@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
 function LoginForm() {
   const router = useRouter();
@@ -31,7 +32,7 @@ function LoginForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${next}` },
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
@@ -39,11 +40,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="card w-full max-w-md p-8 space-y-6">
+    <div className="card w-full max-w-md p-8 space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Welcome back</h1>
         <p className="text-sm text-muted-fg">Log in to your tasks.</p>
       </div>
+
+      <OAuthButtons next={next} />
+
+      <Divider>or with email</Divider>
+
       <form onSubmit={onPassword} className="space-y-3">
         <input
           type="email"
@@ -66,16 +72,27 @@ function LoginForm() {
           {loading ? "…" : "Log in"}
         </button>
       </form>
-      <div className="text-center text-sm text-muted-fg">or</div>
-      <button onClick={onMagicLink} className="btn-outline w-full" disabled={loading}>
-        Email me a magic link
+
+      <button onClick={onMagicLink} className="btn-ghost w-full text-sm" disabled={loading}>
+        Email me a magic link instead
       </button>
+
       <p className="text-sm text-center text-muted-fg">
         New here?{" "}
         <Link href="/signup" className="text-accent hover:underline">
           Create an account
         </Link>
       </p>
+    </div>
+  );
+}
+
+function Divider({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-px bg-border" />
+      <span className="text-xs uppercase tracking-wider text-muted-fg">{children}</span>
+      <div className="flex-1 h-px bg-border" />
     </div>
   );
 }

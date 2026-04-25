@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,11 +34,16 @@ export default function SignupPage() {
 
   return (
     <main className="min-h-screen grid place-items-center px-6">
-      <div className="card w-full max-w-md p-8 space-y-6">
+      <div className="card w-full max-w-md p-8 space-y-5">
         <div>
           <h1 className="text-2xl font-semibold">Create your account</h1>
-          <p className="text-sm text-muted-fg">It's free. No credit card.</p>
+          <p className="text-sm text-muted-fg">It&apos;s free. No credit card.</p>
         </div>
+
+        <OAuthButtons />
+
+        <Divider>or with email</Divider>
+
         <form onSubmit={onSubmit} className="space-y-3">
           <input
             placeholder="Your name"
@@ -66,6 +72,7 @@ export default function SignupPage() {
             {loading ? "…" : "Sign up"}
           </button>
         </form>
+
         <p className="text-sm text-center text-muted-fg">
           Already have an account?{" "}
           <Link href="/login" className="text-accent hover:underline">
@@ -74,5 +81,15 @@ export default function SignupPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+function Divider({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-px bg-border" />
+      <span className="text-xs uppercase tracking-wider text-muted-fg">{children}</span>
+      <div className="flex-1 h-px bg-border" />
+    </div>
   );
 }
