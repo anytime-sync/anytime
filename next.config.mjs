@@ -7,4 +7,8 @@ const nextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
-  // Lint locally; skip during 
+  // Lint locally; skip during Vercel build for now.
+  eslint: { ignoreDuringBuilds: true },
+};
+
+export default nextConfig;

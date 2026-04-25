@@ -158,7 +158,6 @@ export function useCreateTask() {
       if (error) throw error;
 
       if (tagNames && tagNames.length) {
-        // upsert tags then link
         const rows = tagNames.map((name) => ({ user_id: u.user!.id, name }));
         const { data: tags, error: tagErr } = await supabase
           .from("tags")
@@ -176,9 +175,93 @@ export function useCreateTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+      qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 }
 
-export function useUpdate
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: Partial<Task> & { id: string }) => {
+      const supabase = createClient();
+      const { id, ...rest } = p;
+      const { error } = await supabase.from("tasks").update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (p) => {
+      await qc.cancelQueries({ queryKey: ["tasks"] });
+      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
+        old?.map((t) => (t.id === p.id ? { ...t, ...p } : t))
+      );
+      return { prev };
+    },
+    onError: (_e, _p, ctx) => {
+      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
+      toast.error("Update failed");
+    },
+    onSettled: (_d, _e, p) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["task", p.id] });
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+      qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
+    },
+  });
+}
+
+/**
+ * Compute next occurrence for a recurring task.
+ * Returns null if no rrule or no due_at, or if no further occurrence.
+ */
+function nextOccurrence(task: Task): Date | null {
+  if (!task.rrule || !task.due_at) return null;
+  try {
+    const dtstart = new Date(task.due_at);
+    const rule = rrulestr(`DTSTART:${dtstart.toISOString().replace(/[-:]|\.\d{3}/g, "")}\nRRULE:${task.rrule}`);
+    const next = rule.after(dtstart, false);
+    return next ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function useToggleTask() {
+  const update = useUpdateTask();
+  return (task: Task) => {
+    // Recurring + currently incomplete → reschedule to next occurrence rather than mark complete.
+    if (!task.is_completed) {
+      const next = nextOccurrence(task);
+      if (next) {
+        update.mutate({
+          id: task.id,
+          due_at: next.toISOString(),
+        });
+        return;
+      }
+    }
+    update.mutate({
+      id: task.id,
+      is_completed: !task.is_completed,
+      completed_at: !task.is_completed ? new Date().toISOString() : null,
+    });
+  };
+}
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient();
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+      qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
+    },
+  });
+}

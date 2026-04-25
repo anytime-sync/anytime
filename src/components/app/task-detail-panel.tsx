@@ -181,4 +181,63 @@ export function TaskDetailPanel() {
             }
           >
             <option value="">Inbox (no list)</option>
-            {project
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Tags">
+          <div className="flex flex-wrap gap-1">
+            {task.tags.length === 0 && (
+              <p className="text-xs text-muted-fg">
+                Edit the title and add <code>#tagname</code> in quick add.
+              </p>
+            )}
+            {task.tags.map((t) => (
+              <span key={t.id} className="chip">
+                <Hash className="size-3" style={{ color: t.color }} />
+                {t.name}
+              </span>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Subtasks">
+          <SubtaskList parentId={task.id} parentProjectId={task.project_id} />
+        </Field>
+
+        <Field label="Notes">
+          <textarea
+            rows={6}
+            className="input min-h-[120px] py-2"
+            placeholder="Add notes…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={() => {
+              if (notes !== (task.notes ?? "")) {
+                update.mutate({ id: task.id, notes });
+              }
+            }}
+          />
+        </Field>
+
+        <div className="text-xs text-muted-fg">
+          Created {format(new Date(task.created_at), "MMM d, yyyy")} · Updated{" "}
+          {format(new Date(task.updated_at), "MMM d, yyyy")}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <div className="text-xs font-medium text-muted-fg">{label}</div>
+      {children}
+    </div>
+  );
+}

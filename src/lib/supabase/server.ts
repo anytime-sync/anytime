@@ -19,4 +19,10 @@ export function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Server Components c
+            // Server Components can't set cookies — ignored when middleware refreshes the session.
+          }
+        },
+      },
+    }
+  );
+}

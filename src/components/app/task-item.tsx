@@ -86,4 +86,23 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
   );
 }
 
-function DueChip({ due_at
+function DueChip({ due_at, all_day }: { due_at: string; all_day: boolean }) {
+  const d = new Date(due_at);
+  const overdue = !isToday(d) && isPast(d);
+  const label = isToday(d)
+    ? all_day
+      ? "Today"
+      : `Today ${format(d, "h:mm a")}`
+    : isTomorrow(d)
+    ? all_day
+      ? "Tomorrow"
+      : `Tomorrow ${format(d, "h:mm a")}`
+    : all_day
+    ? format(d, "MMM d")
+    : format(d, "MMM d, h:mm a");
+  return (
+    <span className={cn("inline-flex items-center gap-1", overdue && "text-danger")}>
+      <Calendar className="size-3" /> {label}
+    </span>
+  );
+}

@@ -42,4 +42,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   if (user && (path === "/login" || path === "/signup")) {
-    const url = request.next
+    const url = request.nextUrl.clone();
+    url.pathname = "/app";
+    return NextResponse.redirect(url);
+  }
+
+  return supabaseResponse;
+}

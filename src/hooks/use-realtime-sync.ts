@@ -36,4 +36,12 @@ export function useRealtimeSync() {
         qc.invalidateQueries({ queryKey: ["habit_logs"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "pomodoro_sessions" }, () => {
-        qc.invalidateQueries({ queryKey: ["pomodoro_ses
+        qc.invalidateQueries({ queryKey: ["pomodoro_sessions"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+}

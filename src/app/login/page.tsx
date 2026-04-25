@@ -83,4 +83,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="min-h-screen grid place-items-center px-6">
-      <Suspense fallback={<div className="t
+      <Suspense fallback={<div className="text-muted-fg">Loading…</div>}>
+        <LoginForm />
+      </Suspense>
+    </main>
+  );
+}
