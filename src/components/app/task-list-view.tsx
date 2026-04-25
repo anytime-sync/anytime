@@ -1,11 +1,12 @@
 "use client";
 
-import { useTasks, type TasksFilter, type TaskWithTags } from "@/hooks/use-tasks";
+import { useTasks, type TasksFilter } from "@/hooks/use-tasks";
 import { TaskItem } from "./task-item";
 import { useUIStore } from "@/store/ui";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { InlineTaskInput } from "./inline-task-input";
+import { SortableTaskList } from "./sortable-task-list";
 
 type Props = {
   title: string;
@@ -49,9 +50,9 @@ export function TaskListView({ title, subtitle, filter, defaults }: Props) {
           </div>
         ) : null}
 
-        {incomplete.map((t: TaskWithTags) => (
-          <TaskItem key={t.id} task={t} />
-        ))}
+        {/* Drag-to-reorder for the active list. Completed tasks stay below in
+            chronological order; reordering them isn't useful. */}
+        <SortableTaskList tasks={incomplete} />
 
         {completed.length > 0 && (
           <div className="pt-4">
