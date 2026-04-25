@@ -1,0 +1,13 @@
+{
+  "name": "Anytime",
+  "short_name": "Anytime",
+  "description": "A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
+  "start_url": "/app/today",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#4772fa",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

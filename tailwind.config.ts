@@ -1,0 +1,47 @@
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: ["./src/**/*.{ts,tsx,js,jsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        // TickTick-style palette mapped to CSS variables (defined in globals.css)
+        bg: "hsl(var(--bg))",
+        panel: "hsl(var(--panel))",
+        border: "hsl(var(--border))",
+        muted: "hsl(var(--muted))",
+        "muted-fg": "hsl(var(--muted-fg))",
+        fg: "hsl(var(--fg))",
+        accent: "hsl(var(--accent))",
+        "accent-fg": "hsl(var(--accent-fg))",
+        // Priority colors (TickTick uses red/orange/blue/grey)
+        "p-high": "hsl(var(--p-high))",
+        "p-med": "hsl(var(--p-med))",
+        "p-low": "hsl(var(--p-low))",
+        "p-none": "hsl(var(--p-none))",
+        success: "hsl(var(--success))",
+        danger: "hsl(var(--danger))",
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "slide-in-right": {
+          from: { transform: "translateX(8px)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+      },
+      animation: {
+        "fade-in": "fade-in 150ms ease-out",
+        "slide-in-right": "slide-in-right 200ms ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
+
+export default config;

@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TickTick-inspired theme. Tweak freely. */
+@layer base {
+  :root {
+    --bg: 0 0% 100%;
+    --panel: 220 20% 98%;
+    --border: 220 13% 91%;
+    --muted: 220 14% 96%;
+    --muted-fg: 220 9% 46%;
+    --fg: 222 47% 11%;
+    --accent: 224 89% 60%;
+    --accent-fg: 0 0% 100%;
+    --p-high: 0 84% 60%;
+    --p-med: 32 95% 55%;
+    --p-low: 217 91% 60%;
+    --p-none: 220 9% 70%;
+    --success: 142 71% 45%;
+    --danger: 0 84% 60%;
+    --radius: 8px;
+  }
+  .dark {
+    --bg: 222 25% 8%;
+    --panel: 222 23% 11%;
+    --border: 222 16% 20%;
+    --muted: 222 18% 14%;
+    --muted-fg: 220 9% 64%;
+    --fg: 210 20% 96%;
+    --accent: 224 89% 65%;
+    --accent-fg: 222 25% 8%;
+    --p-high: 0 84% 65%;
+    --p-med: 32 95% 60%;
+    --p-low: 217 91% 65%;
+    --p-none: 220 9% 50%;
+    --success: 142 71% 50%;
+    --danger: 0 84% 65%;
+  }
+  html, body {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-fg antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+      "Segoe UI Emoji", sans-serif;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-accent-fg hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply btn hover:bg-muted text-fg;
+  }
+  .btn-outline {
+    @apply btn border border-border hover:bg-muted;
+  }
+  .input {
+    @apply w-full h-9 rounded-md border border-border bg-bg px-3 text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-accent/40;
+  }
+  .card {
+    @apply rounded-lg border border-border bg-panel;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs bg-muted text-fg;
+  }
+}
