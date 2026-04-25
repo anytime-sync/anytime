@@ -1,27 +1,21 @@
 import Link from "next/link";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Hash,
+  LayoutGrid,
+  ListTree,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 
-export default function Home() {
-  return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="max-w-2xl w-full text-center space-y-6">
-        <h1 className="text-5xl font-bold tracking-tight">
-          A calm place to <span className="text-accent">get things done</span>.
-        </h1>
-        <p className="text-muted-fg text-lg">
-          Tasks, calendar, habits, Pomodoro — synced across every device.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <Link href="/signup" className="btn-primary">
-            Get started — free
-          </Link>
-          <Link href="/login" className="btn-outline">
-            Log in
-          </Link>
-        </div>
-        <p className="text-xs text-muted-fg pt-8">
-          Built with Next.js, Supabase, and Tailwind.
-        </p>
-      </div>
-    </main>
-  );
-}
+const FEATURES = [
+  { icon: Sun, title: "Smart views", body: "Today, Tomorrow, Next 7 Days, Inbox — your day, organized." },
+  { icon: CalendarDays, title: "Calendar", body: "Drag tasks between days. Plan your week visually." },
+  { icon: ListTree, title: "Subtasks", body: "Break work into pieces. Track progress at a glance." },
+  { icon: CheckCircle2, title: "Recurring tasks", body: "Daily, weekly, monthly — set it once, never miss it." },
+  { icon: Clock, title: "Pomodoro", body: "Focus cycles with breaks, all logged for later review." },
+  { icon: Sparkles, title: "Habits", body: "Build streaks. Show up. Compound." },
+  { icon: LayoutGrid, title: "Eisenhower", body: "Sort by urgency × importance. Decide faster." },
+  { icon: Hash, title: "Tags & priorit

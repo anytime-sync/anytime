@@ -1,8 +1,8 @@
 "use client";
 
-import { Calendar, Flag, Hash } from "lucide-react";
+import { Calendar, Flag, Hash, ListTree, Repeat } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
-import { useToggleTask } from "@/hooks/use-tasks";
+import { useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -12,6 +12,8 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
   const selectedId = useUIStore((s) => s.selectedTaskId);
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const isSelected = selectedId === task.id;
+  const { data: counts = {} } = useSubtaskCounts([task.id]);
+  const subCount = counts[task.id];
 
   return (
     <div
@@ -68,29 +70,20 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
               {t.name}
             </span>
           ))}
+          {task.rrule && (
+            <span className="inline-flex items-center gap-1" title="Repeats">
+              <Repeat className="size-3" />
+            </span>
+          )}
+          {subCount && subCount.total > 0 && (
+            <span className="inline-flex items-center gap-1" title="Subtasks">
+              <ListTree className="size-3" /> {subCount.done}/{subCount.total}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function DueChip({ due_at, all_day }: { due_at: string; all_day: boolean }) {
-  const d = new Date(due_at);
-  const overdue = !isToday(d) && isPast(d);
-  const label = isToday(d)
-    ? all_day
-      ? "Today"
-      : `Today ${format(d, "h:mm a")}`
-    : isTomorrow(d)
-    ? all_day
-      ? "Tomorrow"
-      : `Tomorrow ${format(d, "h:mm a")}`
-    : all_day
-    ? format(d, "MMM d")
-    : format(d, "MMM d, h:mm a");
-  return (
-    <span className={cn("inline-flex items-center gap-1", overdue && "text-danger")}>
-      <Calendar className="size-3" /> {label}
-    </span>
-  );
-}
+function DueChip({ due_at

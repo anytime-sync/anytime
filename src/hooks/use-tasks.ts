@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
 import { toast } from "sonner";
+import { rrulestr } from "rrule";
 
 export type TaskWithTags = Task & { tags: Tag[] };
 
@@ -25,6 +26,9 @@ export function useTasks(filter: TasksFilter = {}) {
         .order("priority", { ascending: false })
         .order("due_at", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
+
+      // Top-level tasks only — subtasks are loaded via useSubtasks(parentId).
+      q = q.is("parent_id", null);
 
       if (!filter.includeCompleted) q = q.eq("is_completed", false);
       if (filter.projectId !== undefined) {
@@ -69,6 +73,49 @@ export function useTasks(filter: TasksFilter = {}) {
         );
       }
       return tasks;
+    },
+  });
+}
+
+export function useSubtasks(parentId: string | null) {
+  return useQuery({
+    enabled: !!parentId,
+    queryKey: ["subtasks", parentId],
+    queryFn: async () => {
+      if (!parentId) return [];
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("parent_id", parentId)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Task[];
+    },
+  });
+}
+
+export function useSubtaskCounts(parentIds: string[]) {
+  return useQuery({
+    enabled: parentIds.length > 0,
+    queryKey: ["subtaskCounts", [...parentIds].sort()],
+    queryFn: async () => {
+      if (!parentIds.length) return {} as Record<string, { total: number; done: number }>;
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("parent_id, is_completed")
+        .in("parent_id", parentIds);
+      if (error) throw error;
+      const counts: Record<string, { total: number; done: number }> = {};
+      for (const row of (data ?? []) as Pick<Task, "parent_id" | "is_completed">[]) {
+        const key = row.parent_id!;
+        counts[key] ??= { total: 0, done: 0 };
+        counts[key].total += 1;
+        if (row.is_completed) counts[key].done += 1;
+      }
+      return counts;
     },
   });
 }
@@ -134,52 +181,4 @@ export function useCreateTask() {
   });
 }
 
-export function useUpdateTask() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (p: Partial<Task> & { id: string }) => {
-      const supabase = createClient();
-      const { id, ...rest } = p;
-      const { error } = await supabase.from("tasks").update(rest).eq("id", id);
-      if (error) throw error;
-    },
-    onMutate: async (p) => {
-      await qc.cancelQueries({ queryKey: ["tasks"] });
-      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
-      qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
-        old?.map((t) => (t.id === p.id ? { ...t, ...p } : t))
-      );
-      return { prev };
-    },
-    onError: (_e, _p, ctx) => {
-      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
-      toast.error("Update failed");
-    },
-    onSettled: (_d, _e, p) => {
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-      qc.invalidateQueries({ queryKey: ["task", p.id] });
-    },
-  });
-}
-
-export function useToggleTask() {
-  const update = useUpdateTask();
-  return (task: Task) =>
-    update.mutate({
-      id: task.id,
-      is_completed: !task.is_completed,
-      completed_at: !task.is_completed ? new Date().toISOString() : null,
-    });
-}
-
-export function useDeleteTask() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const supabase = createClient();
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
-  });
-}
+export function useUpdate

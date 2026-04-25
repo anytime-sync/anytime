@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+
+type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 export function createClient() {
   const cookieStore = cookies();
@@ -11,16 +13,10 @@ export function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(toSet) {
+        setAll(toSet: CookieToSet[]) {
           try {
             toSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Server Components can't set cookies — ignored when middleware refreshes the session.
-          }
-        },
-      },
-    }
-  );
-}
+            // Server Components c

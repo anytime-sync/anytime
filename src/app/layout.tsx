@@ -9,8 +9,12 @@ export const metadata: Metadata = {
   description: "A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
@@ -29,12 +33,4 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <Providers>{children}</Providers>
-        <Toaster position="bottom-right" richColors closeButton />
-        <SwRegister />
-      </body>
-    </html>
-  );
-}
+    <html lang="en" sup

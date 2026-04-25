@@ -17,6 +17,8 @@ export function useRealtimeSync() {
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => {
         qc.invalidateQueries({ queryKey: ["tasks"] });
         qc.invalidateQueries({ queryKey: ["task"] });
+        qc.invalidateQueries({ queryKey: ["subtasks"] });
+        qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => {
         qc.invalidateQueries({ queryKey: ["projects"] });
@@ -34,12 +36,4 @@ export function useRealtimeSync() {
         qc.invalidateQueries({ queryKey: ["habit_logs"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "pomodoro_sessions" }, () => {
-        qc.invalidateQueries({ queryKey: ["pomodoro_sessions"] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [qc]);
-}
+        qc.invalidateQueries({ queryKey: ["pomodoro_ses

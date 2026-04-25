@@ -4,11 +4,19 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import {
-  Calendar, Flag, Hash, Folder, Trash2, X,
-} from "lucide-react";
+import { Flag, Hash, Trash2, X, Repeat } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn, priorityColorClass } from "@/lib/utils";
+import { SubtaskList } from "./subtask-list";
+
+const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Doesn't repeat" },
+  { value: "FREQ=DAILY", label: "Daily" },
+  { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays (Mon–Fri)" },
+  { value: "FREQ=WEEKLY", label: "Weekly" },
+  { value: "FREQ=MONTHLY", label: "Monthly" },
+  { value: "FREQ=YEARLY", label: "Yearly" },
+];
 
 export function TaskDetailPanel() {
   const id = useUIStore((s) => s.selectedTaskId);
@@ -30,6 +38,9 @@ export function TaskDetailPanel() {
   }, [task]);
 
   if (!id || !task) return null;
+
+  const recurrenceMatch = RECURRENCE_PRESETS.find((p) => p.value === (task.rrule ?? ""));
+  const recurrenceValue = recurrenceMatch ? recurrenceMatch.value : (task.rrule ?? "");
 
   return (
     <aside className="w-[380px] shrink-0 h-full border-l border-border bg-panel animate-slide-in-right flex flex-col">
@@ -112,6 +123,34 @@ export function TaskDetailPanel() {
           />
         </Field>
 
+        <Field label="Repeat">
+          <div className="flex items-center gap-2">
+            <Repeat className="size-4 text-muted-fg" />
+            <select
+              className="input flex-1"
+              value={recurrenceValue}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                update.mutate({ id: task.id, rrule: v });
+              }}
+            >
+              {RECURRENCE_PRESETS.map((p) => (
+                <option key={p.value || "none"} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+              {!recurrenceMatch && task.rrule && (
+                <option value={task.rrule}>Custom: {task.rrule}</option>
+              )}
+            </select>
+          </div>
+          {task.rrule && !task.due_at && (
+            <p className="text-[11px] text-muted-fg mt-1">
+              Set a due date — recurrence creates the next occurrence when you complete the task.
+            </p>
+          )}
+        </Field>
+
         <Field label="Priority">
           <div className="flex gap-1">
             {[0, 1, 3, 5].map((p) => (
@@ -142,59 +181,4 @@ export function TaskDetailPanel() {
             }
           >
             <option value="">Inbox (no list)</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Tags">
-          <div className="flex flex-wrap gap-1">
-            {task.tags.length === 0 && (
-              <p className="text-xs text-muted-fg">
-                Edit the title and add <code>#tagname</code> in quick add.
-              </p>
-            )}
-            {task.tags.map((t) => (
-              <span key={t.id} className="chip">
-                <Hash className="size-3" style={{ color: t.color }} />
-                {t.name}
-              </span>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="Notes">
-          <textarea
-            rows={6}
-            className="input min-h-[120px] py-2"
-            placeholder="Add notes…"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => {
-              if (notes !== (task.notes ?? "")) {
-                update.mutate({ id: task.id, notes });
-              }
-            }}
-          />
-        </Field>
-
-        <div className="text-xs text-muted-fg">
-          Created {format(new Date(task.created_at), "MMM d, yyyy")} · Updated{" "}
-          {format(new Date(task.updated_at), "MMM d, yyyy")}
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <div className="text-xs font-medium text-muted-fg">{label}</div>
-      {children}
-    </div>
-  );
-}
+            {project
