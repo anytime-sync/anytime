@@ -12,11 +12,43 @@ import { cn } from "@/lib/utils";
 
 type QuadrantKey = "q1" | "q2" | "q3" | "q4";
 
-const QUADRANTS: Record<QuadrantKey, { label: string; subtitle: string; accent: string }> = {
-  q1: { label: "Do first",  subtitle: "Urgent · Important",         accent: "hsl(var(--p-high))" },
-  q2: { label: "Schedule",  subtitle: "Not urgent · Important",     accent: "hsl(var(--p-low))" },
-  q3: { label: "Delegate",  subtitle: "Urgent · Not important",     accent: "hsl(var(--p-med))" },
-  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", accent: "hsl(var(--muted-fg))" },
+/**
+ * Each quadrant gets its own distinct hue.
+ *  Q1 Do first   — red    (crisis)
+ *  Q2 Schedule   — emerald (strategic / important growth)
+ *  Q3 Delegate   — amber   (interrupts)
+ *  Q4 Eliminate  — slate   (waste)
+ */
+type QuadMeta = {
+  label: string;
+  subtitle: string;
+  fg: string;     // text color
+  bg: string;     // tinted card background
+  border: string; // top accent / drop highlight
+  pill: string;   // count chip bg
+};
+
+const QUADRANTS: Record<QuadrantKey, QuadMeta> = {
+  q1: {
+    label: "Do first", subtitle: "Urgent · Important",
+    fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",
+    border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)",
+  },
+  q2: {
+    label: "Schedule", subtitle: "Not urgent · Important",
+    fg: "#047857", bg: "rgba(16, 185, 129, 0.08)",
+    border: "#10B981", pill: "rgba(16, 185, 129, 0.15)",
+  },
+  q3: {
+    label: "Delegate", subtitle: "Urgent · Not important",
+    fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)",
+    border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)",
+  },
+  q4: {
+    label: "Eliminate", subtitle: "Not urgent · Not important",
+    fg: "#475569", bg: "rgba(100, 116, 139, 0.08)",
+    border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)",
+  },
 };
 
 function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
@@ -52,9 +84,7 @@ export default function MatrixPage() {
   const buckets: Record<QuadrantKey, TaskWithTags[]> = { q1: [], q2: [], q3: [], q4: [] };
   for (const t of tasks) buckets[classify(t)].push(t);
 
-  function onDragStart(e: DragStartEvent) {
-    setActiveId(String(e.active.id));
-  }
+  function onDragStart(e: DragStartEvent) { setActiveId(String(e.active.id)); }
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
@@ -73,7 +103,7 @@ export default function MatrixPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border">
-        <h1 className="text-xl font-semibold">Eisenhower matrix</h1>
+        <h1 className="font-display text-2xl tracking-tight">Eisenhower matrix</h1>
         <p className="text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
       </div>
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
@@ -100,17 +130,28 @@ function Quadrant({ qkey, tasks, activeId }: { qkey: QuadrantKey; tasks: TaskWit
   return (
     <div
       ref={setNodeRef}
+      style={{
+        backgroundColor: meta.bg,
+        borderColor: isOver ? meta.border : "hsl(var(--border))",
+        borderTopWidth: 3,
+        borderTopColor: meta.border,
+      }}
       className={cn(
-        "card flex flex-col min-h-0 transition-colors",
-        isOver && "ring-2 ring-accent bg-accent/5"
+        "card flex flex-col min-h-0 transition-all",
+        isOver && "ring-2 shadow-md",
       )}
     >
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
-          <h3 className="font-medium" style={{ color: meta.accent }}>{meta.label}</h3>
-          <p className="text-xs text-muted-fg">{meta.subtitle}</p>
+          <h3 className="font-display text-lg leading-tight" style={{ color: meta.fg }}>{meta.label}</h3>
+          <p className="text-[11px] text-muted-fg uppercase tracking-[0.18em]">{meta.subtitle}</p>
         </div>
-        <span className="chip">{tasks.length}</span>
+        <span
+          className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-medium"
+          style={{ backgroundColor: meta.pill, color: meta.fg }}
+        >
+          {tasks.length}
+        </span>
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {tasks.length === 0 ? (

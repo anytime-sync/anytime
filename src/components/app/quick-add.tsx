@@ -235,29 +235,36 @@ function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
 }
 
 function MiniEisenhower({ active }: { active: Quadrant }) {
-  const cells: Array<{ key: Exclude<Quadrant, null>; label: string }> = [
-    { key: "q1", label: "Do first" },
-    { key: "q2", label: "Schedule" },
-    { key: "q3", label: "Delegate" },
-    { key: "q4", label: "Eliminate" },
+  const cells: Array<{ key: Exclude<Quadrant, null>; label: string; fg: string; bg: string; border: string }> = [
+    { key: "q1", label: "Do first",  fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
+    { key: "q2", label: "Schedule",  fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
+    { key: "q3", label: "Delegate",  fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
+    { key: "q4", label: "Eliminate", fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
   ];
   return (
     <div className="shrink-0 self-start">
-      <div className="grid grid-cols-2 gap-1 w-[160px]">
-        {cells.map((c) => (
-          <div
-            key={c.key}
-            className={cn(
-              "h-12 rounded-md border text-[10px] grid place-items-center text-center px-1 transition-all",
-              active === c.key
-                ? "border-fg bg-fg text-bg font-medium"
-                : "border-border text-muted-fg"
-            )}
-            title={`${c.label} quadrant`}
-          >
-            {c.label}
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-1 w-[176px]">
+        {cells.map((c) => {
+          const isActive = active === c.key;
+          return (
+            <div
+              key={c.key}
+              style={{
+                backgroundColor: isActive ? c.fg : c.bg,
+                color: isActive ? "white" : c.fg,
+                borderColor: c.border,
+                borderTopWidth: 3,
+              }}
+              className={cn(
+                "h-12 rounded-md border text-[10px] grid place-items-center text-center px-1 transition-all",
+                isActive && "shadow-md font-medium"
+              )}
+              title={c.label}
+            >
+              {c.label}
+            </div>
+          );
+        })}
       </div>
       <div className="text-[10px] text-muted-fg text-center mt-1">Eisenhower</div>
     </div>
