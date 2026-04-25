@@ -53,9 +53,7 @@ export function useTasks(filter: TasksFilter = {}) {
       if (filter.view === "today") {
         q = q.lt("due_at", startOfTomorrow.toISOString());
       } else if (filter.view === "tomorrow") {
-        q = q
-          .gte("due_at", startOfTomorrow.toISOString())
-          .lt("due_at", endOfTomorrow.toISOString());
+        q = q.gte("due_at", startOfTomorrow.toISOString()).lt("due_at", endOfTomorrow.toISOString());
       } else if (filter.view === "next7") {
         q = q.lt("due_at", endOf7.toISOString());
       }
@@ -64,9 +62,7 @@ export function useTasks(filter: TasksFilter = {}) {
       if (error) throw error;
 
       let tasks = (data ?? []).map((row: any) => {
-        const tags = (row.task_tags ?? [])
-          .map((tt: any) => tt.tags)
-          .filter(Boolean) as Tag[];
+        const tags = (row.task_tags ?? []).map((tt: any) => tt.tags).filter(Boolean) as Tag[];
         const { task_tags, ...rest } = row;
         return { ...(rest as Task), tags } as TaskWithTags;
       });
@@ -216,10 +212,7 @@ export function useUpdateTask() {
   });
 }
 
-/**
- * Compute next occurrence for a recurring task.
- * Returns null if no rrule or no due_at, or if no further occurrence.
- */
+/** Compute next occurrence for a recurring task. Returns null if none. */
 function nextOccurrence(task: Task): Date | null {
   if (!task.rrule || !task.due_at) return null;
   try {
@@ -235,14 +228,10 @@ function nextOccurrence(task: Task): Date | null {
 export function useToggleTask() {
   const update = useUpdateTask();
   return (task: Task) => {
-    // Recurring + currently incomplete → reschedule to next occurrence rather than mark complete.
     if (!task.is_completed) {
       const next = nextOccurrence(task);
       if (next) {
-        update.mutate({
-          id: task.id,
-          due_at: next.toISOString(),
-        });
+        update.mutate({ id: task.id, due_at: next.toISOString() });
         return;
       }
     }
@@ -259,8 +248,16 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient();
-      const { error } = await supabase.from("tasks").delete().eq(
-
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+      qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
+    },
+  });
+}
 
 /**
  * Batch-persist new task positions after a drag-to-reorder, with optimistic
