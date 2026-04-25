@@ -4,11 +4,12 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import { Bell, Flag, Hash, Trash2, X, Repeat, Paperclip } from "lucide-react";
+import { Bell, Flag, Trash2, X, Repeat, Paperclip } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn, priorityColorClass } from "@/lib/utils";
 import { SubtaskList } from "./subtask-list";
 import { AttachmentList } from "./attachment-list";
+import { TagEditor } from "./tag-editor";
 
 const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "", label: "Doesn't repeat" },
@@ -215,19 +216,7 @@ export function TaskDetailPanel() {
         </Field>
 
         <Field label="Tags">
-          <div className="flex flex-wrap gap-1">
-            {task.tags.length === 0 && (
-              <p className="text-xs text-muted-fg">
-                Edit the title and add <code>#tagname</code> in quick add.
-              </p>
-            )}
-            {task.tags.map((t) => (
-              <span key={t.id} className="chip">
-                <Hash className="size-3" style={{ color: t.color }} />
-                {t.name}
-              </span>
-            ))}
-          </div>
+          <TagEditor taskId={task.id} currentTags={task.tags} />
         </Field>
 
         <Field label="Subtasks">
@@ -281,3 +270,4 @@ function Field({
     </div>
   );
 }
+                                                                                                                                                                                                                                                                                                                                                                                                  
