@@ -23,9 +23,10 @@ export function SortableTaskList({ tasks }: { tasks: TaskWithTags[] }) {
 
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
-    if (!e.over || e.active.id === e.over.id) return;
-    const oldIndex = tasks.findIndex((t) => t.id === String(e.active.id));
-    const newIndex = tasks.findIndex((t) => t.id === String(e.over.id));
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = tasks.findIndex((t) => t.id === String(active.id));
+    const newIndex = tasks.findIndex((t) => t.id === String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
 
     const reordered = arrayMove(tasks, oldIndex, newIndex);
