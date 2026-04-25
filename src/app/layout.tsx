@@ -5,8 +5,9 @@ import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
 
 export const metadata: Metadata = {
-  title: "Anytime — tasks, calendar, habits",
-  description: "A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
+  title: "Anytime — plan with intent, live with flow",
+  description:
+    "A calm operating system for getting things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1020" },
+    { media: "(prefers-color-scheme: dark)", color: "#161412" },
   ],
   width: "device-width",
   initialScale: 1,

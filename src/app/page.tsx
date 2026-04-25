@@ -1,39 +1,44 @@
 import Link from "next/link";
-import {
-  CalendarDays,
-  CheckCircle2,
-  Clock,
-  Hash,
-  LayoutGrid,
-  ListTree,
-  Sparkles,
-  Sun,
-} from "lucide-react";
 
 const FEATURES = [
-  { icon: Sun, title: "Smart views", body: "Today, Tomorrow, Next 7 Days, Inbox — your day, organized." },
-  { icon: CalendarDays, title: "Calendar", body: "Drag tasks between days. Plan your week visually." },
-  { icon: ListTree, title: "Subtasks", body: "Break work into pieces. Track progress at a glance." },
-  { icon: CheckCircle2, title: "Recurring tasks", body: "Daily, weekly, monthly — set it once, never miss it." },
-  { icon: Clock, title: "Pomodoro", body: "Focus cycles with breaks, all logged for later review." },
-  { icon: Sparkles, title: "Habits", body: "Build streaks. Show up. Compound." },
-  { icon: LayoutGrid, title: "Eisenhower", body: "Sort by urgency × importance. Decide faster." },
-  { icon: Hash, title: "Tags & priorities", body: "Filter, focus, ship. Quick add accepts #tag and !1." },
+  { num: "01", kicker: "Smart views",     body: "Today, Tomorrow, Next 7 Days, Inbox — your day, organized." },
+  { num: "02", kicker: "Calendar",        body: "Drag tasks between days. Plan your week visually." },
+  { num: "03", kicker: "Subtasks",        body: "Break work into pieces. Track progress at a glance." },
+  { num: "04", kicker: "Recurring",       body: "Daily, weekly, monthly — set it once, never miss it." },
+  { num: "05", kicker: "Pomodoro",        body: "Focus cycles with breaks, all logged for later review." },
+  { num: "06", kicker: "Habits",          body: "Build streaks. Show up. Compound." },
+  { num: "07", kicker: "Eisenhower",      body: "Sort by urgency × importance. Decide faster." },
+  { num: "08", kicker: "Tags & priorities", body: "Filter, focus, ship. Quick add accepts #tag and !1." },
 ];
 
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
+      {/* Wordmark */}
+      <header className="px-6 pt-8">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <Link href="/" className="font-display text-2xl tracking-tight">
+            Anytime
+          </Link>
+          <nav className="flex items-center gap-6 text-sm text-muted-fg">
+            <Link href="/login" className="hover:text-fg">Log in</Link>
+            <Link href="/signup" className="btn-primary px-4 h-9">Get started</Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero */}
       <section className="flex-1 grid place-items-center px-6 py-20">
         <div className="max-w-3xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 h-8 rounded-full border border-border text-xs text-muted-fg">
-            <span className="size-1.5 rounded-full bg-success" />
-            Now live
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-            A calm place to <span className="text-accent">get things done</span>.
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-fg">
+            Anytime — A calm operating system for getting things done
+          </p>
+          <h1 className="font-display text-5xl md:text-7xl leading-[1.05] tracking-tight">
+            Plan with intent,
+            <br />
+            <em className="font-display">live with flow.</em>
           </h1>
-          <p className="text-lg text-muted-fg max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-muted-fg max-w-xl mx-auto">
             Tasks, calendar, habits, and Pomodoro — synced across every device.
             Open-source. Yours.
           </p>
@@ -51,26 +56,42 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 pb-20">
-        <div className="max-w-5xl mx-auto grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="card p-5 space-y-2">
-              <Icon className="size-5 text-accent" />
-              <h3 className="font-medium">{title}</h3>
-              <p className="text-sm text-muted-fg">{body}</p>
-            </div>
-          ))}
+      {/* Editorial divider */}
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+
+      {/* Features grid — magazine columns */}
+      <section className="px-6 py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="editorial-number text-sm">In this issue</p>
+            <h2 className="font-display text-3xl md:text-4xl mt-1">
+              <em>Everything</em> you need.
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10">
+            {FEATURES.map(({ num, kicker, body }) => (
+              <article key={num} className="space-y-2">
+                <div className="editorial-number text-xs">{num}</div>
+                <h3 className="font-display text-xl leading-tight">{kicker}</h3>
+                <p className="text-sm text-muted-fg leading-relaxed">{body}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      <footer className="px-6 py-8 border-t border-border text-center text-xs text-muted-fg">
-        Built with Next.js, Supabase, and Tailwind ·{" "}
-        <a
-          href="https://github.com/anytime-sync/anytime"
-          className="text-accent hover:underline"
-        >
-          source on GitHub
-        </a>
+      <footer className="px-6 py-8 border-t border-border">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
+          <span>© Anytime · Built with Next.js, Supabase &amp; Tailwind.</span>
+          <a
+            href="https://github.com/anytime-sync/anytime"
+            className="hover:text-fg"
+          >
+            Source on GitHub →
+          </a>
+        </div>
       </footer>
     </main>
   );

@@ -2,44 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TickTick-inspired theme. Tweak freely. */
+/* OQUA-inspired theme — black/white with warm grays, lavender as secondary,
+   serif display for editorial headlines, sans for body and UI. */
 @layer base {
   :root {
     --bg: 0 0% 100%;
-    --panel: 220 20% 98%;
-    --border: 220 13% 91%;
-    --muted: 220 14% 96%;
-    --muted-fg: 220 9% 46%;
-    --fg: 222 47% 11%;
-    --accent: 224 89% 60%;
+    --panel: 30 20% 98%;
+    --border: 30 12% 88%;
+    --muted: 30 14% 96%;
+    --muted-fg: 30 6% 35%;
+    --fg: 0 0% 7%;
+    --accent: 0 0% 7%;          /* black primary */
     --accent-fg: 0 0% 100%;
-    --p-high: 0 84% 60%;
-    --p-med: 32 95% 55%;
-    --p-low: 217 91% 60%;
-    --p-none: 220 9% 70%;
-    --success: 142 71% 45%;
-    --danger: 0 84% 60%;
-    --radius: 8px;
+    --p-high: 0 75% 50%;
+    --p-med: 22 90% 50%;
+    --p-low: 254 86% 70%;       /* lavender */
+    --p-none: 30 8% 60%;
+    --success: 158 64% 40%;
+    --danger: 0 75% 50%;
+    --radius: 6px;
+    --font-display: ui-serif, "Iowan Old Style", "Apple Garamond", Baskerville,
+      "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif;
   }
   .dark {
-    --bg: 222 25% 8%;
-    --panel: 222 23% 11%;
-    --border: 222 16% 20%;
-    --muted: 222 18% 14%;
-    --muted-fg: 220 9% 64%;
-    --fg: 210 20% 96%;
-    --accent: 224 89% 65%;
-    --accent-fg: 222 25% 8%;
-    --p-high: 0 84% 65%;
-    --p-med: 32 95% 60%;
-    --p-low: 217 91% 65%;
-    --p-none: 220 9% 50%;
-    --success: 142 71% 50%;
-    --danger: 0 84% 65%;
+    --bg: 30 6% 8%;
+    --panel: 30 6% 11%;
+    --border: 30 6% 22%;
+    --muted: 30 6% 14%;
+    --muted-fg: 30 6% 65%;
+    --fg: 30 10% 95%;
+    --accent: 30 10% 95%;
+    --accent-fg: 30 6% 8%;
+    --p-high: 0 75% 62%;
+    --p-med: 22 90% 60%;
+    --p-low: 254 86% 76%;
+    --p-none: 30 8% 50%;
+    --success: 158 64% 52%;
+    --danger: 0 75% 62%;
   }
-  html, body {
-    height: 100%;
-  }
+  html, body { height: 100%; }
   body {
     @apply bg-bg text-fg antialiased;
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -52,6 +53,7 @@
 }
 
 @layer components {
+  .font-display { font-family: var(--font-display); }
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
   }
@@ -65,12 +67,18 @@
     @apply btn border border-border hover:bg-muted;
   }
   .input {
-    @apply w-full h-9 rounded-md border border-border bg-bg px-3 text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-accent/40;
+    @apply w-full h-9 rounded-md border border-border bg-bg px-3 text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-accent/30;
   }
   .card {
-    @apply rounded-lg border border-border bg-panel;
+    @apply rounded-md border border-border bg-panel;
   }
   .chip {
     @apply inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs bg-muted text-fg;
+  }
+  /* Editorial number — small, mono-ish digit pair like 01, 02 in OQUA. */
+  .editorial-number {
+    @apply font-display tabular-nums text-muted-fg;
+    font-feature-settings: "tnum";
+    letter-spacing: 0.04em;
   }
 }
