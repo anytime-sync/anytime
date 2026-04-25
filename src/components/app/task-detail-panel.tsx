@@ -4,10 +4,11 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import { Bell, Flag, Hash, Trash2, X, Repeat } from "lucide-react";
+import { Bell, Flag, Hash, Trash2, X, Repeat, Paperclip } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn, priorityColorClass } from "@/lib/utils";
 import { SubtaskList } from "./subtask-list";
+import { AttachmentList } from "./attachment-list";
 
 const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "", label: "Doesn't repeat" },
@@ -21,7 +22,6 @@ const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
 function localInputValue(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
-  // datetime-local expects YYYY-MM-DDTHH:mm in local time
   const tzOffset = d.getTimezoneOffset() * 60 * 1000;
   return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
 }
@@ -234,6 +234,10 @@ export function TaskDetailPanel() {
           <SubtaskList parentId={task.id} parentProjectId={task.project_id} />
         </Field>
 
+        <Field label="Attachments" icon={<Paperclip className="size-3.5 text-muted-fg" />}>
+          <AttachmentList taskId={task.id} />
+        </Field>
+
         <Field label="Notes">
           <textarea
             rows={6}
@@ -258,10 +262,21 @@ export function TaskDetailPanel() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  icon,
+}: {
+  label: string;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
   return (
     <div className="space-y-1">
-      <div className="text-xs font-medium text-muted-fg">{label}</div>
+      <div className="text-xs font-medium text-muted-fg flex items-center gap-1">
+        {icon}
+        {label}
+      </div>
       {children}
     </div>
   );

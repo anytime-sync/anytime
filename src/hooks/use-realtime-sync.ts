@@ -4,10 +4,6 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Subscribes to Supabase Postgres changes and invalidates relevant queries.
- * Single subscription owned by the AppShell.
- */
 export function useRealtimeSync() {
   const qc = useQueryClient();
   useEffect(() => {
@@ -33,6 +29,9 @@ export function useRealtimeSync() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "task_tags" }, () => {
         qc.invalidateQueries({ queryKey: ["tasks"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_attachments" }, () => {
+        qc.invalidateQueries({ queryKey: ["task_attachments"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "habits" }, () => {
         qc.invalidateQueries({ queryKey: ["habits"] });
