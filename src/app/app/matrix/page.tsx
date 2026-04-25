@@ -1,28 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
 import { isPast, isToday, addDays, endOfDay } from "date-fns";
 import {
-  DndContext, DragEndEvent, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
-import { cn, priorityColorClass } from "@/lib/utils";
-import { Flag, Hash } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type QuadrantKey = "q1" | "q2" | "q3" | "q4";
 
-const QUADRANTS: Record<QuadrantKey, {
-  label: string;
-  subtitle: string;
-  accent: string;
-}> = {
+const QUADRANTS: Record<QuadrantKey, { label: string; subtitle: string; accent: string }> = {
   q1: { label: "Do first",  subtitle: "Urgent · Important",         accent: "hsl(var(--p-high))" },
   q2: { label: "Schedule",  subtitle: "Not urgent · Important",     accent: "hsl(var(--p-low))" },
   q3: { label: "Delegate",  subtitle: "Urgent · Not important",     accent: "hsl(var(--p-med))" },
   q4: { label: "Eliminate", subtitle: "Not urgent · Not important", accent: "hsl(var(--muted-fg))" },
 };
 
-/** What we set when a task is dropped into a quadrant. */
 function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
   const eod = endOfDay(new Date()).toISOString();
   switch (q) {
@@ -50,11 +46,17 @@ export default function MatrixPage() {
   const { data: tasks = [] } = useTasks({});
   const update = useUpdateTask();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null;
 
   const buckets: Record<QuadrantKey, TaskWithTags[]> = { q1: [], q2: [], q3: [], q4: [] };
   for (const t of tasks) buckets[classify(t)].push(t);
 
+  function onDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+  }
   function onDragEnd(e: DragEndEvent) {
+    setActiveId(null);
     if (!e.over) return;
     const q = String(e.over.id) as QuadrantKey;
     const t = tasks.find((x) => x.id === String(e.active.id));
@@ -72,22 +74,27 @@ export default function MatrixPage() {
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border">
         <h1 className="text-xl font-semibold">Eisenhower matrix</h1>
-        <p className="text-xs text-muted-fg">
-          Drag tasks between quadrants to change urgency × importance.
-        </p>
+        <p className="text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
       </div>
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 grid-rows-2 gap-4">
           {(Object.keys(QUADRANTS) as QuadrantKey[]).map((k) => (
-            <Quadrant key={k} qkey={k} tasks={buckets[k]} />
+            <Quadrant key={k} qkey={k} tasks={buckets[k]} activeId={activeId} />
           ))}
         </div>
+        <DragOverlay dropAnimation={{ duration: 150 }}>
+          {activeTask ? (
+            <div className="rounded-md ring-2 ring-accent shadow-2xl bg-bg w-[320px]">
+              <TaskItem task={activeTask} />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
 }
 
-function Quadrant({ qkey, tasks }: { qkey: QuadrantKey; tasks: TaskWithTags[] }) {
+function Quadrant({ qkey, tasks, activeId }: { qkey: QuadrantKey; tasks: TaskWithTags[]; activeId: string | null }) {
   const meta = QUADRANTS[qkey];
   const { isOver, setNodeRef } = useDroppable({ id: qkey });
   return (
@@ -109,31 +116,25 @@ function Quadrant({ qkey, tasks }: { qkey: QuadrantKey; tasks: TaskWithTags[] })
         {tasks.length === 0 ? (
           <p className="text-xs text-muted-fg p-3">Drop tasks here.</p>
         ) : (
-          tasks.map((t) => <DraggableMatrixCard key={t.id} task={t} />)
+          tasks.map((t) => <DraggableMatrixCard key={t.id} task={t} dimmed={activeId === t.id} />)
         )}
       </div>
     </div>
   );
 }
 
-function DraggableMatrixCard({ task }: { task: TaskWithTags }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
-  const style: React.CSSProperties = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 }
-    : {};
+function DraggableMatrixCard({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...listeners}
       {...attributes}
       className={cn(
         "rounded-md cursor-grab active:cursor-grabbing",
-        isDragging && "ring-2 ring-accent shadow-lg"
+        (dimmed || isDragging) && "opacity-30"
       )}
     >
-      {/* Reuse TaskItem visuals (it handles selection + completion). The
-          drag listeners on the wrapper take precedence for grab gestures. */}
       <TaskItem task={task} />
     </div>
   );
