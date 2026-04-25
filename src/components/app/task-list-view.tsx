@@ -5,7 +5,7 @@ import { TaskItem } from "./task-item";
 import { useUIStore } from "@/store/ui";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { useCreateTask } from "@/hooks/use-tasks";
+import { InlineTaskInput } from "./inline-task-input";
 
 type Props = {
   title: string;
@@ -17,9 +17,7 @@ type Props = {
 export function TaskListView({ title, subtitle, filter, defaults }: Props) {
   const { data: tasks = [], isLoading } = useTasks(filter);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const create = useCreateTask();
   const [showCompleted, setShowCompleted] = useState(false);
-  const [inline, setInline] = useState("");
 
   const incomplete = tasks.filter((t) => !t.is_completed);
   const completed = tasks.filter((t) => t.is_completed);
@@ -40,26 +38,7 @@ export function TaskListView({ title, subtitle, filter, defaults }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-        <form
-          className="px-3 py-2 rounded-md border border-dashed border-border flex items-center gap-3 cursor-text"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!inline.trim()) return;
-            await create.mutateAsync({
-              title: inline.trim(),
-              project_id: defaults?.project_id ?? null,
-            });
-            setInline("");
-          }}
-        >
-          <span className="size-5 rounded-full border-2 border-muted-fg" />
-          <input
-            className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-fg"
-            placeholder="Add task — Enter to save"
-            value={inline}
-            onChange={(e) => setInline(e.target.value)}
-          />
-        </form>
+        <InlineTaskInput defaultProjectId={defaults?.project_id ?? null} />
 
         {isLoading ? (
           <div className="text-sm text-muted-fg px-3">Loading…</div>
