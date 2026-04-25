@@ -19,6 +19,7 @@ export function useRealtimeSync() {
         qc.invalidateQueries({ queryKey: ["task"] });
         qc.invalidateQueries({ queryKey: ["subtasks"] });
         qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
+        qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => {
         qc.invalidateQueries({ queryKey: ["projects"] });

@@ -4,7 +4,7 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import { Flag, Hash, Trash2, X, Repeat } from "lucide-react";
+import { Bell, Flag, Hash, Trash2, X, Repeat } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn, priorityColorClass } from "@/lib/utils";
 import { SubtaskList } from "./subtask-list";
@@ -17,6 +17,14 @@ const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "FREQ=MONTHLY", label: "Monthly" },
   { value: "FREQ=YEARLY", label: "Yearly" },
 ];
+
+function localInputValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  // datetime-local expects YYYY-MM-DDTHH:mm in local time
+  const tzOffset = d.getTimezoneOffset() * 60 * 1000;
+  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+}
 
 export function TaskDetailPanel() {
   const id = useUIStore((s) => s.selectedTaskId);
@@ -107,11 +115,7 @@ export function TaskDetailPanel() {
           <input
             type="datetime-local"
             className="input"
-            value={
-              task.due_at
-                ? new Date(task.due_at).toISOString().slice(0, 16)
-                : ""
-            }
+            value={localInputValue(task.due_at)}
             onChange={(e) => {
               const v = e.target.value;
               update.mutate({
@@ -149,6 +153,27 @@ export function TaskDetailPanel() {
               Set a due date — recurrence creates the next occurrence when you complete the task.
             </p>
           )}
+        </Field>
+
+        <Field label="Reminder">
+          <div className="flex items-center gap-2">
+            <Bell className="size-4 text-muted-fg" />
+            <input
+              type="datetime-local"
+              className="input flex-1"
+              value={localInputValue(task.reminder_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                update.mutate({
+                  id: task.id,
+                  reminder_at: v ? new Date(v).toISOString() : null,
+                });
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-muted-fg mt-1">
+            Browser notification fires at this time while the app is open. Allow notifications when prompted.
+          </p>
         </Field>
 
         <Field label="Priority">

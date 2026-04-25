@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar";
 import { CommandPalette } from "./command-palette";
 import { TaskDetailPanel } from "./task-detail-panel";
 import { QuickAdd } from "./quick-add";
+import { Reminders } from "./reminders";
 import { useUIStore } from "@/store/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 
@@ -49,6 +50,7 @@ export function AppShell({
       </main>
       <CommandPalette />
       <QuickAdd />
+      <Reminders />
     </div>
   );
 }
