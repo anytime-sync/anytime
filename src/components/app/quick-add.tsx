@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseQuickInput, describeParsed, describeNow, type ParsedQuickInput } from "@/lib/quick-parse";
-import { useCreateTask } from "@/hooks/use-tasks";
+import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import { useParseTaskAI } from "@/hooks/use-ai";
@@ -122,6 +122,7 @@ export function QuickAdd() {
     setActiveChip(null);
   }
   const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
   const aiParse = useParseTaskAI();
@@ -158,40 +159,86 @@ export function QuickAdd() {
 
   if (!open) return null;
 
-  async function submit() {
-    if (!text.trim()) return;
-    // Try the LLM parser first — it handles richer phrases ("the Friday before
-    // the offsite", "after dentist before kids pickup"). Fall back to the
-    // chrono-node `parsed` if AI is disabled or fails.
-    let p: any = parsed;
-    try {
-      const ai = await aiParse.mutateAsync(text.trim());
-      if (ai && ai.title) p = ai;
-    } catch {
-      // chrono fallback already in `parsed`
-    }
-    if (!p.title) return;
+  /**
+   * Quick-add submit — instant feel, AI refinement in the background.
+   *
+   * Flow:
+   *   1. Close the modal synchronously so the user is back to their list.
+   *   2. Insert via the optimistic useCreateTask path with the local parse;
+   *      the row paints in the same frame.
+   *   3. Run the Anthropic parser in the background and patch the new
+   *      task if it picks up structure the local parser missed.
+   */
+  function submit() {
+    const raw = text.trim();
+    if (!raw) return;
+    const localP = parsed;
+    if (!localP.title) localP.title = raw;
+    setOpen(false);
+    void instantCreateAndRefine(raw, localP);
+  }
+
+  async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
     let projectId: string | null = null;
     if (p.projectName) {
-      const found = projects.find((pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase());
+      const found = projects.find(
+        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
+      );
       if (found) projectId = found.id;
-      else {
-        const created = await createProject.mutateAsync({ name: p.projectName });
-        projectId = created.id;
-      }
     }
-    await createTask.mutateAsync({
-      title: p.title,
-      due_at: p.due_at,
-      is_all_day: p.is_all_day,
-      priority: p.priority,
-      tagNames: p.tagNames,
-      project_id: projectId,
-      rrule: p.rrule,
-      reminder_at: p.reminder_at,
-      ...(p.estimated_minutes != null ? { estimated_minutes: p.estimated_minutes } : {}),
-    } as any);
-    setOpen(false);
+
+    let createdTask: any;
+    try {
+      createdTask = await createTask.mutateAsync({
+        title: p.title,
+        due_at: p.due_at,
+        is_all_day: p.is_all_day,
+        priority: p.priority,
+        tagNames: p.tagNames,
+        project_id: projectId,
+        rrule: p.rrule,
+        reminder_at: p.reminder_at,
+      } as any);
+    } catch {
+      return;
+    }
+    if (!createdTask?.id) return;
+
+    const localGotEnough =
+      !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
+    if (localGotEnough) return;
+
+    try {
+      const ai = await aiParse.mutateAsync(raw);
+      if (!ai || !ai.title) return;
+
+      let aiProjectId = projectId;
+      if (ai.projectName && !aiProjectId) {
+        const found = projects.find(
+          (pr: any) => pr.name.toLowerCase() === ai.projectName!.toLowerCase()
+        );
+        aiProjectId = found
+          ? found.id
+          : (await createProject.mutateAsync({ name: ai.projectName })).id;
+      }
+
+      const patch: Record<string, any> = { id: createdTask.id };
+      if (ai.title && ai.title !== p.title) patch.title = ai.title;
+      if (ai.due_at && !p.due_at) {
+        patch.due_at = ai.due_at;
+        patch.is_all_day = ai.is_all_day;
+      }
+      if (ai.priority && ai.priority > p.priority) patch.priority = ai.priority;
+      if (ai.rrule && !p.rrule) patch.rrule = ai.rrule;
+      if (ai.reminder_at && !p.reminder_at) patch.reminder_at = ai.reminder_at;
+      if (aiProjectId && aiProjectId !== projectId) patch.project_id = aiProjectId;
+
+      if (Object.keys(patch).length > 1) {
+        updateTask.mutate(patch);
+      }
+    } catch {
+      // AI failure is silent — local-parsed task is already saved.
+    }
   }
 
   return (
