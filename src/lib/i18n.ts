@@ -114,7 +114,12 @@ type StringKey =
   | "sidebar.next90"
   | "sidebar.completed"
   | "view.next90.subtitle"
-  | "view.completed.subtitle";
+  | "view.completed.subtitle"
+  | "email.subject"
+  | "email.kicker"
+  | "email.dueLabel"
+  | "email.openCta"
+  | "email.footer";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -183,6 +188,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.completed": "Completed",
     "view.next90.subtitle": "Tasks due in the next 90 days.",
     "view.completed.subtitle": "Everything you have finished, most recent first.",
+    "email.subject": "Reminder · {title}",
+    "email.kicker": "FIRST LIGHT · REMINDER",
+    "email.dueLabel": "Due",
+    "email.openCta": "Open in First Light →",
+    "email.footer": "You're receiving this because you set a reminder. Manage email reminders in Settings.",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -250,6 +260,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.completed": "已完成",
     "view.next90.subtitle": "未來 90 天內到期的任務。",
     "view.completed.subtitle": "你已完成的事,最新優先。",
+    "email.subject": "提醒 · {title}",
+    "email.kicker": "FIRST LIGHT · 提醒",
+    "email.dueLabel": "到期",
+    "email.openCta": "在 First Light 開啟 →",
+    "email.footer": "你收到這封信是因為你設定了提醒。可在設定中管理 email 提醒。",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -317,6 +332,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.completed": "已完成",
     "view.next90.subtitle": "未来 90 天内到期的任务。",
     "view.completed.subtitle": "你已完成的事,最新优先。",
+    "email.subject": "提醒 · {title}",
+    "email.kicker": "FIRST LIGHT · 提醒",
+    "email.dueLabel": "到期",
+    "email.openCta": "在 First Light 打开 →",
+    "email.footer": "你收到这封信是因为你设置了提醒。可在设置中管理 email 提醒。",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -384,6 +404,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.completed": "完了",
     "view.next90.subtitle": "今後90日以内に期限のタスク。",
     "view.completed.subtitle": "完了した作業 — 新しい順。",
+    "email.subject": "リマインダー · {title}",
+    "email.kicker": "FIRST LIGHT · リマインダー",
+    "email.dueLabel": "期限",
+    "email.openCta": "First Light で開く →",
+    "email.footer": "リマインダーを設定したため送信されました。設定からメール通知を管理できます。",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -451,6 +476,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.completed": "완료",
     "view.next90.subtitle": "앞으로 90일 이내 마감 작업.",
     "view.completed.subtitle": "완료한 작업 — 최신순.",
+    "email.subject": "리마인더 · {title}",
+    "email.kicker": "FIRST LIGHT · 리마인더",
+    "email.dueLabel": "기한",
+    "email.openCta": "First Light에서 열기 →",
+    "email.footer": "리마인더를 설정해 발송된 메일입니다. 설정에서 이메일 알림을 관리할 수 있습니다.",
   },
 };
 
