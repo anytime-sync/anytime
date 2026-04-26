@@ -15,6 +15,7 @@ import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
+import { SidebarTagItem } from "./sidebar-tag-item";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
@@ -219,23 +220,13 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
                 <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.tags")}</span>
               </div>
               <div className="space-y-0.5">
-                {tags.map((tag) => {
-                  const href = `/app/tags/${encodeURIComponent(tag.name)}`;
-                  const active = pathname === href;
-                  return (
-                    <Link
-                      key={tag.id}
-                      href={href}
-                      className={cn(
-                        "flex items-center gap-2 h-9 px-2 rounded-md text-sm",
-                        active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg"
-                      )}
-                    >
-                      <Hash className="size-4 shrink-0" style={{ color: tag.color }} />
-                      <span className="truncate">{tag.name}</span>
-                    </Link>
-                  );
-                })}
+                {tags.map((tag) => (
+                  <SidebarTagItem
+                    key={tag.id}
+                    tag={tag}
+                    active={pathname === `/app/tags/${encodeURIComponent(tag.name)}`}
+                  />
+                ))}
                 {tags.length === 0 && (
                   <p className="text-xs text-muted-fg px-2">{t(lang, "sidebar.noTags")}</p>
                 )}

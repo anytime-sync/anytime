@@ -101,3 +101,43 @@ export function useRemoveTaskTag() {
     },
   });
 }
+
+/** Rename a tag globally. All task_tags rows follow automatically since
+ *  they reference tag_id (not name). The UNIQUE (user_id, name) constraint
+ *  surfaces a friendly error on collision. */
+export function useRenameTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; name: string }) => {
+      const supabase = createClient();
+      const name = input.name.trim().replace(/^#/, "");
+      if (!name) throw new Error("Tag name is empty");
+      const { error } = await supabase
+        .from("tags")
+        .update({ name })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tags"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+/** Delete a tag entirely. task_tags rows cascade automatically via the
+ *  ON DELETE CASCADE foreign key in the schema. */
+export function useDeleteTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient();
+      const { error } = await supabase.from("tags").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tags"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
