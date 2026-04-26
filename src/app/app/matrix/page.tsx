@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
-import { useSuggestQuadrant } from "@/hooks/use-ai";
+import { useSuggestQuadrant, usePlanWeek, type PlanWeekSuggestion } from "@/hooks/use-ai";
+import { toast } from "sonner";
 import { isPast, isToday, addDays, endOfDay } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
@@ -94,10 +95,16 @@ export default function MatrixPage() {
           <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Eisenhower</h1>
           <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency × importance.</p>
         </div>
-        <SuggestQuadrantsButton tasks={tasks} onApply={(id, q) => {
-          const target = targetForQuadrant(q);
-          update.mutate({ id, priority: target.priority, due_at: target.due_at });
-        }} />
+        <div className="flex items-center gap-2 shrink-0">
+          <PlanMyWeekButton tasks={tasks} onApply={(id, q, p) => {
+            const target = targetForQuadrant(q);
+            update.mutate({ id, priority: p, due_at: target.due_at });
+          }} />
+          <SuggestQuadrantsButton tasks={tasks} onApply={(id, q) => {
+            const target = targetForQuadrant(q);
+            update.mutate({ id, priority: target.priority, due_at: target.due_at });
+          }} />
+        </div>
       </div>
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex-1 overflow-y-auto p-3 md:p-6 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-3 md:gap-4">
@@ -276,6 +283,194 @@ function SuggestQuadrantsButton({
               <button className="btn-ghost h-8 px-3 text-xs" onClick={() => setResults(null)}>
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
+/* ---------- Plan-my-week: batch prioritizer ----------
+   Sends the next-7-days-or-undated open tasks to the AI in a single
+   call. The model sees the whole list at once and weights items
+   relatively, which is the part one-by-one classification can't do. */
+
+function PlanMyWeekButton({
+  tasks,
+  onApply,
+}: {
+  tasks: TaskWithTags[];
+  onApply: (id: string, q: QuadrantKey, suggestedPriority: 0 | 1 | 3 | 5) => void;
+}) {
+  const planMutation = usePlanWeek();
+  const [open, setOpen] = useState(false);
+  const [results, setResults] = useState<PlanWeekSuggestion[] | null>(null);
+  const [notes, setNotes] = useState<string>("");
+  const [running, setRunning] = useState(false);
+
+  function pickHorizonTasks(): TaskWithTags[] {
+    const horizonEnd = addDays(new Date(), 7);
+    return tasks
+      .filter((t) => !t.is_completed)
+      .filter((t) => {
+        if (!t.due_at) return true;
+        const d = new Date(t.due_at);
+        return d <= horizonEnd;
+      })
+      .slice(0, 30);
+  }
+
+  async function run() {
+    const horizon = pickHorizonTasks();
+    if (horizon.length === 0) {
+      toast.message("No open tasks to plan in the next 7 days.");
+      return;
+    }
+    setRunning(true);
+    setOpen(true);
+    setResults(null);
+    setNotes("");
+    try {
+      const r = await planMutation.mutateAsync(
+        horizon.map((t) => ({
+          id: t.id,
+          title: t.title,
+          due_at: t.due_at,
+          priority: t.priority,
+          project: null,
+        }))
+      );
+      if (!r) {
+        toast.error("AI is currently disabled.");
+        setOpen(false);
+        return;
+      }
+      setResults(r.suggestions);
+      setNotes(r.notes);
+    } catch (e: any) {
+      toast.error(e?.message?.includes("429")
+        ? "Daily plan-week budget reached. Try again tomorrow."
+        : "Couldn't plan your week — try again.");
+      setOpen(false);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  function applyAll() {
+    if (!results) return;
+    let n = 0;
+    for (const s of results) {
+      const k = (`q${s.quadrant}`) as QuadrantKey;
+      onApply(s.id, k, s.suggested_priority);
+      n++;
+    }
+    toast.success(`Applied ${n} suggestion${n !== 1 ? "s" : ""}.`);
+    setOpen(false);
+    setResults(null);
+  }
+
+  return (
+    <>
+      <button
+        onClick={run}
+        disabled={running}
+        className="btn-primary gap-2 h-9 px-3 text-xs disabled:opacity-50"
+        title="AI plans the next 7 days as a coherent whole"
+      >
+        <Sparkles className={cn("size-3.5", running && "animate-spin")} />
+        {running ? "Planning…" : "Plan my week"}
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-fade-in"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="card max-w-xl w-[92vw] p-5 max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="font-display text-xl">Your week</h2>
+              {results && (
+                <span className="text-xs text-muted-fg">
+                  {results.length} item{results.length !== 1 && "s"}
+                </span>
+              )}
+            </div>
+
+            {running && (
+              <p className="text-sm text-muted-fg">Reading the whole list…</p>
+            )}
+
+            {results && notes && (
+              <p className="text-sm text-fg italic mb-3 leading-relaxed">{notes}</p>
+            )}
+
+            {results && results.length > 0 && (
+              <ul className="space-y-2">
+                {results.map((s) => {
+                  const t = tasks.find((x) => x.id === s.id);
+                  if (!t) return null;
+                  return (
+                    <li
+                      key={s.id}
+                      className="border border-border rounded-md p-3 flex items-start gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{t.title}</div>
+                        <div className="text-xs text-muted-fg mt-0.5">
+                          <span className="text-fg">Q{s.quadrant}</span> · p{s.suggested_priority} · {s.reason}
+                        </div>
+                      </div>
+                      <button
+                        className="btn-ghost size-8 grid place-items-center text-success"
+                        title="Apply"
+                        onClick={() => {
+                          const k = (`q${s.quadrant}`) as QuadrantKey;
+                          onApply(s.id, k, s.suggested_priority);
+                          setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
+                        }}
+                      >
+                        <Check className="size-4" />
+                      </button>
+                      <button
+                        className="btn-ghost size-8 grid place-items-center text-muted-fg"
+                        title="Skip"
+                        onClick={() =>
+                          setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null))
+                        }
+                      >
+                        <XIcon className="size-4" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {results && results.length === 0 && !running && (
+              <p className="text-sm text-muted-fg">All clear — your week is already on track.</p>
+            )}
+
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <button
+                className="btn-ghost h-8 px-3 text-xs"
+                onClick={() => { setOpen(false); setResults(null); }}
+              >
+                Close
+              </button>
+              {results && results.length > 0 && (
+                <button
+                  className="btn-primary h-8 px-3 text-xs"
+                  onClick={applyAll}
+                >
+                  Apply all
+                </button>
+              )}
             </div>
           </div>
         </div>
