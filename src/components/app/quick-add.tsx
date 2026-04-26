@@ -21,6 +21,46 @@ const EXAMPLES = [
   "Call mom Sunday afternoon",
 ];
 
+
+/** For each attribute kind, regexes that recognise an existing phrase
+ *  of that type in the input. injectPhrase() strips matching ranges
+ *  before adding the new phrase, so clicking Today → Tomorrow swaps
+ *  the date instead of stacking 'today tomorrow'. Tags are intentionally
+ *  excluded — those are a multi-value list. */
+const STRIP_PATTERNS: Record<
+  "time" | "repeat" | "reminder" | "priority" | "inbox",
+  RegExp[]
+> = {
+  time: [
+    /\b(today|tonight|tomorrow)\b/gi,
+    /\b(next|this) +(week|month|year|mon(day)?|tue(s|sday)?|wed(nesday)?|thu(r|rs|rsday)?|fri(day)?|sat(urday)?|sun(day)?)\b/gi,
+    /\bin +\d+ +(day|days|week|weeks|month|months)\b/gi,
+    /\bon +\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2})?\b/gi,
+    /\bat +\d{1,2}:\d{2}\b/gi,
+    /\b\d{1,2}(?::\d{2})? *(am|pm|AM|PM)\b/g,
+  ],
+  repeat: [
+    /\bevery +(day|weekday|week|month|year|mon(day)?|tue(s|sday)?|wed(nesday)?|thu(r|rs|rsday)?|fri(day)?|sat(urday)?|sun(day)?)\b/gi,
+    /\b(daily|weekly|monthly|yearly|annually)\b/gi,
+  ],
+  reminder: [
+    /\bremind +me +\d+ *(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days) +before\b/gi,
+  ],
+  priority: [
+    /\b(urgent|asap|high +priority|important|medium +priority|low +priority|no +priority)\b/gi,
+  ],
+  inbox: [
+    /(^|\s)~[\p{L}\p{N}_-]+\b/gu,
+  ],
+};
+
+function stripExisting(text: string, kind: keyof typeof STRIP_PATTERNS): string {
+  let out = text;
+  for (const re of STRIP_PATTERNS[kind]) out = out.replace(re, " ");
+  // Collapse whitespace introduced by the stripping.
+  return out.replace(/ {2,}/g, " ").replace(/ +([,;.])/g, "$1").trim();
+}
+
 export function QuickAdd() {
   const open = useUIStore((s) => s.quickAddOpen);
   const setOpen = useUIStore((s) => s.setQuickAddOpen);
@@ -32,12 +72,36 @@ export function QuickAdd() {
     "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags" | null
   >(null);
 
-  /** Append a phrase to the current text. Uses the input's selection so
-   *  insertions land at the cursor when the user is mid-edit; otherwise
-   *  appends with a leading space. Re-focuses the input. */
-  function injectPhrase(phrase: string) {
-    const el = inputRef.current;
+  /** Inject (or replace) an attribute phrase into the input.
+   *
+   *  If `kind` is supplied, any existing phrase of that kind is removed
+   *  first — so picking Today then Tomorrow swaps the date instead of
+   *  stacking "today tomorrow". When kind is null/undefined the phrase
+   *  is just appended (used for raw '#' tag insertion).
+   *
+   *  Inserts at the cursor when the input is focused; otherwise appends
+   *  at the end. Always re-focuses afterward. */
+  function injectPhrase(
+    phrase: string,
+    kind?: keyof typeof STRIP_PATTERNS | null
+  ) {
     const sep = (cur: string) => (cur && !cur.endsWith(" ") ? " " : "");
+    if (kind) {
+      // Replace mode: strip prior attribute then append the new phrase.
+      const stripped = stripExisting(text, kind);
+      const next = stripped + sep(stripped) + phrase;
+      setText(next);
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        try { el.setSelectionRange(next.length, next.length); } catch {}
+      });
+      setActiveChip(null);
+      return;
+    }
+    // Append mode (tags, free-form '#'): use cursor if focused.
+    const el = inputRef.current;
     if (el && document.activeElement === el) {
       const start = el.selectionStart ?? text.length;
       const end = el.selectionEnd ?? text.length;
@@ -226,14 +290,19 @@ export function QuickAdd() {
               <ChipOptions
                 kind={activeChip}
                 projects={projects.map((pr: any) => pr.name)}
-                onPick={injectPhrase}
+                onPick={(phrase) =>
+                  injectPhrase(
+                    phrase,
+                    activeChip === "tags" ? null : (activeChip as keyof typeof STRIP_PATTERNS)
+                  )
+                }
                 onClose={() => setActiveChip(null)}
               />
             )}
           </div>
           <MiniEisenhower
             active={quadrant}
-            onPick={(phrase) => injectPhrase(phrase)}
+            onPick={(phrase) => injectPhrase(phrase, "priority")}
           />
         </div>
 
