@@ -72,7 +72,7 @@
         hsla(28, 70%, 80%, 0.40) 0%,
         hsla(28, 70%, 80%, 0.12) 35%,
         transparent 70%),
-      radial-gradient(circle 28% at 75% 30%,
+      radial-gradient(ellipse 28% 28% at 75% 30%,
         hsla(40, 90%, 88%, 0.30) 0%,
         transparent 70%);
     background-attachment: fixed;
