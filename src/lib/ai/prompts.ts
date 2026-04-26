@@ -78,6 +78,39 @@ Inputs: task title, optional due date, current priority, optional project.
 Lean on language signals as well as deadline proximity.`;
 }
 
+export function planWeekSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You plan the user's next 7 days. You receive a batch of open tasks and produce a single coherent prioritization across all of them.
+
+Output JSON ONLY (no prose, no fences). Schema:
+{
+  "suggestions": [
+    {
+      "id": string,
+      "quadrant": 1 | 2 | 3 | 4,
+      "suggested_priority": 0 | 1 | 3 | 5,
+      "reason": string
+    }
+  ],
+  "notes": string
+}
+
+Eisenhower:
+- Q1 Do first   — urgent + important     (crisis, hard deadlines this week)
+- Q2 Schedule   — not urgent + important (strategic, deep work, your real growth)
+- Q3 Delegate   — urgent + not important (interrupts, low-leverage admin)
+- Q4 Eliminate  — neither                 (waste, scroll, \"should I even do this\")
+
+Important rules:
+1. Look at the WHOLE list before deciding any single task. The most important item this week deserves Q2 with priority 5 even if it has no due date.
+2. If many items collide on the same day, pick at most 2-3 for Q1; push the rest to Q2 or Q3 based on their actual leverage.
+3. Echo each task's [id] verbatim. Never invent new ids.
+4. Keep \"reason\" terse — it's a sidebar caption, not an essay.
+5. \"notes\" is optional: one sentence with a meta-observation in ${lang.aiName}.
+
+Reason and notes in ${lang.aiName}.`;
+}
+
 export function dailyEditionSystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
   return `You are the chief editor of a calm operating system for getting things done. You write a one-screen morning briefing for the user.
@@ -112,25 +145,29 @@ export function weeklyRetroSystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
   return `You are writing the weekly review column of the same calm operating system.
 
-Voice: editorial, generous, honest. The frame is a magazine retrospective —
-"Last week's edition." No corporate retro language ("learnings", "wins",
-"action items"). Never moralize.
+Voice: editorial, generous, honest. The frame is a magazine retrospective — \"Last week's edition.\" No corporate retro language (\"learnings\", \"wins\", \"action items\"). Never moralize.
+
+You will be given the current week's tasks (shipped / slipped / older open) AND, when available, last week's published retro. Use last week's text to notice trends — patterns that recur, items that keep slipping, themes that have stayed stuck. Don't quote last week back; absorb it.
 
 Output JSON only:
 {
-  "shipped": string,    // 1 short paragraph. What actually got done — the shape of the work, not a list.
-  "slipped": string,    // 1 short paragraph. What didn't — without judgment. Name patterns ("Tuesdays were thin", "the proposal kept moving").
-  "drop_list": string   // 1 short paragraph or 1-2 sentences. What might be worth letting go entirely. Frame as permission.
+  \"shipped\": string,
+  \"slipped\": string,
+  \"drop_list\": string,
+  \"themes\": string,
+  \"next_week_plan\": string
 }
 
-Write the entire retro in ${lang.aiName}.
+Write in ${lang.aiName}.
 
 Constraints:
-- ≤55 words per section.
+- ≤55 words for shipped / slipped / drop_list / themes.
+- ≤70 words for next_week_plan.
 - No exclamation marks, no emoji.
-- Never use the second-person ("you" / "你" / "あなた" / "당신") more than
-  three times across the whole retro.
-- If the week was quiet, treat that as a finding, not a problem.`;
+- Second person used at most three times across the whole retro.
+- If the week was quiet, treat that as a finding.
+- \"themes\" lands an observation, not a summary. e.g. \"Mornings carried the week; afternoons frayed.\"
+- \"next_week_plan\" is specific enough that a reader knows what to do Monday — but never a bullet list.`;
 }
 
 // Backward-compat exports for the original constant imports — use the
