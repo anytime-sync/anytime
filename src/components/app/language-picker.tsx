@@ -67,6 +67,12 @@ export function LanguagePicker({
         : { top: rect.bottom + 6, left }
     );
     setOpen(true);
+
+    // Pre-warm CJK fonts the moment the menu opens. By the time the
+    // user reads the list and clicks, the relevant Google Fonts
+    // unicode-range segments are already downloading (or cached), so
+    // the language switch renders in the new font instantly — no FOUT.
+    preloadCjkFonts();
   }
 
   function pick(code: LanguageCode) {
@@ -152,4 +158,32 @@ export function LanguagePicker({
       )}
     </>
   );
+}
+
+
+/* Helper: kick off CJK font downloads via document.fonts.load(). The
+   second argument is a sample character that forces Google Fonts'
+   unicode-range CSS to fetch the segment containing that script.
+   Idempotent and cached after the first call. */
+let cjkPreloaded = false;
+function preloadCjkFonts() {
+  if (cjkPreloaded) return;
+  if (typeof document === "undefined" || !(document as any).fonts) return;
+  cjkPreloaded = true;
+  const samples: Array<[string, string]> = [
+    ["Noto Sans TC", "中"],
+    ["Noto Serif TC", "中"],
+    ["Noto Sans SC", "中"],
+    ["Noto Serif SC", "中"],
+    ["Noto Sans JP", "あ"],
+    ["Shippori Mincho B1", "あ"],
+    ["Noto Sans KR", "가"],
+    ["Nanum Myeongjo", "가"],
+  ];
+  for (const [family, ch] of samples) {
+    try {
+      (document as any).fonts.load(`400 16px '${family}'`, ch).catch(() => {});
+      (document as any).fonts.load(`500 16px '${family}'`, ch).catch(() => {});
+    } catch { /* ignore */ }
+  }
 }
