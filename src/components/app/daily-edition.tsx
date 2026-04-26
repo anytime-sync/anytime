@@ -92,16 +92,17 @@ export function DailyEdition() {
         </div>
       </header>
 
-      <h1 className="font-display text-xl md:text-3xl leading-tight tracking-tight mb-3">
+      <h1 className="font-display text-lg md:text-3xl leading-tight tracking-tight mb-2 md:mb-3">
         {data.headline}
       </h1>
 
-      <p className="text-[14px] md:text-[15px] leading-relaxed text-fg/90 mb-3">
-        {data.front_page}
-      </p>
-
+      {/* Mobile: only the headline shows by default. Read more reveals
+          front_page + inside + below_fold. Desktop: everything visible. */}
       {expanded ? (
         <>
+          <p className="text-[14px] md:text-[15px] leading-relaxed text-fg/90 mb-3">
+            {data.front_page}
+          </p>
           <p className="text-[13px] md:text-[14px] leading-relaxed text-fg/80 mb-3">
             {data.inside}
           </p>

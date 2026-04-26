@@ -89,10 +89,10 @@ export default function MatrixPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 pt-6 pb-3 border-b border-border flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">Eisenhower matrix</h1>
-          <p className="text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 border-b border-border flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl md:text-2xl tracking-tight">Eisenhower</h1>
+          <p className="hidden md:block text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
         </div>
         <SuggestQuadrantsButton tasks={tasks} onApply={(id, q) => {
           const target = targetForQuadrant(q);
@@ -100,7 +100,7 @@ export default function MatrixPage() {
         }} />
       </div>
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 grid-rows-2 gap-4">
+        <div className="flex-1 overflow-y-auto p-3 md:p-6 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-3 md:gap-4">
           {(Object.keys(QUADRANTS) as QuadrantKey[]).map((k) => (
             <Quadrant key={k} qkey={k} tasks={buckets[k]} activeId={activeId} />
           ))}
@@ -131,10 +131,10 @@ function Quadrant({ qkey, tasks, activeId }: { qkey: QuadrantKey; tasks: TaskWit
       }}
       className={cn("card flex flex-col min-h-0 transition-all", isOver && "ring-2 shadow-md")}
     >
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div>
-          <h3 className="font-display text-lg leading-tight" style={{ color: meta.fg }}>{meta.label}</h3>
-          <p className="text-[11px] text-muted-fg uppercase tracking-[0.18em]">{meta.subtitle}</p>
+      <div className="px-3 md:px-4 py-2 md:py-3 border-b border-border flex items-center justify-between gap-2 min-w-0">
+        <div className="min-w-0">
+          <h3 className="font-display text-base md:text-lg leading-tight truncate" style={{ color: meta.fg }}>{meta.label}</h3>
+          <p className="text-[10px] md:text-[11px] text-muted-fg uppercase tracking-[0.16em] md:tracking-[0.18em] truncate">{meta.subtitle}</p>
         </div>
         <span
           className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-medium"

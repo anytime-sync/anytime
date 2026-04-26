@@ -29,10 +29,10 @@ export function TaskListView({ title, subtitle, filter, defaults, showDailyEditi
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 pt-6 pb-3 border-b border-border">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 border-b border-border">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-2xl tracking-tight truncate">{title}</h1>
+            <h1 className="font-display text-xl md:text-2xl tracking-tight truncate">{title}</h1>
             {subtitle && <p className="text-xs text-muted-fg mt-0.5">{subtitle}</p>}
           </div>
           <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
@@ -42,7 +42,7 @@ export function TaskListView({ title, subtitle, filter, defaults, showDailyEditi
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
         {showDailyEdition && (
           <div className="px-3">
             <DailyEdition />
