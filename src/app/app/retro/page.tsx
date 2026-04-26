@@ -81,7 +81,20 @@ export default function RetroPage() {
               )}
               <Section kicker="Shipped" body={data.shipped} />
               <Section kicker="Slipped" body={data.slipped} />
+              {/* Themes + next-week plan are the smarter-retro additions.
+                  Both live in raw_json so older cached weeks won't have
+                  them, and that's fine — Section no-ops on empty body. */}
+              {(data.raw_json as any)?.themes && (
+                <Section kicker="Themes" body={(data.raw_json as any).themes} />
+              )}
               <Section kicker="Worth dropping" body={data.drop_list} variant="muted" />
+              {(data.raw_json as any)?.next_week_plan && (
+                <Section
+                  kicker="For next week"
+                  body={(data.raw_json as any).next_week_plan}
+                  variant="accent"
+                />
+              )}
             </article>
           )}
         </div>
@@ -97,15 +110,30 @@ function Section({
 }: {
   kicker: string;
   body: string;
-  variant?: "default" | "muted";
+  variant?: "default" | "muted" | "accent";
 }) {
+  if (!body) return null;
   return (
-    <section>
-      <p className="editorial-number text-[11px] mb-2">{kicker}</p>
+    <section
+      className={cn(
+        variant === "accent" &&
+          "border-l-2 border-accent/60 pl-4 -ml-4 md:ml-0 md:pl-5"
+      )}
+    >
+      <p
+        className={cn(
+          "editorial-number text-[11px] mb-2",
+          variant === "accent" && "text-accent"
+        )}
+      >
+        {kicker}
+      </p>
       <p
         className={cn(
           "leading-relaxed",
-          variant === "muted" ? "text-sm text-muted-fg italic" : "text-[15px]"
+          variant === "muted" && "text-sm text-muted-fg italic",
+          variant === "default" && "text-[15px]",
+          variant === "accent" && "text-[15px]"
         )}
       >
         {body}
