@@ -1,6 +1,7 @@
 // Minimal app-shell service worker. Use a tool like next-pwa or workbox for fancier strategies.
-const CACHE = "ticktick-shell-v1";
-const ASSETS = ["/", "/login", "/signup", "/manifest.webmanifest"];
+// Bump CACHE version on visual/theme changes to force-flush stale clients.
+const CACHE = "firstlight-shell-v3";
+const ASSETS = ["/", "/login", "/signup", "/manifest.webmanifest", "/light-bg.jpg"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
@@ -25,8 +26,4 @@ self.addEventListener("fetch", (event) => {
       fetch(req).catch(() => caches.match(req).then((r) => r ?? caches.match("/")))
     );
   } else if (req.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(req).then((cached) => cached ?? fetch(req))
-    );
-  }
-});
+    ev
