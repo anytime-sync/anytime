@@ -67,7 +67,10 @@ type StringKey =
   | "auth.signup.haveAccount"
   | "auth.signup.login"
   | "auth.signup.created"
-  | "auth.shared.language";
+  | "auth.shared.language"
+  | "auth.shared.close"
+  | "auth.shared.signupTab"
+  | "auth.shared.loginTab";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -89,6 +92,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.signup.login": "Log in",
     "auth.signup.created": "Account created. Check your inbox to verify.",
     "auth.shared.language": "Language",
+    "auth.shared.close": "Close",
+    "auth.shared.signupTab": "Sign up",
+    "auth.shared.loginTab": "Log in",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -109,6 +115,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.signup.login": "登入",
     "auth.signup.created": "帳號已建立,請查收驗證郵件。",
     "auth.shared.language": "語言",
+    "auth.shared.close": "關閉",
+    "auth.shared.signupTab": "註冊",
+    "auth.shared.loginTab": "登入",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -129,6 +138,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.signup.login": "登录",
     "auth.signup.created": "账号已创建,请查收验证邮件。",
     "auth.shared.language": "语言",
+    "auth.shared.close": "关闭",
+    "auth.shared.signupTab": "注册",
+    "auth.shared.loginTab": "登录",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -149,6 +161,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.signup.login": "ログイン",
     "auth.signup.created": "アカウントを作成しました。受信箱をご確認ください。",
     "auth.shared.language": "言語",
+    "auth.shared.close": "閉じる",
+    "auth.shared.signupTab": "登録",
+    "auth.shared.loginTab": "ログイン",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -169,6 +184,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.signup.login": "로그인",
     "auth.signup.created": "계정이 생성되었습니다. 받은 편지함을 확인하세요.",
     "auth.shared.language": "언어",
+    "auth.shared.close": "닫기",
+    "auth.shared.signupTab": "가입",
+    "auth.shared.loginTab": "로그인",
   },
 };
 

@@ -1,55 +1,49 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { LanguagePicker } from "@/components/app/language-picker";
+import { AuthCard } from "@/components/auth/auth-card";
 
 const PRINCIPLES = [
-  {
-    kicker: "01",
-    title: "Clarity",
-    body: "Clear thinking, clear direction.",
-    Glyph: SmallSun,
-  },
-  {
-    kicker: "02",
-    title: "Focus",
-    body: "One thing at a time.",
-    Glyph: BeamLight,
-  },
-  {
-    kicker: "03",
-    title: "Progress",
-    body: "Small steps create big change.",
-    Glyph: SunHorizon,
-  },
-  {
-    kicker: "04",
-    title: "Calm",
-    body: "Peaceful mind, productive life.",
-    Glyph: SoftOrb,
-  },
-  {
-    kicker: "05",
-    title: "Light",
-    body: "Inspiration to move forward.",
-    Glyph: RadialSun,
-  },
+  { kicker: "01", title: "Clarity",  body: "Clear thinking, clear direction.", Glyph: SmallSun },
+  { kicker: "02", title: "Focus",    body: "One thing at a time.",             Glyph: BeamLight },
+  { kicker: "03", title: "Progress", body: "Small steps create big change.",   Glyph: SunHorizon },
+  { kicker: "04", title: "Calm",     body: "Peaceful mind, productive life.",  Glyph: SoftOrb },
+  { kicker: "05", title: "Light",    body: "Inspiration to move forward.",     Glyph: RadialSun },
 ];
 
 export default function Home() {
+  // null = no overlay; "signup" or "login" = open the inline auth card.
+  const [authMode, setAuthMode] = useState<"signup" | "login" | null>(null);
+
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Wordmark */}
       <header className="px-6 pt-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="wordmark text-base">
             First Light
           </Link>
-          <nav className="flex items-center gap-6 text-sm text-muted-fg">
-            <Link href="/login" className="hover:text-fg">Log in</Link>
-            <Link href="/signup" className="btn-primary px-4 h-9">Get started</Link>
+          <nav className="flex items-center gap-3 text-sm text-muted-fg">
+            <LanguagePicker mode="local" />
+            <button
+              type="button"
+              onClick={() => setAuthMode("login")}
+              className="hover:text-fg px-2 h-9"
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode("signup")}
+              className="btn-primary px-4 h-9"
+            >
+              Get started
+            </button>
           </nav>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="flex-1 grid place-items-center px-6 py-20">
         <div className="max-w-3xl text-center space-y-6">
           <p className="editorial-number text-xs">
@@ -66,12 +60,20 @@ export default function Home() {
             not on fire.
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
-            <Link href="/signup" className="btn-primary px-5 h-11">
+            <button
+              type="button"
+              onClick={() => setAuthMode("signup")}
+              className="btn-primary px-5 h-11"
+            >
               Get started — free
-            </Link>
-            <Link href="/login" className="btn-outline px-5 h-11">
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode("login")}
+              className="btn-outline px-5 h-11"
+            >
               Log in
-            </Link>
+            </button>
           </div>
           <p className="text-xs text-muted-fg pt-2">
             No credit card. No tracking. Real-time sync.
@@ -83,7 +85,6 @@ export default function Home() {
         <div className="h-px bg-border" />
       </div>
 
-      {/* Brand principles */}
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -108,21 +109,21 @@ export default function Home() {
       <footer className="px-6 py-8 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
           <span>© First Light · Built with Next.js, Supabase &amp; Tailwind.</span>
-          <a
-            href="https://github.com/anytime-sync/anytime"
-            className="hover:text-fg"
-          >
+          <a href="https://github.com/anytime-sync/anytime" className="hover:text-fg">
             Source on GitHub →
           </a>
         </div>
       </footer>
+
+      {authMode && (
+        <AuthCard initialMode={authMode} onClose={() => setAuthMode(null)} />
+      )}
     </main>
   );
 }
 
-/* ---------- Five sun glyphs (warm gold, currentColor-driven) ---------- */
+/* ---------- Five sun glyphs ---------- */
 
-/** 01 Clarity — small delicate sun, fewer rays, sharp edges. */
 function SmallSun({ className }: { className?: string }) {
   const rays = Array.from({ length: 12 }, (_, i) => i * 30);
   return (
@@ -137,7 +138,6 @@ function SmallSun({ className }: { className?: string }) {
   );
 }
 
-/** 02 Focus — concentrated vertical beam through a circle. */
 function BeamLight({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none"
@@ -156,14 +156,11 @@ function BeamLight({ className }: { className?: string }) {
   );
 }
 
-/** 03 Progress — half sun rising over horizon lines. */
 function SunHorizon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none"
       stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden>
-      {/* half sun */}
       <path d="M 18 36 a 14 14 0 0 1 28 0" />
-      {/* horizon lines, longest top, tapering down */}
       <line x1="10" y1="42" x2="54" y2="42" />
       <line x1="14" y1="48" x2="50" y2="48" />
       <line x1="18" y1="54" x2="46" y2="54" />
@@ -171,7 +168,6 @@ function SunHorizon({ className }: { className?: string }) {
   );
 }
 
-/** 04 Calm — soft glowing orb, no rays, gradient. */
 function SoftOrb({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
@@ -188,7 +184,6 @@ function SoftOrb({ className }: { className?: string }) {
   );
 }
 
-/** 05 Light — full radial sun, many long rays. */
 function RadialSun({ className }: { className?: string }) {
   const rays = Array.from({ length: 16 }, (_, i) => i * 22.5);
   return (
