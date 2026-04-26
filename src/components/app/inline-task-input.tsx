@@ -113,7 +113,7 @@ export function InlineTaskInput({
           : (await createProject.mutateAsync({ name: ai.projectName })).id;
       }
 
-      const patch: Record<string, any> = { id: createdTask.id };
+      const patch: { id: string } & Record<string, any> = { id: createdTask.id };
       if (ai.title && ai.title !== p.title) patch.title = ai.title;
       if (ai.due_at && !p.due_at) {
         patch.due_at = ai.due_at;
