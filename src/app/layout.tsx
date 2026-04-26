@@ -6,6 +6,8 @@ import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
 import { PhotoBackground } from "@/components/photo-background";
 import { LanguageBootstrap } from "@/components/app/language-bootstrap";
+import { RouteTracker } from "@/components/app/route-tracker";
+import { Suspense } from "react";
 
 // Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
@@ -88,11 +90,35 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href={CJK_FONTS_HREF} rel="stylesheet" />
+        {/* Plausible — privacy-respecting analytics. Loaded only when
+            NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set (Vercel env var). The script
+            is < 1kb, sets no cookies, sends no personal data. The "manual"
+            extension lets us track custom events via window.plausible(). */}
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
+          <>
+            <script
+              defer
+              data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
+              src="https://plausible.io/js/script.manual.js"
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "window.plausible = window.plausible || function(){(window.plausible.q = window.plausible.q || []).push(arguments)}",
+              }}
+            />
+          </>
+        )}
       </head>
       <body>
         <LanguageBootstrap />
         <Providers>
           <PhotoBackground />
+          {/* useSearchParams suspends in App Router; wrap so the rest of
+              the tree streams in regardless. */}
+          <Suspense fallback={null}>
+            <RouteTracker />
+          </Suspense>
           {children}
         </Providers>
         <Toaster position="bottom-right" richColors closeButton />
