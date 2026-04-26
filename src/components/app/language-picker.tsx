@@ -119,7 +119,7 @@ export function LanguagePicker({
       {mounted && open && pos && createPortal(
         <div
           data-lang-menu
-          className="fixed z-[90] min-w-[200px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
+          className="fixed z-[200] min-w-[200px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
           style={{ ...(pos as any) }}
         >
           <div className="editorial-number text-[9px] px-2 py-1.5">
