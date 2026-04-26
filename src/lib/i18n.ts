@@ -15,6 +15,7 @@
  *   - AI-generated content (Daily Edition, Weekly Retro, parsed task titles)
  *   - Date formatting (date-fns locale)
  */
+import { useEffect, useState } from "react";
 import { enUS, zhTW, zhCN, ja, ko, type Locale } from "date-fns/locale";
 
 export type LanguageCode = "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
@@ -93,7 +94,24 @@ type StringKey =
   | "landing.principle5Title"
   | "landing.principle5Body"
   | "landing.footerCredit"
-  | "landing.footerSource";
+  | "landing.footerSource"
+  | "sidebar.addTask"
+  | "sidebar.search"
+  | "sidebar.today"
+  | "sidebar.tomorrow"
+  | "sidebar.next7"
+  | "sidebar.inbox"
+  | "sidebar.calendar"
+  | "sidebar.eisenhower"
+  | "sidebar.pomodoro"
+  | "sidebar.habits"
+  | "sidebar.weeklyReview"
+  | "sidebar.lists"
+  | "sidebar.tags"
+  | "sidebar.noLists"
+  | "sidebar.noTags"
+  | "sidebar.newList"
+  | "sidebar.logout";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -141,6 +159,23 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "Inspiration to move forward.",
     "landing.footerCredit": "© First Light · Built with Next.js, Supabase & Tailwind.",
     "landing.footerSource": "Source on GitHub →",
+    "sidebar.addTask": "Add task",
+    "sidebar.search": "Search…",
+    "sidebar.today": "Today",
+    "sidebar.tomorrow": "Tomorrow",
+    "sidebar.next7": "Next 7 Days",
+    "sidebar.inbox": "Inbox",
+    "sidebar.calendar": "Calendar",
+    "sidebar.eisenhower": "Eisenhower",
+    "sidebar.pomodoro": "Pomodoro",
+    "sidebar.habits": "Habits",
+    "sidebar.weeklyReview": "Weekly review",
+    "sidebar.lists": "Lists",
+    "sidebar.tags": "Tags",
+    "sidebar.noLists": "No lists yet.",
+    "sidebar.noTags": "No tags yet — type #tagname in a task title.",
+    "sidebar.newList": "New list",
+    "sidebar.logout": "Log out",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -187,6 +222,23 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "前行的靈感與動力。",
     "landing.footerCredit": "© First Light · 由 Next.js、Supabase 與 Tailwind 打造",
     "landing.footerSource": "GitHub 原始碼 →",
+    "sidebar.addTask": "新增任務",
+    "sidebar.search": "搜尋…",
+    "sidebar.today": "今天",
+    "sidebar.tomorrow": "明天",
+    "sidebar.next7": "未來七日",
+    "sidebar.inbox": "收件匣",
+    "sidebar.calendar": "行事曆",
+    "sidebar.eisenhower": "艾森豪矩陣",
+    "sidebar.pomodoro": "番茄鐘",
+    "sidebar.habits": "習慣",
+    "sidebar.weeklyReview": "每週回顧",
+    "sidebar.lists": "清單",
+    "sidebar.tags": "標籤",
+    "sidebar.noLists": "尚未建立清單。",
+    "sidebar.noTags": "尚未有標籤 — 在任務標題中輸入 #tagname。",
+    "sidebar.newList": "新清單",
+    "sidebar.logout": "登出",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -233,6 +285,23 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "前行的灵感与动力。",
     "landing.footerCredit": "© First Light · 由 Next.js、Supabase 与 Tailwind 打造",
     "landing.footerSource": "GitHub 源码 →",
+    "sidebar.addTask": "新增任务",
+    "sidebar.search": "搜索…",
+    "sidebar.today": "今天",
+    "sidebar.tomorrow": "明天",
+    "sidebar.next7": "未来七日",
+    "sidebar.inbox": "收件箱",
+    "sidebar.calendar": "日历",
+    "sidebar.eisenhower": "艾森豪威尔矩阵",
+    "sidebar.pomodoro": "番茄钟",
+    "sidebar.habits": "习惯",
+    "sidebar.weeklyReview": "每周回顾",
+    "sidebar.lists": "清单",
+    "sidebar.tags": "标签",
+    "sidebar.noLists": "还没有清单。",
+    "sidebar.noTags": "还没有标签 — 在任务标题中输入 #tagname。",
+    "sidebar.newList": "新清单",
+    "sidebar.logout": "退出",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -279,6 +348,23 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "前へと導く、ささやかなひらめき。",
     "landing.footerCredit": "© First Light · Next.js、Supabase、Tailwindで構築",
     "landing.footerSource": "GitHub のソース →",
+    "sidebar.addTask": "タスクを追加",
+    "sidebar.search": "検索…",
+    "sidebar.today": "今日",
+    "sidebar.tomorrow": "明日",
+    "sidebar.next7": "次の7日間",
+    "sidebar.inbox": "受信箱",
+    "sidebar.calendar": "カレンダー",
+    "sidebar.eisenhower": "アイゼンハワー",
+    "sidebar.pomodoro": "ポモドーロ",
+    "sidebar.habits": "習慣",
+    "sidebar.weeklyReview": "週次レビュー",
+    "sidebar.lists": "リスト",
+    "sidebar.tags": "タグ",
+    "sidebar.noLists": "まだリストがありません。",
+    "sidebar.noTags": "まだタグがありません — タスク名に #tagname と入力。",
+    "sidebar.newList": "新しいリスト",
+    "sidebar.logout": "ログアウト",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -325,6 +411,23 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "앞으로 나아가게 하는 영감.",
     "landing.footerCredit": "© First Light · Next.js, Supabase, Tailwind로 제작",
     "landing.footerSource": "GitHub 소스 →",
+    "sidebar.addTask": "작업 추가",
+    "sidebar.search": "검색…",
+    "sidebar.today": "오늘",
+    "sidebar.tomorrow": "내일",
+    "sidebar.next7": "향후 7일",
+    "sidebar.inbox": "받은편지함",
+    "sidebar.calendar": "캘린더",
+    "sidebar.eisenhower": "아이젠하워",
+    "sidebar.pomodoro": "뽀모도로",
+    "sidebar.habits": "습관",
+    "sidebar.weeklyReview": "주간 리뷰",
+    "sidebar.lists": "목록",
+    "sidebar.tags": "태그",
+    "sidebar.noLists": "아직 목록이 없습니다.",
+    "sidebar.noTags": "아직 태그가 없습니다 — 작업 제목에 #tagname 입력.",
+    "sidebar.newList": "새 목록",
+    "sidebar.logout": "로그아웃",
   },
 };
 
@@ -361,5 +464,32 @@ export function writeStoredLanguage(code: LanguageCode) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LS_KEY, code);
+    // localStorage 'storage' events don't fire in the same tab, so we
+    // broadcast a custom event for in-tab subscribers (useLanguage).
+    window.dispatchEvent(new CustomEvent("fl.language.change", { detail: code }));
   } catch {}
+}
+
+
+/* ----------------------------------------------------------------- */
+/* useLanguage — React hook returning the current language. Listens  */
+/* to both 'storage' (cross-tab) and 'fl.language.change' (same-tab).*/
+/* Components rely on this for live re-render when the user picks a  */
+/* new language.                                                     */
+/* ----------------------------------------------------------------- */
+
+export function useLanguage(): LanguageCode {
+  const [lang, setLang] = useState<LanguageCode>(DEFAULT_LANGUAGE);
+  useEffect(() => {
+    setLang(readStoredLanguage());
+    function onChange() { setLang(readStoredLanguage()); }
+    function onStorage(e: StorageEvent) { if (e.key === LS_KEY) onChange(); }
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("fl.language.change", onChange as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("fl.language.change", onChange as EventListener);
+    };
+  }, []);
+  return lang;
 }

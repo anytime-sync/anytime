@@ -16,18 +16,22 @@ import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
 import { useState } from "react";
+import { useLanguage, t } from "@/lib/i18n";
 
-const TOP_LINKS = [
-  { href: "/app/today", label: "Today", icon: Sun },
-  { href: "/app/tomorrow", label: "Tomorrow", icon: Sunrise },
-  { href: "/app/next7", label: "Next 7 Days", icon: CalendarRange },
-  { href: "/app/inbox", label: "Inbox", icon: Inbox },
-  { href: "/app/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/app/matrix", label: "Eisenhower", icon: LayoutGrid },
-  { href: "/app/pomodoro", label: "Pomodoro", icon: Clock },
-  { href: "/app/habits", label: "Habits", icon: Sparkles },
-  { href: "/app/retro", label: "Weekly review", icon: Newspaper },
-];
+type Lang = ReturnType<typeof useLanguage>;
+function topLinks(lang: Lang) {
+  return [
+    { href: "/app/today",    label: t(lang, "sidebar.today"),         icon: Sun },
+    { href: "/app/tomorrow", label: t(lang, "sidebar.tomorrow"),      icon: Sunrise },
+    { href: "/app/next7",    label: t(lang, "sidebar.next7"),         icon: CalendarRange },
+    { href: "/app/inbox",    label: t(lang, "sidebar.inbox"),         icon: Inbox },
+    { href: "/app/calendar", label: t(lang, "sidebar.calendar"),      icon: CalendarDays },
+    { href: "/app/matrix",   label: t(lang, "sidebar.eisenhower"),    icon: LayoutGrid },
+    { href: "/app/pomodoro", label: t(lang, "sidebar.pomodoro"),      icon: Clock },
+    { href: "/app/habits",   label: t(lang, "sidebar.habits"),        icon: Sparkles },
+    { href: "/app/retro",    label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
+  ];
+}
 
 export function Sidebar({ user }: { user: { email: string; name: string | null } }) {
   const pathname = usePathname();
@@ -39,6 +43,8 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const { data: tags = [] } = useTags();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [showCreate, setShowCreate] = useState(false);
+  const lang = useLanguage();
+  const TOP_LINKS = topLinks(lang);
 
   return (
     <aside className="h-screen border-r border-border surface flex flex-col">
@@ -63,14 +69,14 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           onClick={() => setQuickAdd(true)}
         >
           <Plus className="size-4" />
-          {!collapsed && <span>Add task</span>}
+          {!collapsed && <span>{t(lang, "sidebar.addTask")}</span>}
         </button>
         <button
           className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
           onClick={() => setCmdOpen(true)}
         >
           <Search className="size-4" />
-          {!collapsed && <span>Search…</span>}
+          {!collapsed && <span>{t(lang, "sidebar.search")}</span>}
           {!collapsed && <span className="ml-auto text-xs text-muted-fg">⌘K</span>}
         </button>
       </div>
@@ -101,11 +107,11 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           <>
             <div>
               <div className="flex items-center justify-between px-2 mb-1">
-                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">Lists</span>
+                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.lists")}</span>
                 <button
                   className="text-muted-fg hover:text-fg"
                   onClick={() => setShowCreate(true)}
-                  aria-label="New list"
+                  aria-label={t(lang, "sidebar.newList")}
                 >
                   <Plus className="size-4" />
                 </button>
@@ -119,37 +125,35 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
                   />
                 ))}
                 {projects.length === 0 && (
-                  <p className="text-xs text-muted-fg px-2">No lists yet.</p>
+                  <p className="text-xs text-muted-fg px-2">{t(lang, "sidebar.noLists")}</p>
                 )}
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between px-2 mb-1">
-                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">Tags</span>
+                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.tags")}</span>
               </div>
               <div className="space-y-0.5">
-                {tags.map((t) => {
-                  const href = `/app/tags/${encodeURIComponent(t.name)}`;
+                {tags.map((tag) => {
+                  const href = `/app/tags/${encodeURIComponent(tag.name)}`;
                   const active = pathname === href;
                   return (
                     <Link
-                      key={t.id}
+                      key={tag.id}
                       href={href}
                       className={cn(
                         "flex items-center gap-2 h-9 px-2 rounded-md text-sm",
                         active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg"
                       )}
                     >
-                      <Hash className="size-4 shrink-0" style={{ color: t.color }} />
-                      <span className="truncate">{t.name}</span>
+                      <Hash className="size-4 shrink-0" style={{ color: tag.color }} />
+                      <span className="truncate">{tag.name}</span>
                     </Link>
                   );
                 })}
                 {tags.length === 0 && (
-                  <p className="text-xs text-muted-fg px-2">
-                    No tags yet — type <code className="text-fg">#tagname</code> in a task title.
-                  </p>
+                  <p className="text-xs text-muted-fg px-2">{t(lang, "sidebar.noTags")}</p>
                 )}
               </div>
             </div>
@@ -175,7 +179,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
               <div className="text-muted-fg truncate">{user.email}</div>
             </div>
             <form action="/auth/signout" method="post">
-              <button className="btn-ghost size-9 p-0 grid place-items-center" title="Log out">
+              <button className="btn-ghost size-9 p-0 grid place-items-center" title={t(lang, "sidebar.logout")}>
                 <LogOut className="size-4" />
               </button>
             </form>
