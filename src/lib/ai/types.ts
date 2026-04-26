@@ -28,10 +28,18 @@ export const DailyEditionSchema = z.object({
 });
 export type DailyEdition = z.infer<typeof DailyEditionSchema>;
 
+/**
+ * Weekly retro. shipped/slipped/drop_list are the original columns;
+ * themes + next_week_plan are the smarter-retro upgrade. Both are optional
+ * on read so older cached rows still validate — the prompt asks for them
+ * on every new generation.
+ */
 export const WeeklyRetroSchema = z.object({
   shipped: z.string(),
   slipped: z.string(),
   drop_list: z.string(),
+  themes: z.string().optional(),
+  next_week_plan: z.string().optional(),
 });
 export type WeeklyRetro = z.infer<typeof WeeklyRetroSchema>;
 
