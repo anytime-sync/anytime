@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
+import { LightRays } from "@/components/light-rays";
 
 // Inter — Söhne stand-in for UI / body / labels.
 const inter = Inter({
@@ -58,6 +59,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
+        <LightRays />
         <Providers>{children}</Providers>
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />

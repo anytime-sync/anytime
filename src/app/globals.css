@@ -75,28 +75,10 @@
         hsla(28, 70%, 80%, 0.40) 0%,
         hsla(28, 70%, 80%, 0.12) 35%,
         transparent 70%),
-      /* 3. RAY FAN — light shattering from the upper-right corner.
-         An asymmetric set of narrow warm slices emanating outward, each
-         a different weight, so it reads as an organic burst rather than
-         a stencilled pattern. Opacities stay ≤ 0.16 so the rays
-         enhance ambience without competing with content. */
-      conic-gradient(from 198deg at 96% -3%,
-        transparent           0deg,
-        hsla(38, 95%, 84%, 0.16)   6deg,
-        transparent          12deg,
-        transparent          24deg,
-        hsla(38, 95%, 84%, 0.10)  31deg,
-        transparent          38deg,
-        transparent          54deg,
-        hsla(38, 95%, 84%, 0.13)  60deg,
-        transparent          67deg,
-        transparent          82deg,
-        hsla(40, 95%, 86%, 0.07)  87deg,
-        transparent          92deg,
-        transparent         360deg),
-      /* 4. Small bright pivot at upper-mid right — anchors the rays. */
+      /* The hard-edged rays now live in <LightRays /> as SVG, so
+         the body just carries the warm ambient wash underneath them. */
       radial-gradient(ellipse 28% 28% at 88% 18%,
-        hsla(40, 95%, 88%, 0.30) 0%,
+        hsla(40, 95%, 88%, 0.20) 0%,
         transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
