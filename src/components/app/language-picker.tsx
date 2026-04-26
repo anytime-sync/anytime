@@ -75,6 +75,7 @@ export function LanguagePicker({
     if (mode === "local") {
       writeStoredLanguage(code);
       setLocalLang(code);
+      if (typeof document !== "undefined") document.documentElement.lang = code;
       onChange?.(code);
       toast.success(t(code, "auth.shared.language") + " — " + getLanguage(code).displayName);
       return;
@@ -82,6 +83,7 @@ export function LanguagePicker({
     try {
       await update.mutateAsync({ language: code });
       writeStoredLanguage(code);
+      if (typeof document !== "undefined") document.documentElement.lang = code;
       qc.invalidateQueries({ queryKey: ["dailyEdition"] });
       qc.invalidateQueries({ queryKey: ["weeklyRetro"] });
       onChange?.(code);

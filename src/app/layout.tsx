@@ -5,16 +5,16 @@ import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
 import { PhotoBackground } from "@/components/photo-background";
+import { LanguageBootstrap } from "@/components/app/language-bootstrap";
 
-// Inter — Söhne stand-in for UI / body / labels.
+// Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
 });
 
-// Cormorant Garamond — editorial serif for hero headlines and the
-// Daily Edition. Italic carries the brand's quiet, intentional feel.
+// Cormorant Garamond — editorial serif for English hero headlines.
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -23,8 +23,7 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-// Outfit — geometric humanist sans, clean uppercase shapes for the
-// brand wordmark (FIRST LIGHT lockup).
+// Outfit — wordmark "FIRST LIGHT" lockup. English-only brand mark.
 const outfit = Outfit({
   subsets: ["latin"],
   weight: ["400", "500"],
@@ -56,6 +55,24 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Google Fonts URL bundling the CJK families used per language.
+// All loaded eagerly but the browser only fetches the unicode-range
+// segments that contain characters actually present on the page —
+// English visitors don't pay for CJK bytes.
+const CJK_FONTS_HREF =
+  "https://fonts.googleapis.com/css2?" +
+  [
+    "family=Noto+Sans+TC:wght@400;500",
+    "family=Noto+Serif+TC:wght@400;500",
+    "family=Noto+Sans+SC:wght@400;500",
+    "family=Noto+Serif+SC:wght@400;500",
+    "family=Noto+Sans+JP:wght@400;500",
+    "family=Shippori+Mincho+B1:wght@400;500",
+    "family=Noto+Sans+KR:wght@400;500",
+    "family=Nanum+Myeongjo:wght@400;700",
+    "display=swap",
+  ].join("&");
+
 export default function RootLayout({
   children,
 }: {
@@ -67,8 +84,14 @@ export default function RootLayout({
       className={`${inter.variable} ${cormorant.variable} ${outfit.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href={CJK_FONTS_HREF} rel="stylesheet" />
+      </head>
       <body>
         <PhotoBackground />
+        <LanguageBootstrap />
         <Providers>{children}</Providers>
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />

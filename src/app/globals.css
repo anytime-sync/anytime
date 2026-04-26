@@ -2,43 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* First Light theme — ivory + warm gold + charcoal, blue-grey for muted UI.
-   Söhne-substitute (Inter) wired in via next/font as --font-sans. */
+/* First Light theme — ivory + warm gold + charcoal, blue-grey for muted UI. */
 @layer base {
   :root {
-    /* Soft-morning palette — paler, almost-white with the faintest
-       warm undertone. Keeps brand warmth but lets the photo bg
-       dominate the mood rather than the chrome. */
-    --bg: 42 22% 97%;            /* near-white with whisper of cream */
-    --panel: 40 30% 99%;         /* almost white, hint of warmth */
-    --border: 36 18% 90%;        /* paler sand border */
-    --muted: 40 26% 96%;         /* very pale ivory */
-    --muted-fg: 204 12% 42%;     /* dimmed blue-grey for secondary text */
-    --fg: 0 0% 7%;               /* charcoal */
-    --accent: 34 49% 50%;        /* warm gold #C89B5A (lifted slightly for AA) */
+    --bg: 42 22% 97%;
+    --panel: 40 30% 99%;
+    --border: 36 18% 90%;
+    --muted: 40 26% 96%;
+    --muted-fg: 204 12% 42%;
+    --fg: 0 0% 7%;
+    --accent: 34 49% 50%;
     --accent-fg: 0 0% 100%;
-    /* Priority colors — keep red for urgency, warm gold for medium,
-       blue-grey for low so the palette stays brand-consistent. */
     --p-high: 0 65% 50%;
-    --p-med: 34 60% 55%;         /* warm gold */
-    --p-low: 204 17% 63%;        /* blue grey */
+    --p-med: 34 60% 55%;
+    --p-low: 204 17% 63%;
     --p-none: 36 12% 70%;
     --success: 158 50% 40%;
     --danger: 0 65% 50%;
-    --warning: 34 60% 55%;       /* warm gold for anti-overload */
+    --warning: 34 60% 55%;
     --radius: 8px;
-    /* Single sans family for everything per the brand guide.
-       Inter is the closest free stand-in for Söhne. */
     --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
       "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
       "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    /* Display = an editorial serif for hero headlines and the
-       Daily Edition. Cormorant Garamond, loaded via next/font. */
     --font-display: var(--font-cormorant), ui-serif, "Iowan Old Style",
       "Apple Garamond", Baskerville, "Times New Roman", Times, serif;
   }
   .dark {
-    /* Dark mode: charcoal bg, warm white text, warm gold accent. */
     --bg: 0 0% 7%;
     --panel: 0 0% 11%;
     --border: 0 0% 18%;
@@ -60,15 +49,8 @@
     @apply text-fg antialiased;
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    /* The photo lives in <PhotoBackground />, NOT here. Body is
-       deliberately transparent so the fixed photo layer at -z-10
-       shows through every panel and wrapper above it. A faint
-       fallback color prevents flash-of-white before the JS layer
-       paints. Drop a new photo at /public/light-bg.jpg anytime. */
     background-color: hsl(var(--bg));
   }
-  /* Dark mode: same composition, deeper warmth, lower opacity so the
-     charcoal base still reads cleanly. */
   .dark body {
     background-image:
       radial-gradient(ellipse 65% 55% at 92% -5%,
@@ -99,33 +81,22 @@
 @layer components {
   .font-display {
     font-family: var(--font-display);
-    /* Serif headlines feel best with normal weight and looser tracking. */
     font-weight: 400;
     letter-spacing: -0.01em;
   }
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
   }
-  .btn-primary {
-    @apply btn bg-accent text-accent-fg hover:opacity-90;
-  }
-  .btn-ghost {
-    @apply btn hover:bg-muted text-fg;
-  }
-  .btn-outline {
-    @apply btn border border-border hover:bg-muted;
-  }
+  .btn-primary { @apply btn bg-accent text-accent-fg hover:opacity-90; }
+  .btn-ghost   { @apply btn hover:bg-muted text-fg; }
+  .btn-outline { @apply btn border border-border hover:bg-muted; }
   .input {
     @apply w-full h-9 rounded-md border border-border bg-bg px-3 text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-accent/30;
   }
-  .card {
-    /* See .card definition below — surface is plain CSS, not Tailwind. */
-  }
+  .card { /* See .card definition below — surface uses plain CSS, not Tailwind. */ }
   .chip {
     @apply inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs bg-muted text-fg;
   }
-  /* "Editorial number" — the tracked, all-caps section labels (kickers).
-     In First Light we lean fully into the brand guide's Söhne aesthetic. */
   .editorial-number {
     @apply tabular-nums uppercase text-muted-fg;
     font-family: var(--font-sans);
@@ -133,8 +104,7 @@
     font-feature-settings: "tnum";
     letter-spacing: 0.18em;
   }
-  /* Brand wordmark — Outfit, the closest free match to the
-     geometric humanist sans in the brand reference. Tracked uppercase. */
+  /* Brand wordmark — Outfit. STAYS English-flavored across all languages. */
   .wordmark {
     font-family: var(--font-outfit), var(--font-sans);
     font-weight: 400;
@@ -144,16 +114,8 @@
 }
 
 /* ============================================================
-   .surface — the ONE class for every panel that sits above the
-   photo background. Replaces every prior bg-panel usage.
-
-   Tunable in one place:
-     --surface-alpha — how much the photo bleeds through (0–1)
-     --surface-blur  — how strongly the photo is blurred behind
-     --surface-saturate — color richness multiplier on the bg
-
-   Drop in any photo and the whole UI adapts: the panels remain
-   readable, the photo's tonality permeates the chrome.
+   .surface — translucent panel surface used everywhere a card
+   sits over the photo bg. Tunable via CSS vars below.
    ============================================================ */
 :root {
   --surface-alpha: 0.42;
@@ -170,16 +132,11 @@
   -webkit-backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
   backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
 }
-/* Heavier variant for modals / detail rail where the photo behind
-   would compete with dense content. */
 .surface-strong {
   background-color: hsl(var(--panel) / 0.86);
   -webkit-backdrop-filter: saturate(135%) blur(22px);
   backdrop-filter: saturate(135%) blur(22px);
 }
-
-/* .card now inlines the surface styles directly because @apply
-   can't reach plain CSS classes outside @layer components. */
 .card {
   border-radius: var(--radius);
   border: 1px solid hsl(var(--border));
@@ -187,7 +144,52 @@
   -webkit-backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
   backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
 }
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .surface, .card { background-color: hsl(var(--panel) / 0.92); }
+}
 
-/* Safety net: if Safari ever lacks backdrop-filter, bump the panel
-   alpha so the UI stays readable. */
-@su
+/* ============================================================
+   Per-language font stacks — driven by <html lang="...">.
+   <LanguageBootstrap/> sets the lang attribute from localStorage
+   and the LanguagePicker updates it on change.
+
+     zh-TW : Noto Sans TC + Noto Serif TC   (Songti-tradition serif — OQUA-style)
+     zh-CN : Noto Sans SC + Noto Serif SC
+     ja    : Noto Sans JP + Shippori Mincho B1   (refined editorial mincho)
+     ko    : Noto Sans KR + Nanum Myeongjo       (classic Myeongjo serif)
+
+   Loaded as one Google Fonts <link> in layout.tsx; the browser only
+   fetches the unicode-range segments it actually needs.
+   ============================================================ */
+[lang="zh-TW"] {
+  --font-sans:
+    "Noto Sans TC", var(--font-inter), ui-sans-serif, system-ui,
+    "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-display:
+    "Noto Serif TC", var(--font-cormorant), ui-serif,
+    "Songti TC", "PMingLiU", serif;
+}
+[lang="zh-CN"] {
+  --font-sans:
+    "Noto Sans SC", var(--font-inter), ui-sans-serif, system-ui,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display:
+    "Noto Serif SC", var(--font-cormorant), ui-serif,
+    "Songti SC", "SimSun", serif;
+}
+[lang="ja"] {
+  --font-sans:
+    "Noto Sans JP", var(--font-inter), ui-sans-serif, system-ui,
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --font-display:
+    "Shippori Mincho B1", "Noto Serif JP", var(--font-cormorant),
+    "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+[lang="ko"] {
+  --font-sans:
+    "Noto Sans KR", var(--font-inter), ui-sans-serif, system-ui,
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display:
+    "Nanum Myeongjo", "Noto Serif KR", var(--font-cormorant),
+    "Apple SD Gothic Neo", serif;
+}
