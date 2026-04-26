@@ -29,11 +29,11 @@ export function TaskListView({ title, subtitle, filter, defaults, showDailyEditi
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 border-b border-border">
+      <div className="px-4 md:px-6 pt-5 md:pt-7 pb-4 border-b border-border">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-xl md:text-2xl tracking-tight truncate">{title}</h1>
-            {subtitle && <p className="text-xs text-muted-fg mt-0.5">{subtitle}</p>}
+            <h1 className="font-display text-3xl md:text-4xl tracking-tight truncate leading-tight">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-fg mt-1">{subtitle}</p>}
           </div>
           <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
             <Plus className="size-4" />
