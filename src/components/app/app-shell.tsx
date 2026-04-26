@@ -42,7 +42,7 @@ export function AppShell({
       }}
     >
       <Sidebar user={user} />
-      <main className="relative h-screen overflow-hidden bg-bg flex">
+      <main className="relative h-screen overflow-hidden flex">
         <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           {mounted ? children : null}
         </div>
