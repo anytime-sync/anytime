@@ -22,7 +22,7 @@ export default function RetroPage() {
     <div className="flex flex-col h-full">
       {/* Header bar — same shape as Today/Tomorrow/Eisenhower so this
           page sits in the same left-aligned column as the rest. */}
-      <div className="px-4 md:px-6 pt-5 md:pt-7 pb-4 border-b border-border">
+      <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="editorial-number text-xs mb-1">Weekly review</p>

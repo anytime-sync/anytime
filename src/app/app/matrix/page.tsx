@@ -89,7 +89,7 @@ export default function MatrixPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 md:px-6 pt-5 md:pt-7 pb-4 border-b border-border flex items-end justify-between gap-3">
+      <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Eisenhower</h1>
           <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency × importance.</p>

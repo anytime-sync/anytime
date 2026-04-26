@@ -29,7 +29,7 @@ export function TaskListView({ title, subtitle, filter, defaults, showDailyEditi
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 md:px-6 pt-5 md:pt-7 pb-4 border-b border-border">
+      <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight truncate leading-tight">{title}</h1>
