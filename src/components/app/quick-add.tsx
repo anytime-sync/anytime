@@ -322,10 +322,10 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
     key: Exclude<Quadrant, null>; label: string; phrase: string;
     fg: string; bg: string; border: string;
   }> = [
-    { key: "q1", label: "Do first",  phrase: "urgent today",         fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
-    { key: "q2", label: "Schedule",  phrase: "important",            fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
-    { key: "q3", label: "Delegate",  phrase: "low priority today",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
-    { key: "q4", label: "Eliminate", phrase: "low priority",         fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
+    { key: "q1", label: "Do first",  phrase: "urgent",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
+    { key: "q2", label: "Schedule",  phrase: "important",    fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
+    { key: "q3", label: "Delegate",  phrase: "low priority", fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
+    { key: "q4", label: "Eliminate", phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
   ];
   return (
     <div className="shrink-0 self-start">
@@ -524,13 +524,7 @@ function ChipOptions({
         {options.time!.map((o) => (
           <OptionPill key={o.label} label={o.label} onClick={() => onPick(o.phrase)} />
         ))}
-        <input
-          type="date"
-          className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg"
-          onChange={(e) => {
-            if (e.target.value) onPick("on " + e.target.value);
-          }}
-        />
+        <DateTimePicker onPick={onPick} />
         <button
           type="button"
           onClick={onClose}
@@ -567,5 +561,46 @@ function OptionPill({ label, onClick }: { label: string; onClick: () => void }) 
     >
       {label}
     </button>
+  );
+}
+
+/** Date + Time picker. Two native inputs side by side; once the user
+ *  has chosen at least a date, the combined phrase is injected into
+ *  the parent input ("on 2026-04-30 14:00"). Time alone (without
+ *  date) injects an "at HH:MM" phrase. The chrono-node parser then
+ *  resolves both shapes correctly. */
+function DateTimePicker({ onPick }: { onPick: (phrase: string) => void }) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+
+  function commit(d: string, tm: string) {
+    if (d && tm) onPick(`on ${d} ${tm}`);
+    else if (d) onPick(`on ${d}`);
+    else if (tm) onPick(`at ${tm}`);
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDate(v);
+          commit(v, time);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTime(v);
+          commit(date, v);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+    </span>
   );
 }
