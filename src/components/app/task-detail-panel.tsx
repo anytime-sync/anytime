@@ -14,9 +14,13 @@ import { TagEditor } from "./tag-editor";
 const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "", label: "Doesn't repeat" },
   { value: "FREQ=DAILY", label: "Daily" },
+  { value: "FREQ=DAILY;INTERVAL=2", label: "Every other day" },
   { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays (Mon–Fri)" },
+  { value: "FREQ=WEEKLY;BYDAY=SA,SU", label: "Weekends" },
   { value: "FREQ=WEEKLY", label: "Weekly" },
+  { value: "FREQ=WEEKLY;INTERVAL=2", label: "Every other week" },
   { value: "FREQ=MONTHLY", label: "Monthly" },
+  { value: "FREQ=MONTHLY;INTERVAL=3", label: "Every 3 months" },
   { value: "FREQ=YEARLY", label: "Yearly" },
 ];
 
