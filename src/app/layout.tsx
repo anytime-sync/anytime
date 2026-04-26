@@ -90,9 +90,11 @@ export default function RootLayout({
         <link href={CJK_FONTS_HREF} rel="stylesheet" />
       </head>
       <body>
-        <PhotoBackground />
         <LanguageBootstrap />
-        <Providers>{children}</Providers>
+        <Providers>
+          <PhotoBackground />
+          {children}
+        </Providers>
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />
       </body>
