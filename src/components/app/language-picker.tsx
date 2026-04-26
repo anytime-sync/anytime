@@ -3,56 +3,99 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Languages, Check } from "lucide-react";
-import { LANGUAGES, getLanguage, type LanguageCode } from "@/lib/i18n";
+import {
+  LANGUAGES,
+  getLanguage,
+  readStoredLanguage,
+  writeStoredLanguage,
+  t,
+  type LanguageCode,
+} from "@/lib/i18n";
 import { useUserPrefs, useUpdatePrefs } from "@/hooks/use-ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 /**
- * Compact language picker that lives in the sidebar footer next to the
- * theme toggle. Reads + writes user_preferences.language. After saving
- * we invalidate the dailyEdition / weekly retro queries so they
- * regenerate in the new language.
+ * LanguagePicker — works both inside the authed app (reads/writes
+ * user_preferences.language) and on pre-login pages (reads/writes
+ * localStorage). Pass `mode="local"` for pre-auth pages.
+ *
+ * Menu opens UPWARD when the trigger sits in the bottom half of the
+ * viewport, otherwise downward. Clamped to the viewport on both axes.
  */
-export function LanguagePicker() {
+export function LanguagePicker({
+  mode = "user",
+  onChange,
+}: {
+  mode?: "user" | "local";
+  onChange?: (code: LanguageCode) => void;
+}) {
+  // Authed: read/write Supabase. Pre-auth: read/write localStorage.
   const { data: prefs } = useUserPrefs();
   const update = useUpdatePrefs();
   const qc = useQueryClient();
 
+  const [localLang, setLocalLang] = useState<LanguageCode>("en");
+  useEffect(() => {
+    if (mode === "local") setLocalLang(readStoredLanguage());
+  }, [mode]);
+
+  const currentCode: LanguageCode =
+    mode === "local"
+      ? localLang
+      : ((prefs?.language ?? "en") as LanguageCode);
+  const current = getLanguage(currentCode);
+
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => setMounted(true), []);
-
-  const current = getLanguage(prefs?.language);
 
   function openMenu(e: React.MouseEvent<HTMLButtonElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
-    setPos({ top: rect.top - 8, left: rect.right + 8 });
+    const menuWidth = 200;
+    const menuHeight = 240;
+    const viewportH = window.innerHeight;
+    const viewportW = window.innerWidth;
+    const openUpward = rect.top + menuHeight + 16 > viewportH;
+    let left = rect.left;
+    if (left + menuWidth > viewportW - 8) left = viewportW - menuWidth - 8;
+    if (left < 8) left = 8;
+    setPos(
+      openUpward
+        ? { bottom: viewportH - rect.top + 6, left }
+        : { top: rect.bottom + 6, left }
+    );
     setOpen(true);
   }
 
   async function pick(code: LanguageCode) {
     setOpen(false);
-    if (code === prefs?.language) return;
+    if (code === currentCode) return;
+    if (mode === "local") {
+      writeStoredLanguage(code);
+      setLocalLang(code);
+      onChange?.(code);
+      toast.success(t(code, "auth.shared.language") + " — " + getLanguage(code).displayName);
+      return;
+    }
     try {
       await update.mutateAsync({ language: code });
-      // Invalidate AI-cached queries so the brief/retro regenerates.
+      writeStoredLanguage(code);
       qc.invalidateQueries({ queryKey: ["dailyEdition"] });
       qc.invalidateQueries({ queryKey: ["weeklyRetro"] });
-      toast.success(`Language set to ${getLanguage(code).displayName}`);
+      onChange?.(code);
+      toast.success(`${getLanguage(code).displayName}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't change language");
     }
   }
 
-  // Close on outside click.
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      const t = e.target as HTMLElement;
-      if (!t.closest("[data-lang-menu]") && !t.closest("[data-lang-trigger]")) {
+      const t2 = e.target as HTMLElement;
+      if (!t2.closest("[data-lang-menu]") && !t2.closest("[data-lang-trigger]")) {
         setOpen(false);
       }
     }
@@ -76,10 +119,12 @@ export function LanguagePicker() {
       {mounted && open && pos && createPortal(
         <div
           data-lang-menu
-          className="fixed z-[90] min-w-[180px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
-          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-[90] min-w-[200px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
+          style={{ ...(pos as any) }}
         >
-          <div className="editorial-number text-[9px] px-2 py-1.5">Language</div>
+          <div className="editorial-number text-[9px] px-2 py-1.5">
+            {t(currentCode, "auth.shared.language")}
+          </div>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
@@ -88,7 +133,7 @@ export function LanguagePicker() {
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-fg"
             >
               <span className="flex-1 text-left">{l.displayName}</span>
-              {l.code === current.code && <Check className="size-3.5 text-accent" />}
+              {l.code === currentCode && <Check className="size-3.5 text-accent" />}
             </button>
           ))}
         </div>,
