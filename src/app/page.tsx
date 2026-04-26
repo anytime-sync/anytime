@@ -1,21 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { AuthCard } from "@/components/auth/auth-card";
-
-const PRINCIPLES = [
-  { kicker: "01", title: "Clarity",  body: "Clear thinking, clear direction.", Glyph: SmallSun },
-  { kicker: "02", title: "Focus",    body: "One thing at a time.",             Glyph: BeamLight },
-  { kicker: "03", title: "Progress", body: "Small steps create big change.",   Glyph: SunHorizon },
-  { kicker: "04", title: "Calm",     body: "Peaceful mind, productive life.",  Glyph: SoftOrb },
-  { kicker: "05", title: "Light",    body: "Inspiration to move forward.",     Glyph: RadialSun },
-];
+import {
+  readStoredLanguage,
+  t,
+  type LanguageCode,
+} from "@/lib/i18n";
 
 export default function Home() {
-  // null = no overlay; "signup" or "login" = open the inline auth card.
   const [authMode, setAuthMode] = useState<"signup" | "login" | null>(null);
+  const [lang, setLang] = useState<LanguageCode>("en");
+
+  useEffect(() => {
+    setLang(readStoredLanguage());
+    function onStorage(e: StorageEvent) {
+      if (e.key === "fl.language") setLang(readStoredLanguage());
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const principles = [
+    { kicker: "01", title: t(lang, "landing.principle1Title"), body: t(lang, "landing.principle1Body"), Glyph: SmallSun  },
+    { kicker: "02", title: t(lang, "landing.principle2Title"), body: t(lang, "landing.principle2Body"), Glyph: BeamLight },
+    { kicker: "03", title: t(lang, "landing.principle3Title"), body: t(lang, "landing.principle3Body"), Glyph: SunHorizon },
+    { kicker: "04", title: t(lang, "landing.principle4Title"), body: t(lang, "landing.principle4Body"), Glyph: SoftOrb   },
+    { kicker: "05", title: t(lang, "landing.principle5Title"), body: t(lang, "landing.principle5Body"), Glyph: RadialSun },
+  ];
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -25,20 +39,20 @@ export default function Home() {
             First Light
           </Link>
           <nav className="flex items-center gap-3 text-sm text-muted-fg">
-            <LanguagePicker mode="local" />
+            <LanguagePicker mode="local" onChange={setLang} />
             <button
               type="button"
               onClick={() => setAuthMode("login")}
               className="hover:text-fg px-2 h-9"
             >
-              Log in
+              {t(lang, "landing.headerLogin")}
             </button>
             <button
               type="button"
               onClick={() => setAuthMode("signup")}
               className="btn-primary px-4 h-9"
             >
-              Get started
+              {t(lang, "landing.headerSignup")}
             </button>
           </nav>
         </div>
@@ -47,17 +61,15 @@ export default function Home() {
       <section className="flex-1 grid place-items-center px-6 py-20">
         <div className="max-w-3xl text-center space-y-6">
           <p className="editorial-number text-xs">
-            First Light · A calm operating system for getting things done
+            {t(lang, "landing.kicker")}
           </p>
           <h1 className="font-display text-5xl md:text-7xl leading-[1.05] tracking-tight">
-            Plan with intent,
+            {t(lang, "landing.heroLine1")}
             <br />
-            <em className="font-display">light with purpose.</em>
+            <em className="font-display">{t(lang, "landing.heroLine2")}</em>
           </h1>
           <p className="text-base md:text-lg text-muted-fg max-w-xl mx-auto">
-            Tasks, calendar, habits, and Pomodoro — synced across every device.
-            A daily editorial briefing that keeps your day on the page,
-            not on fire.
+            {t(lang, "landing.heroBody")}
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
@@ -65,18 +77,18 @@ export default function Home() {
               onClick={() => setAuthMode("signup")}
               className="btn-primary px-5 h-11"
             >
-              Get started — free
+              {t(lang, "landing.signupCta")}
             </button>
             <button
               type="button"
               onClick={() => setAuthMode("login")}
               className="btn-outline px-5 h-11"
             >
-              Log in
+              {t(lang, "landing.loginCta")}
             </button>
           </div>
           <p className="text-xs text-muted-fg pt-2">
-            No credit card. No tracking. Real-time sync.
+            {t(lang, "landing.ctaNote")}
           </p>
         </div>
       </section>
@@ -88,13 +100,13 @@ export default function Home() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <p className="editorial-number text-xs">Brand principles</p>
+            <p className="editorial-number text-xs">{t(lang, "landing.principlesKicker")}</p>
             <h2 className="font-display text-3xl md:text-4xl mt-2">
-              <em>Five</em> intentions, every day.
+              <em>{t(lang, "landing.principlesHeading")}</em>
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-12">
-            {PRINCIPLES.map(({ kicker, title, body, Glyph }) => (
+            {principles.map(({ kicker, title, body, Glyph }) => (
               <article key={kicker} className="space-y-3 text-center">
                 <Glyph className="size-16 mx-auto text-accent" />
                 <div className="editorial-number text-[10px]">{kicker}</div>
@@ -108,9 +120,12 @@ export default function Home() {
 
       <footer className="px-6 py-8 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
-          <span>© First Light · Built with Next.js, Supabase &amp; Tailwind.</span>
-          <a href="https://github.com/anytime-sync/anytime" className="hover:text-fg">
-            Source on GitHub →
+          <span>{t(lang, "landing.footerCredit")}</span>
+          <a
+            href="https://github.com/anytime-sync/anytime"
+            className="hover:text-fg"
+          >
+            {t(lang, "landing.footerSource")}
           </a>
         </div>
       </footer>

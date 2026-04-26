@@ -70,7 +70,30 @@ type StringKey =
   | "auth.shared.language"
   | "auth.shared.close"
   | "auth.shared.signupTab"
-  | "auth.shared.loginTab";
+  | "auth.shared.loginTab"
+  | "landing.kicker"
+  | "landing.heroLine1"
+  | "landing.heroLine2"
+  | "landing.heroBody"
+  | "landing.signupCta"
+  | "landing.loginCta"
+  | "landing.ctaNote"
+  | "landing.headerLogin"
+  | "landing.headerSignup"
+  | "landing.principlesKicker"
+  | "landing.principlesHeading"
+  | "landing.principle1Title"
+  | "landing.principle1Body"
+  | "landing.principle2Title"
+  | "landing.principle2Body"
+  | "landing.principle3Title"
+  | "landing.principle3Body"
+  | "landing.principle4Title"
+  | "landing.principle4Body"
+  | "landing.principle5Title"
+  | "landing.principle5Body"
+  | "landing.footerCredit"
+  | "landing.footerSource";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -95,6 +118,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.shared.close": "Close",
     "auth.shared.signupTab": "Sign up",
     "auth.shared.loginTab": "Log in",
+    "landing.kicker": "First Light · A calm operating system for getting things done",
+    "landing.heroLine1": "Plan with intent,",
+    "landing.heroLine2": "light with purpose.",
+    "landing.heroBody": "Tasks, calendar, habits, and Pomodoro — synced across every device. A daily editorial briefing that keeps your day on the page, not on fire.",
+    "landing.signupCta": "Get started — free",
+    "landing.loginCta": "Log in",
+    "landing.ctaNote": "No credit card. No tracking. Real-time sync.",
+    "landing.headerLogin": "Log in",
+    "landing.headerSignup": "Get started",
+    "landing.principlesKicker": "Brand principles",
+    "landing.principlesHeading": "Five intentions, every day.",
+    "landing.principle1Title": "Clarity",
+    "landing.principle1Body": "Clear thinking, clear direction.",
+    "landing.principle2Title": "Focus",
+    "landing.principle2Body": "One thing at a time.",
+    "landing.principle3Title": "Progress",
+    "landing.principle3Body": "Small steps create big change.",
+    "landing.principle4Title": "Calm",
+    "landing.principle4Body": "Peaceful mind, productive life.",
+    "landing.principle5Title": "Light",
+    "landing.principle5Body": "Inspiration to move forward.",
+    "landing.footerCredit": "© First Light · Built with Next.js, Supabase & Tailwind.",
+    "landing.footerSource": "Source on GitHub →",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -118,6 +164,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.shared.close": "關閉",
     "auth.shared.signupTab": "註冊",
     "auth.shared.loginTab": "登入",
+    "landing.kicker": "First Light · 一個沉靜的工作作業系統",
+    "landing.heroLine1": "用心規劃,",
+    "landing.heroLine2": "為目的而發光。",
+    "landing.heroBody": "任務、日曆、習慣與番茄鐘 — 跨裝置即時同步。每日的編輯式簡報,讓你掌握節奏,而非陷入焦灼。",
+    "landing.signupCta": "免費開始",
+    "landing.loginCta": "登入",
+    "landing.ctaNote": "無需信用卡 · 不追蹤 · 即時同步",
+    "landing.headerLogin": "登入",
+    "landing.headerSignup": "開始使用",
+    "landing.principlesKicker": "品牌理念",
+    "landing.principlesHeading": "五個每日意圖。",
+    "landing.principle1Title": "清晰",
+    "landing.principle1Body": "清晰的思考,清晰的方向。",
+    "landing.principle2Title": "專注",
+    "landing.principle2Body": "一次只做一件事。",
+    "landing.principle3Title": "前進",
+    "landing.principle3Body": "微小步伐,創造改變。",
+    "landing.principle4Title": "從容",
+    "landing.principle4Body": "心思平靜,效率自然。",
+    "landing.principle5Title": "光",
+    "landing.principle5Body": "前行的靈感與動力。",
+    "landing.footerCredit": "© First Light · 由 Next.js、Supabase 與 Tailwind 打造",
+    "landing.footerSource": "GitHub 原始碼 →",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -141,6 +210,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.shared.close": "关闭",
     "auth.shared.signupTab": "注册",
     "auth.shared.loginTab": "登录",
+    "landing.kicker": "First Light · 一个沉静的工作操作系统",
+    "landing.heroLine1": "用心规划,",
+    "landing.heroLine2": "为目的而发光。",
+    "landing.heroBody": "任务、日历、习惯与番茄钟 — 跨设备实时同步。每日的编辑式简报,让你掌握节奏,而非陷入焦灼。",
+    "landing.signupCta": "免费开始",
+    "landing.loginCta": "登录",
+    "landing.ctaNote": "无需信用卡 · 不追踪 · 实时同步",
+    "landing.headerLogin": "登录",
+    "landing.headerSignup": "开始使用",
+    "landing.principlesKicker": "品牌理念",
+    "landing.principlesHeading": "五个每日意图。",
+    "landing.principle1Title": "清晰",
+    "landing.principle1Body": "清晰的思考,清晰的方向。",
+    "landing.principle2Title": "专注",
+    "landing.principle2Body": "一次只做一件事。",
+    "landing.principle3Title": "前进",
+    "landing.principle3Body": "微小步伐,创造改变。",
+    "landing.principle4Title": "从容",
+    "landing.principle4Body": "心思平静,效率自然。",
+    "landing.principle5Title": "光",
+    "landing.principle5Body": "前行的灵感与动力。",
+    "landing.footerCredit": "© First Light · 由 Next.js、Supabase 与 Tailwind 打造",
+    "landing.footerSource": "GitHub 源码 →",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -164,6 +256,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.shared.close": "閉じる",
     "auth.shared.signupTab": "登録",
     "auth.shared.loginTab": "ログイン",
+    "landing.kicker": "First Light · 静けさの中で進める仕事のためのOS",
+    "landing.heroLine1": "意図を持って計画し、",
+    "landing.heroLine2": "目的を持って光を当てる。",
+    "landing.heroBody": "タスク、カレンダー、習慣、ポモドーロ — すべてのデバイスでリアルタイムに同期。一日のリズムを整える、編集された朝のブリーフィング。",
+    "landing.signupCta": "無料で始める",
+    "landing.loginCta": "ログイン",
+    "landing.ctaNote": "クレジットカード不要 · 追跡なし · リアルタイム同期",
+    "landing.headerLogin": "ログイン",
+    "landing.headerSignup": "始める",
+    "landing.principlesKicker": "ブランド原則",
+    "landing.principlesHeading": "毎日の五つの意図。",
+    "landing.principle1Title": "明晰",
+    "landing.principle1Body": "澄んだ思考、確かな方向。",
+    "landing.principle2Title": "集中",
+    "landing.principle2Body": "一度にひとつだけ。",
+    "landing.principle3Title": "進歩",
+    "landing.principle3Body": "小さな歩みが変化をつくる。",
+    "landing.principle4Title": "静けさ",
+    "landing.principle4Body": "穏やかな心、生産的な日々。",
+    "landing.principle5Title": "光",
+    "landing.principle5Body": "前へと導く、ささやかなひらめき。",
+    "landing.footerCredit": "© First Light · Next.js、Supabase、Tailwindで構築",
+    "landing.footerSource": "GitHub のソース →",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -187,6 +302,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "auth.shared.close": "닫기",
     "auth.shared.signupTab": "가입",
     "auth.shared.loginTab": "로그인",
+    "landing.kicker": "First Light · 일을 차분하게 다루는 운영체제",
+    "landing.heroLine1": "의도를 가지고 계획하고,",
+    "landing.heroLine2": "목적을 향해 빛을 두다.",
+    "landing.heroBody": "할 일, 캘린더, 습관, 뽀모도로 — 모든 기기에서 실시간으로 동기화됩니다. 하루의 리듬을 잡아주는 매일의 에디토리얼 브리핑.",
+    "landing.signupCta": "무료로 시작하기",
+    "landing.loginCta": "로그인",
+    "landing.ctaNote": "신용카드 불필요 · 추적 없음 · 실시간 동기화",
+    "landing.headerLogin": "로그인",
+    "landing.headerSignup": "시작하기",
+    "landing.principlesKicker": "브랜드 원칙",
+    "landing.principlesHeading": "매일의 다섯 가지 의도.",
+    "landing.principle1Title": "명료",
+    "landing.principle1Body": "명료한 사고, 명료한 방향.",
+    "landing.principle2Title": "집중",
+    "landing.principle2Body": "한 번에 하나씩.",
+    "landing.principle3Title": "진보",
+    "landing.principle3Body": "작은 걸음이 큰 변화를 만든다.",
+    "landing.principle4Title": "평온",
+    "landing.principle4Body": "평온한 마음, 충실한 하루.",
+    "landing.principle5Title": "빛",
+    "landing.principle5Body": "앞으로 나아가게 하는 영감.",
+    "landing.footerCredit": "© First Light · Next.js, Supabase, Tailwind로 제작",
+    "landing.footerSource": "GitHub 소스 →",
   },
 };
 
