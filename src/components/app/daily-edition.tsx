@@ -66,7 +66,7 @@ export function DailyEdition() {
         {data.headline}
       </h1>
       <div className="prose prose-sm max-w-none text-fg/90">
-        <p className="text-[15px] leading-relaxed mb-3 first-letter:font-display first-letter:text-3xl first-letter:float-left first-letter:mr-1.5 first-letter:leading-none first-letter:mt-1">
+        <p className="text-[15px] leading-relaxed mb-3">
           {data.front_page}
         </p>
         <p className="text-[14px] leading-relaxed text-fg/80 mb-3">{data.inside}</p>
