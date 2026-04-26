@@ -102,11 +102,11 @@ export function QuickAdd() {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-start pt-[10vh] bg-black/40 animate-fade-in"
+      className="fixed inset-0 z-[100] grid place-items-center px-4 bg-black/30 backdrop-blur-sm animate-fade-in"
       onClick={() => setOpen(false)}
     >
       <div
-        className="card w-[92vw] max-w-2xl p-5 space-y-4"
+        className="card surface-strong w-full max-w-2xl p-5 space-y-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* "Now" anchor */}
