@@ -72,7 +72,13 @@ export async function POST(req: Request) {
   const weekEnd = new Date(start);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const [shipped, slipped, openTasks] = await Promise.all([
+  // Smarter-retro: fetch last week's saved retro so the model can
+  // pick up on continuing themes. ISO-week math handles year wrap.
+  const lastWeekDate = new Date(weekStart);
+  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastWeekIso = isoWeek(lastWeekDate, tz);
+
+  const [shipped, slipped, openTasks, lastWeekRetro] = await Promise.all([
     supabase.from("tasks").select("title,priority,project_id,completed_at")
       .eq("is_completed", true)
       .gte("completed_at", weekStart.toISOString())
@@ -88,7 +94,24 @@ export async function POST(req: Request) {
       .eq("is_completed", false)
       .lt("due_at", weekStart.toISOString())
       .limit(20),
+    supabase.from("weekly_retros")
+      .select("shipped,slipped,drop_list,raw_json")
+      .eq("user_id", u.user.id)
+      .eq("iso_year", lastWeekIso.year)
+      .eq("iso_week", lastWeekIso.week)
+      .maybeSingle(),
   ]);
+
+  const lw = lastWeekRetro.data;
+  const lastWeekSnippet = lw
+    ? {
+        shipped: lw.shipped,
+        slipped: lw.slipped,
+        drop_list: lw.drop_list,
+        themes: (lw.raw_json as any)?.themes,
+        next_week_plan: (lw.raw_json as any)?.next_week_plan,
+      }
+    : null;
 
   const ctx = {
     week_start: startStr,
@@ -97,6 +120,7 @@ export async function POST(req: Request) {
     shipped: shipped.data ?? [],
     slipped: slipped.data ?? [],
     older_open: openTasks.data ?? [],
+    last_week: lastWeekSnippet,
   };
 
   try {
@@ -119,7 +143,13 @@ export async function POST(req: Request) {
       shipped: parsed.shipped,
       slipped: parsed.slipped,
       drop_list: parsed.drop_list,
-      raw_json: { ...parsed, language } as any,
+      // Smarter-retro additions live in raw_json (no schema migration).
+      raw_json: {
+        ...parsed,
+        themes: parsed.themes ?? "",
+        next_week_plan: parsed.next_week_plan ?? "",
+        language,
+      } as any,
       model: MODELS.fast,
     };
     await supabase.from("weekly_retros").upsert(row, {
