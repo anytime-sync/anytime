@@ -9,7 +9,7 @@ import { rrulestr } from "rrule";
 export type TaskWithTags = Task & { tags: Tag[] };
 
 export type TasksFilter = {
-  view?: "today" | "tomorrow" | "next7" | "inbox" | "all";
+  view?: "today" | "tomorrow" | "next7" | "next90" | "inbox" | "completed" | "all";
   projectId?: string | null;
   tagName?: string;
   includeCompleted?: boolean;
@@ -34,7 +34,17 @@ export function useTasks(filter: TasksFilter = {}) {
       // Top-level tasks only — subtasks are loaded via useSubtasks(parentId).
       q = q.is("parent_id", null);
 
-      if (!filter.includeCompleted) q = q.eq("is_completed", false);
+      // The 'completed' view is the only one that flips the polarity of
+      // is_completed — every other view filters out completed tasks
+      // unless includeCompleted was explicitly passed.
+      if (filter.view === "completed") {
+        q = q
+          .eq("is_completed", true)
+          .order("completed_at", { ascending: false });
+      } else if (!filter.includeCompleted) {
+        q = q.eq("is_completed", false);
+      }
+
       if (filter.projectId !== undefined) {
         if (filter.projectId === null) q = q.is("project_id", null);
         else q = q.eq("project_id", filter.projectId);
@@ -49,6 +59,8 @@ export function useTasks(filter: TasksFilter = {}) {
       endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
       const endOf7 = new Date(startOfToday);
       endOf7.setDate(endOf7.getDate() + 7);
+      const endOf90 = new Date(startOfToday);
+      endOf90.setDate(endOf90.getDate() + 90);
 
       if (filter.view === "today") {
         q = q.lt("due_at", startOfTomorrow.toISOString());
@@ -56,6 +68,8 @@ export function useTasks(filter: TasksFilter = {}) {
         q = q.gte("due_at", startOfTomorrow.toISOString()).lt("due_at", endOfTomorrow.toISOString());
       } else if (filter.view === "next7") {
         q = q.lt("due_at", endOf7.toISOString());
+      } else if (filter.view === "next90") {
+        q = q.lt("due_at", endOf90.toISOString());
       }
 
       const { data, error } = await q;

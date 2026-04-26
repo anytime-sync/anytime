@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Inbox, CalendarDays, CalendarRange, Sun, Sunrise, Hash, Folder, Clock,
+  Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Search, Plus, ChevronLeft, ChevronRight, LogOut,
-  Moon, SunMedium, Newspaper,
+  Moon, SunMedium, Newspaper, CheckCircle2,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useTheme } from "next-themes";
@@ -22,15 +22,17 @@ import { t } from "@/lib/i18n";
 type Lang = ReturnType<typeof useLanguage>;
 function topLinks(lang: Lang) {
   return [
-    { href: "/app/today",    label: t(lang, "sidebar.today"),         icon: Sun },
-    { href: "/app/tomorrow", label: t(lang, "sidebar.tomorrow"),      icon: Sunrise },
-    { href: "/app/next7",    label: t(lang, "sidebar.next7"),         icon: CalendarRange },
-    { href: "/app/inbox",    label: t(lang, "sidebar.inbox"),         icon: Inbox },
-    { href: "/app/calendar", label: t(lang, "sidebar.calendar"),      icon: CalendarDays },
-    { href: "/app/matrix",   label: t(lang, "sidebar.eisenhower"),    icon: LayoutGrid },
-    { href: "/app/pomodoro", label: t(lang, "sidebar.pomodoro"),      icon: Clock },
-    { href: "/app/habits",   label: t(lang, "sidebar.habits"),        icon: Sparkles },
-    { href: "/app/retro",    label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
+    { href: "/app/today",     label: t(lang, "sidebar.today"),        icon: Sun },
+    { href: "/app/tomorrow",  label: t(lang, "sidebar.tomorrow"),     icon: Sunrise },
+    { href: "/app/next7",     label: t(lang, "sidebar.next7"),        icon: CalendarRange },
+    { href: "/app/next90",    label: t(lang, "sidebar.next90"),       icon: CalendarSearch },
+    { href: "/app/inbox",     label: t(lang, "sidebar.inbox"),        icon: Inbox },
+    { href: "/app/calendar",  label: t(lang, "sidebar.calendar"),     icon: CalendarDays },
+    { href: "/app/matrix",    label: t(lang, "sidebar.eisenhower"),   icon: LayoutGrid },
+    { href: "/app/pomodoro",  label: t(lang, "sidebar.pomodoro"),     icon: Clock },
+    { href: "/app/habits",    label: t(lang, "sidebar.habits"),       icon: Sparkles },
+    { href: "/app/retro",     label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
+    { href: "/app/completed", label: t(lang, "sidebar.completed"),    icon: CheckCircle2 },
   ];
 }
 

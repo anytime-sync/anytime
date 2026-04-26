@@ -110,7 +110,11 @@ type StringKey =
   | "sidebar.noLists"
   | "sidebar.noTags"
   | "sidebar.newList"
-  | "sidebar.logout";
+  | "sidebar.logout"
+  | "sidebar.next90"
+  | "sidebar.completed"
+  | "view.next90.subtitle"
+  | "view.completed.subtitle";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -175,6 +179,10 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.noTags": "No tags yet — type #tagname in a task title.",
     "sidebar.newList": "New list",
     "sidebar.logout": "Log out",
+    "sidebar.next90": "Next 90 Days",
+    "sidebar.completed": "Completed",
+    "view.next90.subtitle": "Tasks due in the next 90 days.",
+    "view.completed.subtitle": "Everything you have finished, most recent first.",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -238,6 +246,10 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.noTags": "尚未有標籤 — 在任務標題中輸入 #tagname。",
     "sidebar.newList": "新清單",
     "sidebar.logout": "登出",
+    "sidebar.next90": "未來 90 日",
+    "sidebar.completed": "已完成",
+    "view.next90.subtitle": "未來 90 天內到期的任務。",
+    "view.completed.subtitle": "你已完成的事,最新優先。",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -301,6 +313,10 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.noTags": "还没有标签 — 在任务标题中输入 #tagname。",
     "sidebar.newList": "新清单",
     "sidebar.logout": "退出",
+    "sidebar.next90": "未来 90 日",
+    "sidebar.completed": "已完成",
+    "view.next90.subtitle": "未来 90 天内到期的任务。",
+    "view.completed.subtitle": "你已完成的事,最新优先。",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -364,6 +380,10 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.noTags": "まだタグがありません — タスク名に #tagname と入力。",
     "sidebar.newList": "新しいリスト",
     "sidebar.logout": "ログアウト",
+    "sidebar.next90": "次の90日",
+    "sidebar.completed": "完了",
+    "view.next90.subtitle": "今後90日以内に期限のタスク。",
+    "view.completed.subtitle": "完了した作業 — 新しい順。",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -427,6 +447,10 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.noTags": "아직 태그가 없습니다 — 작업 제목에 #tagname 입력.",
     "sidebar.newList": "새 목록",
     "sidebar.logout": "로그아웃",
+    "sidebar.next90": "향후 90일",
+    "sidebar.completed": "완료",
+    "view.next90.subtitle": "앞으로 90일 이내 마감 작업.",
+    "view.completed.subtitle": "완료한 작업 — 최신순.",
   },
 };
 

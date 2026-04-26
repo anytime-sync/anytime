@@ -91,7 +91,7 @@ export async function POST(req: Request) {
 
   try {
     const res = await client.messages.create({
-      model: MODELS.editorial,
+      model: MODELS.fast,
       max_tokens: 700,
       system: weeklyRetroSystem(language),
       messages: [{ role: "user", content: "CONTEXT (JSON):\n" + JSON.stringify(ctx, null, 2) }],
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       slipped: parsed.slipped,
       drop_list: parsed.drop_list,
       raw_json: { ...parsed, language } as any,
-      model: MODELS.editorial,
+      model: MODELS.fast,
     };
     await supabase.from("weekly_retros").upsert(row, {
       onConflict: "user_id,iso_year,iso_week",

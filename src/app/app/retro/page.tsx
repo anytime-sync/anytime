@@ -1,13 +1,22 @@
 "use client";
 
-import { useWeeklyRetro } from "@/hooks/use-ai";
+import { useWeeklyRetro, useUserPrefs } from "@/hooks/use-ai";
 import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+import { getLanguage } from "@/lib/i18n";
 
 export default function RetroPage() {
   const [target, setTarget] = useState<"last" | "current">("last");
-  const { data, isLoading, isError } = useWeeklyRetro(target);
+  const { data, isLoading, isFetching, isError } = useWeeklyRetro(target);
+  const { data: prefs } = useUserPrefs();
+  const locale = getLanguage(prefs?.language).dateFnsLocale;
+  // True when we have stale data on screen and a refetch is running —
+  // typical case: user just switched language and the new translation
+  // is being generated. Show a subtle 'Updating…' chip rather than
+  // dropping back to a skeleton.
+  const isRevalidating = !isLoading && isFetching;
 
   return (
     <div className="px-6 py-8 max-w-3xl mx-auto">
@@ -16,6 +25,12 @@ export default function RetroPage() {
         <h1 className="font-display text-3xl md:text-4xl mt-1">
           {target === "last" ? "Last week's edition" : "This week, so far"}
         </h1>
+        {isRevalidating && (
+          <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-fg">
+            <Loader2 className="size-3 animate-spin" />
+            Updating…
+          </div>
+        )}
         <div className="mt-3 inline-flex rounded-md border border-border overflow-hidden text-xs">
           {(["last", "current"] as const).map((t) => (
             <button
@@ -51,7 +66,7 @@ export default function RetroPage() {
         <article className="space-y-7">
           {data.week_start && (
             <p className="text-xs text-muted-fg">
-              Week of {format(new Date(data.week_start), "EEEE, MMMM d, yyyy")}
+              Week of {format(new Date(data.week_start), "EEEE, MMMM d, yyyy", { locale })}
             </p>
           )}
           <Section kicker="Shipped" body={data.shipped} />

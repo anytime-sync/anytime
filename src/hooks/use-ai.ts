@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
 const tz = () =>
@@ -129,6 +129,10 @@ export function useWeeklyRetro(target: "last" | "current" = "last") {
       return await r.json();
     },
     staleTime: 60 * 60_000,
+    // Keep the previously rendered retro on screen while a refetch
+    // (e.g. language change → cache invalidation) is in flight. The
+    // page also reads `isFetching` to show a subtle 'Updating…' chip.
+    placeholderData: keepPreviousData,
   });
 }
 
