@@ -15,7 +15,6 @@
  *   - AI-generated content (Daily Edition, Weekly Retro, parsed task titles)
  *   - Date formatting (date-fns locale)
  */
-import { useEffect, useState } from "react";
 import { enUS, zhTW, zhCN, ja, ko, type Locale } from "date-fns/locale";
 
 export type LanguageCode = "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
@@ -468,28 +467,4 @@ export function writeStoredLanguage(code: LanguageCode) {
     // broadcast a custom event for in-tab subscribers (useLanguage).
     window.dispatchEvent(new CustomEvent("fl.language.change", { detail: code }));
   } catch {}
-}
-
-
-/* ----------------------------------------------------------------- */
-/* useLanguage — React hook returning the current language. Listens  */
-/* to both 'storage' (cross-tab) and 'fl.language.change' (same-tab).*/
-/* Components rely on this for live re-render when the user picks a  */
-/* new language.                                                     */
-/* ----------------------------------------------------------------- */
-
-export function useLanguage(): LanguageCode {
-  const [lang, setLang] = useState<LanguageCode>(DEFAULT_LANGUAGE);
-  useEffect(() => {
-    setLang(readStoredLanguage());
-    function onChange() { setLang(readStoredLanguage()); }
-    function onStorage(e: StorageEvent) { if (e.key === LS_KEY) onChange(); }
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("fl.language.change", onChange as EventListener);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("fl.language.change", onChange as EventListener);
-    };
-  }, []);
-  return lang;
 }

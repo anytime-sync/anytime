@@ -16,7 +16,8 @@ import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
 import { useState } from "react";
-import { useLanguage, t } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 type Lang = ReturnType<typeof useLanguage>;
 function topLinks(lang: Lang) {
