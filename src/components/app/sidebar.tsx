@@ -41,13 +41,14 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
 
   return (
     <aside className="h-screen border-r border-border surface flex flex-col">
-      {/* Wordmark */}
-      <div className="flex items-center justify-between px-3 h-14 border-b border-border">
+      {/* Wordmark — centered horizontally; toggle absolute-positioned
+          on the right so it doesn't push the wordmark off-center. */}
+      <div className="relative flex items-center justify-center px-3 h-14 border-b border-border">
         {!collapsed && (
           <div className="wordmark text-[15px]">First Light</div>
         )}
         <button
-          className="btn-ghost h-8 px-2"
+          className="btn-ghost h-8 px-2 absolute right-2 top-1/2 -translate-y-1/2"
           aria-label="Toggle sidebar"
           onClick={() => setCollapsed(!collapsed)}
         >
