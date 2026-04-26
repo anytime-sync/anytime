@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
+import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { quadrantSystem } from "@/lib/ai/prompts";
 import { QuadrantResultSchema, extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
@@ -11,6 +12,15 @@ export async function POST(req: Request) {
   const supabase = createClient();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Per-user daily AI budget check (Anthropic cost guard).
+  const __budget = await checkAiBudget(u.user.id, "quadrant");
+  if (!__budget.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", used: __budget.used, limit: __budget.limit },
+      { status: 429, headers: { "Retry-After": String(__budget.retryAfter) } }
+    );
+  }
 
   const client = getAnthropic();
   if (!client) return NextResponse.json({ error: "ai_disabled" }, { status: 503 });
@@ -46,6 +56,7 @@ export async function POST(req: Request) {
       .join("");
     const json = extractJson(content);
     const parsed = QuadrantResultSchema.parse(json);
+    await logAiCall(u.user.id, "quadrant", { model: res.model, status: 200 });
     return NextResponse.json(parsed);
   } catch (e: any) {
     console.error("[ai]", "\n", e?.stack || e?.message || e);

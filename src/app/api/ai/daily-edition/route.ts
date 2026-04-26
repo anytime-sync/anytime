@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
+import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { dailyEditionSystem } from "@/lib/ai/prompts";
 import { DailyEditionSchema, extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
@@ -18,6 +19,15 @@ export async function POST(req: Request) {
   const supabase = createClient();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Per-user daily AI budget check (Anthropic cost guard).
+  const __budget = await checkAiBudget(u.user.id, "daily_edition");
+  if (!__budget.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", used: __budget.used, limit: __budget.limit },
+      { status: 429, headers: { "Retry-After": String(__budget.retryAfter) } }
+    );
+  }
 
   const body = await req.json().catch(() => ({}));
   const tz: string = body.tz || "UTC";
@@ -103,6 +113,7 @@ export async function POST(req: Request) {
       .join("");
     const json = extractJson(content);
     const parsed = DailyEditionSchema.parse(json);
+    await logAiCall(u.user.id, "daily_edition", { model: res.model, status: 200 });
 
     const row = {
       user_id: u.user.id,
