@@ -216,10 +216,10 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
             </div>
 
             <div>
-              <div className="flex items-center justify-between px-2 mb-1">
+              <div className="flex items-center justify-between px-2 mb-1.5">
                 <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.tags")}</span>
               </div>
-              <div className="space-y-0.5">
+              <div className="flex flex-wrap gap-1 px-2">
                 {tags.map((tag) => (
                   <SidebarTagItem
                     key={tag.id}
@@ -228,7 +228,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
                   />
                 ))}
                 {tags.length === 0 && (
-                  <p className="text-xs text-muted-fg px-2">{t(lang, "sidebar.noTags")}</p>
+                  <p className="text-xs text-muted-fg w-full">{t(lang, "sidebar.noTags")}</p>
                 )}
               </div>
             </div>

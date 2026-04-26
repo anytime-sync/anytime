@@ -3,21 +3,27 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, Hash, Pencil, Trash2 } from "lucide-react";
+import { X, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tag } from "@/lib/db.types";
 import { useRenameTag, useDeleteTag } from "@/hooks/use-tags";
-import { useLanguage } from "@/lib/use-language";
-import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 
 /**
- * One row in the sidebar Tags section. Mirrors SidebarListItem:
- *   - The ⋯ button is a sibling of <Link>, not a child, so Next.js
- *     Link click-through can't swallow the button click.
- *   - Menu and confirm modal portaled to body to escape the sidebar's
- *     backdrop-filter (which would otherwise create a containing block
- *     that breaks position:fixed).
+ * SidebarTagItem — a compact, inline tag pill.
+ *
+ * Layout:
+ *   - The pill is a flex-row: a clickable Link (navigates to the tag
+ *     view) followed by an X button (deletes the tag globally after
+ *     confirmation).
+ *   - Width is content-driven; pills wrap onto the next row when the
+ *     parent's flex-wrap container fills.
+ *   - Background = tag.color. Text color is auto-picked for contrast
+ *     so any user-chosen color stays readable.
+ *   - Double-click swaps the pill into an inline rename input.
+ *
+ * The delete-confirm modal is portaled to <body> (the sidebar's
+ * backdrop-filter would otherwise break position:fixed centering).
  */
 export function SidebarTagItem({
   tag,
@@ -26,47 +32,23 @@ export function SidebarTagItem({
   tag: Tag;
   active: boolean;
 }) {
-  const lang = useLanguage();
   const rename = useRenameTag();
   const del = useDeleteTag();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [name, setName] = useState(tag.name);
   const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const menuBtnRef = useRef<HTMLButtonElement>(null);
   const href = `/app/tags/${encodeURIComponent(tag.name)}`;
 
   useEffect(() => setMounted(true), []);
   useEffect(() => setName(tag.name), [tag.name]);
-
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      const target = e.target as Node;
-      const inside = wrapRef.current?.contains(target);
-      const inPortal =
-        target instanceof HTMLElement &&
-        target.closest(`[data-tag-menu="${tag.id}"]`);
-      if (!inside && !inPortal) setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [tag.id]);
-
   useEffect(() => {
     if (renaming) setTimeout(() => inputRef.current?.select(), 10);
   }, [renaming]);
 
-  function openMenu() {
-    const rect = menuBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
-    }
-    setMenuOpen(true);
-  }
+  const fg = readableTextColor(tag.color);
+  const subtleFg = fg === "#fff" ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.55)";
 
   function commitRename() {
     const trimmed = name.trim().replace(/^#/, "");
@@ -98,8 +80,10 @@ export function SidebarTagItem({
 
   if (renaming) {
     return (
-      <div className="flex items-center gap-2 h-9 px-2 rounded-md bg-muted">
-        <Hash className="size-4 shrink-0" style={{ color: tag.color }} />
+      <div
+        className="inline-flex items-center h-6 rounded-md px-1.5 text-[11px] font-medium"
+        style={{ backgroundColor: tag.color, color: fg }}
+      >
         <input
           ref={inputRef}
           value={name}
@@ -109,87 +93,66 @@ export function SidebarTagItem({
             else if (e.key === "Escape") { setName(tag.name); setRenaming(false); }
           }}
           onBlur={commitRename}
-          className="flex-1 bg-transparent outline-none text-sm"
+          className="bg-transparent outline-none w-[7ch] min-w-[3ch]"
+          style={{ color: fg }}
+          size={Math.max(3, name.length)}
         />
       </div>
     );
   }
 
   return (
-    <div ref={wrapRef} className="relative group">
-      <Link
-        href={href}
-        className={cn(
-          "flex items-center gap-2 h-9 pl-2 pr-8 rounded-md text-sm",
-          active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg"
-        )}
-      >
-        <Hash className="size-4 shrink-0" style={{ color: tag.color }} />
-        <span className="truncate flex-1">{tag.name}</span>
-      </Link>
-
-      <button
-        ref={menuBtnRef}
-        type="button"
-        aria-label={`Options for #${tag.name}`}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (menuOpen) setMenuOpen(false);
-          else openMenu();
-        }}
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 right-1 size-6 grid place-items-center rounded transition",
-          "opacity-0 group-hover:opacity-100 hover:bg-bg",
-          menuOpen && "opacity-100 bg-bg"
-        )}
-      >
-        <MoreHorizontal className="size-3.5" />
-      </button>
-
-      {mounted && menuOpen && menuPos && createPortal(
-        <div
-          data-tag-menu={tag.id}
-          className="fixed z-[90] min-w-[160px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
-          style={{ top: menuPos.top, right: menuPos.right }}
+    <>
+      <span className="group inline-flex items-stretch h-6 rounded-md overflow-hidden text-[11px] font-medium leading-none">
+        <Link
+          href={href}
+          onDoubleClick={(e) => { e.preventDefault(); setRenaming(true); }}
+          title={`${tag.name} — double-click to rename`}
+          className={cn(
+            "inline-flex items-center px-2 transition-opacity hover:opacity-90",
+            active && "ring-1 ring-fg/30"
+          )}
+          style={{
+            backgroundColor: tag.color,
+            color: fg,
+          }}
         >
-          <button
-            type="button"
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-fg"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setMenuOpen(false);
-              setRenaming(true);
-            }}
-          >
-            <Pencil className="size-3.5" />
-            Rename
-          </button>
-          <button
-            type="button"
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-danger/10 text-danger"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setMenuOpen(false);
-              setConfirming(true);
-            }}
-          >
-            <Trash2 className="size-3.5" />
-            Delete
-          </button>
-        </div>,
-        document.body
-      )}
+          {tag.name}
+        </Link>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setConfirming(true);
+          }}
+          aria-label={`Delete #${tag.name}`}
+          title={`Delete #${tag.name}`}
+          className="inline-flex items-center justify-center w-5 transition-colors"
+          style={{
+            backgroundColor: tag.color,
+            color: subtleFg,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = fg;
+            e.currentTarget.style.backgroundColor = darken(tag.color, 0.12);
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = subtleFg;
+            e.currentTarget.style.backgroundColor = tag.color;
+          }}
+        >
+          <X className="size-3" strokeWidth={2.5} />
+        </button>
+      </span>
 
       {mounted && confirming && createPortal(
         <div
-          className="fixed inset-0 z-[100] grid place-items-center bg-black/30 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/30 backdrop-blur-sm animate-fade-in px-4"
           onClick={() => setConfirming(false)}
         >
           <div
-            className="card surface-strong max-w-md w-[92vw] p-6 space-y-4 shadow-2xl"
+            className="card surface-strong max-w-md w-full p-6 space-y-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1">
@@ -221,6 +184,37 @@ export function SidebarTagItem({
         </div>,
         document.body
       )}
-    </div>
+    </>
   );
+}
+
+/* ---------- helpers ---------- */
+
+/** Pick white or charcoal text based on the bg color's perceived brightness. */
+function readableTextColor(hex: string): "#fff" | "#111" {
+  const { r, g, b } = parseHex(hex);
+  // Relative luminance (Rec. 709 approximation).
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.62 ? "#111" : "#fff";
+}
+
+/** Darken a hex color by a factor (0-1). Used for the X button's hover. */
+function darken(hex: string, amount: number): string {
+  const { r, g, b } = parseHex(hex);
+  const f = (n: number) => Math.max(0, Math.min(255, Math.round(n * (1 - amount))));
+  return rgbToHex(f(r), f(g), f(b));
+}
+
+function parseHex(hex: string): { r: number; g: number; b: number } {
+  let h = hex.replace(/^#/, "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2) || "0", 16);
+  const g = parseInt(h.slice(2, 4) || "0", 16);
+  const b = parseInt(h.slice(4, 6) || "0", 16);
+  return { r, g, b };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const t = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${t(r)}${t(g)}${t(b)}`;
 }
