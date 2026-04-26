@@ -9,9 +9,11 @@ import { useUpdateProject, useDeleteProject } from "@/hooks/use-projects";
 import { toast } from "sonner";
 
 /**
- * One row in the sidebar Lists section. Shows a ⋯ button on hover that
- * opens a small floating menu with Rename + Delete. Rename swaps the row
- * into an inline input. Delete asks for confirmation in a tiny modal.
+ * One row in the sidebar Lists section. Shows a ⋯ button on hover.
+ *
+ * IMPORTANT: the ⋯ button is a SIBLING of the <Link>, not a child.
+ * Putting it inside the Link caused click-through navigation in
+ * Next.js — preventDefault doesn't reliably stop Link's intercept.
  */
 export function SidebarListItem({
   project,
@@ -53,7 +55,13 @@ export function SidebarListItem({
       setName(project.name);
       return;
     }
-    update.mutate({ id: project.id, name: trimmed });
+    update.mutate(
+      { id: project.id, name: trimmed },
+      {
+        onError: (e: any) => toast.error(e?.message ?? "Couldn't rename"),
+        onSuccess: () => toast.success("Renamed"),
+      }
+    );
     setRenaming(false);
   }
 
@@ -89,46 +97,61 @@ export function SidebarListItem({
 
   return (
     <div ref={wrapRef} className="relative group">
+      {/* The clickable row — Link only wraps the visual content, NOT the menu button. */}
       <Link
         href={href}
         className={cn(
-          "flex items-center gap-2 h-9 px-2 rounded-md text-sm",
+          "flex items-center gap-2 h-9 pl-2 pr-8 rounded-md text-sm",
           active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg"
         )}
       >
         <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
         <Folder className="size-4 shrink-0 text-muted-fg" />
         <span className="truncate flex-1">{project.name}</span>
-        <button
-          type="button"
-          aria-label={`Options for ${project.name}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setMenuOpen((v) => !v);
-          }}
-          className={cn(
-            "size-6 grid place-items-center rounded transition opacity-0 group-hover:opacity-100",
-            menuOpen && "opacity-100 bg-bg",
-            "hover:bg-bg"
-          )}
-        >
-          <MoreHorizontal className="size-3.5" />
-        </button>
       </Link>
+
+      {/* ⋯ menu button — sibling of Link, absolutely positioned over the right edge. */}
+      <button
+        type="button"
+        aria-label={`Options for ${project.name}`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setMenuOpen((v) => !v);
+        }}
+        className={cn(
+          "absolute top-1/2 -translate-y-1/2 right-1 size-6 grid place-items-center rounded transition",
+          "opacity-0 group-hover:opacity-100 hover:bg-bg",
+          menuOpen && "opacity-100 bg-bg"
+        )}
+      >
+        <MoreHorizontal className="size-3.5" />
+      </button>
 
       {menuOpen && (
         <div className="absolute z-30 right-1 top-9 min-w-[140px] rounded-md border border-border surface shadow-md p-1 text-sm">
           <button
+            type="button"
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted"
-            onClick={() => { setMenuOpen(false); setRenaming(true); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenuOpen(false);
+              setRenaming(true);
+            }}
           >
             <Pencil className="size-3.5" />
             Rename
           </button>
           <button
+            type="button"
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-danger/10 text-danger"
-            onClick={() => { setMenuOpen(false); setConfirming(true); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenuOpen(false);
+              setConfirming(true);
+            }}
           >
             <Trash2 className="size-3.5" />
             Delete

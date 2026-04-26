@@ -14,9 +14,11 @@ export function PhotoBackground() {
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
         backgroundImage:
-          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.06) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.06) 100%), url('/light-bg.jpg?v=12')",
+          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.05) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.05) 100%), url('/light-bg.jpg?v=13')",
         backgroundSize: "cover, cover",
-        backgroundPosition: "center, center",
+        // Center-top so the window light stays visible at the top of
+        // the viewport for portrait-aspect bg photos.
+        backgroundPosition: "center top, center top",
         backgroundRepeat: "no-repeat, no-repeat",
         backgroundAttachment: "fixed, fixed",
       }}
