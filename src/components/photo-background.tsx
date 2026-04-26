@@ -28,12 +28,8 @@ export function PhotoBackground() {
           // Subtle warm overlay on top of the user's photo so any
           // image gets pulled toward the First Light palette. Drop
           // the overlay if you want the photo at full saturation.
-          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.18) 0%, hsla(36, 36%, 96%, 0.05) 40%, hsla(36, 36%, 96%, 0.18) 100%), url('/light-bg.jpg')",
-        backgroundSize: "cover, cover",
-        backgroundPosition: "center, center",
-        backgroundRepeat: "no-repeat, no-repeat",
-        backgroundAttachment: "fixed, fixed",
-      }}
-    />
-  );
-}
+          // Cache-bust the photo URL on every release so neither
+          // the SW nor the browser HTTP cache can serve a stale
+          // version. Bump BG_VERSION when you swap the photo.
+          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.10) 0%, hsla(36, 36%, 96%, 0.02) 40%, hsla(36, 36%, 96%, 0.10) 100%), url('/light-bg.jpg?v=8')",
+       
