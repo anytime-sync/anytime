@@ -4,6 +4,7 @@ import { getResend, getFromAddress } from "@/lib/resend";
 import { format } from "date-fns";
 import { getLanguage, t, type LanguageCode } from "@/lib/i18n";
 import { makeUnsubToken } from "@/lib/unsub-token";
+import webpush from "web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,6 +138,59 @@ async function handle(req: Request) {
     } catch (e) {
       // Don't mark as sent — the next tick will retry.
       console.error("[reminders] send failed", task.id, e);
+    }
+  }
+
+  // Web push (in parallel to email). Same throttle: only send per task once.
+  // We already track 'handled' via reminder_sent_at, so push and email
+  // share that single flag — a reminder fires both channels in one tick.
+  const vapidPub = process.env.VAPID_PUBLIC_KEY;
+  const vapidPriv = process.env.VAPID_PRIVATE_KEY;
+  const vapidEmail = process.env.VAPID_CONTACT_EMAIL ?? "mailto:no-reply@firstlight.app";
+  if (vapidPub && vapidPriv) {
+    webpush.setVapidDetails(vapidEmail, vapidPub, vapidPriv);
+    const { data: subs } = await supabase
+      .from("push_subscriptions")
+      .select("user_id,endpoint,p256dh,auth")
+      .in("user_id", userIds);
+    const subsByUser = new Map<string, Array<{ endpoint: string; p256dh: string; auth: string }>>();
+    for (const s of subs ?? []) {
+      const arr = subsByUser.get(s.user_id) ?? [];
+      arr.push(s);
+      subsByUser.set(s.user_id, arr);
+    }
+    // pushTasks: only those we just emailed (or tried to) AND whose owner has push enabled.
+    for (const task of due) {
+      const pref = prefByUser.get(task.user_id);
+      if (pref?.email_reminders === false && !(pref as any)?.push_reminders) continue;
+      // honor push_reminders flag if present (defaults to true server-side)
+      const pushFlag = (pref as any)?.push_reminders;
+      if (pushFlag === false) continue;
+      const list = subsByUser.get(task.user_id) ?? [];
+      for (const s of list) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            JSON.stringify({
+              title: task.title,
+              body: "First Light · Reminder",
+              tag: `task-${task.id}`,
+              url: `${appUrl}/app/today`,
+            })
+          );
+        } catch (e: any) {
+          // 410 / 404 = endpoint gone, prune it.
+          const code = e?.statusCode;
+          if (code === 410 || code === 404) {
+            await supabase
+              .from("push_subscriptions")
+              .delete()
+              .eq("endpoint", s.endpoint);
+          } else {
+            console.error("[push send]", code, e?.message ?? e);
+          }
+        }
+      }
     }
   }
 

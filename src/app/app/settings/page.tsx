@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
-import { Download, Trash2, LogOut } from "lucide-react";
+import { Download, Trash2, LogOut, Bell } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
 
 export default function SettingsPage() {
   const { data: prefs } = useUserPrefs();
@@ -17,6 +18,39 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
+  const [pushReady, setPushReady] = useState(false);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!(await pushSupported())) { setPushReady(false); return; }
+      setPushReady(true);
+      const cur = await getCurrentSubscription();
+      setPushSubscribed(!!cur);
+    })();
+  }, []);
+
+  async function togglePush(next: boolean) {
+    if (next) {
+      const r = await subscribePush();
+      if (!r.ok) {
+        toast.error(
+          r.reason === "denied" ? "Notification permission denied" :
+          r.reason === "unsupported" ? "Push isn't supported on this device" :
+          "Couldn't subscribe to push"
+        );
+        return;
+      }
+      setPushSubscribed(true);
+      setPref("push_reminders", true);
+      toast.success("Push notifications on");
+    } else {
+      await unsubscribePush();
+      setPushSubscribed(false);
+      setPref("push_reminders", false);
+      toast.success("Push notifications off");
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -203,9 +237,18 @@ export default function SettingsPage() {
           <Section kicker="Notifications">
             <Toggle
               label="Email reminders"
-              hint="When a task's reminder time is reached, send the email to your inbox."
+              hint="When a task's reminder time is reached, send an email to your inbox."
               checked={prefs?.email_reminders ?? true}
               onChange={(v) => setPref("email_reminders", v)}
+            />
+            <Toggle
+              label="Push notifications"
+              hint={pushReady
+                ? "Browser-native notifications even when the tab is closed. (PWA recommended on iOS.)"
+                : "Not supported on this device or browser."}
+              checked={pushSubscribed && (prefs?.push_reminders ?? true)}
+              onChange={(v) => togglePush(v)}
+              disabled={!pushReady}
             />
           </Section>
 

@@ -149,6 +149,7 @@ export type UserPrefs = {
   ai_voice_enabled: boolean;
   language: "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
   email_reminders: boolean;
+  push_reminders: boolean;
 };
 
 export function useUserPrefs() {
