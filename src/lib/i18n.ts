@@ -119,7 +119,8 @@ type StringKey =
   | "email.kicker"
   | "email.dueLabel"
   | "email.openCta"
-  | "email.footer";
+  | "email.footer"
+  | "email.unsubscribe";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -193,6 +194,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.dueLabel": "Due",
     "email.openCta": "Open in First Light →",
     "email.footer": "You're receiving this because you set a reminder. Manage email reminders in Settings.",
+    "email.unsubscribe": "Unsubscribe from reminder emails",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -265,6 +267,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.dueLabel": "到期",
     "email.openCta": "在 First Light 開啟 →",
     "email.footer": "你收到這封信是因為你設定了提醒。可在設定中管理 email 提醒。",
+    "email.unsubscribe": "取消訂閱提醒郵件",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -337,6 +340,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.dueLabel": "到期",
     "email.openCta": "在 First Light 打开 →",
     "email.footer": "你收到这封信是因为你设置了提醒。可在设置中管理 email 提醒。",
+    "email.unsubscribe": "取消订阅提醒邮件",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -409,6 +413,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.dueLabel": "期限",
     "email.openCta": "First Light で開く →",
     "email.footer": "リマインダーを設定したため送信されました。設定からメール通知を管理できます。",
+    "email.unsubscribe": "リマインダーメールの配信を停止",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -481,6 +486,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.dueLabel": "기한",
     "email.openCta": "First Light에서 열기 →",
     "email.footer": "리마인더를 설정해 발송된 메일입니다. 설정에서 이메일 알림을 관리할 수 있습니다.",
+    "email.unsubscribe": "리마인더 이메일 수신 거부",
   },
 };
 

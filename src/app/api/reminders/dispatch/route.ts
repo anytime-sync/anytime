@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getResend, getFromAddress } from "@/lib/resend";
 import { format } from "date-fns";
 import { getLanguage, t, type LanguageCode } from "@/lib/i18n";
+import { makeUnsubToken } from "@/lib/unsub-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,7 +123,14 @@ async function handle(req: Request) {
           dueAt: task.due_at,
           lang,
           appUrl,
+          unsubUrl: `${appUrl}/api/reminders/unsubscribe?t=${makeUnsubToken(task.user_id)}`,
         }),
+        // Real one-click unsubscribe header — Gmail/Outlook honor this
+        // for the inbox-level unsubscribe button.
+        headers: {
+          "List-Unsubscribe": `<${appUrl}/api/reminders/unsubscribe?t=${makeUnsubToken(task.user_id)}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       });
       sent++;
       handledIds.push(task.id);
@@ -149,11 +157,13 @@ function emailHtml({
   dueAt,
   lang,
   appUrl,
+  unsubUrl,
 }: {
   title: string;
   dueAt: string | null;
   lang: LanguageCode;
   appUrl: string;
+  unsubUrl: string;
 }): string {
   const locale = getLanguage(lang).dateFnsLocale;
   const dueStr = dueAt
@@ -187,7 +197,10 @@ function emailHtml({
             </tr>
             <tr>
               <td style="padding:16px 32px 24px;border-top:1px solid #ECE6D8;">
-                <p style="margin:0;font-size:11px;color:#999;line-height:1.5;">${escapeHtml(t(lang, "email.footer"))}</p>
+                <p style="margin:0 0 8px;font-size:11px;color:#999;line-height:1.5;">${escapeHtml(t(lang, "email.footer"))}</p>
+                <p style="margin:0;font-size:11px;color:#999;line-height:1.5;">
+                  <a href="${unsubUrl}" style="color:#999;text-decoration:underline;">${escapeHtml(t(lang, "email.unsubscribe"))}</a>
+                </p>
               </td>
             </tr>
           </table>
