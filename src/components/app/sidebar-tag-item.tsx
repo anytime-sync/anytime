@@ -3,28 +3,34 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Pencil } from "lucide-react";
+import { X, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tag } from "@/lib/db.types";
-import { useRenameTag, useDeleteTag } from "@/hooks/use-tags";
+import { useRenameTag, useDeleteTag, useRecolorTag } from "@/hooks/use-tags";
 import { toast } from "sonner";
 
 /**
- * SidebarTagItem — a compact, inline tag pill.
+ * Inline tag pill in the sidebar — same visual language as the
+ * task-detail TagEditor. Always-white text, regardless of bg color,
+ * for maximum visual consistency.
  *
- * Layout:
- *   - The pill is a flex-row: a clickable Link (navigates to the tag
- *     view) followed by an X button (deletes the tag globally after
- *     confirmation).
- *   - Width is content-driven; pills wrap onto the next row when the
- *     parent's flex-wrap container fills.
- *   - Background = tag.color. Text color is auto-picked for contrast
- *     so any user-chosen color stays readable.
- *   - Double-click swaps the pill into an inline rename input.
+ * Hover affordances (in order, right-aligned):
+ *   - Palette icon → opens a portaled color picker; clicking a swatch
+ *     updates tag.color via useRecolorTag.
+ *   - X icon → opens the delete-confirm modal.
  *
- * The delete-confirm modal is portaled to <body> (the sidebar's
- * backdrop-filter would otherwise break position:fixed centering).
+ * Double-click the pill body = inline rename.
+ *
+ * The popovers and modal are portaled to <body> to escape the
+ * sidebar's backdrop-filter (which would otherwise create a
+ * containing block and break position:fixed).
  */
+
+const TAG_COLORS = [
+  "#5B7FE8", "#7DB48F", "#C76A6A", "#D08C5A", "#C8A24F",
+  "#5BA8A8", "#9B7FB8", "#C77FA0", "#7E8A9C",
+];
+
 export function SidebarTagItem({
   tag,
   active,
@@ -33,12 +39,16 @@ export function SidebarTagItem({
   active: boolean;
 }) {
   const rename = useRenameTag();
+  const recolor = useRecolorTag();
   const del = useDeleteTag();
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [colorPos, setColorPos] = useState<{ top: number; left: number } | null>(null);
   const [name, setName] = useState(tag.name);
   const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const colorBtnRef = useRef<HTMLButtonElement>(null);
   const href = `/app/tags/${encodeURIComponent(tag.name)}`;
 
   useEffect(() => setMounted(true), []);
@@ -47,8 +57,16 @@ export function SidebarTagItem({
     if (renaming) setTimeout(() => inputRef.current?.select(), 10);
   }, [renaming]);
 
-  const fg = readableTextColor(tag.color);
-  const subtleFg = fg === "#fff" ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.55)";
+  // Close color popover on outside click.
+  useEffect(() => {
+    if (!colorOpen) return;
+    function onDoc(e: MouseEvent) {
+      const t = e.target as HTMLElement;
+      if (!t.closest(`[data-tag-color-pop="${tag.id}"]`)) setColorOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [colorOpen, tag.id]);
 
   function commitRename() {
     const trimmed = name.trim().replace(/^#/, "");
@@ -78,11 +96,28 @@ export function SidebarTagItem({
     }
   }
 
+  function openColorPicker() {
+    const rect = colorBtnRef.current?.getBoundingClientRect();
+    if (rect) setColorPos({ top: rect.bottom + 6, left: rect.left });
+    setColorOpen(true);
+  }
+
+  function pickColor(color: string) {
+    setColorOpen(false);
+    if (color === tag.color) return;
+    recolor.mutate(
+      { id: tag.id, color },
+      {
+        onError: (e: any) => toast.error(e?.message ?? "Couldn't change color"),
+      }
+    );
+  }
+
   if (renaming) {
     return (
       <div
-        className="inline-flex items-center h-6 rounded-md px-1.5 text-[11px] font-medium"
-        style={{ backgroundColor: tag.color, color: fg }}
+        className="inline-flex items-center h-6 rounded-md px-2 text-sm font-medium leading-none"
+        style={{ backgroundColor: tag.color, color: "#fff" }}
       >
         <input
           ref={inputRef}
@@ -94,7 +129,7 @@ export function SidebarTagItem({
           }}
           onBlur={commitRename}
           className="bg-transparent outline-none w-[7ch] min-w-[3ch]"
-          style={{ color: fg }}
+          style={{ color: "#fff" }}
           size={Math.max(3, name.length)}
         />
       </div>
@@ -103,22 +138,39 @@ export function SidebarTagItem({
 
   return (
     <>
-      <span className="group inline-flex items-stretch h-6 rounded-md overflow-hidden text-[11px] font-medium leading-none">
+      <span
+        className={cn(
+          "group inline-flex items-stretch h-6 rounded-md overflow-hidden text-sm font-medium leading-none",
+          active && "ring-1 ring-fg/30"
+        )}
+      >
         <Link
           href={href}
           onDoubleClick={(e) => { e.preventDefault(); setRenaming(true); }}
           title={`${tag.name} — double-click to rename`}
-          className={cn(
-            "inline-flex items-center px-2 transition-opacity hover:opacity-90",
-            active && "ring-1 ring-fg/30"
-          )}
-          style={{
-            backgroundColor: tag.color,
-            color: fg,
-          }}
+          className="inline-flex items-center px-2 transition-opacity hover:opacity-90"
+          style={{ backgroundColor: tag.color, color: "#fff" }}
         >
           {tag.name}
         </Link>
+        <button
+          ref={colorBtnRef}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (colorOpen) setColorOpen(false);
+            else openColorPicker();
+          }}
+          aria-label={`Change color of ${tag.name}`}
+          title="Change color"
+          className="inline-flex items-center justify-center w-5 transition-colors"
+          style={{ backgroundColor: tag.color, color: "rgba(255,255,255,0.78)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.78)")}
+        >
+          <Palette className="size-3" strokeWidth={2.4} />
+        </button>
         <button
           type="button"
           onClick={(e) => {
@@ -126,26 +178,46 @@ export function SidebarTagItem({
             e.stopPropagation();
             setConfirming(true);
           }}
-          aria-label={`Delete #${tag.name}`}
-          title={`Delete #${tag.name}`}
+          aria-label={`Delete ${tag.name}`}
+          title="Delete tag"
           className="inline-flex items-center justify-center w-5 transition-colors"
-          style={{
-            backgroundColor: tag.color,
-            color: subtleFg,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = fg;
-            e.currentTarget.style.backgroundColor = darken(tag.color, 0.12);
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = subtleFg;
-            e.currentTarget.style.backgroundColor = tag.color;
-          }}
+          style={{ backgroundColor: tag.color, color: "rgba(255,255,255,0.78)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.78)")}
         >
           <X className="size-3" strokeWidth={2.5} />
         </button>
       </span>
 
+      {/* Color picker popover */}
+      {mounted && colorOpen && colorPos && createPortal(
+        <div
+          data-tag-color-pop={tag.id}
+          className="fixed z-[200] rounded-md border border-border surface-strong shadow-lg p-2 animate-fade-in"
+          style={{ top: colorPos.top, left: colorPos.left }}
+        >
+          <div className="editorial-number text-[9px] mb-1.5">Color</div>
+          <div className="flex flex-wrap gap-1.5 max-w-[180px]">
+            {TAG_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={c}
+                aria-label={`Set color ${c}`}
+                onClick={() => pickColor(c)}
+                className={cn(
+                  "size-6 rounded-md transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-fg/30 focus:ring-offset-1",
+                  c === tag.color && "ring-2 ring-offset-1 ring-fg"
+                )}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete confirm modal */}
       {mounted && confirming && createPortal(
         <div
           className="fixed inset-0 z-[100] grid place-items-center bg-black/30 backdrop-blur-sm animate-fade-in px-4"
@@ -186,35 +258,4 @@ export function SidebarTagItem({
       )}
     </>
   );
-}
-
-/* ---------- helpers ---------- */
-
-/** Pick white or charcoal text based on the bg color's perceived brightness. */
-function readableTextColor(hex: string): "#fff" | "#111" {
-  const { r, g, b } = parseHex(hex);
-  // Relative luminance (Rec. 709 approximation).
-  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return lum > 0.62 ? "#111" : "#fff";
-}
-
-/** Darken a hex color by a factor (0-1). Used for the X button's hover. */
-function darken(hex: string, amount: number): string {
-  const { r, g, b } = parseHex(hex);
-  const f = (n: number) => Math.max(0, Math.min(255, Math.round(n * (1 - amount))));
-  return rgbToHex(f(r), f(g), f(b));
-}
-
-function parseHex(hex: string): { r: number; g: number; b: number } {
-  let h = hex.replace(/^#/, "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  const r = parseInt(h.slice(0, 2) || "0", 16);
-  const g = parseInt(h.slice(2, 4) || "0", 16);
-  const b = parseInt(h.slice(4, 6) || "0", 16);
-  return { r, g, b };
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  const t = (n: number) => n.toString(16).padStart(2, "0");
-  return `#${t(r)}${t(g)}${t(b)}`;
 }

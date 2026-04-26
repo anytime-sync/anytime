@@ -141,3 +141,24 @@ export function useDeleteTag() {
     },
   });
 }
+
+/** Update only the color of a tag. Mirrors useRenameTag in shape so the
+ *  caller can pass the id + new color and not worry about the rest. */
+export function useRecolorTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; color: string }) => {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("tags")
+        .update({ color: input.color })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tags"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+

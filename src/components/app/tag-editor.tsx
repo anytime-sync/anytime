@@ -171,8 +171,9 @@ export function TagEditor({
 /* ---------- Pill ---------- */
 
 function TagPill({ tag, onRemove }: { tag: Tag; onRemove: () => void }) {
-  const fg = readableTextColor(tag.color ?? "#6b7280");
-  const subtleFg = fg === "#fff" ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.55)";
+  // Always white text — consistent across sidebar and editor regardless of bg.
+  const fg = "#fff";
+  const subtleFg = "rgba(255,255,255,0.78)";
   return (
     <span
       className="inline-flex items-stretch h-6 rounded-md overflow-hidden text-sm leading-none font-medium"
@@ -198,18 +199,3 @@ function TagPill({ tag, onRemove }: { tag: Tag; onRemove: () => void }) {
 }
 
 /* ---------- helpers ---------- */
-
-function readableTextColor(hex: string): "#fff" | "#111" {
-  const { r, g, b } = parseHex(hex);
-  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return lum > 0.62 ? "#111" : "#fff";
-}
-
-function parseHex(hex: string): { r: number; g: number; b: number } {
-  let h = hex.replace(/^#/, "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  const r = parseInt(h.slice(0, 2) || "0", 16);
-  const g = parseInt(h.slice(2, 4) || "0", 16);
-  const b = parseInt(h.slice(4, 6) || "0", 16);
-  return { r, g, b };
-}
