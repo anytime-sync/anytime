@@ -1,108 +1,187 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { useUserPrefs } from "@/hooks/use-ai";
+import { toast } from "sonner";
 
 /**
- * Microphone button using the browser's webkitSpeechRecognition API.
- * No API key, no server round-trip. Works in Chrome, Edge, and Safari.
+ * VoiceButton — push-to-talk-ish dictation using the browser's native
+ * SpeechRecognition (free, on-device on most modern browsers).
  *
- * - On press: starts continuous recognition; live-updates `onTranscript`.
- * - On press again: stops and emits the final transcript.
- * - On unmount or window blur: stops cleanly.
+ * Contract (matches the existing call sites in QuickAdd + InlineTaskInput):
+ *   - onTranscript(text): interim results, fires repeatedly while speaking
+ *   - onFinal(text): the final transcript when the recognizer commits
  *
- * If the browser doesn't support it, the button is hidden — callers can
- * fall back to typed input without a feature flag.
+ * Behavior:
+ *   - Click to start; click again (or 1.8s of silence) to stop.
+ *   - Recognition language follows the app's UI language so zh-TW
+ *     dictation lands as Traditional Chinese, etc.
+ *   - When the API isn't available (Firefox, embedded webviews) or the
+ *     user has flipped ai_voice_enabled off, the button hides itself
+ *     so we don't dangle a non-functional control.
+ *
+ * No audio leaves the device — Chrome/Edge ship Web Speech as a local
+ * service; Safari uses the OS dictation engine.
  */
-type Recognition = any;
 
-declare global {
-  interface Window {
-    SpeechRecognition?: any;
-    webkitSpeechRecognition?: any;
-  }
+// Map our app language codes to BCP-47 tags the recognizer expects.
+const RECOG_LANG: Record<string, string> = {
+  en: "en-US",
+  "zh-TW": "zh-TW",
+  "zh-CN": "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
+};
+
+type Props = {
+  onTranscript: (text: string) => void;
+  onFinal: (text: string) => void;
+  className?: string;
+};
+
+// Loose typing — the SpeechRecognition lib types aren't on the global
+// DOM lib in TS by default. We narrow only what we actually use.
+type SR = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((e: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+};
+
+function getRecognitionCtor(): (new () => SR) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: new () => SR;
+    webkitSpeechRecognition?: new () => SR;
+  };
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
-export function VoiceButton({
-  onTranscript,
-  onFinal,
-  disabled,
-  className,
-}: {
-  onTranscript: (text: string) => void;
-  onFinal?: (text: string) => void;
-  disabled?: boolean;
-  className?: string;
-}) {
+export function VoiceButton({ onTranscript, onFinal, className }: Props) {
+  const lang = useLanguage();
+  const { data: prefs } = useUserPrefs();
   const [supported, setSupported] = useState(false);
-  const [active, setActive] = useState(false);
-  const recRef = useRef<Recognition | null>(null);
-  const finalRef = useRef("");
+  const [recording, setRecording] = useState(false);
+  const recRef = useRef<SR | null>(null);
+  const finalsRef = useRef<string>("");
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const Cls = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setSupported(!!Cls);
+    setSupported(!!getRecognitionCtor());
   }, []);
 
-  useEffect(() => () => stop(), []);
-
-  function start() {
-    const Cls = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Cls) return;
-    const r: Recognition = new Cls();
-    r.continuous = true;
-    r.interimResults = true;
-    r.lang = navigator.language || "en-US";
-    finalRef.current = "";
-    r.onresult = (e: any) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const chunk = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalRef.current += chunk;
-        else interim += chunk;
-      }
-      const combined = (finalRef.current + " " + interim).trim();
-      onTranscript(combined);
+  // Stop recognizer cleanly on unmount.
+  useEffect(() => {
+    return () => {
+      try { recRef.current?.abort(); } catch {}
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-    r.onerror = () => stop();
-    r.onend = () => {
-      setActive(false);
-      if (onFinal && finalRef.current.trim()) onFinal(finalRef.current.trim());
-    };
-    r.start();
-    recRef.current = r;
-    setActive(true);
-  }
-
-  function stop() {
-    try {
-      recRef.current?.stop();
-    } catch {}
-    recRef.current = null;
-  }
+  }, []);
 
   if (!supported) return null;
+  if (prefs && prefs.ai_voice_enabled === false) return null;
+
+  function startRecording() {
+    const Ctor = getRecognitionCtor();
+    if (!Ctor) return;
+
+    const r = new Ctor();
+    r.lang = RECOG_LANG[lang] ?? "en-US";
+    r.continuous = true;
+    r.interimResults = true;
+    finalsRef.current = "";
+
+    r.onresult = (e) => {
+      let interim = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const res = e.results[i];
+        const transcript = res[0].transcript;
+        if (res.isFinal) {
+          finalsRef.current += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      const merged = (finalsRef.current + interim).trimStart();
+      onTranscript(merged);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        try { r.stop(); } catch {}
+      }, 1800);
+    };
+
+    r.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        toast.error(
+          "Mic permission was denied. Allow microphone access in the site settings to dictate.",
+        );
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        toast.error(`Voice input error: ${e.error}`);
+      }
+    };
+
+    r.onend = () => {
+      setRecording(false);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      const finalText = finalsRef.current.trim();
+      if (finalText) onFinal(finalText);
+      recRef.current = null;
+    };
+
+    recRef.current = r;
+    setRecording(true);
+    try {
+      r.start();
+    } catch (err) {
+      setRecording(false);
+      recRef.current = null;
+      toast.error("Couldn't start dictation — try again.");
+    }
+  }
+
+  function stopRecording() {
+    try { recRef.current?.stop(); } catch {}
+  }
 
   return (
     <button
       type="button"
-      aria-label={active ? "Stop dictation" : "Start dictation"}
-      title={active ? "Stop dictation" : "Speak to add a task"}
-      disabled={disabled}
-      onClick={() => (active ? stop() : start())}
+      aria-label={recording ? "Stop dictation" : "Start dictation"}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (recording) stopRecording();
+        else startRecording();
+      }}
       className={cn(
-        "size-9 grid place-items-center rounded-full transition",
-        active ? "bg-danger/15 text-danger" : "btn-ghost",
-        className
+        "relative inline-grid place-items-center size-8 rounded-full transition-colors shrink-0",
+        recording
+          ? "bg-danger text-white"
+          : "text-muted-fg hover:text-fg hover:bg-muted",
+        className,
       )}
     >
-      {active ? (
-        <Mic className="size-4 animate-pulse" />
+      {recording ? (
+        <>
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full bg-danger/40 animate-ping"
+          />
+          <Mic className="size-4 relative" />
+        </>
       ) : (
-        <MicOff className="size-4 opacity-70" />
+        <Mic className="size-4" />
       )}
     </button>
   );
 }
+
+export { VoiceButton as MicButton };
