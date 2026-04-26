@@ -1,4 +1,4 @@
--- TickTick-clone schema. Run this in the Supabase SQL editor.
+-- First Light schema. Run this in the Supabase SQL editor.
 -- Idempotent-ish; safe to re-run on a fresh project.
 
 create extension if not exists "pgcrypto";

@@ -1,6 +1,6 @@
 # First Light
 
-A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere. TickTick-inspired, self-hosted, and yours. Web first; the architecture extends naturally to mobile (Capacitor) and desktop (Tauri / Electron) without changing the core code.
+A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere. task-manager–class, self-hosted, and yours. Web first; the architecture extends naturally to mobile (Capacitor) and desktop (Tauri / Electron) without changing the core code.
 
 ## What's in v1
 
@@ -133,9 +133,9 @@ Anything visual will do — the manifest references them. (You can generate them
 
 ---
 
-## Roadmap to "full TickTick"
+## Roadmap — features still to build
 
-This is a strong v1. Major TickTick features still to build:
+This is a strong v1. Major task-management features still to build:
 
 - [ ] Recurring tasks (RRULE wiring — column already exists; UI editor + materialization on completion)
 - [ ] Reminders / push notifications (web push + service worker scheduling)
@@ -162,7 +162,7 @@ You picked "decide later" — here's the easy path when you're ready:
 ## Project layout
 
 ```
-ticktick-clone/
+first-light/
 ├── middleware.ts
 ├── next.config.mjs
 ├── package.json
