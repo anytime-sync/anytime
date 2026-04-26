@@ -31,7 +31,15 @@ export type ParsedQuickInput = {
  *   - ~ListName → project routing
  */
 export function parseQuickInput(raw: string): ParsedQuickInput {
-  let s = raw.trim();
+  // Normalize common typos / shorthands so the chrono fallback still gets
+  // useful date phrases when the LLM parser is unavailable.
+  let s = raw
+    .trim()
+    .replace(/\btmm?r\b/gi, "tomorrow")
+    .replace(/\btmrw\b/gi, "tomorrow")
+    .replace(/\btmrr?o(w)?\b/gi, "tomorrow")
+    .replace(/\btnght\b/gi, "tonight")
+    .replace(/\bmoring\b/gi, "morning");
 
   // ---------- priority ----------
   let priority: 0 | 1 | 3 | 5 | null = null;

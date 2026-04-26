@@ -107,6 +107,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(row);
   } catch (e: any) {
+    console.error("[ai]", "\n" , e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "edition_failed", detail: e?.message ?? String(e) },
       { status: 502 }

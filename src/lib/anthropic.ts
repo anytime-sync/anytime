@@ -16,7 +16,9 @@ export function getAnthropic(): Anthropic | null {
 
 export const MODELS = {
   // Cheap + fast: parsing, quadrant classification.
-  fast: "claude-haiku-4-5",
+  // Use the dated Haiku 4.5 identifier (the alias `claude-haiku-4-5` is
+  // not currently valid against the Messages API).
+  fast: "claude-haiku-4-5-20251001",
   // Stronger reasoning + voice: Daily Edition, Weekly Retro.
   editorial: "claude-sonnet-4-6",
 } as const;

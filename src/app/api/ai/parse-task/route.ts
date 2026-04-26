@@ -39,6 +39,7 @@ INPUT: ${text}`;
     const parsed = ParsedTaskSchema.parse(json);
     return NextResponse.json(parsed);
   } catch (e: any) {
+    console.error("[ai]", "\n" , e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "parse_failed", detail: e?.message ?? String(e) },
       { status: 502 }

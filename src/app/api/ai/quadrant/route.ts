@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     const parsed = QuadrantResultSchema.parse(json);
     return NextResponse.json(parsed);
   } catch (e: any) {
+    console.error("[ai]", "\n" , e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "quadrant_failed", detail: e?.message ?? String(e) },
       { status: 502 }

@@ -29,7 +29,14 @@ export function DailyEdition() {
     );
   }
 
-  if (isError || !data) return null;
+  if (isError) {
+    return (
+      <article className="rounded-xl border border-border bg-panel p-4 mb-6 text-sm text-muted-fg">
+        <p>Daily Edition couldn&apos;t load. <button className="underline hover:text-fg" onClick={() => regen.mutate()}>Try again</button></p>
+      </article>
+    );
+  }
+  if (!data) return null;
 
   return (
     <article className="rounded-xl border border-border bg-panel p-5 mb-6 group">
