@@ -34,7 +34,7 @@ export function PhotoBackground() {
   // Light: ivory veil + warm photo. Dark: charcoal veil + moody photo
   // with a touch of warm contrast so it doesn't fall flat.
   const overlay = isDark
-    ? "linear-gradient(180deg, hsla(0, 0%, 0%, 0.18) 0%, hsla(0, 0%, 0%, 0.05) 40%, hsla(0, 0%, 0%, 0.20) 100%)"
+    ? "linear-gradient(180deg, hsla(0, 0%, 0%, 0.45) 0%, hsla(0, 0%, 0%, 0.32) 40%, hsla(0, 0%, 0%, 0.50) 100%)"
     : "linear-gradient(180deg, hsla(36, 36%, 96%, 0.05) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.05) 100%)";
   const photo = isDark ? "/dark-bg.jpg?v=2" : "/light-bg.jpg?v=16";
 
@@ -54,7 +54,7 @@ export function PhotoBackground() {
           backgroundSize: "min(78vmin, 1900px) auto, cover",
           backgroundPosition: "center, center",
           backgroundRepeat: "no-repeat, no-repeat",
-          transform: isDark ? "scale(2)" : "none",
+          transform: isDark ? "scale(2.3)" : "none",
           transformOrigin: "center center",
         }}
       />
