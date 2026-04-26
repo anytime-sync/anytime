@@ -13,9 +13,10 @@ import { useEffect, useState } from "react";
  * dark theme. The visible image follows next-themes' resolvedTheme so
  * the toggle button in the sidebar swaps the photo with the palette.
  *
- * Sizing: photo capped at 78vmin / 1900px native — never upscales,
- * always sharp; bg-color frames it softly. Gradient overlay at cover
- * fills the whole viewport.
+ * Dark mode uses a CSS `transform: scale` on the bg layer to zoom in
+ * past 1x cover, cropping the photo to a tighter focal slice. The
+ * uploaded dark photo (a row of lamps in fog) reads as a repeating
+ * pattern at 1x; the zoom kills that feel.
  *
  * Swap a photo any time: replace /public/{light,dark}-bg.jpg AND bump
  * the ?v= number below so caches invalidate.
@@ -35,20 +36,28 @@ export function PhotoBackground() {
   const overlay = isDark
     ? "linear-gradient(180deg, hsla(0, 0%, 0%, 0.18) 0%, hsla(0, 0%, 0%, 0.05) 40%, hsla(0, 0%, 0%, 0.20) 100%)"
     : "linear-gradient(180deg, hsla(36, 36%, 96%, 0.05) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.05) 100%)";
-  const photo = isDark ? "/dark-bg.jpg?v=1" : "/light-bg.jpg?v=16";
+  const photo = isDark ? "/dark-bg.jpg?v=2" : "/light-bg.jpg?v=16";
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 transition-opacity duration-300"
-      style={{
-        backgroundImage: `${overlay}, url('${photo}')`,
-        backgroundSize: "min(78vmin, 1900px) auto, cover",
-        backgroundPosition: "center, center",
-        backgroundRepeat: "no-repeat, no-repeat",
-        backgroundAttachment: "fixed, fixed",
-        backgroundColor: "hsl(var(--bg))",
-      }}
-    />
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      style={{ backgroundColor: "hsl(var(--bg))" }}
+    >
+      {/* Inner layer is bg-cover scaled up so dark mode crops to a single
+          focal slice (kills the "repeating row of lamps" feel). Light mode
+          stays at 1x — the bedroom photo reads better fully visible. */}
+      <div
+        className="absolute inset-0 transition-transform duration-300"
+        style={{
+          backgroundImage: `${overlay}, url('${photo}')`,
+          backgroundSize: "min(78vmin, 1900px) auto, cover",
+          backgroundPosition: "center, center",
+          backgroundRepeat: "no-repeat, no-repeat",
+          transform: isDark ? "scale(1.45)" : "none",
+          transformOrigin: "center center",
+        }}
+      />
+    </div>
   );
 }
