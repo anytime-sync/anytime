@@ -1,6 +1,6 @@
 // Minimal app-shell service worker.
 // Bump CACHE version on visual/theme changes to force-flush stale clients.
-const CACHE = "firstlight-shell-v8";
+const CACHE = "firstlight-shell-v9";
 const ASSETS = ["/", "/login", "/signup", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
