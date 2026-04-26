@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
+import { SidebarListItem } from "./sidebar-list-item";
 import { useState } from "react";
 
 const TOP_LINKS = [
@@ -43,7 +44,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
       {/* Wordmark */}
       <div className="flex items-center justify-between px-3 h-14 border-b border-border">
         {!collapsed && (
-          <div className="font-display text-xl tracking-tight">Anytime</div>
+          <div className="wordmark text-[15px]">First Light</div>
         )}
         <button
           className="btn-ghost h-8 px-2"
@@ -108,24 +109,13 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
                 </button>
               </div>
               <div className="space-y-0.5">
-                {projects.map((p) => {
-                  const href = `/app/lists/${p.id}`;
-                  const active = pathname === href;
-                  return (
-                    <Link
-                      key={p.id}
-                      href={href}
-                      className={cn(
-                        "flex items-center gap-2 h-9 px-2 rounded-md text-sm",
-                        active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg"
-                      )}
-                    >
-                      <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                      <Folder className="size-4 shrink-0 text-muted-fg" />
-                      <span className="truncate">{p.name}</span>
-                    </Link>
-                  );
-                })}
+                {projects.map((p) => (
+                  <SidebarListItem
+                    key={p.id}
+                    project={p}
+                    active={pathname === `/app/lists/${p.id}`}
+                  />
+                ))}
                 {projects.length === 0 && (
                   <p className="text-xs text-muted-fg px-2">No lists yet.</p>
                 )}

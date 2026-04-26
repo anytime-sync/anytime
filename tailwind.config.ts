@@ -5,8 +5,11 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx,js,jsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)"],
+        display: ["var(--font-display)"],
+      },
       colors: {
-        // TickTick-style palette mapped to CSS variables (defined in globals.css)
         bg: "hsl(var(--bg))",
         panel: "hsl(var(--panel))",
         border: "hsl(var(--border))",
@@ -15,13 +18,13 @@ const config: Config = {
         fg: "hsl(var(--fg))",
         accent: "hsl(var(--accent))",
         "accent-fg": "hsl(var(--accent-fg))",
-        // Priority colors (TickTick uses red/orange/blue/grey)
         "p-high": "hsl(var(--p-high))",
         "p-med": "hsl(var(--p-med))",
         "p-low": "hsl(var(--p-low))",
         "p-none": "hsl(var(--p-none))",
         success: "hsl(var(--success))",
         danger: "hsl(var(--danger))",
+        warning: "hsl(var(--warning))",
       },
       borderRadius: {
         lg: "var(--radius)",

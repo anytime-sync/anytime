@@ -2,50 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/* OQUA-inspired theme — black/white with warm grays, lavender as secondary,
-   serif display for editorial headlines, sans for body and UI. */
+/* First Light theme — ivory + warm gold + charcoal, blue-grey for muted UI.
+   Söhne-substitute (Inter) wired in via next/font as --font-sans. */
 @layer base {
   :root {
-    --bg: 0 0% 100%;
-    --panel: 30 20% 98%;
-    --border: 30 12% 88%;
-    --muted: 30 14% 96%;
-    --muted-fg: 30 6% 35%;
-    --fg: 0 0% 7%;
-    --accent: 0 0% 7%;          /* black primary */
+    /* Ivory background, warm-white panel, charcoal foreground. */
+    --bg: 36 36% 96%;            /* #FAF7F2 ivory */
+    --panel: 0 0% 100%;          /* warm white */
+    --border: 36 24% 88%;        /* light sand border */
+    --muted: 36 32% 94%;         /* hint of ivory */
+    --muted-fg: 204 12% 42%;     /* dimmed blue-grey for secondary text */
+    --fg: 0 0% 7%;               /* charcoal */
+    --accent: 34 49% 50%;        /* warm gold #C89B5A (lifted slightly for AA) */
     --accent-fg: 0 0% 100%;
-    --p-high: 0 75% 50%;
-    --p-med: 22 90% 50%;
-    --p-low: 254 86% 70%;       /* lavender */
-    --p-none: 30 8% 60%;
-    --success: 158 64% 40%;
-    --danger: 0 75% 50%;
-    --radius: 6px;
-    --font-display: ui-serif, "Iowan Old Style", "Apple Garamond", Baskerville,
-      "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif;
+    /* Priority colors — keep red for urgency, warm gold for medium,
+       blue-grey for low so the palette stays brand-consistent. */
+    --p-high: 0 65% 50%;
+    --p-med: 34 60% 55%;         /* warm gold */
+    --p-low: 204 17% 63%;        /* blue grey */
+    --p-none: 36 12% 70%;
+    --success: 158 50% 40%;
+    --danger: 0 65% 50%;
+    --warning: 34 60% 55%;       /* warm gold for anti-overload */
+    --radius: 8px;
+    /* Single sans family for everything per the brand guide.
+       Inter is the closest free stand-in for Söhne. */
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+      "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+    /* "Display" is just the same family at heavier weight & tighter tracking;
+       hierarchy comes from size and tracking, not a separate face. */
+    --font-display: var(--font-sans);
   }
   .dark {
-    --bg: 30 6% 8%;
-    --panel: 30 6% 11%;
-    --border: 30 6% 22%;
-    --muted: 30 6% 14%;
-    --muted-fg: 30 6% 65%;
-    --fg: 30 10% 95%;
-    --accent: 30 10% 95%;
-    --accent-fg: 30 6% 8%;
-    --p-high: 0 75% 62%;
-    --p-med: 22 90% 60%;
-    --p-low: 254 86% 76%;
-    --p-none: 30 8% 50%;
-    --success: 158 64% 52%;
-    --danger: 0 75% 62%;
+    /* Dark mode: charcoal bg, warm white text, warm gold accent. */
+    --bg: 0 0% 7%;
+    --panel: 0 0% 11%;
+    --border: 0 0% 18%;
+    --muted: 0 0% 13%;
+    --muted-fg: 204 10% 65%;
+    --fg: 36 36% 96%;
+    --accent: 34 60% 60%;
+    --accent-fg: 0 0% 7%;
+    --p-high: 0 65% 60%;
+    --p-med: 34 60% 60%;
+    --p-low: 204 17% 65%;
+    --p-none: 0 0% 50%;
+    --success: 158 50% 50%;
+    --danger: 0 65% 60%;
+    --warning: 34 60% 60%;
   }
   html, body { height: 100%; }
   body {
     @apply bg-bg text-fg antialiased;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-      "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
-      "Segoe UI Emoji", sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
@@ -53,7 +64,12 @@
 }
 
 @layer components {
-  .font-display { font-family: var(--font-display); }
+  .font-display {
+    /* Hierarchy comes from weight + tracking, not a different face. */
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
   }
@@ -75,10 +91,20 @@
   .chip {
     @apply inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs bg-muted text-fg;
   }
-  /* Editorial number — small, mono-ish digit pair like 01, 02 in OQUA. */
+  /* "Editorial number" — the tracked, all-caps section labels (kickers).
+     In First Light we lean fully into the brand guide's Söhne aesthetic. */
   .editorial-number {
-    @apply font-display tabular-nums text-muted-fg;
+    @apply tabular-nums uppercase text-muted-fg;
+    font-family: var(--font-sans);
+    font-weight: 500;
     font-feature-settings: "tnum";
-    letter-spacing: 0.04em;
+    letter-spacing: 0.18em;
+  }
+  /* Brand wordmark utility: tracked uppercase Söhne-style. */
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
   }
 }

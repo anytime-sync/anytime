@@ -1,4 +1,4 @@
-# Anytime
+# First Light
 
 A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere. TickTick-inspired, self-hosted, and yours. Web first; the architecture extends naturally to mobile (Capacitor) and desktop (Tauri / Electron) without changing the core code.
 

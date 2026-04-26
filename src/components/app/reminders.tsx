@@ -57,7 +57,7 @@ export function Reminders() {
       if (ms < 0 || ms > 60 * 60 * 1000) continue;
       const t = setTimeout(() => {
         if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          const n = new Notification("Anytime — reminder", {
+          const n = new Notification("First Light — reminder", {
             body: u.title,
             icon: "/icons/icon-192.png",
             tag: u.id,

@@ -1,11 +1,11 @@
 {
-  "name": "Anytime",
-  "short_name": "Anytime",
-  "description": "A calm operating system for getting things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
+  "name": "First Light",
+  "short_name": "First Light",
+  "description": "Your space for clarity, focus, and intentional progress.",
   "start_url": "/app/today",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0F0E0D",
+  "background_color": "#FAF7F2",
+  "theme_color": "#C89B5A",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

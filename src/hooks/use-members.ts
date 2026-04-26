@@ -53,7 +53,7 @@ export function useAddMember() {
       if (error) throw error;
       const found = (data ?? [])[0] as { id: string; email: string } | undefined;
       if (!found) {
-        throw new Error("No Anytime account with that email yet — ask them to sign up first.");
+        throw new Error("No First Light account with that email yet — ask them to sign up first.");
       }
       const { error: insErr } = await supabase
         .from("project_members")
