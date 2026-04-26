@@ -1,16 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
 
-// Söhne is paid; Inter is the closest free stand-in and sets the
-// brand's modern, neutral tone. Loaded as a CSS variable so Tailwind +
-// our globals can pick it up consistently.
+// Inter — Söhne stand-in for UI / body / labels.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+// Cormorant Garamond — editorial serif for hero headlines and the
+// Daily Edition. Italic carries the brand's quiet, intentional feel.
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
   display: "swap",
 });
 
@@ -44,7 +52,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${cormorant.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         <Providers>{children}</Providers>
         <Toaster position="bottom-right" richColors closeButton />

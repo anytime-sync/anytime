@@ -30,9 +30,10 @@
     --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
       "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
       "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-    /* "Display" is just the same family at heavier weight & tighter tracking;
-       hierarchy comes from size and tracking, not a separate face. */
-    --font-display: var(--font-sans);
+    /* Display = an editorial serif for hero headlines and the
+       Daily Edition. Cormorant Garamond, loaded via next/font. */
+    --font-display: var(--font-cormorant), ui-serif, "Iowan Old Style",
+      "Apple Garamond", Baskerville, "Times New Roman", Times, serif;
   }
   .dark {
     /* Dark mode: charcoal bg, warm white text, warm gold accent. */
@@ -65,10 +66,10 @@
 
 @layer components {
   .font-display {
-    /* Hierarchy comes from weight + tracking, not a different face. */
     font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    /* Serif headlines feel best with normal weight and looser tracking. */
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none;
