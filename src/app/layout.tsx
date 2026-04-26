@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Cormorant_Garamond } from "next/font/google";
+import { Inter, Cormorant_Garamond, Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
@@ -20,6 +20,15 @@ const cormorant = Cormorant_Garamond({
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-cormorant",
+  display: "swap",
+});
+
+// Outfit — geometric humanist sans, clean uppercase shapes for the
+// brand wordmark (FIRST LIGHT lockup).
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-outfit",
   display: "swap",
 });
 
@@ -55,7 +64,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${cormorant.variable}`}
+      className={`${inter.variable} ${cormorant.variable} ${outfit.variable}`}
       suppressHydrationWarning
     >
       <body>

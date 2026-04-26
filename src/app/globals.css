@@ -149,11 +149,12 @@
     font-feature-settings: "tnum";
     letter-spacing: 0.18em;
   }
-  /* Brand wordmark utility: tracked uppercase Söhne-style. */
+  /* Brand wordmark — Outfit, the closest free match to the
+     geometric humanist sans in the brand reference. Tracked uppercase. */
   .wordmark {
-    font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: 0.18em;
+    font-family: var(--font-outfit), var(--font-sans);
+    font-weight: 400;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
   }
 }
