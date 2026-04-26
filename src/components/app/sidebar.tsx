@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Inbox, CalendarDays, CalendarRange, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Search, Plus, ChevronLeft, ChevronRight, LogOut,
-  Moon, SunMedium,
+  Moon, SunMedium, Newspaper,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useTheme } from "next-themes";
@@ -24,6 +24,7 @@ const TOP_LINKS = [
   { href: "/app/matrix", label: "Eisenhower", icon: LayoutGrid },
   { href: "/app/pomodoro", label: "Pomodoro", icon: Clock },
   { href: "/app/habits", label: "Habits", icon: Sparkles },
+  { href: "/app/retro", label: "Weekly review", icon: Newspaper },
 ];
 
 export function Sidebar({ user }: { user: { email: string; name: string | null } }) {

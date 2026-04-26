@@ -8,6 +8,7 @@ export default function TodayPage() {
       title="Today"
       subtitle={format(new Date(), "EEEE, MMMM d")}
       filter={{ view: "today" }}
+      showDailyEdition
     />
   );
 }

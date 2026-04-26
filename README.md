@@ -59,9 +59,25 @@ Copy `.env.example` → `.env.local` and fill in:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY
+# Optional — enables AI features (Daily Edition, Weekly Retro, LLM quick-add,
+# Smart Eisenhower). The app works without this; AI features are skipped.
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-You'll find these under Supabase → Project Settings → API.
+You'll find Supabase keys under Supabase → Project Settings → API. Get an Anthropic key at https://console.anthropic.com/.
+
+### AI features
+
+When `ANTHROPIC_API_KEY` is set, the app turns on:
+
+- **Daily Edition** — editorial morning briefing on the Today page, in a calm, magazine-style voice. Cached server-side per user per local date.
+- **Weekly review** (`/app/retro`) — last week's edition: what shipped, what slipped, what's worth dropping.
+- **LLM quick-add parser** — quick-add and every inline "Add task" row run a Claude Haiku parse on submit, with the existing chrono-node parser as fallback. Understands richer natural language ("the Friday before the offsite", "after dentist before kids pickup").
+- **Smart Eisenhower** — `AI · suggest` button on the matrix page proposes moves for tasks that look misplaced; one-click apply.
+- **Voice capture** — microphone button on every Add Task input. Uses the browser's built-in `webkitSpeechRecognition` (no API key, no server round-trip).
+- **Anti-overload banner** — Today view warns plainly when the day is over your daily capacity (default 4h), and offers to defer the lowest-priority task.
+
+Costs are designed to be small: Haiku for parsing/quadrants, Sonnet for editorial briefings; daily and weekly outputs are cached.
 
 ### 5. Run
 
@@ -161,45 +177,4 @@ ticktick-clone/
 └── src/
     ├── app/
     │   ├── layout.tsx
-    │   ├── globals.css
-    │   ├── page.tsx              # marketing landing
-    │   ├── login/, signup/, auth/{callback,signout}/
-    │   └── app/
-    │       ├── layout.tsx        # auth-gated, mounts AppShell
-    │       ├── today/, tomorrow/, next7/, inbox/
-    │       ├── lists/[id]/, tags/[name]/
-    │       ├── calendar/, matrix/, pomodoro/, habits/
-    ├── components/
-    │   ├── providers.tsx
-    │   └── app/
-    │       ├── app-shell.tsx
-    │       ├── sidebar.tsx
-    │       ├── task-list-view.tsx, task-item.tsx, task-detail-panel.tsx
-    │       ├── quick-add.tsx, command-palette.tsx
-    │       ├── create-project-dialog.tsx
-    │       └── sw-register.tsx
-    ├── hooks/
-    │   ├── use-projects.ts, use-tags.ts, use-tasks.ts
-    │   ├── use-habits.ts, use-realtime-sync.ts
-    ├── lib/
-    │   ├── db.types.ts
-    │   ├── quick-parse.ts
-    │   ├── supabase/{client,server,middleware}.ts
-    │   └── utils.ts
-    └── store/
-        └── ui.ts
-```
-
-## Scripts
-
-```bash
-npm run dev        # dev server
-npm run build      # production build
-npm run start      # run production build
-npm run lint       # next lint
-npm run typecheck  # tsc --noEmit
-```
-
-## License
-
-MIT — do anything you want with it.
+    │   �

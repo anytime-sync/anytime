@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
+import { useSuggestQuadrant } from "@/hooks/use-ai";
 import { isPast, isToday, addDays, endOfDay } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
+import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type QuadrantKey = "q1" | "q2" | "q3" | "q4";
@@ -22,33 +24,17 @@ type QuadrantKey = "q1" | "q2" | "q3" | "q4";
 type QuadMeta = {
   label: string;
   subtitle: string;
-  fg: string;     // text color
-  bg: string;     // tinted card background
-  border: string; // top accent / drop highlight
-  pill: string;   // count chip bg
+  fg: string;
+  bg: string;
+  border: string;
+  pill: string;
 };
 
 const QUADRANTS: Record<QuadrantKey, QuadMeta> = {
-  q1: {
-    label: "Do first", subtitle: "Urgent · Important",
-    fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",
-    border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)",
-  },
-  q2: {
-    label: "Schedule", subtitle: "Not urgent · Important",
-    fg: "#047857", bg: "rgba(16, 185, 129, 0.08)",
-    border: "#10B981", pill: "rgba(16, 185, 129, 0.15)",
-  },
-  q3: {
-    label: "Delegate", subtitle: "Urgent · Not important",
-    fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)",
-    border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)",
-  },
-  q4: {
-    label: "Eliminate", subtitle: "Not urgent · Not important",
-    fg: "#475569", bg: "rgba(100, 116, 139, 0.08)",
-    border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)",
-  },
+  q1: { label: "Do first",  subtitle: "Urgent · Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
+  q2: { label: "Schedule",  subtitle: "Not urgent · Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
+  q3: { label: "Delegate",  subtitle: "Urgent · Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
+  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
 };
 
 function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
@@ -87,9 +73,10 @@ export default function MatrixPage() {
   function onDragStart(e: DragStartEvent) { setActiveId(String(e.active.id)); }
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
-    if (!e.over) return;
-    const q = String(e.over.id) as QuadrantKey;
-    const t = tasks.find((x) => x.id === String(e.active.id));
+    const { active, over } = e;
+    if (!over) return;
+    const q = String(over.id) as QuadrantKey;
+    const t = tasks.find((x) => x.id === String(active.id));
     if (!t || classify(t) === q) return;
     const target = targetForQuadrant(q);
     update.mutate({
@@ -102,9 +89,15 @@ export default function MatrixPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 pt-6 pb-3 border-b border-border">
-        <h1 className="font-display text-2xl tracking-tight">Eisenhower matrix</h1>
-        <p className="text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
+      <div className="px-6 pt-6 pb-3 border-b border-border flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl tracking-tight">Eisenhower matrix</h1>
+          <p className="text-xs text-muted-fg">Drag tasks between quadrants to change urgency × importance.</p>
+        </div>
+        <SuggestQuadrantsButton tasks={tasks} onApply={(id, q) => {
+          const target = targetForQuadrant(q);
+          update.mutate({ id, priority: target.priority, due_at: target.due_at });
+        }} />
       </div>
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 grid-rows-2 gap-4">
@@ -136,10 +129,7 @@ function Quadrant({ qkey, tasks, activeId }: { qkey: QuadrantKey; tasks: TaskWit
         borderTopWidth: 3,
         borderTopColor: meta.border,
       }}
-      className={cn(
-        "card flex flex-col min-h-0 transition-all",
-        isOver && "ring-2 shadow-md",
-      )}
+      className={cn("card flex flex-col min-h-0 transition-all", isOver && "ring-2 shadow-md")}
     >
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
@@ -171,12 +161,125 @@ function DraggableMatrixCard({ task, dimmed }: { task: TaskWithTags; dimmed?: bo
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={cn(
-        "rounded-md cursor-grab active:cursor-grabbing",
-        (dimmed || isDragging) && "opacity-30"
-      )}
+      className={cn("rounded-md cursor-grab active:cursor-grabbing", (dimmed || isDragging) && "opacity-30")}
     >
       <TaskItem task={task} />
     </div>
+  );
+}
+
+/* ---------- AI: bulk-suggest quadrants for messy buckets ---------- */
+
+type Suggestion = { task: TaskWithTags; quadrant: 1 | 2 | 3 | 4; reason: string; from: 1 | 2 | 3 | 4 };
+
+function quadrantNumber(t: TaskWithTags): 1 | 2 | 3 | 4 {
+  const k = classify(t);
+  return k === "q1" ? 1 : k === "q2" ? 2 : k === "q3" ? 3 : 4;
+}
+
+function SuggestQuadrantsButton({
+  tasks,
+  onApply,
+}: {
+  tasks: TaskWithTags[];
+  onApply: (id: string, q: QuadrantKey) => void;
+}) {
+  const suggest = useSuggestQuadrant();
+  const [results, setResults] = useState<Suggestion[] | null>(null);
+  const [running, setRunning] = useState(false);
+
+  async function run() {
+    setRunning(true);
+    setResults(null);
+    const candidates = tasks.filter((t) => !t.is_completed).slice(0, 12);
+    const out: Suggestion[] = [];
+    for (const t of candidates) {
+      try {
+        const r = await suggest.mutateAsync({
+          title: t.title,
+          due_at: t.due_at,
+          priority: t.priority,
+          project: null,
+        });
+        if (!r) continue;
+        const fromKey = quadrantNumber(t);
+        if (r.quadrant !== fromKey)
+          out.push({ task: t, quadrant: r.quadrant, reason: r.reason, from: fromKey });
+      } catch {}
+    }
+    setRunning(false);
+    setResults(out);
+  }
+
+  return (
+    <>
+      <button
+        onClick={run}
+        disabled={running}
+        className="btn-outline gap-2 h-9 px-3 text-xs disabled:opacity-50"
+        title="Let AI suggest quadrants for tasks that look misplaced"
+      >
+        <Sparkles className={cn("size-3.5", running && "animate-spin")} />
+        {running ? "Looking…" : "AI · suggest"}
+      </button>
+
+      {results && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-fade-in"
+          onClick={() => setResults(null)}
+        >
+          <div
+            className="card max-w-xl w-[92vw] p-5 max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="font-display text-xl">Suggested moves</h2>
+              <span className="text-xs text-muted-fg">{results.length} item{results.length !== 1 && "s"}</span>
+            </div>
+            {results.length === 0 ? (
+              <p className="text-sm text-muted-fg">Nothing looks out of place.</p>
+            ) : (
+              <ul className="space-y-2">
+                {results.map((s) => (
+                  <li key={s.task.id} className="border border-border rounded-md p-3 flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{s.task.title}</div>
+                      <div className="text-xs text-muted-fg mt-0.5">
+                        Q{s.from} → <span className="text-fg">Q{s.quadrant}</span> · {s.reason}
+                      </div>
+                    </div>
+                    <button
+                      className="btn-ghost size-8 grid place-items-center text-success"
+                      title="Apply"
+                      onClick={() => {
+                        const k = (`q${s.quadrant}`) as QuadrantKey;
+                        onApply(s.task.id, k);
+                        setResults((r) => r?.filter((x) => x.task.id !== s.task.id) ?? null);
+                      }}
+                    >
+                      <Check className="size-4" />
+                    </button>
+                    <button
+                      className="btn-ghost size-8 grid place-items-center text-muted-fg"
+                      title="Skip"
+                      onClick={() =>
+                        setResults((r) => r?.filter((x) => x.task.id !== s.task.id) ?? null)
+                      }
+                    >
+                      <XIcon className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button className="btn-ghost h-8 px-3 text-xs" onClick={() => setResults(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

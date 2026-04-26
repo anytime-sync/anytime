@@ -1,0 +1,177 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+
+const tz = () =>
+  Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+export type ParsedTask = {
+  title: string;
+  due_at: string | null;
+  is_all_day: boolean;
+  priority: 0 | 1 | 3 | 5;
+  tagNames: string[];
+  projectName: string | null;
+  rrule: string | null;
+  reminder_at: string | null;
+  estimated_minutes: number | null;
+};
+
+/** LLM-powered quick-add parser. Resolves to null when AI is disabled (503). */
+export function useParseTaskAI() {
+  return useMutation({
+    mutationFn: async (text: string): Promise<ParsedTask | null> => {
+      const r = await fetch("/api/ai/parse-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, tz: tz() }),
+      });
+      if (r.status === 503) return null;        // AI off — caller falls back
+      if (!r.ok) throw new Error(`parse_failed ${r.status}`);
+      return (await r.json()) as ParsedTask;
+    },
+  });
+}
+
+export function useSuggestQuadrant() {
+  return useMutation({
+    mutationFn: async (input: {
+      title: string;
+      due_at?: string | null;
+      priority?: number;
+      project?: string | null;
+    }): Promise<{ quadrant: 1 | 2 | 3 | 4; reason: string } | null> => {
+      const r = await fetch("/api/ai/quadrant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`quadrant_failed ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export type DailyEditionRow = {
+  user_id: string;
+  edition_date: string;
+  kicker: string;
+  headline: string;
+  front_page: string;
+  inside: string;
+  below_fold: string;
+  generated_at?: string;
+  model?: string;
+};
+
+export function useDailyEdition() {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ["dailyEdition"],
+    queryFn: async (): Promise<DailyEditionRow | null> => {
+      const r = await fetch("/api/ai/daily-edition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tz: tz() }),
+      });
+      if (r.status === 503) return null;       // AI off
+      if (!r.ok) throw new Error(`edition_failed ${r.status}`);
+      const row = (await r.json()) as DailyEditionRow;
+      qc.setQueryData(["dailyEdition"], row);
+      return row;
+    },
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useRegenerateEdition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/ai/daily-edition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tz: tz(), force: true }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`edition_failed ${r.status}`);
+      return await r.json();
+    },
+    onSuccess: (row) => {
+      if (row) qc.setQueryData(["dailyEdition"], row);
+    },
+  });
+}
+
+export type WeeklyRetroRow = {
+  user_id: string;
+  iso_year: number;
+  iso_week: number;
+  week_start: string;
+  shipped: string;
+  slipped: string;
+  drop_list: string;
+};
+
+export function useWeeklyRetro(target: "last" | "current" = "last") {
+  return useQuery({
+    queryKey: ["weeklyRetro", target],
+    queryFn: async (): Promise<WeeklyRetroRow | null> => {
+      const r = await fetch("/api/ai/weekly-retro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tz: tz(), target }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`retro_failed ${r.status}`);
+      return await r.json();
+    },
+    staleTime: 60 * 60_000,
+  });
+}
+
+/** User preferences — capacity caps, AI toggles, energy windows. */
+export type UserPrefs = {
+  user_id: string;
+  daily_capacity_minutes: number;
+  default_task_minutes: number;
+  energy_peak_start: string;
+  energy_peak_end: string;
+  ai_enabled: boolean;
+  ai_auto_quadrant: boolean;
+  ai_daily_edition: boolean;
+  ai_voice_enabled: boolean;
+};
+
+export function useUserPrefs() {
+  return useQuery({
+    queryKey: ["userPrefs"],
+    queryFn: async (): Promise<UserPrefs | null> => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return (data as UserPrefs) ?? null;
+    },
+  });
+}
+
+export function useUpdatePrefs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: Partial<UserPrefs>) => {
+      const supabase = createClient();
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("user_preferences")
+        .upsert({ user_id: u.user.id, ...patch });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["userPrefs"] }),
+  });
+}

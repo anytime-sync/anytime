@@ -7,15 +7,19 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { InlineTaskInput } from "./inline-task-input";
 import { SortableTaskList } from "./sortable-task-list";
+import { DailyEdition } from "./daily-edition";
+import { AntiOverloadBanner } from "./anti-overload-banner";
 
 type Props = {
   title: string;
   subtitle?: string;
   filter: TasksFilter;
   defaults?: { project_id?: string | null };
+  /** Show the AI Daily Edition card and anti-overload banner (Today view). */
+  showDailyEdition?: boolean;
 };
 
-export function TaskListView({ title, subtitle, filter, defaults }: Props) {
+export function TaskListView({ title, subtitle, filter, defaults, showDailyEdition }: Props) {
   const { data: tasks = [], isLoading } = useTasks(filter);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -39,6 +43,12 @@ export function TaskListView({ title, subtitle, filter, defaults }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+        {showDailyEdition && (
+          <div className="px-3">
+            <DailyEdition />
+            <AntiOverloadBanner />
+          </div>
+        )}
         <InlineTaskInput defaultProjectId={defaults?.project_id ?? null} />
 
         {isLoading ? (

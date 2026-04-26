@@ -5,6 +5,8 @@ import { parseQuickInput, describeParsed, describeNow, type ParsedQuickInput } f
 import { useCreateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
+import { useParseTaskAI } from "@/hooks/use-ai";
+import { VoiceButton } from "./voice-button";
 import {
   Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles,
 } from "lucide-react";
@@ -28,6 +30,7 @@ export function QuickAdd() {
   const createTask = useCreateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
+  const aiParse = useParseTaskAI();
 
   const parsed = useMemo(() => parseQuickInput(text), [text]);
   const preview = useMemo(() => describeParsed(parsed, now), [parsed, now]);
@@ -62,26 +65,38 @@ export function QuickAdd() {
   if (!open) return null;
 
   async function submit() {
-    if (!parsed.title) return;
+    if (!text.trim()) return;
+    // Try the LLM parser first — it handles richer phrases ("the Friday before
+    // the offsite", "after dentist before kids pickup"). Fall back to the
+    // chrono-node `parsed` if AI is disabled or fails.
+    let p: any = parsed;
+    try {
+      const ai = await aiParse.mutateAsync(text.trim());
+      if (ai && ai.title) p = ai;
+    } catch {
+      // chrono fallback already in `parsed`
+    }
+    if (!p.title) return;
     let projectId: string | null = null;
-    if (parsed.projectName) {
-      const found = projects.find((p) => p.name.toLowerCase() === parsed.projectName!.toLowerCase());
+    if (p.projectName) {
+      const found = projects.find((pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase());
       if (found) projectId = found.id;
       else {
-        const created = await createProject.mutateAsync({ name: parsed.projectName });
+        const created = await createProject.mutateAsync({ name: p.projectName });
         projectId = created.id;
       }
     }
     await createTask.mutateAsync({
-      title: parsed.title,
-      due_at: parsed.due_at,
-      is_all_day: parsed.is_all_day,
-      priority: parsed.priority,
-      tagNames: parsed.tagNames,
+      title: p.title,
+      due_at: p.due_at,
+      is_all_day: p.is_all_day,
+      priority: p.priority,
+      tagNames: p.tagNames,
       project_id: projectId,
-      rrule: parsed.rrule,
-      reminder_at: parsed.reminder_at,
-    });
+      rrule: p.rrule,
+      reminder_at: p.reminder_at,
+      ...(p.estimated_minutes != null ? { estimated_minutes: p.estimated_minutes } : {}),
+    } as any);
     setOpen(false);
   }
 
@@ -100,16 +115,19 @@ export function QuickAdd() {
           <span>{describeNow(now)}</span>
         </div>
 
-        <input
-          ref={inputRef}
-          className="w-full bg-transparent outline-none text-lg placeholder:text-muted-fg"
-          placeholder='Tell me what to add — e.g. "Email Sam tomorrow 9am with reminder 30m before, urgent #work"'
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            className="flex-1 bg-transparent outline-none text-lg placeholder:text-muted-fg"
+            placeholder='Tell me what to add — or press the mic and speak'
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+          />
+          <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
+        </div>
 
         {/* Conversational preview */}
         <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-fg flex items-start gap-2">

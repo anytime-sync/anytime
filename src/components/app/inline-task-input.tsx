@@ -9,6 +9,8 @@ import {
 } from "@/lib/quick-parse";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
+import { useParseTaskAI } from "@/hooks/use-ai";
+import { VoiceButton } from "./voice-button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,32 +31,41 @@ export function InlineTaskInput({
   const create = useCreateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
+  const aiParse = useParseTaskAI();
 
   const parsed = useMemo(() => parseQuickInput(text), [text]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!parsed.title) return;
+    if (!text.trim()) return;
+    // LLM parse on submit; chrono fallback on failure or when AI is disabled.
+    let p: any = parsed;
+    try {
+      const ai = await aiParse.mutateAsync(text.trim());
+      if (ai && ai.title) p = ai;
+    } catch {}
+    if (!p.title) return;
 
     let projectId: string | null = defaultProjectId;
-    if (parsed.projectName) {
+    if (p.projectName) {
       const found = projects.find(
-        (p) => p.name.toLowerCase() === parsed.projectName!.toLowerCase()
+        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
       );
-      projectId = found ? found.id : (await createProject.mutateAsync({ name: parsed.projectName })).id;
+      projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
     }
 
     await create.mutateAsync({
-      title: parsed.title,
-      due_at: parsed.due_at,
-      is_all_day: parsed.is_all_day,
-      priority: parsed.priority,
-      tagNames: parsed.tagNames,
+      title: p.title,
+      due_at: p.due_at,
+      is_all_day: p.is_all_day,
+      priority: p.priority,
+      tagNames: p.tagNames,
       project_id: projectId,
-      rrule: parsed.rrule,
-      reminder_at: parsed.reminder_at,
-    });
+      rrule: p.rrule,
+      reminder_at: p.reminder_at,
+      ...(p.estimated_minutes != null ? { estimated_minutes: p.estimated_minutes } : {}),
+    } as any);
     setText("");
   }
 
@@ -70,6 +81,11 @@ export function InlineTaskInput({
           placeholder={placeholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
+        />
+        <VoiceButton
+          onTranscript={(t) => setText(t)}
+          onFinal={(t) => setText(t)}
+          className="size-7 shrink-0"
         />
         {showPreview && (
           <span className="text-[11px] text-muted-fg shrink-0">Enter to add</span>
