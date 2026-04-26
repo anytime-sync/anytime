@@ -200,20 +200,20 @@ export function QuickAdd() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="card surface-strong w-full max-w-2xl p-5 space-y-4 shadow-2xl"
+        className="card surface-strong w-full max-w-2xl p-4 md:p-5 space-y-3 md:space-y-4 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* "Now" anchor */}
-        <div className="flex items-center justify-between text-[11px] text-muted-fg">
-          <span className="editorial-number uppercase tracking-[0.18em]">Quick add</span>
-          <span>{describeNow(now)}</span>
+        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-fg min-w-0">
+          <span className="editorial-number uppercase tracking-[0.18em] shrink-0">Quick add</span>
+          <span className="truncate">{describeNow(now)}</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent outline-none text-lg placeholder:text-muted-fg"
-            placeholder='Tell me what to add — or press the mic and speak'
+            className="flex-1 min-w-0 bg-transparent outline-none text-base md:text-lg placeholder:text-muted-fg"
+            placeholder='Add a task — type or speak'
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -224,14 +224,14 @@ export function QuickAdd() {
         </div>
 
         {/* Conversational preview */}
-        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-fg flex items-start gap-2">
+        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-fg flex items-start gap-2 min-w-0">
           <Sparkles className="size-4 text-muted-fg shrink-0 mt-0.5" />
-          <p className="leading-relaxed">{preview}</p>
+          <p className="leading-relaxed min-w-0 flex-1 break-words">{preview}</p>
         </div>
 
         {/* Live activation row + mini Eisenhower */}
-        <div className="grid md:grid-cols-[1fr_auto] gap-4">
-          <div className="space-y-2 content-start">
+        <div className="grid md:grid-cols-[1fr_auto] gap-3 md:gap-4 min-w-0">
+          <div className="space-y-2 content-start min-w-0">
             <div className="flex flex-wrap gap-1.5">
               <Chip
                 kind="time"
@@ -306,14 +306,18 @@ export function QuickAdd() {
           />
         </div>
 
-        {/* Examples (only on empty input) */}
+        {/* Examples (only on empty input). On mobile show only the first 2;
+            the full list returns on >=md viewports. */}
         {!text && (
           <div className="flex flex-wrap gap-1.5">
-            {EXAMPLES.map((ex) => (
+            {EXAMPLES.map((ex, i) => (
               <button
                 key={ex}
                 type="button"
-                className="text-[11px] text-muted-fg hover:text-fg border border-border rounded-full px-2 py-0.5"
+                className={cn(
+                  "text-[11px] text-muted-fg hover:text-fg border border-border rounded-full px-2 py-0.5",
+                  i >= 2 && "hidden md:inline-flex"
+                )}
                 onClick={() => setText(ex)}
               >
                 {ex.length > 56 ? ex.slice(0, 54) + "…" : ex}
@@ -322,13 +326,16 @@ export function QuickAdd() {
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[11px] text-muted-fg pt-1">
-          <span>
+        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-fg pt-1 min-w-0">
+          <span className="hidden md:inline truncate">
             Hints: <code>tomorrow 9am</code>, <code>every Monday</code>,{" "}
             <code>remind me 30m before</code>, <code>urgent</code>,{" "}
             <code>#tag</code>, <code>~ListName</code>
           </span>
-          <span>Enter to add · Esc to close</span>
+          <span className="ml-auto shrink-0">
+            <span className="md:hidden">Enter ↵ · Esc</span>
+            <span className="hidden md:inline">Enter to add · Esc to close</span>
+          </span>
         </div>
       </div>
     </div>
