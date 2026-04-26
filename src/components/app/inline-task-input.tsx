@@ -19,12 +19,18 @@ import { cn } from "@/lib/utils";
  *
  * defaultProjectId — list/project the task lands in if the user doesn't
  *   explicitly type ~ListName. (Smart views like Today/Inbox pass null.)
+ *
+ * defaultDueAt — fallback ISO timestamp used when the user's text didn't
+ *   include a date (calendar single-day view passes the day so anything
+ *   typed there lands on the visible date, not at "no date").
  */
 export function InlineTaskInput({
   defaultProjectId = null,
+  defaultDueAt = null,
   placeholder = 'Add task — try "Email Sam tomorrow 9am, urgent #work"',
 }: {
   defaultProjectId?: string | null;
+  defaultDueAt?: string | null;
   placeholder?: string;
 }) {
   const [text, setText] = useState("");
@@ -57,8 +63,11 @@ export function InlineTaskInput({
 
     await create.mutateAsync({
       title: p.title,
-      due_at: p.due_at,
-      is_all_day: p.is_all_day,
+      // Fall back to the host view's date when the user typed nothing
+      // date-like — keeps tasks added from the calendar's day view on
+      // that day, instead of landing in "no date".
+      due_at: p.due_at ?? defaultDueAt,
+      is_all_day: p.due_at ? p.is_all_day : !!defaultDueAt,
       priority: p.priority,
       tagNames: p.tagNames,
       project_id: projectId,
