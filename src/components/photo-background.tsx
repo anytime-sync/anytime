@@ -31,5 +31,5 @@ export function PhotoBackground() {
           // Cache-bust the photo URL on every release so neither
           // the SW nor the browser HTTP cache can serve a stale
           // version. Bump BG_VERSION when you swap the photo.
-          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.08) 0%, hsla(36, 36%, 96%, 0.02) 40%, hsla(36, 36%, 96%, 0.08) 100%), url('/light-bg.jpg?v=9')",
-       
+          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.06) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.06) 100%), url('/light-bg.jpg?v=10')",
+      
