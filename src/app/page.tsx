@@ -33,27 +33,13 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="px-6 pt-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="wordmark text-base">
+      <header className="px-4 md:px-6 pt-6 md:pt-8">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+          <Link href="/" className="wordmark text-[13px] md:text-base shrink-0">
             First Light
           </Link>
-          <nav className="flex items-center gap-3 text-sm text-muted-fg">
+          <nav className="flex items-center text-sm text-muted-fg">
             <LanguagePicker mode="local" onChange={setLang} />
-            <button
-              type="button"
-              onClick={() => setAuthMode("login")}
-              className="hover:text-fg px-2 h-9"
-            >
-              {t(lang, "landing.headerLogin")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode("signup")}
-              className="btn-primary px-4 h-9"
-            >
-              {t(lang, "landing.headerSignup")}
-            </button>
           </nav>
         </div>
       </header>
