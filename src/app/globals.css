@@ -148,12 +148,14 @@
 }
 
 /* Translucent panels — let the photographic background bleed through.
-   The opaque ivory was hiding the warm window-light photo everywhere
-   it covered the page. Now sidebars and cards carry a glassy ivory
-   wash so the ambient warmth permeates the whole UI while text stays
-   readable. Defined after @tailwind utilities so it overrides the
-   default bg-panel utility from Tailwind's color theme. */
-@layer utilities {
-  .bg-panel {
-    background-color: hsl(var(--panel) / 0.62);
-    -webkit-backdrop-filter: saturate(140%) blur
+   Outside @layer + !important so this reliably beats Tailwind's
+   bg-panel utility regardless of layer ordering. Sidebars and cards
+   become frosted glass over the photo, keeping text readable while
+   the warm window-light ambience permeates the whole UI. */
+.bg-panel {
+  background-color: hsl(var(--panel) / 0.55) !important;
+  -webkit-backdrop-filter: saturate(135%) blur(16px);
+  backdrop-filter: saturate(135%) blur(16px);
+}
+.dark .bg-panel {
+  background
