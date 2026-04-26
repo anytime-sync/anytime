@@ -137,7 +137,7 @@ export default function PomodoroPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border">
-        <h1 className="text-xl font-semibold">Pomodoro</h1>
+        <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Pomodoro</h1>
         <p className="text-xs text-muted-fg">{completedToday} focus sessions today.</p>
       </div>
       <div className="flex-1 overflow-y-auto grid place-items-center p-6">

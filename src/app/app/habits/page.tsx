@@ -25,7 +25,7 @@ export default function HabitsPage() {
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Habits</h1>
+          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Habits</h1>
           <p className="text-xs text-muted-fg">Build streaks. Click a day to log.</p>
         </div>
         <button className="btn-primary gap-2" onClick={() => setCreating(true)}>

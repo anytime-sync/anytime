@@ -50,7 +50,7 @@ export default function CalendarPage() {
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{format(cursor, "MMMM yyyy")}</h1>
+          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy")}</h1>
           <div className="flex">
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(subMonths(cursor, 1))}>
               <ChevronLeft className="size-4" />
