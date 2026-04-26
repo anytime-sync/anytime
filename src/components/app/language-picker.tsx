@@ -69,27 +69,36 @@ export function LanguagePicker({
     setOpen(true);
   }
 
-  async function pick(code: LanguageCode) {
+  function pick(code: LanguageCode) {
     setOpen(false);
     if (code === currentCode) return;
+
+    // 1) INSTANT UI UPDATE — synchronous, no awaits. localStorage write
+    //    fires the fl.language.change event so every useLanguage()
+    //    subscriber re-renders this frame. Setting documentElement.lang
+    //    swaps the per-language font stack defined in globals.css.
+    writeStoredLanguage(code);
+    if (typeof document !== "undefined") document.documentElement.lang = code;
     if (mode === "local") {
-      writeStoredLanguage(code);
       setLocalLang(code);
-      if (typeof document !== "undefined") document.documentElement.lang = code;
-      onChange?.(code);
-      toast.success(t(code, "auth.shared.language") + " — " + getLanguage(code).displayName);
-      return;
     }
-    try {
-      await update.mutateAsync({ language: code });
-      writeStoredLanguage(code);
-      if (typeof document !== "undefined") document.documentElement.lang = code;
-      qc.invalidateQueries({ queryKey: ["dailyEdition"] });
-      qc.invalidateQueries({ queryKey: ["weeklyRetro"] });
-      onChange?.(code);
-      toast.success(`${getLanguage(code).displayName}`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't change language");
+    onChange?.(code);
+    toast.success(getLanguage(code).displayName);
+
+    // 2) BACKGROUND: persist to Supabase (when authed) and invalidate
+    //    AI caches. Fire-and-forget — the UI doesn't wait.
+    if (mode === "user") {
+      update.mutate(
+        { language: code },
+        {
+          onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["dailyEdition"] });
+            qc.invalidateQueries({ queryKey: ["weeklyRetro"] });
+          },
+          onError: (e: any) =>
+            toast.error(e?.message ?? "Couldn't sync language"),
+        }
+      );
     }
   }
 
