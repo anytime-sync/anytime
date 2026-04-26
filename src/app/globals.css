@@ -64,22 +64,45 @@
        readability is preserved while the leak shows in negative space. */
     background-color: hsl(var(--bg));
     background-image:
+      /* 1. Soft ambient leak from upper right — the warm "first light". */
       radial-gradient(ellipse 65% 55% at 92% -5%,
         hsla(34, 80%, 78%, 0.55) 0%,
         hsla(34, 80%, 78%, 0.18) 35%,
         transparent 70%),
+      /* 2. Counter-leak from lower left — keeps the canvas from feeling
+         lopsided, in a softer sand tone. */
       radial-gradient(ellipse 55% 50% at 8% 105%,
         hsla(28, 70%, 80%, 0.40) 0%,
         hsla(28, 70%, 80%, 0.12) 35%,
         transparent 70%),
-      radial-gradient(ellipse 28% 28% at 75% 30%,
-        hsla(40, 90%, 88%, 0.30) 0%,
+      /* 3. RAY FAN — light shattering from the upper-right corner.
+         An asymmetric set of narrow warm slices emanating outward, each
+         a different weight, so it reads as an organic burst rather than
+         a stencilled pattern. Opacities stay ≤ 0.16 so the rays
+         enhance ambience without competing with content. */
+      conic-gradient(from 198deg at 96% -3%,
+        transparent           0deg,
+        hsla(38, 95%, 84%, 0.16)   6deg,
+        transparent          12deg,
+        transparent          24deg,
+        hsla(38, 95%, 84%, 0.10)  31deg,
+        transparent          38deg,
+        transparent          54deg,
+        hsla(38, 95%, 84%, 0.13)  60deg,
+        transparent          67deg,
+        transparent          82deg,
+        hsla(40, 95%, 86%, 0.07)  87deg,
+        transparent          92deg,
+        transparent         360deg),
+      /* 4. Small bright pivot at upper-mid right — anchors the rays. */
+      radial-gradient(ellipse 28% 28% at 88% 18%,
+        hsla(40, 95%, 88%, 0.30) 0%,
         transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
   /* Dark mode: same composition, deeper warmth, lower opacity so the
-     charcoal base reads. */
+     charcoal base still reads cleanly. */
   .dark body {
     background-image:
       radial-gradient(ellipse 65% 55% at 92% -5%,
@@ -89,7 +112,18 @@
       radial-gradient(ellipse 55% 50% at 8% 105%,
         hsla(28, 50%, 28%, 0.35) 0%,
         hsla(28, 50%, 28%, 0.10) 35%,
-        transparent 70%);
+        transparent 70%),
+      conic-gradient(from 198deg at 96% -3%,
+        transparent          0deg,
+        hsla(38, 70%, 50%, 0.10)   6deg,
+        transparent         12deg,
+        transparent         24deg,
+        hsla(38, 70%, 50%, 0.07)  31deg,
+        transparent         38deg,
+        transparent         54deg,
+        hsla(38, 70%, 50%, 0.09)  60deg,
+        transparent         67deg,
+        transparent        360deg);
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
