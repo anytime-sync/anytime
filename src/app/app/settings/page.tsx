@@ -20,6 +20,7 @@ export default function SettingsPage() {
   const [confirmEmail, setConfirmEmail] = useState("");
   const [pushReady, setPushReady] = useState(false);
   const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushDenied, setPushDenied] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,6 +28,9 @@ export default function SettingsPage() {
       setPushReady(true);
       const cur = await getCurrentSubscription();
       setPushSubscribed(!!cur);
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        setPushDenied(true);
+      }
     })();
   }, []);
 
@@ -34,13 +38,17 @@ export default function SettingsPage() {
     if (next) {
       const r = await subscribePush();
       if (!r.ok) {
-        toast.error(
-          r.reason === "denied" ? "Notification permission denied" :
-          r.reason === "unsupported" ? "Push isn't supported on this device" :
-          "Couldn't subscribe to push"
-        );
+        if (r.reason === "denied") {
+          setPushDenied(true);
+          toast.error("Browser blocked notifications. See the hint below.");
+        } else if (r.reason === "unsupported") {
+          toast.error("Push isn't supported on this device");
+        } else {
+          toast.error("Couldn't subscribe to push");
+        }
         return;
       }
+      setPushDenied(false);
       setPushSubscribed(true);
       setPref("push_reminders", true);
       toast.success("Push notifications on");
@@ -276,6 +284,17 @@ export default function SettingsPage() {
               onChange={(v) => togglePush(v)}
               disabled={!pushReady}
             />
+            {pushDenied && (
+              <div className="text-xs text-muted-fg leading-relaxed border-l-2 border-warning pl-3 py-1">
+                <p className="text-fg mb-1">Notifications are blocked for this site.</p>
+                <p>
+                  Click the{" "}
+                  <span className="inline-block px-1.5 py-0.5 border border-border rounded text-[10px]">🔒</span>
+                  {" "}icon left of the URL → <strong>Site settings</strong> → set
+                  <strong> Notifications</strong> to <strong>Allow</strong>, then reload the page and toggle this on again.
+                </p>
+              </div>
+            )}
           </Section>
 
           {/* ---------- Import ---------- */}
@@ -419,21 +438,26 @@ function Toggle({
     <div className={`grid grid-cols-[1fr_auto] items-start gap-4 ${disabled ? "opacity-50" : ""}`}>
       <div>
         <div className="text-sm text-fg">{label}</div>
-        {hint && <p className="text-xs text-muted-fg mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-muted-fg mt-0.5 leading-relaxed">{hint}</p>}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-10 rounded-full transition-colors shrink-0 ${
-          checked ? "bg-accent" : "bg-muted border border-border"
-        }`}
+        className={`relative inline-flex h-[20px] w-[34px] rounded-full transition-all duration-200 shrink-0 border focus:outline-none focus:ring-2 focus:ring-accent/30 ${
+          checked
+            ? "bg-accent/90 border-accent"
+            : "bg-transparent border-border hover:border-fg/40"
+        } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
       >
         <span
-          className={`absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform ${
-            checked ? "translate-x-[18px]" : "translate-x-0.5"
+          className={`absolute top-[2px] size-[14px] rounded-full transition-all duration-200 ${
+            checked
+              ? "left-[16px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.18)]"
+              : "left-[2px] bg-muted-fg/60"
           }`}
         />
       </button>
