@@ -22,16 +22,19 @@ import { cn } from "@/lib/utils";
 
 // First-Light-aligned tag palette: muted, warm, brand-friendly.
 const TAG_COLORS = [
-  "#5B7FE8", // soft cobalt
-  "#7DB48F", // sage green
-  "#C76A6A", // dusty red
+  // Row 1 — warm, light-theme-aligned brand tones.
+  "#C9B88B", // ivory / champagne
+  "#B89878", // milk tea
   "#D08C5A", // warm terracotta
   "#C8A24F", // muted gold
-  "#E5B23A", // solid yellow (mustard, readable with white)
+  "#E5B23A", // solid yellow
+  "#C76A6A", // dusty red
+  // Row 2 — cool / saturated.
+  "#5B7FE8", // soft cobalt
+  "#7DB48F", // sage green
   "#5BA8A8", // soft teal
   "#9B7FB8", // muted lavender
   "#C77FA0", // soft rose
-  "#B89878", // milk tea
   "#7E8A9C", // blue-grey
 ];
 
