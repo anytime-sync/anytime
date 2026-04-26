@@ -52,7 +52,7 @@ export function TaskDetailPanel() {
   const recurrenceValue = recurrenceMatch ? recurrenceMatch.value : (task.rrule ?? "");
 
   return (
-    <aside className="w-[380px] shrink-0 h-full border-l border-border bg-panel animate-slide-in-right flex flex-col">
+    <aside className="w-[380px] shrink-0 h-full border-l border-border surface-strong animate-slide-in-right flex flex-col">
       <div className="flex items-center justify-between px-3 h-12 border-b border-border">
         <button
           aria-label={task.is_completed ? "Mark incomplete" : "Mark complete"}

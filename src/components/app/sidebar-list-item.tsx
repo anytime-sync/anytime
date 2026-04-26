@@ -118,7 +118,7 @@ export function SidebarListItem({
       </Link>
 
       {menuOpen && (
-        <div className="absolute z-30 right-1 top-9 min-w-[140px] rounded-md border border-border bg-panel shadow-md p-1 text-sm">
+        <div className="absolute z-30 right-1 top-9 min-w-[140px] rounded-md border border-border surface shadow-md p-1 text-sm">
           <button
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted"
             onClick={() => { setMenuOpen(false); setRenaming(true); }}

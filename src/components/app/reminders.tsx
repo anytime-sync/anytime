@@ -95,7 +95,7 @@ export function Reminders() {
   return (
     <button
       title="Enable browser reminders"
-      className="fixed bottom-4 right-4 z-30 size-10 rounded-full bg-panel border border-border shadow-md grid place-items-center text-muted-fg hover:text-accent"
+      className="fixed bottom-4 right-4 z-30 size-10 rounded-full surface border border-border shadow-md grid place-items-center text-muted-fg hover:text-accent"
       onClick={async () => {
         const result = await Notification.requestPermission();
         setPerm(result);

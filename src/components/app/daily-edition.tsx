@@ -20,7 +20,7 @@ export function DailyEdition() {
 
   if (isLoading) {
     return (
-      <article className="rounded-xl border border-border bg-panel p-5 mb-6 animate-pulse">
+      <article className="rounded-xl border border-border surface p-5 mb-6 animate-pulse">
         <div className="h-3 w-24 bg-muted rounded mb-3" />
         <div className="h-7 w-3/4 bg-muted rounded mb-3" />
         <div className="h-3 w-full bg-muted rounded mb-2" />
@@ -31,7 +31,7 @@ export function DailyEdition() {
 
   if (isError) {
     return (
-      <article className="rounded-xl border border-border bg-panel p-4 mb-6 text-sm text-muted-fg">
+      <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>Daily Edition couldn&apos;t load. <button className="underline hover:text-fg" onClick={() => regen.mutate()}>Try again</button></p>
       </article>
     );
@@ -39,7 +39,7 @@ export function DailyEdition() {
   if (!data) return null;
 
   return (
-    <article className="rounded-xl border border-border bg-panel p-5 mb-6 group">
+    <article className="rounded-xl border border-border surface p-5 mb-6 group">
       <header className="flex items-baseline justify-between mb-3">
         <div className="flex items-baseline gap-2">
           <Newspaper className="size-3.5 text-muted-fg translate-y-0.5" />

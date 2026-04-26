@@ -40,7 +40,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const [showCreate, setShowCreate] = useState(false);
 
   return (
-    <aside className="h-screen border-r border-border bg-panel flex flex-col">
+    <aside className="h-screen border-r border-border surface flex flex-col">
       {/* Wordmark */}
       <div className="flex items-center justify-between px-3 h-14 border-b border-border">
         {!collapsed && (

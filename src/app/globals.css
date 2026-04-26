@@ -58,18 +58,12 @@
     @apply text-fg antialiased;
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    /* Photo background — soft window-light shafts on a warm cream wall.
-       Real photographic ambience reads more naturally than any SVG
-       simulation could. The image is muted slightly via the warm ivory
-       base color underneath; sidebars and cards stay opaque (bg-panel)
-       so type readability is preserved over the photo. Swap the image
-       at /public/light-bg.jpg if you have a preferred shot. */
+    /* The photo lives in <PhotoBackground />, NOT here. Body is
+       deliberately transparent so the fixed photo layer at -z-10
+       shows through every panel and wrapper above it. A faint
+       fallback color prevents flash-of-white before the JS layer
+       paints. Drop a new photo at /public/light-bg.jpg anytime. */
     background-color: hsl(var(--bg));
-    background-image: url("/light-bg.jpg");
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
   }
   /* Dark mode: same composition, deeper warmth, lower opacity so the
      charcoal base still reads cleanly. */
@@ -123,7 +117,7 @@
     @apply w-full h-9 rounded-md border border-border bg-bg px-3 text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-accent/30;
   }
   .card {
-    @apply rounded-md border border-border bg-panel;
+    /* See .card definition below — surface is plain CSS, not Tailwind. */
   }
   .chip {
     @apply inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs bg-muted text-fg;
@@ -147,15 +141,55 @@
   }
 }
 
-/* Translucent panels — let the photographic background bleed through.
-   Outside @layer + !important so this reliably beats Tailwind's
-   bg-panel utility regardless of layer ordering. Sidebars and cards
-   become frosted glass over the photo, keeping text readable while
-   the warm window-light ambience permeates the whole UI. */
-.bg-panel {
-  background-color: hsl(var(--panel) / 0.55) !important;
-  -webkit-backdrop-filter: saturate(135%) blur(16px);
-  backdrop-filter: saturate(135%) blur(16px);
+/* ============================================================
+   .surface — the ONE class for every panel that sits above the
+   photo background. Replaces every prior bg-panel usage.
+
+   Tunable in one place:
+     --surface-alpha — how much the photo bleeds through (0–1)
+     --surface-blur  — how strongly the photo is blurred behind
+     --surface-saturate — color richness multiplier on the bg
+
+   Drop in any photo and the whole UI adapts: the panels remain
+   readable, the photo's tonality permeates the chrome.
+   ============================================================ */
+:root {
+  --surface-alpha: 0.55;
+  --surface-blur: 18px;
+  --surface-saturate: 140%;
 }
-.dark .bg-panel {
-  background
+.dark {
+  --surface-alpha: 0.72;
+  --surface-blur: 14px;
+  --surface-saturate: 120%;
+}
+.surface {
+  background-color: hsl(var(--panel) / var(--surface-alpha));
+  -webkit-backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
+  backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
+}
+/* Heavier variant for modals / detail rail where the photo behind
+   would compete with dense content. */
+.surface-strong {
+  background-color: hsl(var(--panel) / 0.86);
+  -webkit-backdrop-filter: saturate(135%) blur(22px);
+  backdrop-filter: saturate(135%) blur(22px);
+}
+
+/* .card now inlines the surface styles directly because @apply
+   can't reach plain CSS classes outside @layer components. */
+.card {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--panel) / var(--surface-alpha));
+  -webkit-backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
+  backdrop-filter: saturate(var(--surface-saturate)) blur(var(--surface-blur));
+}
+
+/* Safety net: if Safari ever lacks backdrop-filter, bump the panel
+   alpha so the UI stays readable. */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .surface, .card {
+    background-color: hsl(var(--panel) / 0.92);
+  }
+}

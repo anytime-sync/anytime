@@ -113,7 +113,7 @@ export function TagEditor({
       </div>
 
       {open && (suggestions.length > 0 || showCreate) && (
-        <div className="absolute z-30 mt-1 left-0 right-0 max-h-64 overflow-y-auto rounded-md border border-border bg-panel shadow-lg p-1">
+        <div className="absolute z-30 mt-1 left-0 right-0 max-h-64 overflow-y-auto rounded-md border border-border surface shadow-lg p-1">
           {suggestions.map((t) => (
             <button
               key={t.id}

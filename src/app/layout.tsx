@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
-// LightRays SVG retired — using a real photographic background (public/light-bg.jpg) instead.
+import { PhotoBackground } from "@/components/photo-background";
 
 // Inter — Söhne stand-in for UI / body / labels.
 const inter = Inter({
@@ -68,7 +68,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
+        <PhotoBackground />
         <Providers>{children}</Providers>
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />
-      </bod
+      </body>
+ 

@@ -1,6 +1,6 @@
 // Minimal app-shell service worker. Use a tool like next-pwa or workbox for fancier strategies.
 // Bump CACHE version on visual/theme changes to force-flush stale clients.
-const CACHE = "firstlight-shell-v5";
+const CACHE = "firstlight-shell-v6";
 const ASSETS = ["/", "/login", "/signup", "/manifest.webmanifest", "/light-bg.jpg"];
 
 self.addEventListener("install", (e) => {
