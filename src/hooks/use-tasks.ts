@@ -164,6 +164,9 @@ export function useCreateTask() {
       if (!u.user) throw new Error("Not authenticated");
 
       const { tagNames, ...taskInput } = input;
+      // Strip the synthetic optimistic id (if onMutate added one) before
+      // hitting Postgres — the DB assigns the real uuid.
+      delete (taskInput as any).id;
       const { data: task, error } = await supabase
         .from("tasks")
         .insert({ ...taskInput, user_id: u.user.id })
@@ -186,13 +189,60 @@ export function useCreateTask() {
       }
       return task as Task;
     },
+    /**
+     * Optimistic insert — the new task appears in every visible list
+     * the instant the user hits Enter, before the server responds. The
+     * server roundtrip (~200-500ms) becomes invisible. Errors roll back
+     * to the prior list and surface a toast.
+     */
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ["tasks"] });
+      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
+      const tempId =
+        (input as any).id ?? `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date().toISOString();
+      const optimistic: TaskWithTags = {
+        id: tempId,
+        user_id: "optimistic",
+        project_id: input.project_id ?? null,
+        parent_id: input.parent_id ?? null,
+        title: input.title,
+        notes: input.notes ?? null,
+        is_completed: false,
+        completed_at: null,
+        start_at: input.start_at ?? null,
+        due_at: input.due_at ?? null,
+        is_all_day: input.is_all_day ?? false,
+        priority: (input.priority ?? 0) as any,
+        position: 0,
+        rrule: input.rrule ?? null,
+        reminder_at: input.reminder_at ?? null,
+        estimated_pomodoros: input.estimated_pomodoros ?? 0,
+        spent_pomodoros: 0,
+        created_at: now,
+        updated_at: now,
+        tags: (input.tagNames ?? []).map((name, i) => ({
+          id: `temp-tag-${i}-${name}`,
+          user_id: "optimistic",
+          name,
+          color: null,
+        })) as any,
+      };
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
+        old ? [optimistic, ...old] : old
+      );
+      return { prev, tempId };
+    },
+    onError: (e: Error, _input, ctx) => {
+      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
+      toast.error(e.message);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
 }
 
