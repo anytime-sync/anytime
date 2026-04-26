@@ -56,7 +56,18 @@ export function TaskDetailPanel() {
   const recurrenceValue = recurrenceMatch ? recurrenceMatch.value : (task.rrule ?? "");
 
   return (
-    <aside className="w-[380px] shrink-0 h-full border-l border-border surface-strong animate-slide-in-right flex flex-col">
+    <aside
+      className={cn(
+        // On mobile (<md), the panel is a full-screen overlay so the
+        // close button is reachable. The previous fixed 380px layout
+        // pushed the X button off-screen on narrow viewports because
+        // the parent <main> clips with overflow-hidden.
+        "fixed inset-0 z-40 w-full",
+        "md:relative md:inset-auto md:z-auto md:w-[380px]",
+        "shrink-0 h-full border-l-0 md:border-l border-border",
+        "surface-strong animate-slide-in-right flex flex-col"
+      )}
+    >
       <div className="flex items-center justify-between px-3 h-12 border-b border-border">
         <button
           aria-label={task.is_completed ? "Mark incomplete" : "Mark complete"}
@@ -91,12 +102,16 @@ export function TaskDetailPanel() {
           >
             <Trash2 className="size-4" />
           </button>
+          {/* Done button — labeled on mobile so it's an obvious tap
+              target; compact X on desktop. */}
           <button
-            className="btn-ghost size-9 p-0 grid place-items-center"
+            className="btn-ghost h-9 px-2 md:px-0 md:size-9 grid place-items-center md:p-0 gap-1 text-sm"
             onClick={() => setId(null)}
             title="Close"
+            aria-label="Close task editor"
           >
             <X className="size-4" />
+            <span className="md:hidden">Done</span>
           </button>
         </div>
       </div>
