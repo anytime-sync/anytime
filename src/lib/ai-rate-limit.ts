@@ -18,13 +18,20 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * regardless of which user is calling. The recording happens after the
  * actual AI call so we record the model + status from the response.
  */
-export type AiFeature = "parse_task" | "quadrant" | "daily_edition" | "weekly_retro";
+export type AiFeature =
+  | "parse_task"
+  | "quadrant"
+  | "daily_edition"
+  | "weekly_retro"
+  | "plan_week";
 
 export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   parse_task: 200,
   quadrant: 50,
   daily_edition: 8,
   weekly_retro: 8,
+  // plan_week is batch (≤3d tasks per call), so a low daily count is plenty.
+  plan_week: 10,
 };
 
 function admin() {
