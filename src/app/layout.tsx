@@ -73,4 +73,6 @@ export default function RootLayout({
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />
       </body>
- 
+    </html>
+  );
+}
