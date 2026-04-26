@@ -1,132 +1,83 @@
 /**
- * LightRays — photoreal volumetric god rays from the upper-right corner.
+ * LightRays — warm, photoreal sunbeams against the ivory background.
  *
- * Approach (closer to a photograph than a vector illustration):
- *   1. Each beam is a long polygon, but heavily blurred and then
- *      perturbed with feTurbulence + feDisplacementMap so the edges
- *      become soft, organic, and slightly noisy — like real light
- *      passing through atmospheric particles.
- *   2. The whole layer uses mix-blend-mode: screen so the beams
- *      brighten the page underneath (the way real photons do)
- *      instead of painting flat polygons over the top of it.
- *   3. A wide warm bloom + a tight bright core sit at the source,
- *      so the rays appear to emerge from a luminous sun-spot.
- *   4. A faint, large-scale turbulence layer simulates dust / haze
- *      catching the light between the beams.
+ * Why "multiply" not "screen": the page background is near-white
+ * (#FAF7F2). Screen blend on near-white is invisible — there's
+ * nothing to brighten. In a real photograph of sunlight hitting a
+ * white wall, the lit areas read as WARMER than the wall, not
+ * brighter. Multiply blend with warm gold tints the bg toward
+ * orange exactly where the beams pass — which is what eyes
+ * recognise as "sunlight".
+ *
+ * Construction:
+ *   1. Long polygons fanning from the upper-right corner.
+ *   2. feTurbulence + feDisplacementMap perturb the polygon edges
+ *      so they're soft and organic, not vector-clean.
+ *   3. Wide gaussian blur (stdDev=24) dissolves the polygons into
+ *      atmospheric shafts of light.
+ *   4. mix-blend-mode: multiply tints the page warm where each ray lands.
+ *   5. A bright sun-disc + warm bloom anchor the source.
  */
 export function LightRays() {
   // angle (deg, clockwise from straight-down), length, half-width at far end, opacity.
   const rays: Array<{ a: number; l: number; w: number; o: number }> = [
-    { a:  30, l: 2400, w:  60, o: 0.85 },
-    { a:  52, l: 2300, w:  35, o: 0.65 },
-    { a:  74, l: 2500, w:  80, o: 0.95 },
-    { a:  96, l: 2200, w:  45, o: 0.70 },
-    { a: 118, l: 2400, w:  55, o: 0.80 },
-    { a: 140, l: 2100, w:  30, o: 0.55 },
+    { a:  28, l: 2400, w:  70, o: 0.85 },
+    { a:  50, l: 2300, w:  40, o: 0.65 },
+    { a:  72, l: 2500, w:  90, o: 0.95 },
+    { a:  94, l: 2200, w:  50, o: 0.70 },
+    { a: 116, l: 2400, w:  60, o: 0.80 },
+    { a: 138, l: 2100, w:  35, o: 0.55 },
   ];
 
   return (
     <svg
       className="pointer-events-none fixed inset-0 -z-10 h-full w-full"
-      style={{ mixBlendMode: "screen" }}
+      style={{ mixBlendMode: "multiply" }}
       viewBox="0 0 1440 900"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden
     >
       <defs>
-        {/* Volumetric softener: gentle turbulence displaces the polygon
-            edges, then a wide blur dissolves them into atmospheric beams. */}
-        <filter id="ray-volumetric" x="-20%" y="-20%" width="140%" height="140%">
+        <filter id="ray-soft" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" />
-          <feDisplacementMap in="SourceGraphic" scale="40" />
-          <feGaussianBlur stdDeviation="22" />
+          <feDisplacementMap in="SourceGraphic" scale="50" />
+          <feGaussianBlur stdDeviation="24" />
         </filter>
 
-        {/* A second, narrower blur for the bright inner core of each shaft. */}
-        <filter id="ray-core" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="8" />
-        </filter>
-
-        {/* Large dust/haze noise — barely visible, but it makes the
-            empty space between beams feel like real lit air. */}
-        <filter id="dust" x="0%" y="0%" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" />
-          <feColorMatrix
-            values="0 0 0 0 1
-                    0 0 0 0 0.9
-                    0 0 0 0 0.7
-                    0 0 0 0.06 0"
-          />
-        </filter>
-
-        <linearGradient id="ray-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#FFF1D6" stopOpacity="1" />
-          <stop offset="8%"   stopColor="#FFE0AE" stopOpacity="0.95" />
-          <stop offset="30%"  stopColor="#F2C68C" stopOpacity="0.55" />
-          <stop offset="60%"  stopColor="#D9A36A" stopOpacity="0.20" />
+        {/* Warm tinted gradient — under MULTIPLY this paints warm
+            gold INTO the ivory bg, producing visible sunbeams. */}
+        <linearGradient id="ray-tint" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#E89A3C" stopOpacity="0.85" />
+          <stop offset="20%"  stopColor="#D78B3D" stopOpacity="0.60" />
+          <stop offset="50%"  stopColor="#C68A50" stopOpacity="0.30" />
           <stop offset="100%" stopColor="#C89B5A" stopOpacity="0" />
         </linearGradient>
 
-        <linearGradient id="ray-core-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#FFFFFF" stopOpacity="0.9" />
-          <stop offset="20%"  stopColor="#FFEBC4" stopOpacity="0.6" />
-          <stop offset="55%"  stopColor="#FFD699" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#FFD699" stopOpacity="0" />
-        </linearGradient>
-
-        {/* Wide warm bloom around the source. */}
-        <radialGradient id="bloom-wide" cx="0" cy="0" r="520" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#FFF0CC" stopOpacity="0.75" />
-          <stop offset="35%"  stopColor="#F2C68C" stopOpacity="0.30" />
-          <stop offset="70%"  stopColor="#C89B5A" stopOpacity="0.08" />
+        {/* Source bloom — wide warm halo around the upper-right corner. */}
+        <radialGradient id="bloom" cx="0" cy="0" r="520" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#E89A3C" stopOpacity="0.65" />
+          <stop offset="35%"  stopColor="#D9913A" stopOpacity="0.30" />
+          <stop offset="70%"  stopColor="#C89B5A" stopOpacity="0.10" />
           <stop offset="100%" stopColor="#C89B5A" stopOpacity="0" />
-        </radialGradient>
-
-        {/* Tight bright sun-core. */}
-        <radialGradient id="bloom-core" cx="0" cy="0" r="120" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#FFFFFF" stopOpacity="0.95" />
-          <stop offset="60%"  stopColor="#FFE6BD" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#FFE6BD" stopOpacity="0" />
         </radialGradient>
       </defs>
 
-      {/* Atmospheric dust between the rays (very faint, full canvas). */}
-      <rect x="0" y="0" width="1440" height="900" filter="url(#dust)" opacity="0.55" />
-
-      {/* Wide warm bloom behind the rays. */}
-      <g transform="translate(1400 -20)">
-        <circle r="520" fill="url(#bloom-wide)" />
+      {/* Wide warm bloom around the source. */}
+      <g transform="translate(1420 -40)">
+        <circle r="520" fill="url(#bloom)" />
       </g>
 
-      {/* Volumetric soft beams (the diffuse outer halo of each shaft). */}
-      <g transform="translate(1400 -20)" filter="url(#ray-volumetric)">
+      {/* The beams. */}
+      <g transform="translate(1420 -40)" filter="url(#ray-soft)">
         {rays.map(({ a, l, w, o }, i) => (
           <polygon
-            key={`v${i}`}
+            key={i}
             points={`0,0 ${-w},${l} ${w},${l}`}
-            fill="url(#ray-gradient)"
+            fill="url(#ray-tint)"
             opacity={o}
             transform={`rotate(${a})`}
           />
         ))}
-      </g>
-
-      {/* Bright inner cores — narrower polygons, gentler blur. */}
-      <g transform="translate(1400 -20)" filter="url(#ray-core)">
-        {rays.map(({ a, l, w, o }, i) => (
-          <polygon
-            key={`c${i}`}
-            points={`0,0 ${-w * 0.35},${l * 0.85} ${w * 0.35},${l * 0.85}`}
-            fill="url(#ray-core-gradient)"
-            opacity={o * 0.9}
-            transform={`rotate(${a})`}
-          />
-        ))}
-      </g>
-
-      {/* Bright sun-core sits on top of everything. */}
-      <g transform="translate(1400 -20)">
-        <circle r="120" fill="url(#bloom-core)" />
       </g>
     </svg>
   );
