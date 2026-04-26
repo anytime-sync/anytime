@@ -7,7 +7,7 @@ import {
   describeParsed,
   type ParsedQuickInput,
 } from "@/lib/quick-parse";
-import { useCreateTask } from "@/hooks/use-tasks";
+import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
@@ -35,6 +35,7 @@ export function InlineTaskInput({
 }) {
   const [text, setText] = useState("");
   const create = useCreateTask();
+  const update = useUpdateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
   const aiParse = useParseTaskAI();
@@ -42,40 +43,93 @@ export function InlineTaskInput({
   const parsed = useMemo(() => parseQuickInput(text), [text]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
-  async function submit(e: React.FormEvent) {
+  /**
+   * Submit philosophy — make Enter feel instant.
+   *
+   * Old flow blocked the user for the entire Anthropic round-trip
+   * (~700-1500ms) before clearing the input or showing the new task.
+   *
+   * New flow:
+   *   1. Clear the input synchronously so the user can type the next task.
+   *   2. Insert immediately using the local chrono-based parse (it
+   *      handles 90%+ of inputs correctly). useCreateTask now does an
+   *      optimistic cache insert so the row paints in the same frame.
+   *   3. Fire the AI parse in the background. If it returns extra
+   *      structure the local parser missed, patch the new task.
+   */
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
-    // LLM parse on submit; chrono fallback on failure or when AI is disabled.
-    let p: any = parsed;
-    try {
-      const ai = await aiParse.mutateAsync(text.trim());
-      if (ai && ai.title) p = ai;
-    } catch {}
-    if (!p.title) return;
+    const raw = text.trim();
+    if (!raw) return;
+    const localP = parsed;
+    if (!localP.title) localP.title = raw;
+    setText("");
+    void instantInsertAndRefine(raw, localP);
+  }
 
+  async function instantInsertAndRefine(raw: string, p: ParsedQuickInput) {
     let projectId: string | null = defaultProjectId;
     if (p.projectName) {
       const found = projects.find(
         (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
       );
-      projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
+      if (found) projectId = found.id;
     }
 
-    await create.mutateAsync({
-      title: p.title,
-      // Fall back to the host view's date when the user typed nothing
-      // date-like — keeps tasks added from the calendar's day view on
-      // that day, instead of landing in "no date".
-      due_at: p.due_at ?? defaultDueAt,
-      is_all_day: p.due_at ? p.is_all_day : !!defaultDueAt,
-      priority: p.priority,
-      tagNames: p.tagNames,
-      project_id: projectId,
-      rrule: p.rrule,
-      reminder_at: p.reminder_at,
-      ...(p.estimated_minutes != null ? { estimated_minutes: p.estimated_minutes } : {}),
-    } as any);
-    setText("");
+    let createdTask: any;
+    try {
+      createdTask = await create.mutateAsync({
+        title: p.title,
+        due_at: p.due_at ?? defaultDueAt,
+        is_all_day: p.due_at ? p.is_all_day : !!defaultDueAt,
+        priority: p.priority,
+        tagNames: p.tagNames,
+        project_id: projectId,
+        rrule: p.rrule,
+        reminder_at: p.reminder_at,
+      } as any);
+    } catch {
+      return;
+    }
+    if (!createdTask?.id) return;
+
+    // Skip the AI hop when local parse already captured a date AND the
+    // input is plain ASCII (no need for multilingual title rewriting).
+    const localGotEnough =
+      !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
+    if (localGotEnough) return;
+
+    try {
+      const ai = await aiParse.mutateAsync(raw);
+      if (!ai || !ai.title) return;
+
+      let aiProjectId = projectId;
+      if (ai.projectName && !aiProjectId) {
+        const found = projects.find(
+          (pr: any) => pr.name.toLowerCase() === ai.projectName!.toLowerCase()
+        );
+        aiProjectId = found
+          ? found.id
+          : (await createProject.mutateAsync({ name: ai.projectName })).id;
+      }
+
+      const patch: Record<string, any> = { id: createdTask.id };
+      if (ai.title && ai.title !== p.title) patch.title = ai.title;
+      if (ai.due_at && !p.due_at) {
+        patch.due_at = ai.due_at;
+        patch.is_all_day = ai.is_all_day;
+      }
+      if (ai.priority && ai.priority > p.priority) patch.priority = ai.priority;
+      if (ai.rrule && !p.rrule) patch.rrule = ai.rrule;
+      if (ai.reminder_at && !p.reminder_at) patch.reminder_at = ai.reminder_at;
+      if (aiProjectId && aiProjectId !== projectId) patch.project_id = aiProjectId;
+
+      if (Object.keys(patch).length > 1) {
+        update.mutate(patch);
+      }
+    } catch {
+      // AI failure is silent — the locally-parsed task is already saved.
+    }
   }
 
   return (
