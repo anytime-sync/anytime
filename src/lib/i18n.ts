@@ -115,6 +115,7 @@ type StringKey =
   | "sidebar.completed"
   | "view.next90.subtitle"
   | "view.completed.subtitle"
+  | "sidebar.settings"
   | "email.subject"
   | "email.kicker"
   | "email.dueLabel"
@@ -195,6 +196,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.openCta": "Open in First Light →",
     "email.footer": "You're receiving this because you set a reminder. Manage email reminders in Settings.",
     "email.unsubscribe": "Unsubscribe from reminder emails",
+    "sidebar.settings": "Settings",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -268,6 +270,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.openCta": "在 First Light 開啟 →",
     "email.footer": "你收到這封信是因為你設定了提醒。可在設定中管理 email 提醒。",
     "email.unsubscribe": "取消訂閱提醒郵件",
+    "sidebar.settings": "設定",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -341,6 +344,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.openCta": "在 First Light 打开 →",
     "email.footer": "你收到这封信是因为你设置了提醒。可在设置中管理 email 提醒。",
     "email.unsubscribe": "取消订阅提醒邮件",
+    "sidebar.settings": "设置",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -414,6 +418,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.openCta": "First Light で開く →",
     "email.footer": "リマインダーを設定したため送信されました。設定からメール通知を管理できます。",
     "email.unsubscribe": "リマインダーメールの配信を停止",
+    "sidebar.settings": "設定",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -487,6 +492,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "email.openCta": "First Light에서 열기 →",
     "email.footer": "리마인더를 설정해 발송된 메일입니다. 설정에서 이메일 알림을 관리할 수 있습니다.",
     "email.unsubscribe": "리마인더 이메일 수신 거부",
+    "sidebar.settings": "설정",
   },
 };
 
