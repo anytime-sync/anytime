@@ -54,6 +54,47 @@ export function useSuggestQuadrant() {
   });
 }
 
+export type PlanWeekTaskInput = {
+  id: string;
+  title: string;
+  due_at?: string | null;
+  priority: number;
+  project?: string | null;
+};
+
+export type PlanWeekSuggestion = {
+  id: string;
+  quadrant: 1 | 2 | 3 | 4;
+  suggested_priority: 0 | 1 | 3 | 5;
+  reason: string;
+};
+
+export type PlanWeekResult = {
+  suggestions: PlanWeekSuggestion[];
+  notes: string;
+};
+
+/**
+ * Batch-plan the next 7 days. Sends up to 30 tasks in one shot so the
+ * model can weight them against each other.
+ */
+export function usePlanWeek() {
+  return useMutation({
+    mutationFn: async (
+      tasks: PlanWeekTaskInput[]
+    ): Promise<PlanWeekResult | null> => {
+      const r = await fetch("/api/ai/plan-week", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`plan_week_failed ${r.status}`);
+      return (await r.json()) as PlanWeekResult;
+    },
+  });
+}
+
 export type DailyEditionRow = {
   user_id: string;
   edition_date: string;
@@ -113,6 +154,12 @@ export type WeeklyRetroRow = {
   shipped: string;
   slipped: string;
   drop_list: string;
+  /** Smarter-retro additions live in raw_json so older rows still validate. */
+  raw_json?: {
+    themes?: string;
+    next_week_plan?: string;
+    language?: string;
+  } & Record<string, unknown>;
 };
 
 export function useWeeklyRetro(target: "last" | "current" = "last") {
