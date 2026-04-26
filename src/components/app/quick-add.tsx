@@ -8,7 +8,7 @@ import { useUIStore } from "@/store/ui";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import {
-  Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles,
+  Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles, ChevronDown,
 } from "lucide-react";
 import { addDays, isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,36 @@ export function QuickAdd() {
   const [text, setText] = useState("");
   const [now, setNow] = useState(() => new Date());
   const inputRef = useRef<HTMLInputElement>(null);
+  // Which chip's options panel is currently revealed (null = none).
+  const [activeChip, setActiveChip] = useState<
+    "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags" | null
+  >(null);
+
+  /** Append a phrase to the current text. Uses the input's selection so
+   *  insertions land at the cursor when the user is mid-edit; otherwise
+   *  appends with a leading space. Re-focuses the input. */
+  function injectPhrase(phrase: string) {
+    const el = inputRef.current;
+    const sep = (cur: string) => (cur && !cur.endsWith(" ") ? " " : "");
+    if (el && document.activeElement === el) {
+      const start = el.selectionStart ?? text.length;
+      const end = el.selectionEnd ?? text.length;
+      const before = text.slice(0, start);
+      const after = text.slice(end);
+      const insert = sep(before) + phrase + (after && !after.startsWith(" ") ? " " : "");
+      const next = before + insert + after;
+      setText(next);
+      requestAnimationFrame(() => {
+        const pos = (before + insert).length;
+        el.focus();
+        try { el.setSelectionRange(pos, pos); } catch {}
+      });
+    } else {
+      setText((t) => t + sep(t) + phrase);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+    setActiveChip(null);
+  }
   const createTask = useCreateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
@@ -137,41 +167,74 @@ export function QuickAdd() {
 
         {/* Live activation row + mini Eisenhower */}
         <div className="grid md:grid-cols-[1fr_auto] gap-4">
-          <div className="flex flex-wrap gap-1.5 content-start">
-            <Activator
-              active={!!parsed.due_at}
-              icon={<CalendarClock className="size-3.5" />}
-              label={parsed.due_at ? formatDueShort(parsed.due_at, parsed.is_all_day) : "Time"}
-            />
-            <Activator
-              active={!!parsed.rrule}
-              icon={<Repeat className="size-3.5" />}
-              label={parsed.rrule ? rruleShort(parsed.rrule) : "Repeat"}
-            />
-            <Activator
-              active={!!parsed.reminder_at}
-              icon={<Bell className="size-3.5" />}
-              label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at) : "Reminder"}
-            />
-            <Activator
-              active={parsed.priority > 0}
-              icon={<Flag className="size-3.5" />}
-              label={parsed.priority > 0 ? priorityWord(parsed.priority) : "Priority"}
-              tone={priorityTone(parsed.priority)}
-            />
-            <Activator
-              active={!!parsed.projectName}
-              icon={<Folder className="size-3.5" />}
-              label={parsed.projectName ?? "Inbox"}
-            />
-            {parsed.tagNames.map((t) => (
-              <Activator key={t} active icon={<Hash className="size-3.5" />} label={t} />
-            ))}
-            {parsed.tagNames.length === 0 && (
-              <Activator active={false} icon={<Hash className="size-3.5" />} label="Tags" />
+          <div className="space-y-2 content-start">
+            <div className="flex flex-wrap gap-1.5">
+              <Chip
+                kind="time"
+                active={!!parsed.due_at}
+                open={activeChip === "time"}
+                onClick={() => setActiveChip(activeChip === "time" ? null : "time")}
+                icon={<CalendarClock className="size-3.5" />}
+                label={parsed.due_at ? formatDueShort(parsed.due_at, parsed.is_all_day) : "Time"}
+              />
+              <Chip
+                kind="repeat"
+                active={!!parsed.rrule}
+                open={activeChip === "repeat"}
+                onClick={() => setActiveChip(activeChip === "repeat" ? null : "repeat")}
+                icon={<Repeat className="size-3.5" />}
+                label={parsed.rrule ? rruleShort(parsed.rrule) : "Repeat"}
+              />
+              <Chip
+                kind="reminder"
+                active={!!parsed.reminder_at}
+                open={activeChip === "reminder"}
+                onClick={() => setActiveChip(activeChip === "reminder" ? null : "reminder")}
+                icon={<Bell className="size-3.5" />}
+                label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at) : "Reminder"}
+              />
+              <Chip
+                kind="priority"
+                active={parsed.priority > 0}
+                open={activeChip === "priority"}
+                onClick={() => setActiveChip(activeChip === "priority" ? null : "priority")}
+                icon={<Flag className="size-3.5" />}
+                label={parsed.priority > 0 ? priorityWord(parsed.priority) : "Priority"}
+                tone={priorityTone(parsed.priority)}
+              />
+              <Chip
+                kind="inbox"
+                active={!!parsed.projectName}
+                open={activeChip === "inbox"}
+                onClick={() => setActiveChip(activeChip === "inbox" ? null : "inbox")}
+                icon={<Folder className="size-3.5" />}
+                label={parsed.projectName ?? "Inbox"}
+              />
+              {parsed.tagNames.map((t) => (
+                <Activator key={t} active icon={<Hash className="size-3.5" />} label={t} />
+              ))}
+              <Chip
+                kind="tags"
+                active={false}
+                open={activeChip === "tags"}
+                onClick={() => setActiveChip(activeChip === "tags" ? null : "tags")}
+                icon={<Hash className="size-3.5" />}
+                label="Tag"
+              />
+            </div>
+            {activeChip && (
+              <ChipOptions
+                kind={activeChip}
+                projects={projects.map((pr: any) => pr.name)}
+                onPick={injectPhrase}
+                onClose={() => setActiveChip(null)}
+              />
             )}
           </div>
-          <MiniEisenhower active={quadrant} />
+          <MiniEisenhower
+            active={quadrant}
+            onPick={(phrase) => injectPhrase(phrase)}
+          />
         </div>
 
         {/* Examples (only on empty input) */}
@@ -252,12 +315,17 @@ function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
   return "q4";
 }
 
-function MiniEisenhower({ active }: { active: Quadrant }) {
-  const cells: Array<{ key: Exclude<Quadrant, null>; label: string; fg: string; bg: string; border: string }> = [
-    { key: "q1", label: "Do first",  fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
-    { key: "q2", label: "Schedule",  fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
-    { key: "q3", label: "Delegate",  fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
-    { key: "q4", label: "Eliminate", fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
+function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase: string) => void }) {
+  // Each cell injects a phrase that the parser will resolve into that
+  // quadrant: priority + (where needed) urgency cue.
+  const cells: Array<{
+    key: Exclude<Quadrant, null>; label: string; phrase: string;
+    fg: string; bg: string; border: string;
+  }> = [
+    { key: "q1", label: "Do first",  phrase: "urgent today",         fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
+    { key: "q2", label: "Schedule",  phrase: "important",            fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
+    { key: "q3", label: "Delegate",  phrase: "low priority today",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
+    { key: "q4", label: "Eliminate", phrase: "low priority",         fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
   ];
   return (
     <div className="shrink-0 self-start">
@@ -265,8 +333,10 @@ function MiniEisenhower({ active }: { active: Quadrant }) {
         {cells.map((c) => {
           const isActive = active === c.key;
           return (
-            <div
+            <button
               key={c.key}
+              type="button"
+              onClick={() => onPick(c.phrase)}
               style={{
                 backgroundColor: isActive ? c.fg : c.bg,
                 color: isActive ? "white" : c.fg,
@@ -275,16 +345,17 @@ function MiniEisenhower({ active }: { active: Quadrant }) {
               }}
               className={cn(
                 "h-12 rounded-md border text-[10px] grid place-items-center text-center px-1 transition-all",
+                "hover:brightness-95 active:scale-[0.98]",
                 isActive && "shadow-md font-medium"
               )}
-              title={c.label}
+              title={`Insert "${c.phrase}"`}
             >
               {c.label}
-            </div>
+            </button>
           );
         })}
       </div>
-      <div className="text-[10px] text-muted-fg text-center mt-1">Eisenhower</div>
+      <div className="text-[10px] text-muted-fg text-center mt-1">Eisenhower · click to apply</div>
     </div>
   );
 }
@@ -348,4 +419,153 @@ function isTyping(e: KeyboardEvent) {
   if (!el) return false;
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+}
+
+
+/* ---------- Clickable chip + popover ---------- */
+
+function Chip({
+  active, open, icon, label, onClick, tone,
+}: {
+  kind: "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags";
+  active: boolean;
+  open: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  tone?: "high" | "med" | "low" | "none";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 px-2 h-6 rounded-full text-xs border transition-all",
+        active
+          ? tone === "high"
+            ? "border-p-high text-p-high bg-p-high/10"
+            : tone === "med"
+              ? "border-p-med text-p-med bg-p-med/10"
+              : tone === "low"
+                ? "border-p-low text-p-low bg-p-low/10"
+                : "border-fg text-fg bg-muted"
+          : "border-border text-muted-fg hover:border-fg/40 hover:text-fg",
+        open && "ring-2 ring-accent/40"
+      )}
+    >
+      {icon}
+      {label}
+      <ChevronDown className="size-3 opacity-60" />
+    </button>
+  );
+}
+
+function ChipOptions({
+  kind, projects, onPick, onClose,
+}: {
+  kind: "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags";
+  projects: string[];
+  onPick: (phrase: string) => void;
+  onClose: () => void;
+}) {
+  const options: Record<string, Array<{ label: string; phrase: string }>> = {
+    time: [
+      { label: "Today",       phrase: "today" },
+      { label: "Tonight",     phrase: "tonight" },
+      { label: "Tomorrow",    phrase: "tomorrow 9am" },
+      { label: "This Friday", phrase: "this Friday" },
+      { label: "Next Monday", phrase: "next Monday 9am" },
+      { label: "Next week",   phrase: "next week" },
+    ],
+    repeat: [
+      { label: "Daily",     phrase: "every day" },
+      { label: "Weekdays",  phrase: "every weekday" },
+      { label: "Weekly",    phrase: "every week" },
+      { label: "Monthly",   phrase: "every month" },
+      { label: "Yearly",    phrase: "every year" },
+    ],
+    reminder: [
+      { label: "10m before", phrase: "remind me 10m before" },
+      { label: "30m before", phrase: "remind me 30m before" },
+      { label: "1h before",  phrase: "remind me 1h before" },
+      { label: "1d before",  phrase: "remind me 1 day before" },
+    ],
+    priority: [
+      { label: "Urgent",    phrase: "urgent" },
+      { label: "Important", phrase: "important" },
+      { label: "Low",       phrase: "low priority" },
+      { label: "None",      phrase: "no priority" },
+    ],
+    inbox: projects.length
+      ? projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name }))
+      : [{ label: "Inbox", phrase: "~Inbox" }],
+    tags: [],
+  };
+
+  if (kind === "tags") {
+    // Tags: focus the input with a leading "#" so the user types the name.
+    return (
+      <div className="text-[11px] text-muted-fg pl-1">
+        Type <code className="text-fg">#tagname</code> in the input above —{" "}
+        <button
+          type="button"
+          className="underline hover:text-fg"
+          onClick={() => onPick("#")}
+        >
+          insert “#” at cursor
+        </button>
+      </div>
+    );
+  }
+
+  if (kind === "time") {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5 pl-1">
+        {options.time!.map((o) => (
+          <OptionPill key={o.label} label={o.label} onClick={() => onPick(o.phrase)} />
+        ))}
+        <input
+          type="date"
+          className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg"
+          onChange={(e) => {
+            if (e.target.value) onPick("on " + e.target.value);
+          }}
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[11px] text-muted-fg hover:text-fg ml-1"
+        >
+          cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pl-1">
+      {options[kind]!.map((o) => (
+        <OptionPill key={o.label} label={o.label} onClick={() => onPick(o.phrase)} />
+      ))}
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-[11px] text-muted-fg hover:text-fg ml-1"
+      >
+        cancel
+      </button>
+    </div>
+  );
+}
+
+function OptionPill({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center h-6 rounded-full border border-border px-2 text-[11px] text-fg hover:bg-muted hover:border-fg/40 transition-colors"
+    >
+      {label}
+    </button>
+  );
 }
