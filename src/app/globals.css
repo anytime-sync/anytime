@@ -55,9 +55,41 @@
   }
   html, body { height: 100%; }
   body {
-    @apply bg-bg text-fg antialiased;
+    @apply text-fg antialiased;
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Light-leak background — soft morning light bleeding from the upper
+       right and lower left, in warm gold + sand tones. The base ivory
+       sits underneath; sidebars and cards stay opaque (bg-panel) so
+       readability is preserved while the leak shows in negative space. */
+    background-color: hsl(var(--bg));
+    background-image:
+      radial-gradient(ellipse 65% 55% at 92% -5%,
+        hsla(34, 80%, 78%, 0.55) 0%,
+        hsla(34, 80%, 78%, 0.18) 35%,
+        transparent 70%),
+      radial-gradient(ellipse 55% 50% at 8% 105%,
+        hsla(28, 70%, 80%, 0.40) 0%,
+        hsla(28, 70%, 80%, 0.12) 35%,
+        transparent 70%),
+      radial-gradient(circle 28% at 75% 30%,
+        hsla(40, 90%, 88%, 0.30) 0%,
+        transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  /* Dark mode: same composition, deeper warmth, lower opacity so the
+     charcoal base reads. */
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 65% 55% at 92% -5%,
+        hsla(34, 60%, 32%, 0.45) 0%,
+        hsla(34, 60%, 32%, 0.15) 35%,
+        transparent 70%),
+      radial-gradient(ellipse 55% 50% at 8% 105%,
+        hsla(28, 50%, 28%, 0.35) 0%,
+        hsla(28, 50%, 28%, 0.10) 35%,
+        transparent 70%);
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
