@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDailyEdition, useRegenerateEdition } from "@/hooks/use-ai";
+import { useDailyEdition, useRegenerateEdition, useUserPrefs } from "@/hooks/use-ai";
 import { RefreshCw, Newspaper, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
+import { getLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,6 +21,8 @@ import { cn } from "@/lib/utils";
 export function DailyEdition() {
   const { data, isLoading, isError } = useDailyEdition();
   const regen = useRegenerateEdition();
+  const { data: prefs } = useUserPrefs();
+  const locale = getLanguage(prefs?.language).dateFnsLocale;
   const [expanded, setExpanded] = useState(false);
 
   // Auto-expand on md+ screens. Recompute on resize.
@@ -68,10 +71,10 @@ export function DailyEdition() {
         </div>
         <div className="flex items-center gap-2 md:gap-3 text-[11px] text-muted-fg shrink-0">
           <span className="hidden sm:inline">
-            {format(new Date(data.edition_date), "EEEE, MMMM d")}
+            {format(new Date(data.edition_date), "EEEE, MMMM d", { locale })}
           </span>
           <span className="sm:hidden">
-            {format(new Date(data.edition_date), "MMM d")}
+            {format(new Date(data.edition_date), "MMM d", { locale })}
           </span>
           <button
             className={cn(

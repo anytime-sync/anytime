@@ -143,6 +143,7 @@ export type UserPrefs = {
   ai_auto_quadrant: boolean;
   ai_daily_edition: boolean;
   ai_voice_enabled: boolean;
+  language: "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
 };
 
 export function useUserPrefs() {

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
-import { DAILY_EDITION_SYSTEM } from "@/lib/ai/prompts";
+import { dailyEditionSystem } from "@/lib/ai/prompts";
 import { DailyEditionSchema, extractJson } from "@/lib/ai/types";
+import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
 function localDateKey(d: Date, tz: string): string {
-  // Returns YYYY-MM-DD in the user's local tz.
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
   });
@@ -24,7 +24,18 @@ export async function POST(req: Request) {
   const force: boolean = !!body.force;
   const today = localDateKey(new Date(), tz);
 
-  // Cached?
+  // Read user prefs (language). Cache key includes language so switching
+  // language regenerates the brief instead of serving stale English.
+  const { data: prefs } = await supabase
+    .from("user_preferences")
+    .select("language")
+    .eq("user_id", u.user.id)
+    .maybeSingle();
+  const language = (prefs?.language ?? "en") as LanguageCode;
+
+  // Cache lookup — only return cached if it was generated for the same
+  // language. (We don't store language on daily_editions yet; treat
+  // raw_json.language as the source of truth, fall back to English.)
   if (!force) {
     const { data: cached } = await supabase
       .from("daily_editions")
@@ -32,7 +43,9 @@ export async function POST(req: Request) {
       .eq("user_id", u.user.id)
       .eq("edition_date", today)
       .maybeSingle();
-    if (cached) return NextResponse.json(cached);
+    if (cached && (cached.raw_json as any)?.language === language) {
+      return NextResponse.json(cached);
+    }
   }
 
   const client = getAnthropic();
@@ -82,7 +95,7 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODELS.editorial,
       max_tokens: 700,
-      system: DAILY_EDITION_SYSTEM,
+      system: dailyEditionSystem(language),
       messages: [{ role: "user", content: "CONTEXT (JSON):\n" + JSON.stringify(ctx, null, 2) }],
     });
     const content = res.content
@@ -99,7 +112,9 @@ export async function POST(req: Request) {
       front_page: parsed.front_page,
       inside: parsed.inside,
       below_fold: parsed.below_fold,
-      raw_json: parsed as any,
+      // Stash language in raw_json so the cache lookup above can detect
+      // language mismatch and regenerate.
+      raw_json: { ...parsed, language } as any,
       model: MODELS.editorial,
     };
     await supabase.from("daily_editions").upsert(row, {
@@ -107,7 +122,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(row);
   } catch (e: any) {
-    console.error("[ai]", "\n" , e?.stack || e?.message || e);
+    console.error("[ai]", "\n", e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "edition_failed", detail: e?.message ?? String(e) },
       { status: 502 }

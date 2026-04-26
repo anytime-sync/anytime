@@ -1,26 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
-import { WEEKLY_RETRO_SYSTEM } from "@/lib/ai/prompts";
+import { weeklyRetroSystem } from "@/lib/ai/prompts";
 import { WeeklyRetroSchema, extractJson } from "@/lib/ai/types";
+import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
-/** ISO 8601 week number (Mon-start) for a Date in user's tz. */
 function isoWeek(d: Date, tz: string): { year: number; week: number; start: Date } {
-  // Convert to tz-local date.
   const localStr = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(d);
   const local = new Date(`${localStr}T00:00:00`);
-  // ISO: week with Thursday belongs to that ISO year.
   const tmp = new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate()));
-  const day = tmp.getUTCDay() || 7;          // Mon=1 ... Sun=7
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);  // nearest Thursday
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
   const year = tmp.getUTCFullYear();
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const week = Math.ceil(((+tmp - +yearStart) / 86400000 + 1) / 7);
-  // Monday of that ISO week (in user-local time).
   const start = new Date(local);
   start.setDate(local.getDate() - (day - 1));
   return { year, week, start };
@@ -34,10 +31,16 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const tz: string = body.tz || "UTC";
   const force: boolean = !!body.force;
-  // Default to *last* week (the retrospective frame).
   const target = body.target === "current" ? new Date() : new Date(Date.now() - 7 * 86400000);
   const { year, week, start } = isoWeek(target, tz);
   const startStr = start.toISOString().slice(0, 10);
+
+  const { data: prefs } = await supabase
+    .from("user_preferences")
+    .select("language")
+    .eq("user_id", u.user.id)
+    .maybeSingle();
+  const language = (prefs?.language ?? "en") as LanguageCode;
 
   if (!force) {
     const { data: cached } = await supabase
@@ -47,7 +50,9 @@ export async function POST(req: Request) {
       .eq("iso_year", year)
       .eq("iso_week", week)
       .maybeSingle();
-    if (cached) return NextResponse.json(cached);
+    if (cached && (cached.raw_json as any)?.language === language) {
+      return NextResponse.json(cached);
+    }
   }
 
   const client = getAnthropic();
@@ -88,7 +93,7 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODELS.editorial,
       max_tokens: 700,
-      system: WEEKLY_RETRO_SYSTEM,
+      system: weeklyRetroSystem(language),
       messages: [{ role: "user", content: "CONTEXT (JSON):\n" + JSON.stringify(ctx, null, 2) }],
     });
     const content = res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
@@ -103,7 +108,7 @@ export async function POST(req: Request) {
       shipped: parsed.shipped,
       slipped: parsed.slipped,
       drop_list: parsed.drop_list,
-      raw_json: parsed as any,
+      raw_json: { ...parsed, language } as any,
       model: MODELS.editorial,
     };
     await supabase.from("weekly_retros").upsert(row, {
@@ -111,7 +116,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(row);
   } catch (e: any) {
-    console.error("[ai]", "\n" , e?.stack || e?.message || e);
+    console.error("[ai]", "\n", e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "retro_failed", detail: e?.message ?? String(e) },
       { status: 502 }

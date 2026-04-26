@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
-import { QUADRANT_SYSTEM } from "@/lib/ai/prompts";
+import { quadrantSystem } from "@/lib/ai/prompts";
 import { QuadrantResultSchema, extractJson } from "@/lib/ai/types";
+import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,13 @@ export async function POST(req: Request) {
   const title: string = (body.title ?? "").toString();
   if (!title) return NextResponse.json({ error: "empty" }, { status: 400 });
 
+  const { data: prefs } = await supabase
+    .from("user_preferences")
+    .select("language")
+    .eq("user_id", u.user.id)
+    .maybeSingle();
+  const language = (prefs?.language ?? "en") as LanguageCode;
+
   const lines = [
     `TITLE: ${title}`,
     body.due_at ? `DUE: ${body.due_at}` : "DUE: (none)",
@@ -30,7 +38,7 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODELS.fast,
       max_tokens: 200,
-      system: QUADRANT_SYSTEM,
+      system: quadrantSystem(language),
       messages: [{ role: "user", content: lines.join("\n") }],
     });
     const content = res.content
@@ -40,7 +48,7 @@ export async function POST(req: Request) {
     const parsed = QuadrantResultSchema.parse(json);
     return NextResponse.json(parsed);
   } catch (e: any) {
-    console.error("[ai]", "\n" , e?.stack || e?.message || e);
+    console.error("[ai]", "\n", e?.stack || e?.message || e);
     return NextResponse.json(
       { error: "quadrant_failed", detail: e?.message ?? String(e) },
       { status: 502 }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
+import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
 import { useState } from "react";
 
@@ -166,6 +167,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
         >
           {(resolvedTheme ?? theme) === "dark" ? <SunMedium className="size-4" /> : <Moon className="size-4" />}
         </button>
+        {!collapsed && <LanguagePicker />}
         {!collapsed && (
           <>
             <div className="flex-1 min-w-0 text-xs">
