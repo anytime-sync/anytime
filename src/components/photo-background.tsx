@@ -18,7 +18,7 @@ export function PhotoBackground() {
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
         backgroundImage:
-          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.05) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.05) 100%), url('/light-bg.jpg?v=15')",
+          "linear-gradient(180deg, hsla(36, 36%, 96%, 0.05) 0%, hsla(36, 36%, 96%, 0.00) 40%, hsla(36, 36%, 96%, 0.05) 100%), url('/light-bg.jpg?v=16')",
         backgroundSize: "min(78vmin, 1900px) auto, cover",
         backgroundPosition: "center, center",
         backgroundRepeat: "no-repeat, no-repeat",
