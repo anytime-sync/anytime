@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreHorizontal, Folder, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/db.types";
@@ -9,11 +10,15 @@ import { useUpdateProject, useDeleteProject } from "@/hooks/use-projects";
 import { toast } from "sonner";
 
 /**
- * One row in the sidebar Lists section. Shows a ⋯ button on hover.
+ * One row in the sidebar Lists section.
  *
- * IMPORTANT: the ⋯ button is a SIBLING of the <Link>, not a child.
- * Putting it inside the Link caused click-through navigation in
- * Next.js — preventDefault doesn't reliably stop Link's intercept.
+ * IMPORTANT: the ⋯ button is a SIBLING of the <Link>, not a child —
+ * Next.js Link click-through can't be reliably stopped from inside.
+ *
+ * The dropdown menu and the delete-confirm modal are both PORTALED
+ * to document.body. The sidebar uses backdrop-filter (.surface),
+ * which creates a containing block and breaks position:fixed for
+ * any descendant. Portaling escapes that.
  */
 export function SidebarListItem({
   project,
@@ -25,28 +30,48 @@ export function SidebarListItem({
   const update = useUpdateProject();
   const del = useDeleteProject();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [name, setName] = useState(project.name);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
   const href = `/app/lists/${project.id}`;
 
+  useEffect(() => setMounted(true), []);
   useEffect(() => setName(project.name), [project.name]);
 
-  // Close menu on outside click.
+  // Close menu on outside click — match against menu button OR the
+  // portaled menu element by data attribute.
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setMenuOpen(false);
+      const target = e.target as Node;
+      const inside = wrapRef.current?.contains(target);
+      const inPortal =
+        target instanceof HTMLElement &&
+        target.closest(`[data-list-menu="${project.id}"]`);
+      if (!inside && !inPortal) setMenuOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [project.id]);
 
-  // Focus the input when entering rename mode.
   useEffect(() => {
     if (renaming) setTimeout(() => inputRef.current?.select(), 10);
   }, [renaming]);
+
+  function openMenu() {
+    const rect = menuBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMenuPos({
+        top: rect.bottom + 6,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setMenuOpen(true);
+  }
 
   function commitRename() {
     const trimmed = name.trim();
@@ -97,7 +122,6 @@ export function SidebarListItem({
 
   return (
     <div ref={wrapRef} className="relative group">
-      {/* The clickable row — Link only wraps the visual content, NOT the menu button. */}
       <Link
         href={href}
         className={cn(
@@ -110,14 +134,15 @@ export function SidebarListItem({
         <span className="truncate flex-1">{project.name}</span>
       </Link>
 
-      {/* ⋯ menu button — sibling of Link, absolutely positioned over the right edge. */}
       <button
+        ref={menuBtnRef}
         type="button"
         aria-label={`Options for ${project.name}`}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setMenuOpen((v) => !v);
+          if (menuOpen) setMenuOpen(false);
+          else openMenu();
         }}
         className={cn(
           "absolute top-1/2 -translate-y-1/2 right-1 size-6 grid place-items-center rounded transition",
@@ -128,11 +153,16 @@ export function SidebarListItem({
         <MoreHorizontal className="size-3.5" />
       </button>
 
-      {menuOpen && (
-        <div className="absolute z-30 right-1 top-9 min-w-[140px] rounded-md border border-border surface shadow-md p-1 text-sm">
+      {/* Menu — portaled to body, positioned with viewport coords. */}
+      {mounted && menuOpen && menuPos && createPortal(
+        <div
+          data-list-menu={project.id}
+          className="fixed z-[90] min-w-[160px] rounded-md border border-border surface-strong shadow-lg p-1 text-sm animate-fade-in"
+          style={{ top: menuPos.top, right: menuPos.right }}
+        >
           <button
             type="button"
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-fg"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -156,31 +186,39 @@ export function SidebarListItem({
             <Trash2 className="size-3.5" />
             Delete
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {confirming && (
+      {/* Delete-confirm modal — also portaled. */}
+      {mounted && confirming && createPortal(
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-fade-in"
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/30 backdrop-blur-sm animate-fade-in"
           onClick={() => setConfirming(false)}
         >
           <div
-            className="card max-w-sm w-[92vw] p-5"
+            className="card surface-strong max-w-md w-[92vw] p-6 space-y-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="font-display text-lg mb-1">Delete &quot;{project.name}&quot;?</h2>
-            <p className="text-sm text-muted-fg mb-4">
-              The list and every task inside will be removed. This can&apos;t be undone.
-            </p>
-            <div className="flex justify-end gap-2">
+            <div className="space-y-1">
+              <h2 className="font-display text-2xl tracking-tight">
+                Delete &quot;{project.name}&quot;?
+              </h2>
+              <p className="text-sm text-muted-fg">
+                The list and every task inside will be removed. This can&apos;t be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
               <button
-                className="btn-ghost h-9 px-3 text-sm"
+                type="button"
+                className="btn-ghost h-9 px-4"
                 onClick={() => setConfirming(false)}
               >
                 Cancel
               </button>
               <button
-                className="btn-primary h-9 px-3 text-sm bg-danger hover:bg-danger/90"
+                type="button"
+                className="btn h-9 px-5 bg-danger text-white hover:opacity-90"
                 onClick={commitDelete}
                 disabled={del.isPending}
               >
@@ -188,7 +226,8 @@ export function SidebarListItem({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
