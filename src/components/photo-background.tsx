@@ -54,7 +54,7 @@ export function PhotoBackground() {
           backgroundSize: "min(78vmin, 1900px) auto, cover",
           backgroundPosition: "center, center",
           backgroundRepeat: "no-repeat, no-repeat",
-          transform: isDark ? "scale(1.45)" : "none",
+          transform: isDark ? "scale(2)" : "none",
           transformOrigin: "center center",
         }}
       />
