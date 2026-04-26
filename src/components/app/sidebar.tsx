@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Search, Plus, ChevronLeft, ChevronRight, LogOut,
-  Moon, SunMedium, Newspaper, CheckCircle2,
+  Moon, SunMedium, Newspaper, CheckCircle2, GripVertical,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useTheme } from "next-themes";
@@ -15,12 +15,38 @@ import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from "@dnd-kit/modifiers";
 
 type Lang = ReturnType<typeof useLanguage>;
-function topLinks(lang: Lang) {
+
+type LinkDef = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+function topLinks(lang: Lang): LinkDef[] {
   return [
     { href: "/app/today",     label: t(lang, "sidebar.today"),        icon: Sun },
     { href: "/app/tomorrow",  label: t(lang, "sidebar.tomorrow"),     icon: Sunrise },
@@ -36,6 +62,31 @@ function topLinks(lang: Lang) {
   ];
 }
 
+const ORDER_KEY = "fl.sidebar.order";
+
+/** Read saved sidebar order from localStorage; sanitize against current
+ *  link set so removed/added links are handled gracefully. */
+function resolveOrder(links: LinkDef[]): LinkDef[] {
+  if (typeof window === "undefined") return links;
+  let saved: string[] = [];
+  try {
+    const raw = window.localStorage.getItem(ORDER_KEY);
+    if (raw) saved = JSON.parse(raw);
+  } catch {}
+  const byHref = new Map(links.map((l) => [l.href, l]));
+  const ordered: LinkDef[] = [];
+  for (const href of saved) {
+    const l = byHref.get(href);
+    if (l) {
+      ordered.push(l);
+      byHref.delete(href);
+    }
+  }
+  // Append any links not yet in saved order (newly added in code).
+  for (const l of links) if (byHref.has(l.href)) ordered.push(l);
+  return ordered;
+}
+
 export function Sidebar({ user }: { user: { email: string; name: string | null } }) {
   const pathname = usePathname();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
@@ -47,12 +98,40 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [showCreate, setShowCreate] = useState(false);
   const lang = useLanguage();
-  const TOP_LINKS = topLinks(lang);
+
+  // Top nav: ordered links with localStorage-backed reordering.
+  const baseLinks = useMemo(() => topLinks(lang), [lang]);
+  const [orderedLinks, setOrderedLinks] = useState<LinkDef[]>(baseLinks);
+  // Reapply the saved order whenever the language changes (link labels
+  // change but href identity is stable, so order is preserved).
+  useEffect(() => {
+    setOrderedLinks(resolveOrder(baseLinks));
+  }, [baseLinks]);
+
+  // Click vs drag: a 5px movement is required before drag activates,
+  // so a normal click still fires the <Link> navigation.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedLinks.findIndex((l) => l.href === active.id);
+    const newIndex = orderedLinks.findIndex((l) => l.href === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(orderedLinks, oldIndex, newIndex);
+    setOrderedLinks(next);
+    try {
+      window.localStorage.setItem(
+        ORDER_KEY,
+        JSON.stringify(next.map((l) => l.href))
+      );
+    } catch {}
+  }
 
   return (
     <aside className="h-screen border-r border-border surface flex flex-col">
-      {/* Wordmark — centered horizontally; toggle absolute-positioned
-          on the right so it doesn't push the wordmark off-center. */}
       <div className="relative flex items-center justify-center px-3 h-14 border-b border-border">
         {!collapsed && (
           <div className="wordmark text-[15px]">First Light</div>
@@ -85,26 +164,28 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4">
-        <div>
-          {TOP_LINKS.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-2 h-9 px-2 rounded-md text-sm",
-                  active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg",
-                  collapsed && "justify-center"
-                )}
-                title={label}
-              >
-                <Icon className="size-4 shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
-              </Link>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        >
+          <SortableContext
+            items={orderedLinks.map((l) => l.href)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div>
+              {orderedLinks.map((link) => (
+                <SortableLink
+                  key={link.href}
+                  link={link}
+                  active={pathname === link.href}
+                  collapsed={collapsed}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         {!collapsed && (
           <>
@@ -192,5 +273,67 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
 
       {showCreate && <CreateProjectDialog onClose={() => setShowCreate(false)} />}
     </aside>
+  );
+}
+
+/** A single sortable nav link. The whole row is the drag handle —
+ *  PointerSensor activation distance (5px) keeps clicks navigating
+ *  while real drags reorder. A subtle GripVertical fades in on hover
+ *  to advertise the affordance. */
+function SortableLink({
+  link,
+  active,
+  collapsed,
+}: {
+  link: LinkDef;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: link.href });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.45 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  const Icon = link.icon;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "group relative",
+        isDragging && "cursor-grabbing"
+      )}
+    >
+      <Link
+        href={link.href}
+        className={cn(
+          "flex items-center gap-2 h-9 px-2 rounded-md text-sm select-none",
+          active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg",
+          collapsed && "justify-center"
+        )}
+        title={link.label}
+        // Block default drag (which would offer to drag the URL) so only
+        // dnd-kit's pointer events drive reordering.
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+      >
+        <Icon className="size-4 shrink-0" />
+        {!collapsed && <span className="truncate flex-1">{link.label}</span>}
+        {!collapsed && (
+          <GripVertical className="size-3.5 text-muted-fg/0 group-hover:text-muted-fg/60 transition-colors shrink-0" />
+        )}
+      </Link>
+    </div>
   );
 }
