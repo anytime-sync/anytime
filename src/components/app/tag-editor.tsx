@@ -27,9 +27,11 @@ const TAG_COLORS = [
   "#C76A6A", // dusty red
   "#D08C5A", // warm terracotta
   "#C8A24F", // muted gold
+  "#E5B23A", // solid yellow (mustard, readable with white)
   "#5BA8A8", // soft teal
   "#9B7FB8", // muted lavender
   "#C77FA0", // soft rose
+  "#B89878", // milk tea
   "#7E8A9C", // blue-grey
 ];
 

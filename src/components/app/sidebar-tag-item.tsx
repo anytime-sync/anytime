@@ -27,8 +27,8 @@ import { toast } from "sonner";
  */
 
 const TAG_COLORS = [
-  "#5B7FE8", "#7DB48F", "#C76A6A", "#D08C5A", "#C8A24F",
-  "#5BA8A8", "#9B7FB8", "#C77FA0", "#7E8A9C",
+  "#5B7FE8", "#7DB48F", "#C76A6A", "#D08C5A", "#C8A24F", "#E5B23A",
+  "#5BA8A8", "#9B7FB8", "#C77FA0", "#B89878", "#7E8A9C",
 ];
 
 export function SidebarTagItem({
