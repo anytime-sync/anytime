@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
-import { Download, Trash2, LogOut, Bell } from "lucide-react";
+import { Download, Trash2, LogOut, Bell, Upload } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
@@ -83,6 +83,32 @@ export default function SettingsPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/");
+  }
+
+  const [importFormat, setImportFormat] = useState<"ticktick" | "todoist" | "ics" | "generic">("ticktick");
+  const [importing, setImporting] = useState(false);
+  const fileRef = useState<HTMLInputElement | null>(null);
+
+  async function importFile(file: File) {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const r = await fetch("/api/account/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: importFormat, content: text }),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        toast.error(j.detail ?? j.error ?? "Import failed");
+      } else {
+        toast.success(`Imported ${j.imported} task${j.imported === 1 ? "" : "s"}`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Import failed");
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function exportData() {
@@ -250,6 +276,38 @@ export default function SettingsPage() {
               onChange={(v) => togglePush(v)}
               disabled={!pushReady}
             />
+          </Section>
+
+          {/* ---------- Import ---------- */}
+          <Section kicker="Import">
+            <Row label="From">
+              <select
+                className="input flex-1"
+                value={importFormat}
+                onChange={(e) => setImportFormat(e.target.value as any)}
+              >
+                <option value="ticktick">TickTick CSV</option>
+                <option value="todoist">Todoist CSV</option>
+                <option value="ics">Apple Reminders / Calendar (.ics)</option>
+                <option value="generic">Generic CSV (title, due, list, completed)</option>
+              </select>
+            </Row>
+            <Row label="File">
+              <input
+                type="file"
+                accept=".csv,.ics,.txt"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) importFile(f);
+                  e.target.value = "";
+                }}
+                disabled={importing}
+                className="text-sm flex-1"
+              />
+            </Row>
+            <p className="text-xs text-muted-fg">
+              {importing ? "Importing…" : "Up to 1,000 rows per upload. Existing tasks aren't touched; imports are added on top."}
+            </p>
           </Section>
 
           {/* ---------- Data ---------- */}
