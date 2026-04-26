@@ -6,11 +6,13 @@
    Söhne-substitute (Inter) wired in via next/font as --font-sans. */
 @layer base {
   :root {
-    /* Ivory background, warm-white panel, charcoal foreground. */
-    --bg: 36 36% 96%;            /* #FAF7F2 ivory */
-    --panel: 0 0% 100%;          /* warm white */
-    --border: 36 24% 88%;        /* light sand border */
-    --muted: 36 32% 94%;         /* hint of ivory */
+    /* Soft-morning palette — paler, almost-white with the faintest
+       warm undertone. Keeps brand warmth but lets the photo bg
+       dominate the mood rather than the chrome. */
+    --bg: 42 22% 97%;            /* near-white with whisper of cream */
+    --panel: 40 30% 99%;         /* almost white, hint of warmth */
+    --border: 36 18% 90%;        /* paler sand border */
+    --muted: 40 26% 96%;         /* very pale ivory */
     --muted-fg: 204 12% 42%;     /* dimmed blue-grey for secondary text */
     --fg: 0 0% 7%;               /* charcoal */
     --accent: 34 49% 50%;        /* warm gold #C89B5A (lifted slightly for AA) */
@@ -154,9 +156,9 @@
    readable, the photo's tonality permeates the chrome.
    ============================================================ */
 :root {
-  --surface-alpha: 0.55;
-  --surface-blur: 18px;
-  --surface-saturate: 140%;
+  --surface-alpha: 0.42;
+  --surface-blur: 22px;
+  --surface-saturate: 130%;
 }
 .dark {
   --surface-alpha: 0.72;
@@ -188,8 +190,4 @@
 
 /* Safety net: if Safari ever lacks backdrop-filter, bump the panel
    alpha so the UI stays readable. */
-@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .surface, .card {
-    background-color: hsl(var(--panel) / 0.92);
-  }
-}
+@su
