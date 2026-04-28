@@ -175,12 +175,12 @@ export function WeekTimeline() {
           {/* Hour rail — sticky on the left so it stays visible while
               the user swipes horizontally between days. */}
           <div
-            className="shrink-0 sticky left-0 bg-bg z-30 border-r border-border"
+            className="shrink-0 sticky left-0 bg-bg/60 backdrop-blur-md z-30 border-r border-border"
             style={{ width: RAIL_WIDTH }}
           >
             {/* Header spacer */}
             <div
-              className="border-b border-border bg-bg"
+              className="border-b border-border bg-bg/60 backdrop-blur-md"
               style={{ height: HEADER_HEIGHT }}
             />
             {/* Hour labels */}
@@ -270,7 +270,7 @@ function DayColumn({
       {/* Sticky day header */}
       <div
         className={cn(
-          "sticky top-0 z-20 bg-bg border-b border-border",
+          "sticky top-0 z-20 bg-bg/60 backdrop-blur-md border-b border-border",
           "px-2 flex flex-col items-center justify-center text-center"
         )}
         style={{ height: HEADER_HEIGHT }}
@@ -388,10 +388,10 @@ function DraggableTask({
       style={style}
       className={cn(
         "absolute left-1 right-1 rounded-md text-left px-2 py-1.5",
-        "border surface hover:shadow-sm transition-shadow",
+        "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
         "flex flex-col gap-0.5 overflow-hidden cursor-grab active:cursor-grabbing",
         "border-l-[3px]",
-        isDragging && "opacity-80 shadow-2xl ring-2 ring-accent z-20",
+        isDragging && "opacity-90 shadow-2xl ring-2 ring-accent z-20",
         task.is_completed && "opacity-60"
       )}
     >
