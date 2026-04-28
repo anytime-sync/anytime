@@ -62,6 +62,51 @@ export function useUpdateProject() {
   });
 }
 
+/**
+ * Reorder the user's lists. Takes the new ordered array of project ids
+ * and updates each project's `position` to its new index * 1000 (the
+ * gap leaves room for future single-item inserts without a full
+ * re-write). The cache is updated optimistically so the sidebar
+ * doesn't snap back while the writes round-trip.
+ */
+export function useReorderProjects() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const supabase = createClient();
+      for (let i = 0; i < orderedIds.length; i++) {
+        const { error } = await supabase
+          .from("projects")
+          .update({ position: i * 1000 })
+          .eq("id", orderedIds[i]!);
+        if (error) throw error;
+      }
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["projects"] });
+      const prev = qc.getQueryData<Project[]>(["projects"]);
+      if (prev) {
+        const byId = new Map(prev.map((p) => [p.id, p]));
+        const reordered = orderedIds
+          .map((id, i) => {
+            const p = byId.get(id);
+            return p ? { ...p, position: i * 1000 } : null;
+          })
+          .filter((p): p is Project => !!p);
+        qc.setQueryData<Project[]>(["projects"], reordered);
+      }
+      return { prev };
+    },
+    onError: (e: Error, _ids, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["projects"], ctx.prev);
+      toast.error(e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
