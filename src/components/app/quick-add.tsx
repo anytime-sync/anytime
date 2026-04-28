@@ -191,6 +191,7 @@ export function QuickAdd() {
     try {
       createdTask = await createTask.mutateAsync({
         title: p.title,
+        start_at: p.start_at,
         due_at: p.due_at,
         is_all_day: p.is_all_day,
         priority: p.priority,
@@ -227,6 +228,9 @@ export function QuickAdd() {
       if (ai.due_at && !p.due_at) {
         patch.due_at = ai.due_at;
         patch.is_all_day = ai.is_all_day;
+      }
+      if (ai.start_at && !p.start_at) {
+        patch.start_at = ai.start_at;
       }
       if (ai.priority && ai.priority > p.priority) patch.priority = ai.priority;
       if (ai.rrule && !p.rrule) patch.rrule = ai.rrule;
