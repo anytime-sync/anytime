@@ -9,6 +9,7 @@ export default function TomorrowPage() {
       subtitle={format(addDays(new Date(), 1), "EEEE, MMMM d")}
       filter={{ view: "tomorrow" }}
       sortBy="due_at"
+      sortKey="tomorrow"
     />
   );
 }
