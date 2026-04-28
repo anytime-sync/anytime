@@ -15,7 +15,16 @@ import { cn } from "@/lib/utils";
 
 const SPACING = 1024;
 
-export function SortableTaskList({ tasks }: { tasks: TaskWithTags[] }) {
+export function SortableTaskList({
+  tasks,
+  onManualReorder,
+}: {
+  tasks: TaskWithTags[];
+  /** Fired after a successful drag-to-reorder. Used by date-sorted views
+   *  to flip themselves into "manual" mode so the user's hand-arranged
+   *  order sticks instead of snapping back to date order. */
+  onManualReorder?: () => void;
+}) {
   const reorder = useReorderTasks();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -30,14 +39,18 @@ export function SortableTaskList({ tasks }: { tasks: TaskWithTags[] }) {
     if (oldIndex < 0 || newIndex < 0) return;
 
     const reordered = arrayMove(tasks, oldIndex, newIndex);
-    // Compute new positions for the visible list, then send updates only for
-    // tasks whose position actually changed.
-    const changes: Array<{ id: string; position: number }> = [];
-    reordered.forEach((t, i) => {
-      const newPos = (i + 1) * SPACING;
-      if (t.position !== newPos) changes.push({ id: t.id, position: newPos });
-    });
-    if (changes.length > 0) reorder.mutate(changes);
+    // Compute new positions for the visible list, then send updates for
+    // every visible row. We rewrite all positions (not just changed rows)
+    // because in date-sorted views the underlying positions might be
+    // unrelated to the visible order — we want the new manual order to
+    // be a clean, deterministic sequence going forward.
+    const changes: Array<{ id: string; position: number }> = reordered.map(
+      (t, i) => ({ id: t.id, position: (i + 1) * SPACING })
+    );
+    if (changes.length > 0) {
+      reorder.mutate(changes);
+      onManualReorder?.();
+    }
   }
 
   if (tasks.length === 0) return null;
