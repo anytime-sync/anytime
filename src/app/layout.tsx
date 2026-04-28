@@ -64,12 +64,9 @@ export const viewport: Viewport = {
 const CJK_FONTS_HREF =
   "https://fonts.googleapis.com/css2?" +
   [
-    // zh-TW / zh-CN: Noto Sans CJK at heavy weights for editorial
-    // hero headings (matches the bold-sans aesthetic, not mincho/song).
-    // Serif TC/SC kept for any in-content quote / pull-quote use.
-    "family=Noto+Sans+TC:wght@400;500;700;900",
+    "family=Noto+Sans+TC:wght@400;500",
     "family=Noto+Serif+TC:wght@400;500",
-    "family=Noto+Sans+SC:wght@400;500;700;900",
+    "family=Noto+Sans+SC:wght@400;500",
     "family=Noto+Serif+SC:wght@400;500",
     "family=Noto+Sans+JP:wght@400;500",
     "family=Shippori+Mincho+B1:wght@400;500",
