@@ -97,7 +97,7 @@ async function handle(req: Request) {
   }
 
   const from = getFromAddress();
-  const appUrl = process.env.APP_URL ?? "https://anytime-oqua.vercel.app";
+  const appUrl = process.env.APP_URL ?? "https://firstlight.to";
 
   let sent = 0;
   const handledIds: string[] = [];
