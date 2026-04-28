@@ -131,10 +131,19 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Default ON — most users want to stay signed in. The cookie
+  // middleware reads `fl.auth.persist` and either keeps the long
+  // maxAge ("1") or strips it for session-only cookies ("0").
+  const [stayLogged, setStayLogged] = useState(true);
 
   async function onPassword(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    // Set the persist flag BEFORE signing in so the auth cookies
+    // the server is about to set inherit the right maxAge.
+    document.cookie = `fl.auth.persist=${stayLogged ? "1" : "0"}; path=/; max-age=${
+      60 * 60 * 24 * 365
+    }; SameSite=Lax`;
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error) {
@@ -194,6 +203,15 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
           required
           minLength={6}
         />
+        <label className="flex items-center gap-2 text-xs text-muted-fg cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={stayLogged}
+            onChange={(e) => setStayLogged(e.target.checked)}
+            className="size-3.5 accent-accent cursor-pointer"
+          />
+          Stay signed in for 30 days
+        </label>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "…" : t(lang, "auth.login.submit")}
         </button>
