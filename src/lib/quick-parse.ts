@@ -2,6 +2,9 @@ import * as chrono from "chrono-node";
 
 export type ParsedQuickInput = {
   title: string;
+  /** Start of a timed task. Set when the user typed a range like
+   *  "10am-11am" or "from 9 to 10". Null for due-only tasks. */
+  start_at: string | null;
   due_at: string | null;
   is_all_day: boolean;
   priority: 0 | 1 | 3 | 5;
@@ -146,16 +149,25 @@ export function parseQuickInput(raw: string): ParsedQuickInput {
   }
 
   // ---------- chrono date ----------
+  // chrono returns BOTH start and end for range phrases like "10am-11am",
+  // "from 9 to 10", "5-7pm tomorrow" — we use that to fill start_at + due_at.
+  // Single anchors ("at 9am") set due_at only.
+  let start_at: string | null = null;
   let due_at: string | null = null;
   let is_all_day = true;
   const results = chrono.parse(s, new Date(), { forwardDate: true });
   if (results.length) {
     const r = results[0]!;
-    const start = r.start;
-    if (start) {
-      const known = (k: string) => start.isCertain(k as any);
+    const startC = r.start;
+    if (startC) {
+      const known = (k: string) => startC.isCertain(k as any);
       is_all_day = !(known("hour") || known("minute"));
-      due_at = start.date().toISOString();
+      if (r.end) {
+        start_at = startC.date().toISOString();
+        due_at = r.end.date().toISOString();
+      } else {
+        due_at = startC.date().toISOString();
+      }
       s = (s.slice(0, r.index) + s.slice(r.index + r.text.length)).replace(/\s+/g, " ").trim();
     }
   }
@@ -178,6 +190,7 @@ export function parseQuickInput(raw: string): ParsedQuickInput {
 
   return {
     title,
+    start_at,
     due_at,
     is_all_day,
     priority: finalPriority,
@@ -200,7 +213,9 @@ export function describeParsed(p: ParsedQuickInput, now: Date = new Date()): str
 
   parts.push(`I'll add "${p.title}"`);
 
-  if (p.due_at) {
+  if (p.start_at && p.due_at) {
+    parts.push(`from ${formatDue(p.start_at, false, now)} to ${formatTimeOnly(p.due_at)}`);
+  } else if (p.due_at) {
     parts.push(`due ${formatDue(p.due_at, p.is_all_day, now)}`);
   }
   if (p.rrule) {
@@ -280,6 +295,11 @@ function formatDue(iso: string, allDay: boolean, now: Date): string {
 
 function formatTime(d: Date, _now: Date): string {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+/** Time-only format used in range descriptions ("from 10:00 AM to 11:00 AM"). */
+function formatTimeOnly(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
 /** Friendly description of "now" for the preview header. */
