@@ -8,6 +8,7 @@ import { useUIStore } from "@/store/ui";
 /**
  * Today — toggleable between the editorial list (default) and the new
  * vertical timeline that shows time-blocked tasks against an hour rail.
+ *
  * Choice persists per-device via localStorage (see useDayViewMode).
  */
 export default function TodayPage() {
@@ -22,6 +23,7 @@ export default function TodayPage() {
         filter={{ view: "today" }}
         showDailyEdition
         sortBy="due_at"
+        sortKey="today"
         headerExtra={<DayViewToggle mode={mode} setMode={setMode} />}
       />
     );
