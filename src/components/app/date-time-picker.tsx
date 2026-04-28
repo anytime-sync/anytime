@@ -242,49 +242,66 @@ export function DateTimePicker({
             })}
           </div>
 
-          {/* Time row */}
-          <div className="mt-3 pt-3 border-t border-border">
-            <div className="flex items-center gap-2">
-              <span className="editorial-number text-[10px] uppercase shrink-0">
-                Time
-              </span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={h12}
-                  onChange={(e) => {
-                    const n = clamp(parseInt(e.target.value, 10) || 1, 1, 12);
-                    changeTime(n, mm, meridiem);
-                  }}
-                  className="input w-12 text-center tabular-nums"
-                  aria-label="Hour"
-                />
-                <span className="text-muted-fg">:</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={59}
-                  step={5}
-                  value={String(mm).padStart(2, "0")}
-                  onChange={(e) => {
-                    const n = clamp(parseInt(e.target.value, 10) || 0, 0, 59);
-                    changeTime(h12, n, meridiem);
-                  }}
-                  className="input w-12 text-center tabular-nums"
-                  aria-label="Minute"
-                />
+          {/* Time picker — tap-to-select hour/minute grids for fast,
+              intuitive entry. No typing, no spinner buttons; everything
+              is one click away. Hour grid is 12 cells in 6×2; minute
+              grid is twelve 5-minute steps in the same shape so the two
+              read as a matched pair. AM/PM toggle is centered below
+              and rendered in the active locale (上午/下午 in zh-TW). */}
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            <div>
+              <p className="editorial-number text-[10px] uppercase mb-1.5">
+                Hour
+              </p>
+              <div className="grid grid-cols-6 gap-1">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => changeTime(h, mm, meridiem)}
+                    className={cn(
+                      "h-7 rounded-md text-xs tabular-nums transition-colors",
+                      h12 === h
+                        ? "bg-accent text-bg font-medium"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    {h}
+                  </button>
+                ))}
               </div>
-              {/* AM / PM toggle — locale-rendered (上午/下午 in zh-TW). */}
-              <div className="ml-auto inline-flex rounded-md border border-border overflow-hidden text-xs shrink-0">
+            </div>
+            <div>
+              <p className="editorial-number text-[10px] uppercase mb-1.5">
+                Minute
+              </p>
+              <div className="grid grid-cols-6 gap-1">
+                {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => changeTime(h12, m, meridiem)}
+                    className={cn(
+                      "h-7 rounded-md text-xs tabular-nums transition-colors",
+                      mm === m
+                        ? "bg-accent text-bg font-medium"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    {String(m).padStart(2, "0")}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-center pt-1">
+              <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
                 {(["AM", "PM"] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => changeTime(h12, mm, m)}
                     className={cn(
-                      "px-2.5 h-7 whitespace-nowrap",
+                      "px-5 h-7 whitespace-nowrap",
                       meridiem === m
                         ? "bg-fg text-bg"
                         : "btn-ghost rounded-none"
