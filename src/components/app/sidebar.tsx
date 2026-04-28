@@ -10,7 +10,8 @@ import {
 import { useUIStore } from "@/store/ui";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { useProjects } from "@/hooks/use-projects";
+import { useProjects, useReorderProjects } from "@/hooks/use-projects";
+import type { Project } from "@/lib/db.types";
 import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
@@ -96,6 +97,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const setCmdOpen = useUIStore((s) => s.setCommandOpen);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const { data: projects = [] } = useProjects();
+  const reorderProjects = useReorderProjects();
   const { data: tags = [] } = useTags();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [showCreate, setShowCreate] = useState(false);
@@ -203,13 +205,38 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
                 </button>
               </div>
               <div className="space-y-0.5">
-                {projects.map((p) => (
-                  <SidebarListItem
-                    key={p.id}
-                    project={p}
-                    active={pathname === `/app/lists/${p.id}`}
-                  />
-                ))}
+                {/* Drag-to-reorder lists. PointerSensor 5px activation
+                    keeps regular clicks navigating; only an actual drag
+                    triggers reorder. The reorder hook updates the
+                    cache optimistically so rows don't snap back. */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                  onDragEnd={(e: DragEndEvent) => {
+                    const { active, over } = e;
+                    if (!over || active.id === over.id) return;
+                    const ids = projects.map((p) => p.id);
+                    const oldIdx = ids.indexOf(String(active.id));
+                    const newIdx = ids.indexOf(String(over.id));
+                    if (oldIdx < 0 || newIdx < 0) return;
+                    const next = arrayMove(ids, oldIdx, newIdx);
+                    reorderProjects.mutate(next);
+                  }}
+                >
+                  <SortableContext
+                    items={projects.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {projects.map((p) => (
+                      <SortableSidebarList
+                        key={p.id}
+                        project={p}
+                        active={pathname === `/app/lists/${p.id}`}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
                 {projects.length === 0 && (
                   <p className="text-xs text-muted-fg px-2">{t(lang, "sidebar.noLists")}</p>
                 )}
@@ -326,6 +353,48 @@ function SortableLink({
           <GripVertical className="size-3.5 text-muted-fg/0 group-hover:text-muted-fg/60 transition-colors shrink-0" />
         )}
       </Link>
+    </div>
+  );
+}
+
+/**
+ * Sortable wrapper around SidebarListItem. Drag listeners attach to a
+ * thin invisible overlay so the inner Link + ⋯ menu button still
+ * receive their own clicks. PointerSensor's 5px activation distance
+ * lets short pointerup events fall through to the underlying Link.
+ */
+function SortableSidebarList({
+  project,
+  active,
+}: {
+  project: Project;
+  active: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: project.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      <SidebarListItem project={project} active={active} />
+      {/* Drag overlay — cuts a 36px gutter on the right so the ⋯ menu
+          button isn't covered by the drag-handle layer. */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute inset-0 right-9 cursor-grab active:cursor-grabbing"
+        aria-hidden
+      />
     </div>
   );
 }
