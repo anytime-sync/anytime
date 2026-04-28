@@ -131,21 +131,40 @@ export function TaskDetailPanel() {
           }}
         />
 
-        <Field label="Due">
-          <input
-            type="datetime-local"
-            className="input"
-            value={localInputValue(task.due_at)}
-            onChange={(e) => {
-              const v = e.target.value;
-              update.mutate({
-                id: task.id,
-                due_at: v ? new Date(v).toISOString() : null,
-                is_all_day: false,
-              });
-            }}
-          />
-        </Field>
+        {/* Start + Due pair — Starts is optional. When set, the task
+            is treated as a time block and renders that way on the
+            timeline view. Empty Starts = "due-only" task. */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Starts">
+            <input
+              type="datetime-local"
+              className="input"
+              value={localInputValue(task.start_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                update.mutate({
+                  id: task.id,
+                  start_at: v ? new Date(v).toISOString() : null,
+                });
+              }}
+            />
+          </Field>
+          <Field label={task.start_at ? "Ends" : "Due"}>
+            <input
+              type="datetime-local"
+              className="input"
+              value={localInputValue(task.due_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                update.mutate({
+                  id: task.id,
+                  due_at: v ? new Date(v).toISOString() : null,
+                  is_all_day: false,
+                });
+              }}
+            />
+          </Field>
+        </div>
 
         <Field label="Repeat">
           <div className="flex items-center gap-2">
