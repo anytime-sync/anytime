@@ -134,11 +134,11 @@ export function TaskDetailPanel() {
         {/* Start + Due pair — Starts is optional. When set, the task
             is treated as a time block and renders that way on the
             timeline view. Empty Starts = "due-only" task. */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <Field label="Starts">
             <input
               type="datetime-local"
-              className="input"
+              className="input w-full"
               value={localInputValue(task.start_at)}
               onChange={(e) => {
                 const v = e.target.value;
@@ -152,7 +152,7 @@ export function TaskDetailPanel() {
           <Field label={task.start_at ? "Ends" : "Due"}>
             <input
               type="datetime-local"
-              className="input"
+              className="input w-full"
               value={localInputValue(task.due_at)}
               onChange={(e) => {
                 const v = e.target.value;
