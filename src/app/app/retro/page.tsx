@@ -24,9 +24,9 @@ export default function RetroPage() {
           page sits in the same left-aligned column as the rest. */}
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="editorial-number text-xs mb-1">Weekly review</p>
-            <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">
+            <h1 className="font-display text-2xl md:text-4xl tracking-tight leading-tight truncate">
               {target === "last" ? "Last week's edition" : "This week, so far"}
             </h1>
             {isRevalidating && (
@@ -36,13 +36,13 @@ export default function RetroPage() {
               </div>
             )}
           </div>
-          <div className="inline-flex rounded-md border border-border overflow-hidden text-xs shrink-0">
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-[11px] md:text-xs shrink-0">
             {(["last", "current"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTarget(t)}
                 className={cn(
-                  "px-3 h-7",
+                  "px-2 md:px-3 h-7 whitespace-nowrap",
                   target === t ? "bg-fg text-bg" : "btn-ghost rounded-none"
                 )}
               >
