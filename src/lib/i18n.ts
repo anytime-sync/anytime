@@ -502,6 +502,19 @@ export function t(language: string | null | undefined, key: StringKey): string {
   return STRINGS[code][key] ?? STRINGS.en[key] ?? key;
 }
 
+/**
+ * Returns the full hardcoded string map for the given locale. Used by
+ * the Admin Content CMS to render the default-value column alongside
+ * editable overrides. Falls back to English when the locale is unknown.
+ */
+export function getTranslations(
+  language: string | null | undefined
+): Record<StringKey, string> {
+  const code = (LANGUAGES.find((l) => l.code === language)?.code ??
+    DEFAULT_LANGUAGE) as LanguageCode;
+  return STRINGS[code];
+}
+
 /* ----------------------------------------------------------------- */
 /* localStorage-backed pre-login language preference.                */
 /* ----------------------------------------------------------------- */
