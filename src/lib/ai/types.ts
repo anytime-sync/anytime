@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export const ParsedTaskSchema = z.object({
   title: z.string().min(1),
+  /** start_at lets the parser surface ranges like "10am-11am". Optional
+   *  on read so older code paths producing only due_at still validate. */
+  start_at: z.string().nullable().optional(),
   due_at: z.string().nullable(),
   is_all_day: z.boolean(),
   priority: z.union([z.literal(0), z.literal(1), z.literal(3), z.literal(5)]),
