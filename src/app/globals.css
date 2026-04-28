@@ -166,16 +166,26 @@
     "Noto Sans TC", var(--font-inter), ui-sans-serif, system-ui,
     "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-display:
-    "Noto Serif TC", var(--font-cormorant), ui-serif,
-    "Songti TC", "PMingLiU", serif;
+    "Noto Sans TC", var(--font-inter), ui-sans-serif, system-ui,
+    "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 [lang="zh-CN"] {
   --font-sans:
     "Noto Sans SC", var(--font-inter), ui-sans-serif, system-ui,
     "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-display:
-    "Noto Serif SC", var(--font-cormorant), ui-serif,
-    "Songti SC", "SimSun", serif;
+    "Noto Sans SC", var(--font-inter), ui-sans-serif, system-ui,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* CJK display elements — heavy weight + tighter tracking so the
+   hero reads like a magazine cover ("生活, 細選而生" reference).
+   Italic on <em> stays as synthetic slant which Noto Sans TC/SC
+   render cleanly. English is unaffected (uses Cormorant serif). */
+[lang="zh-TW"] .font-display,
+[lang="zh-CN"] .font-display {
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 [lang="ja"] {
   --font-sans:
