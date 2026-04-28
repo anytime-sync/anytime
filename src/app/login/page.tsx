@@ -41,8 +41,11 @@ function LoginForm() {
     }
     setLoading(false);
     if (error) return toast.error(error.message);
-    router.replace(next);
-    router.refresh();
+    // Hard navigation so the just-set Supabase auth cookies are
+    // committed before the next request — soft router.replace fires
+    // while the cookie jar is still settling and the middleware
+    // bounces the user back to /login (the "double login" bug).
+    window.location.replace(next);
   }
 
   async function onMagicLink() {
