@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
-import { Clock } from "lucide-react";
-import { useTasks } from "@/hooks/use-tasks";
+import { format, isSameDay, startOfDay, endOfDay, differenceInMinutes } from "date-fns";
+import { Clock, Plus } from "lucide-react";
+import { useTasks, type TaskWithTags } from "@/hooks/use-tasks";
 import { useUserPrefs } from "@/hooks/use-ai";
 import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -12,15 +12,21 @@ import { cn, priorityColorClass } from "@/lib/utils";
  * DayTimeline — vertical hour-rail view of a single day.
  *
  * Layout:
- *   - Left rail: hour markers from 6 AM to 11 PM, 56px per hour.
- *   - Each task with a time renders as an absolutely positioned block.
- *   - All-day / undated tasks stack at the top.
- *   - A red current-time line; the page auto-scrolls so it lands ~1/3
- *     down on first paint.
- *   - Energy-peak window (from user_preferences) gets a faint warm tint
- *     across the rail to advertise deep-work hours.
- *   - Buffer labels ("15 min buffer") render in gaps between consecutive
+ *   - Left rail: hour markers from 6 AM to 11 PM, ~56px per hour.
+ *   - Each task with start_at + due_at on this day renders as an absolutely
+ *     positioned block. Top = (start_minutes - 6h) * pxPerMinute. Height
+ *     = duration * pxPerMinute (clamped at 24px so a 5-min event stays
+ *     readable).
+ *   - "Anytime today" stack at the top for tasks that don't have a time.
+ *   - A red current-time line. The whole timeline auto-scrolls so the
+ *     line lands at ~1/3 viewport on first paint.
+ *   - Energy peak window (from user_preferences) gets a subtle warm tint
+ *     across the rail to advertise deep-work hours without nagging.
+ *   - Buffer labels ("15 mins") render in the gaps between consecutive
  *     scheduled blocks so the day reads as a plan, not a list.
+ *
+ * The timeline is read-mostly today — clicks open the detail panel.
+ * Drag-to-reschedule is left for a follow-up.
  */
 
 const RAIL_START_HOUR = 6;
@@ -40,6 +46,60 @@ function parseHHMM(s?: string | null): { h: number; m: number } | null {
   return { h: +m[1]!, m: +m[2]! };
 }
 
+/**
+ * Greedy column layout for overlapping events (Google-Calendar style).
+ *
+ * Splits events into "clusters" of mutually-overlapping intervals, then
+ * within each cluster assigns each event to the leftmost free column.
+ * The cluster's total column count becomes `cols` so every event in the
+ * same overlap group draws at the same width.
+ *
+ * Tasks that don't overlap anything render full-width (cols=1, col=0).
+ */
+function layoutColumns<T extends { startMin: number; endMin: number }>(
+  events: T[]
+): Map<T, { col: number; cols: number }> {
+  const sorted = [...events].sort(
+    (a, b) => a.startMin - b.startMin || a.endMin - b.endMin
+  );
+  const out = new Map<T, { col: number; cols: number }>();
+  let cluster: T[] = [];
+  let clusterEnd = -Infinity;
+
+  function flush() {
+    if (cluster.length === 0) return;
+    const columns: T[][] = [];
+    for (const ev of cluster) {
+      let placed = false;
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i]!;
+        if (col[col.length - 1]!.endMin <= ev.startMin) {
+          col.push(ev);
+          out.set(ev, { col: i, cols: 0 });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([ev]);
+        out.set(ev, { col: columns.length - 1, cols: 0 });
+      }
+    }
+    // Stamp the cluster-wide column count onto every event.
+    for (const ev of cluster) out.get(ev)!.cols = columns.length;
+    cluster = [];
+    clusterEnd = -Infinity;
+  }
+
+  for (const ev of sorted) {
+    if (ev.startMin >= clusterEnd) flush();
+    cluster.push(ev);
+    clusterEnd = Math.max(clusterEnd, ev.endMin);
+  }
+  flush();
+  return out;
+}
+
 export function DayTimeline({ date }: { date: Date }) {
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
   const { data: prefs } = useUserPrefs();
@@ -48,16 +108,19 @@ export function DayTimeline({ date }: { date: Date }) {
   const [now, setNow] = useState(() => new Date());
   const isToday = isSameDay(date, now);
 
+  // Tick the now-line every minute. Cheap; only re-renders this tree.
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
+  // Auto-scroll so the current time lands ~1/3 down on first paint.
   useEffect(() => {
     if (!isToday || !containerRef.current) return;
     const m = minutesFromRailStart(now);
     const target = Math.max(0, m * PX_PER_MIN - 200);
     containerRef.current.scrollTo({ top: target });
+    // Only on mount; subsequent ticks shouldn't yank the user's scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -76,6 +139,8 @@ export function DayTimeline({ date }: { date: Date }) {
   );
 
   const allDayTasks = dayTasks.filter((t) => t.is_all_day || (!t.start_at && !t.due_at));
+  // Timed = has at least due_at and is not all_day. We accept tasks with
+  // only due_at (a single-time anchor) and render them as a 30-min block.
   const timed = dayTasks
     .filter((t) => !t.is_all_day && t.due_at)
     .map((t) => {
@@ -83,6 +148,7 @@ export function DayTimeline({ date }: { date: Date }) {
       const start = t.start_at ? new Date(t.start_at) : new Date(due.getTime() - 30 * 60_000);
       const startMin = minutesFromRailStart(start);
       const endMin = minutesFromRailStart(due);
+      // Clip to the rail so a 4 AM task doesn't render off-screen.
       const visStart = Math.max(0, startMin);
       const visEnd = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, endMin);
       return { task: t, start, due, startMin, endMin, visStart, visEnd };
@@ -90,6 +156,8 @@ export function DayTimeline({ date }: { date: Date }) {
     .filter((t) => t.visEnd > t.visStart)
     .sort((a, b) => a.startMin - b.startMin);
 
+  // Compute buffer labels: for each gap between consecutive tasks of
+  // ≥10 minutes, drop a small "N min" label centered in that gap.
   const buffers: Array<{ key: string; top: number; minutes: number }> = [];
   for (let i = 0; i < timed.length - 1; i++) {
     const a = timed[i]!;
@@ -113,8 +181,13 @@ export function DayTimeline({ date }: { date: Date }) {
 
   const nowTop = isToday ? minutesFromRailStart(now) * PX_PER_MIN : null;
 
+  // Lay out overlapping events into side-by-side columns so two tasks
+  // that share the same minute don't stack on top of each other.
+  const taskLayout = layoutColumns(timed);
+
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto">
+      {/* All-day stack */}
       {allDayTasks.length > 0 && (
         <div className="border-b border-border px-4 md:px-6 py-2 space-y-1">
           <p className="editorial-number text-[10px]">All day</p>
@@ -142,7 +215,9 @@ export function DayTimeline({ date }: { date: Date }) {
         </div>
       )}
 
+      {/* Hour rail + blocks */}
       <div className="relative" style={{ height: RAIL_HEIGHT }}>
+        {/* Energy-peak shading (under everything) */}
         {peak && (
           <div
             aria-hidden
@@ -151,6 +226,7 @@ export function DayTimeline({ date }: { date: Date }) {
           />
         )}
 
+        {/* Hour markers */}
         {Array.from({ length: RAIL_END_HOUR - RAIL_START_HOUR + 1 }, (_, i) => {
           const h = RAIL_START_HOUR + i;
           const top = i * PX_PER_HOUR;
@@ -168,6 +244,7 @@ export function DayTimeline({ date }: { date: Date }) {
           );
         })}
 
+        {/* Buffer labels (gaps) */}
         {buffers.map((b) => (
           <div
             key={b.key}
@@ -179,44 +256,59 @@ export function DayTimeline({ date }: { date: Date }) {
           </div>
         ))}
 
-        {timed.map((t) => {
-          const top = t.visStart * PX_PER_MIN;
-          const height = Math.max(24, (t.visEnd - t.visStart) * PX_PER_MIN - 2);
-          const tone = priorityColorClass(t.task.priority);
-          return (
-            <button
-              key={t.task.id}
-              onClick={() => setSelected(t.task.id)}
-              className={cn(
-                "absolute left-14 right-4 rounded-md text-left px-3 py-2",
-                "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
-                "flex flex-col gap-0.5 overflow-hidden",
-                t.task.is_completed && "opacity-60"
-              )}
-              style={{
-                top,
-                height,
-                borderColor: "hsl(var(--border))",
-                borderLeftWidth: 3,
-                borderLeftColor: "currentColor",
-              }}
-            >
-              <span className={cn("inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums", tone)}>
-                <Clock className="size-3" />
-                {format(t.start, "h:mm a")} – {format(t.due, "h:mm a")}
-              </span>
-              <span className={cn("text-sm font-medium leading-snug truncate", t.task.is_completed && "line-through")}>
-                {t.task.title}
-              </span>
-              {t.task.notes && height > 56 && (
-                <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
-                  {t.task.notes}
+        {/* Tasks — wrapped in an inset layer so percentage left/width
+            below split the available column space cleanly. Tasks that
+            overlap in time get rendered side-by-side instead of piled
+            on top of each other. */}
+        <div className="absolute inset-y-0 left-14 right-4 pointer-events-none">
+          {timed.map((t) => {
+            const top = t.visStart * PX_PER_MIN;
+            const height = Math.max(24, (t.visEnd - t.visStart) * PX_PER_MIN - 2);
+            const tone = priorityColorClass(t.task.priority);
+            const { col, cols } = taskLayout.get(t) ?? { col: 0, cols: 1 };
+            const widthPct = 100 / cols;
+            // 4px gap between columns when there are 2+ side-by-side cards.
+            const gap = cols > 1 ? 4 : 0;
+            return (
+              <button
+                key={t.task.id}
+                onClick={() => setSelected(t.task.id)}
+                className={cn(
+                  "absolute rounded-md text-left px-3 py-2 pointer-events-auto",
+                  // Frosted-glass card so the photo bleeds through behind
+                  // the timeline. Backdrop blur keeps the title legible.
+                  "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
+                  "flex flex-col gap-0.5 overflow-hidden",
+                  t.task.is_completed && "opacity-60"
+                )}
+                style={{
+                  top,
+                  height,
+                  left: `${col * widthPct}%`,
+                  width: `calc(${widthPct}% - ${gap}px)`,
+                  borderColor: "hsl(var(--border))",
+                  borderLeftWidth: 3,
+                  borderLeftColor: `currentColor`,
+                }}
+              >
+                <span className={cn("inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums", tone)}>
+                  <Clock className="size-3" />
+                  {format(t.start, "h:mm a")} – {format(t.due, "h:mm a")}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                <span className={cn("text-sm font-medium leading-snug truncate", t.task.is_completed && "line-through")}>
+                  {t.task.title}
+                </span>
+                {t.task.notes && height > 56 && cols === 1 && (
+                  <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
+                    {t.task.notes}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
+        {/* Now line */}
         {nowTop != null && nowTop >= 0 && nowTop <= RAIL_HEIGHT && (
           <div
             aria-hidden
@@ -237,6 +329,12 @@ export function DayTimeline({ date }: { date: Date }) {
   );
 }
 
+/* ------------------------ Today wrapper ------------------------ */
+
+/**
+ * TodayTimelineHeader — a small toggle so users can flip between the
+ * familiar list and the new timeline view. Persists choice in localStorage.
+ */
 export function useDayViewMode() {
   const [mode, setMode] = useState<"list" | "timeline">(() => {
     if (typeof window === "undefined") return "list";
