@@ -82,9 +82,23 @@ export function AuthCard({
         </div>
 
         {mode === "signup" ? (
-          <SignupForm lang={lang} onLoggedIn={() => router.replace("/app")} />
+          <SignupForm
+            lang={lang}
+            onLoggedIn={() => {
+              // Hard navigation — guarantees the just-set Supabase auth
+              // cookies are committed before the next request, otherwise
+              // a soft router.replace fires while the cookie jar is still
+              // empty and the middleware bounces the user back to login.
+              window.location.replace("/app");
+            }}
+          />
         ) : (
-          <LoginForm lang={lang} onLoggedIn={() => router.replace("/app")} />
+          <LoginForm
+            lang={lang}
+            onLoggedIn={() => {
+              window.location.replace("/app");
+            }}
+          />
         )}
       </div>
     </div>,
