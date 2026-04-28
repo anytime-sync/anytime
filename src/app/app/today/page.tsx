@@ -21,6 +21,7 @@ export default function TodayPage() {
         subtitle={format(new Date(), "EEEE, MMMM d")}
         filter={{ view: "today" }}
         showDailyEdition
+        sortBy="due_at"
         headerExtra={<DayViewToggle mode={mode} setMode={setMode} />}
       />
     );
@@ -30,19 +31,25 @@ export default function TodayPage() {
     <div className="flex flex-col h-full">
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
               Today
             </h1>
-            <p className="text-sm text-muted-fg mt-1">
+            <p className="text-sm text-muted-fg mt-1 truncate">
               {format(new Date(), "EEEE, MMMM d")}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <DayViewToggle mode={mode} setMode={setMode} />
-            <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
+            {/* Icon-only on mobile so the title isn't squeezed to "T..." */}
+            <button
+              className="btn-ghost gap-2 px-2 md:px-3"
+              onClick={() => setQuickAdd(true)}
+              aria-label="Quick add"
+              title="Quick add"
+            >
               <Plus className="size-4" />
-              Quick add
+              <span className="hidden md:inline">Quick add</span>
             </button>
           </div>
         </div>
