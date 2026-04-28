@@ -10,6 +10,7 @@ import { cn, priorityColorClass } from "@/lib/utils";
 import { SubtaskList } from "./subtask-list";
 import { AttachmentList } from "./attachment-list";
 import { TagEditor } from "./tag-editor";
+import { DateTimePicker } from "./date-time-picker";
 
 const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "", label: "Doesn't repeat" },
@@ -136,32 +137,25 @@ export function TaskDetailPanel() {
             timeline view. Empty Starts = "due-only" task. */}
         <div className="grid grid-cols-1 gap-3">
           <Field label="Starts">
-            <input
-              type="datetime-local"
-              className="input w-full"
-              value={localInputValue(task.start_at)}
-              onChange={(e) => {
-                const v = e.target.value;
-                update.mutate({
-                  id: task.id,
-                  start_at: v ? new Date(v).toISOString() : null,
-                });
-              }}
+            <DateTimePicker
+              value={task.start_at}
+              placeholder="Pick a start time"
+              onChange={(iso) =>
+                update.mutate({ id: task.id, start_at: iso })
+              }
             />
           </Field>
           <Field label={task.start_at ? "Ends" : "Due"}>
-            <input
-              type="datetime-local"
-              className="input w-full"
-              value={localInputValue(task.due_at)}
-              onChange={(e) => {
-                const v = e.target.value;
+            <DateTimePicker
+              value={task.due_at}
+              placeholder="Pick a due time"
+              onChange={(iso) =>
                 update.mutate({
                   id: task.id,
-                  due_at: v ? new Date(v).toISOString() : null,
+                  due_at: iso,
                   is_all_day: false,
-                });
-              }}
+                })
+              }
             />
           </Field>
         </div>
