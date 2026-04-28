@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from "recharts";
+
+/**
+ * Admin Insights — cohort retention, signup growth, feature usage.
+ *
+ * Charts are pure SVG/CSS so we don't drag in a charting library; the
+ * dataset is small (≤ 30 bars) and readability matters more than fancy
+ * tooltips here.
+ */
 
 type Summary = {
   total_users: number;
@@ -20,7 +27,9 @@ type Summary = {
 export default function InsightsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [retention, setRetention] = useState<Array<{ day: number; pct: number }>>([]);
+  const [retention, setRetention] = useState<
+    Array<{ day: number; pct: number }>
+  >([]);
 
   useEffect(() => {
     (async () => {
@@ -28,8 +37,8 @@ export default function InsightsPage() {
       const { data: s } = await supabase.rpc("admin_dashboard_summary");
       setSummary(s as Summary);
 
-      // Build a simple D1/D7/D30 retention proxy from auth.users.created_at
-      // and tasks.updated_at (most recent activity per user).
+      // D1/D3/D7/D14/D30 retention proxy: % of all members who touched
+      // a task within the past N days.
       const { data: users } = await supabase
         .from("profiles")
         .select("id, created_at");
@@ -74,45 +83,7 @@ export default function InsightsPage() {
             title="Signups · last 30 days"
             subtitle={`${summary.signups_7d} new in the past week`}
           >
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={summary.signups_by_day.map((d) => ({
-                    day: format(new Date(d.day), "MMM d"),
-                    count: d.count,
-                  }))}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-fg))" }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-fg))" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--bg))",
-                      border: "1px solid hsl(var(--border))",
-                      fontSize: 12,
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="hsl(var(--accent))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <SignupsBars data={summary.signups_by_day} />
           </Section>
 
           {/* Retention */}
@@ -120,36 +91,7 @@ export default function InsightsPage() {
             title="Activity retention"
             subtitle="% of all members who touched a task within N days"
           >
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={retention.map((r) => ({ day: `D${r.day}`, pct: r.pct }))}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-fg))" }}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-fg))" }}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => [`${v}%`, "Retention"]}
-                    contentStyle={{
-                      background: "hsl(var(--bg))",
-                      border: "1px solid hsl(var(--border))",
-                      fontSize: 12,
-                    }}
-                  />
-                  <Bar dataKey="pct" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <RetentionBars data={retention} />
           </Section>
 
           {/* Feature usage matrix */}
@@ -199,6 +141,66 @@ function Section({
         {children}
       </div>
     </section>
+  );
+}
+
+function SignupsBars({
+  data,
+}: {
+  data: Array<{ day: string; count: number }>;
+}) {
+  const max = Math.max(1, ...data.map((d) => d.count));
+  return (
+    <div>
+      <div className="flex items-end gap-1 h-32">
+        {data.length === 0 && (
+          <p className="text-xs text-muted-fg">No signups in this window.</p>
+        )}
+        {data.map((d) => (
+          <div
+            key={d.day}
+            title={`${format(new Date(d.day), "MMM d")} · ${d.count} signups`}
+            className="flex-1 bg-accent/70 hover:bg-accent rounded-sm min-h-[2px] transition-colors"
+            style={{ height: `${(d.count / max) * 100}%` }}
+          />
+        ))}
+      </div>
+      {data.length > 0 && (
+        <div className="flex justify-between text-[10px] text-muted-fg tabular-nums mt-2">
+          <span>{format(new Date(data[0]!.day), "MMM d")}</span>
+          <span>{format(new Date(data[data.length - 1]!.day), "MMM d")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RetentionBars({
+  data,
+}: {
+  data: Array<{ day: number; pct: number }>;
+}) {
+  if (data.length === 0)
+    return <p className="text-sm text-muted-fg">No data yet.</p>;
+  return (
+    <div className="space-y-2">
+      {data.map((r) => (
+        <div key={r.day} className="flex items-center gap-3">
+          <span className="w-10 text-xs uppercase tracking-wider text-muted-fg tabular-nums">
+            D{r.day}
+          </span>
+          <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all"
+              style={{ width: `${r.pct}%` }}
+            />
+          </div>
+          <span className="w-12 text-right text-xs tabular-nums text-muted-fg">
+            {r.pct}%
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
