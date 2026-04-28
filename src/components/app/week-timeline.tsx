@@ -26,22 +26,6 @@ import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
  * WeekTimeline — Mon–Sun, 7-column timeline view of the current ISO week.
- *
- * Layout:
- *   - Sticky-top day headers (date + weekday + today highlight).
- *   - Sticky-left hour rail (6 AM → 11 PM, 56 px/hour to match DayTimeline).
- *   - 7 day columns. On desktop they share width equally (md:grid-cols-7).
- *     On mobile each column is wider than the viewport so the user
- *     swipes horizontally with snap-x to step day-by-day.
- *   - Each column is a useDroppable. Each task is a useDraggable.
- *     On drop:
- *       • column → new date
- *       • delta.y → new minutes-of-day (snapped to 15-min)
- *       • duration is preserved (or 30 min for due-only tasks)
- *
- * Tasks without a time anchor (no start_at and no due_at) don't appear
- * here — they live in the list view. Dragging a task within the same
- * day still works (column doesn't change, only delta.y matters).
  */
 
 const RAIL_START_HOUR = 6;
@@ -51,10 +35,56 @@ const PX_PER_MIN = PX_PER_HOUR / 60;
 const RAIL_HEIGHT = (RAIL_END_HOUR - RAIL_START_HOUR) * PX_PER_HOUR;
 const SNAP_MINUTES = 15;
 const HEADER_HEIGHT = 56;
-const RAIL_WIDTH = 56; // 14 in tw
+const RAIL_WIDTH = 56;
 
 function minutesFromRailStart(d: Date): number {
   return (d.getHours() - RAIL_START_HOUR) * 60 + d.getMinutes();
+}
+
+/**
+ * Greedy column layout for overlapping events.
+ */
+function layoutColumns<T extends { startMin: number; endMin: number }>(
+  events: T[]
+): Map<T, { col: number; cols: number }> {
+  const sorted = [...events].sort(
+    (a, b) => a.startMin - b.startMin || a.endMin - b.endMin
+  );
+  const out = new Map<T, { col: number; cols: number }>();
+  let cluster: T[] = [];
+  let clusterEnd = -Infinity;
+
+  function flush() {
+    if (cluster.length === 0) return;
+    const columns: T[][] = [];
+    for (const ev of cluster) {
+      let placed = false;
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i]!;
+        if (col[col.length - 1]!.endMin <= ev.startMin) {
+          col.push(ev);
+          out.set(ev, { col: i, cols: 0 });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([ev]);
+        out.set(ev, { col: columns.length - 1, cols: 0 });
+      }
+    }
+    for (const ev of cluster) out.get(ev)!.cols = columns.length;
+    cluster = [];
+    clusterEnd = -Infinity;
+  }
+
+  for (const ev of sorted) {
+    if (ev.startMin >= clusterEnd) flush();
+    cluster.push(ev);
+    clusterEnd = Math.max(clusterEnd, ev.endMin);
+  }
+  flush();
+  return out;
 }
 
 export function WeekTimeline() {
@@ -69,10 +99,8 @@ export function WeekTimeline() {
     return () => clearInterval(id);
   }, []);
 
-  // Mon–Sun (ISO week).
   const weekStart = useMemo(
     () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-    // Recompute at midnight rollover — cheap.
     [now.toDateString()]
   );
   const days = useMemo(
@@ -84,14 +112,11 @@ export function WeekTimeline() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  // Auto-scroll vertically so the current time lands ~1/3 from the top
-  // of the viewport on first paint.
   useEffect(() => {
     if (!containerRef.current) return;
     const m = minutesFromRailStart(now);
     const target = Math.max(0, m * PX_PER_MIN - 200);
     containerRef.current.scrollTo({ top: target });
-    // Only run once on mount; later time ticks shouldn't yank scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -112,7 +137,6 @@ export function WeekTimeline() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task || !task.due_at) return;
 
-    // over.id format: "day-yyyy-MM-dd" — parse without TZ pitfalls.
     const dayKey = String(over.id).replace("day-", "");
     const parts = dayKey.split("-").map((s) => parseInt(s, 10));
     if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return;
@@ -126,11 +150,9 @@ export function WeekTimeline() {
     const origHour = origStart.getHours();
     const origMin = origStart.getMinutes();
 
-    // Apply pixel delta as a minute delta, then snap to 15.
     const dyMin = delta.y / PX_PER_MIN;
     const rawMin = origHour * 60 + origMin + dyMin;
     const snapped = Math.round(rawMin / SNAP_MINUTES) * SNAP_MINUTES;
-    // Keep within the rail's hour band.
     const clamped = Math.max(
       RAIL_START_HOUR * 60,
       Math.min(RAIL_END_HOUR * 60 - SNAP_MINUTES, snapped)
@@ -146,7 +168,6 @@ export function WeekTimeline() {
       : 30;
     const newDue = new Date(newStart.getTime() + dur * 60_000);
 
-    // Skip no-op drags (column same as origin AND time unchanged).
     if (
       isSameDay(newDay, origStart) &&
       newStart.getTime() === origStart.getTime()
@@ -172,18 +193,14 @@ export function WeekTimeline() {
     >
       <div ref={containerRef} className="flex-1 overflow-auto">
         <div className="flex relative">
-          {/* Hour rail — sticky on the left so it stays visible while
-              the user swipes horizontally between days. */}
           <div
             className="shrink-0 sticky left-0 bg-bg/60 backdrop-blur-md z-30 border-r border-border"
             style={{ width: RAIL_WIDTH }}
           >
-            {/* Header spacer */}
             <div
               className="border-b border-border bg-bg/60 backdrop-blur-md"
               style={{ height: HEADER_HEIGHT }}
             />
-            {/* Hour labels */}
             <div className="relative" style={{ height: RAIL_HEIGHT }}>
               {Array.from(
                 { length: RAIL_END_HOUR - RAIL_START_HOUR + 1 },
@@ -210,7 +227,6 @@ export function WeekTimeline() {
             </div>
           </div>
 
-          {/* Day columns. Mobile: horizontal swipe; desktop: equal grid. */}
           <div className="flex md:grid md:grid-cols-7 flex-1">
             {days.map((d) => (
               <DayColumn
@@ -251,23 +267,24 @@ function DayColumn({
       const start = t.start_at
         ? new Date(t.start_at)
         : new Date(due.getTime() - 30 * 60_000);
-      return { task: t, start, due };
+      const startMin = minutesFromRailStart(start);
+      const endMin = minutesFromRailStart(due);
+      return { task: t, start, due, startMin, endMin };
     })
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+    .sort((a, b) => a.startMin - b.startMin);
+
+  const taskLayout = layoutColumns(timed);
 
   const nowTop = isToday ? minutesFromRailStart(now) * PX_PER_MIN : null;
 
   return (
     <div
       className={cn(
-        // Mobile: each column wider than half the viewport so swiping snaps
-        // crisply. Desktop: equal share via grid-cols-7.
         "flex flex-col snap-start shrink-0 md:shrink",
         "min-w-[60vw] md:min-w-0",
         "border-l border-border first:border-l-0"
       )}
     >
-      {/* Sticky day header */}
       <div
         className={cn(
           "sticky top-0 z-20 bg-bg/60 backdrop-blur-md border-b border-border",
@@ -293,7 +310,6 @@ function DayColumn({
         </p>
       </div>
 
-      {/* Drop zone + timed task blocks */}
       <div
         ref={setNodeRef}
         className={cn(
@@ -303,7 +319,6 @@ function DayColumn({
         )}
         style={{ height: RAIL_HEIGHT }}
       >
-        {/* Hour grid lines */}
         {Array.from(
           { length: RAIL_END_HOUR - RAIL_START_HOUR + 1 },
           (_, i) => (
@@ -316,18 +331,21 @@ function DayColumn({
           )
         )}
 
-        {/* Tasks */}
-        {timed.map((t) => (
-          <DraggableTask
-            key={t.task.id}
-            task={t.task}
-            start={t.start}
-            due={t.due}
-            onSelect={onSelect}
-          />
-        ))}
+        {timed.map((t) => {
+          const layout = taskLayout.get(t) ?? { col: 0, cols: 1 };
+          return (
+            <DraggableTask
+              key={t.task.id}
+              task={t.task}
+              start={t.start}
+              due={t.due}
+              col={layout.col}
+              cols={layout.cols}
+              onSelect={onSelect}
+            />
+          );
+        })}
 
-        {/* Now line — only on today's column */}
         {nowTop != null && nowTop >= 0 && nowTop <= RAIL_HEIGHT && (
           <div
             aria-hidden
@@ -347,11 +365,15 @@ function DraggableTask({
   task,
   start,
   due,
+  col,
+  cols,
   onSelect,
 }: {
   task: TaskWithTags;
   start: Date;
   due: Date;
+  col: number;
+  cols: number;
   onSelect: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -367,9 +389,13 @@ function DraggableTask({
   const height = Math.max(24, (visEnd - visStart) * PX_PER_MIN - 2);
   const tone = priorityColorClass(task.priority);
 
+  const gap = cols > 1 ? 2 : 0;
+
   const style: React.CSSProperties = {
     top,
     height,
+    left: `calc(4px + (100% - 8px) * ${col} / ${cols})`,
+    width: `calc((100% - 8px) / ${cols} - ${gap}px)`,
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
       : undefined,
@@ -387,7 +413,7 @@ function DraggableTask({
       }}
       style={style}
       className={cn(
-        "absolute left-1 right-1 rounded-md text-left px-2 py-1.5",
+        "absolute rounded-md text-left px-2 py-1.5",
         "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
         "flex flex-col gap-0.5 overflow-hidden cursor-grab active:cursor-grabbing",
         "border-l-[3px]",
@@ -415,8 +441,6 @@ function DraggableTask({
     </div>
   );
 }
-
-/* ------------------------ View-mode toggle ------------------------ */
 
 export function useWeekViewMode() {
   const [mode, setMode] = useState<"list" | "timeline">(() => {
