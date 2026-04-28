@@ -11,6 +11,7 @@ export default function Next90Page() {
       subtitle={t(lang, "view.next90.subtitle")}
       filter={{ view: "next90" }}
       sortBy="due_at"
+      sortKey="next90"
     />
   );
 }
