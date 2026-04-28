@@ -10,6 +10,7 @@ export default function Next90Page() {
       title={t(lang, "sidebar.next90")}
       subtitle={t(lang, "view.next90.subtitle")}
       filter={{ view: "next90" }}
+      sortBy="due_at"
     />
   );
 }
