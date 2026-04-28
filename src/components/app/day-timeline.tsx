@@ -189,7 +189,7 @@ export function DayTimeline({ date }: { date: Date }) {
               onClick={() => setSelected(t.task.id)}
               className={cn(
                 "absolute left-14 right-4 rounded-md text-left px-3 py-2",
-                "border surface hover:shadow-sm transition-shadow",
+                "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
                 "flex flex-col gap-0.5 overflow-hidden",
                 t.task.is_completed && "opacity-60"
               )}
