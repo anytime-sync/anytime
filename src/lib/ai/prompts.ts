@@ -20,7 +20,8 @@ export function parseTaskSystem(language: LanguageCode = "en"): string {
 Output JSON only. No prose. Schema:
 {
   "title": string,
-  "due_at": string | null,         // ISO 8601 in user's tz, or null
+  "start_at": string | null,       // ISO 8601, set ONLY when the user typed a time range ("10am-11am", "from 9 to 10", "5-7pm")
+  "due_at": string | null,         // ISO 8601 in user's tz, or null. For ranges this is the END.
   "is_all_day": boolean,
   "priority": 0 | 1 | 3 | 5,       // 0 None, 1 Low, 3 Medium, 5 High
   "tagNames": string[],            // bare names, no leading #
@@ -29,6 +30,12 @@ Output JSON only. No prose. Schema:
   "reminder_at": string | null,    // ISO 8601 or null
   "estimated_minutes": number | null
 }
+
+Time-range rules:
+- "10-11am" / "10am-11am" / "10:00-11:00" / "from 9 to 10" / "between 2 and 3pm"
+  → start_at = the start side, due_at = the end side, is_all_day = false.
+- A single time ("at 9am", "tomorrow 9am") → start_at = null, due_at = that time.
+- An all-day date ("tomorrow") → start_at = null, due_at = midnight of that day, is_all_day = true.
 
 The user may type in any of: English, Traditional Chinese, Simplified
 Chinese, Japanese, or Korean. Their preferred language is ${lang.aiName}.
