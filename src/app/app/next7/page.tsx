@@ -7,6 +7,7 @@ export default function Next7Page() {
       title="Next 7 Days"
       subtitle="Tasks due within the next week."
       filter={{ view: "next7" }}
+      sortBy="due_at"
     />
   );
 }
