@@ -3,31 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, isSameDay, startOfDay, endOfDay, differenceInMinutes } from "date-fns";
 import { Clock, Plus } from "lucide-react";
-import { useTasks, type TaskWithTags } from "@/hooks/use-tasks";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { useUserPrefs } from "@/hooks/use-ai";
 import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
-/**
- * DayTimeline — vertical hour-rail view of a single day.
- *
- * Layout:
- *   - Left rail: hour markers from 6 AM to 11 PM, ~56px per hour.
- *   - Each task with start_at + due_at on this day renders as an absolutely
- *     positioned block. Top = (start_minutes - 6h) * pxPerMinute. Height
- *     = duration * pxPerMinute (clamped at 24px so a 5-min event stays
- *     readable).
- *   - "Anytime today" stack at the top for tasks that don't have a time.
- *   - A red current-time line. The whole timeline auto-scrolls so the
- *     line lands at ~1/3 viewport on first paint.
- *   - Energy peak window (from user_preferences) gets a subtle warm tint
- *     across the rail to advertise deep-work hours without nagging.
- *   - Buffer labels ("15 mins") render in the gaps between consecutive
- *     scheduled blocks so the day reads as a plan, not a list.
- *
- * The timeline is read-mostly today — clicks open the detail panel.
- * Drag-to-reschedule is left for a follow-up.
- */
+const SNAP_MINUTES = 15;
 
 const RAIL_START_HOUR = 6;
 const RAIL_END_HOUR = 23;
@@ -48,13 +39,6 @@ function parseHHMM(s?: string | null): { h: number; m: number } | null {
 
 /**
  * Greedy column layout for overlapping events (Google-Calendar style).
- *
- * Splits events into "clusters" of mutually-overlapping intervals, then
- * within each cluster assigns each event to the leftmost free column.
- * The cluster's total column count becomes `cols` so every event in the
- * same overlap group draws at the same width.
- *
- * Tasks that don't overlap anything render full-width (cols=1, col=0).
  */
 function layoutColumns<T extends { startMin: number; endMin: number }>(
   events: T[]
@@ -85,7 +69,6 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
         out.set(ev, { col: columns.length - 1, cols: 0 });
       }
     }
-    // Stamp the cluster-wide column count onto every event.
     for (const ev of cluster) out.get(ev)!.cols = columns.length;
     cluster = [];
     clusterEnd = -Infinity;
@@ -104,23 +87,68 @@ export function DayTimeline({ date }: { date: Date }) {
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
   const { data: prefs } = useUserPrefs();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
+  const update = useUpdateTask();
   const containerRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
   const isToday = isSameDay(date, now);
 
-  // Tick the now-line every minute. Cheap; only re-renders this tree.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  function onDragEnd(e: DragEndEvent) {
+    const { active, delta } = e;
+    const taskId = String(active.id);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.due_at) return;
+
+    const origDue = new Date(task.due_at);
+    const origStart = task.start_at
+      ? new Date(task.start_at)
+      : new Date(origDue.getTime() - 30 * 60_000);
+
+    const dyMin = delta.y / PX_PER_MIN;
+    const rawMin =
+      origStart.getHours() * 60 + origStart.getMinutes() + dyMin;
+    const snapped = Math.round(rawMin / SNAP_MINUTES) * SNAP_MINUTES;
+    const clamped = Math.max(
+      RAIL_START_HOUR * 60,
+      Math.min(RAIL_END_HOUR * 60 - SNAP_MINUTES, snapped)
+    );
+    const newHour = Math.floor(clamped / 60);
+    const newMin = clamped % 60;
+
+    const newStart = new Date(date);
+    newStart.setHours(newHour, newMin, 0, 0);
+
+    if (newStart.getTime() === origStart.getTime()) return;
+
+    const dur = task.start_at
+      ? Math.max(15, differenceInMinutes(origDue, new Date(task.start_at)))
+      : 30;
+    const newDue = new Date(newStart.getTime() + dur * 60_000);
+
+    if (task.start_at) {
+      update.mutate({
+        id: task.id,
+        start_at: newStart.toISOString(),
+        due_at: newDue.toISOString(),
+      });
+    } else {
+      update.mutate({ id: task.id, due_at: newDue.toISOString() });
+    }
+  }
+
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  // Auto-scroll so the current time lands ~1/3 down on first paint.
   useEffect(() => {
     if (!isToday || !containerRef.current) return;
     const m = minutesFromRailStart(now);
     const target = Math.max(0, m * PX_PER_MIN - 200);
     containerRef.current.scrollTo({ top: target });
-    // Only on mount; subsequent ticks shouldn't yank the user's scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,8 +167,6 @@ export function DayTimeline({ date }: { date: Date }) {
   );
 
   const allDayTasks = dayTasks.filter((t) => t.is_all_day || (!t.start_at && !t.due_at));
-  // Timed = has at least due_at and is not all_day. We accept tasks with
-  // only due_at (a single-time anchor) and render them as a 30-min block.
   const timed = dayTasks
     .filter((t) => !t.is_all_day && t.due_at)
     .map((t) => {
@@ -148,7 +174,6 @@ export function DayTimeline({ date }: { date: Date }) {
       const start = t.start_at ? new Date(t.start_at) : new Date(due.getTime() - 30 * 60_000);
       const startMin = minutesFromRailStart(start);
       const endMin = minutesFromRailStart(due);
-      // Clip to the rail so a 4 AM task doesn't render off-screen.
       const visStart = Math.max(0, startMin);
       const visEnd = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, endMin);
       return { task: t, start, due, startMin, endMin, visStart, visEnd };
@@ -156,8 +181,6 @@ export function DayTimeline({ date }: { date: Date }) {
     .filter((t) => t.visEnd > t.visStart)
     .sort((a, b) => a.startMin - b.startMin);
 
-  // Compute buffer labels: for each gap between consecutive tasks of
-  // ≥10 minutes, drop a small "N min" label centered in that gap.
   const buffers: Array<{ key: string; top: number; minutes: number }> = [];
   for (let i = 0; i < timed.length - 1; i++) {
     const a = timed[i]!;
@@ -181,13 +204,11 @@ export function DayTimeline({ date }: { date: Date }) {
 
   const nowTop = isToday ? minutesFromRailStart(now) * PX_PER_MIN : null;
 
-  // Lay out overlapping events into side-by-side columns so two tasks
-  // that share the same minute don't stack on top of each other.
   const taskLayout = layoutColumns(timed);
 
   return (
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
     <div ref={containerRef} className="flex-1 overflow-y-auto">
-      {/* All-day stack */}
       {allDayTasks.length > 0 && (
         <div className="border-b border-border px-4 md:px-6 py-2 space-y-1">
           <p className="editorial-number text-[10px]">All day</p>
@@ -215,9 +236,7 @@ export function DayTimeline({ date }: { date: Date }) {
         </div>
       )}
 
-      {/* Hour rail + blocks */}
       <div className="relative" style={{ height: RAIL_HEIGHT }}>
-        {/* Energy-peak shading (under everything) */}
         {peak && (
           <div
             aria-hidden
@@ -226,7 +245,6 @@ export function DayTimeline({ date }: { date: Date }) {
           />
         )}
 
-        {/* Hour markers */}
         {Array.from({ length: RAIL_END_HOUR - RAIL_START_HOUR + 1 }, (_, i) => {
           const h = RAIL_START_HOUR + i;
           const top = i * PX_PER_HOUR;
@@ -244,7 +262,6 @@ export function DayTimeline({ date }: { date: Date }) {
           );
         })}
 
-        {/* Buffer labels (gaps) */}
         {buffers.map((b) => (
           <div
             key={b.key}
@@ -256,59 +273,32 @@ export function DayTimeline({ date }: { date: Date }) {
           </div>
         ))}
 
-        {/* Tasks — wrapped in an inset layer so percentage left/width
-            below split the available column space cleanly. Tasks that
-            overlap in time get rendered side-by-side instead of piled
-            on top of each other. */}
-        <div className="absolute inset-y-0 left-14 right-4 pointer-events-none">
+        <DayDropZone>
           {timed.map((t) => {
             const top = t.visStart * PX_PER_MIN;
             const height = Math.max(24, (t.visEnd - t.visStart) * PX_PER_MIN - 2);
             const tone = priorityColorClass(t.task.priority);
             const { col, cols } = taskLayout.get(t) ?? { col: 0, cols: 1 };
             const widthPct = 100 / cols;
-            // 4px gap between columns when there are 2+ side-by-side cards.
             const gap = cols > 1 ? 4 : 0;
             return (
-              <button
+              <DraggableCard
                 key={t.task.id}
-                onClick={() => setSelected(t.task.id)}
-                className={cn(
-                  "absolute rounded-md text-left px-3 py-2 pointer-events-auto",
-                  // Frosted-glass card so the photo bleeds through behind
-                  // the timeline. Backdrop blur keeps the title legible.
-                  "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
-                  "flex flex-col gap-0.5 overflow-hidden",
-                  t.task.is_completed && "opacity-60"
-                )}
-                style={{
-                  top,
-                  height,
-                  left: `${col * widthPct}%`,
-                  width: `calc(${widthPct}% - ${gap}px)`,
-                  borderColor: "hsl(var(--border))",
-                  borderLeftWidth: 3,
-                  borderLeftColor: `currentColor`,
-                }}
-              >
-                <span className={cn("inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums", tone)}>
-                  <Clock className="size-3" />
-                  {format(t.start, "h:mm a")} – {format(t.due, "h:mm a")}
-                </span>
-                <span className={cn("text-sm font-medium leading-snug truncate", t.task.is_completed && "line-through")}>
-                  {t.task.title}
-                </span>
-                {t.task.notes && height > 56 && cols === 1 && (
-                  <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
-                    {t.task.notes}
-                  </span>
-                )}
-              </button>
+                task={t.task}
+                top={top}
+                height={height}
+                left={`${col * widthPct}%`}
+                width={`calc(${widthPct}% - ${gap}px)`}
+                tone={tone}
+                start={t.start}
+                due={t.due}
+                cols={cols}
+                onSelect={setSelected}
+              />
             );
           })}
-        </div>
+        </DayDropZone>
 
-        {/* Now line */}
         {nowTop != null && nowTop >= 0 && nowTop <= RAIL_HEIGHT && (
           <div
             aria-hidden
@@ -326,15 +316,107 @@ export function DayTimeline({ date }: { date: Date }) {
         )}
       </div>
     </div>
+    </DndContext>
   );
 }
 
-/* ------------------------ Today wrapper ------------------------ */
+function DayDropZone({ children }: { children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id: "day-drop" });
+  return (
+    <div
+      ref={setNodeRef}
+      className="absolute inset-y-0 left-14 right-4 pointer-events-none"
+    >
+      {children}
+    </div>
+  );
+}
 
-/**
- * TodayTimelineHeader — a small toggle so users can flip between the
- * familiar list and the new timeline view. Persists choice in localStorage.
- */
+function DraggableCard({
+  task,
+  top,
+  height,
+  left,
+  width,
+  tone,
+  start,
+  due,
+  cols,
+  onSelect,
+}: {
+  task: TaskWithTags;
+  top: number;
+  height: number;
+  left: string;
+  width: string;
+  tone: string;
+  start: Date;
+  due: Date;
+  cols: number;
+  onSelect: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: task.id });
+
+  const style: React.CSSProperties = {
+    top,
+    height,
+    left,
+    width,
+    borderColor: "hsl(var(--border))",
+    borderLeftWidth: 3,
+    borderLeftColor: "currentColor",
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        if (isDragging) return;
+        e.stopPropagation();
+        onSelect(task.id);
+      }}
+      style={style}
+      className={cn(
+        "absolute rounded-md text-left px-3 py-2 pointer-events-auto",
+        "border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
+        "flex flex-col gap-0.5 overflow-hidden",
+        "cursor-grab active:cursor-grabbing select-none",
+        isDragging && "opacity-90 shadow-2xl ring-2 ring-accent z-20",
+        task.is_completed && "opacity-60"
+      )}
+    >
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums",
+          tone
+        )}
+      >
+        <Clock className="size-3" />
+        {format(start, "h:mm a")} – {format(due, "h:mm a")}
+      </span>
+      <span
+        className={cn(
+          "text-sm font-medium leading-snug truncate",
+          task.is_completed && "line-through"
+        )}
+      >
+        {task.title}
+      </span>
+      {task.notes && height > 56 && cols === 1 && (
+        <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
+          {task.notes}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function useDayViewMode() {
   const [mode, setMode] = useState<"list" | "timeline">(() => {
     if (typeof window === "undefined") return "list";
