@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Flag, Hash, ListTree, Repeat } from "lucide-react";
+import { Calendar, Clock, Flag, Hash, ListTree, Repeat } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
 import { useUIStore } from "@/store/ui";
@@ -57,8 +57,19 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         >
           {task.title}
         </div>
+        {/* Inline notes preview — first line, muted, truncated. */}
+        {task.notes && !task.is_completed && (
+          <p className="text-xs text-muted-fg mt-0.5 line-clamp-1 leading-snug">
+            {task.notes}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-fg">
           {task.due_at && <DueChip due_at={task.due_at} all_day={task.is_all_day} />}
+          {/* Duration: explicit start->end range wins; otherwise estimated. */}
+          {(task.start_at && task.due_at && !task.is_all_day) ||
+          task.estimated_pomodoros > 0 ? (
+            <DurationChip task={task} />
+          ) : null}
           {task.priority > 0 && (
             <span className="inline-flex items-center gap-1">
               <Flag className={cn("size-3", priorityColorClass(task.priority))} />
@@ -84,6 +95,38 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Duration chip — shows either an explicit time range ("10:00-11:00") when
+ * the task has both start_at + due_at, or a duration ("30m" / "1h 30m")
+ * derived from estimated pomodoros (each = 25 min).
+ */
+function DurationChip({ task }: { task: TaskWithTags }) {
+  if (task.start_at && task.due_at && !task.is_all_day) {
+    const s = new Date(task.start_at);
+    const e = new Date(task.due_at);
+    const min = Math.max(0, Math.round((+e - +s) / 60_000));
+    const fmt = (d: Date) =>
+      d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return (
+      <span className="inline-flex items-center gap-1" title={`${min} min`}>
+        <Clock className="size-3" />
+        {fmt(s)}–{fmt(e)}
+      </span>
+    );
+  }
+  const est = task.estimated_pomodoros * 25;
+  if (est > 0) {
+    const label = est >= 60 ? `${Math.round(est / 60)}h ${est % 60 || ""}m`.trim() : `${est}m`;
+    return (
+      <span className="inline-flex items-center gap-1" title="Estimated">
+        <Clock className="size-3" />
+        {label}
+      </span>
+    );
+  }
+  return null;
 }
 
 function DueChip({ due_at, all_day }: { due_at: string; all_day: boolean }) {
