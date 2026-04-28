@@ -17,9 +17,12 @@ type Props = {
   defaults?: { project_id?: string | null };
   /** Show the AI Daily Edition card and anti-overload banner (Today view). */
   showDailyEdition?: boolean;
+  /** Optional element rendered to the right of the Quick add button —
+   *  used by Today to show its List/Timeline toggle. */
+  headerExtra?: React.ReactNode;
 };
 
-export function TaskListView({ title, subtitle, filter, defaults, showDailyEdition }: Props) {
+export function TaskListView({ title, subtitle, filter, defaults, showDailyEdition, headerExtra }: Props) {
   const { data: tasks = [], isLoading } = useTasks(filter);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -35,10 +38,13 @@ export function TaskListView({ title, subtitle, filter, defaults, showDailyEditi
             <h1 className="font-display text-3xl md:text-4xl tracking-tight truncate leading-tight">{title}</h1>
             {subtitle && <p className="text-sm text-muted-fg mt-1">{subtitle}</p>}
           </div>
-          <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
-            <Plus className="size-4" />
-            Quick add
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {headerExtra}
+            <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
+              <Plus className="size-4" />
+              Quick add
+            </button>
+          </div>
         </div>
       </div>
 
