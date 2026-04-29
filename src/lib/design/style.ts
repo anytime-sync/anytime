@@ -32,12 +32,28 @@ export function overridesToStyle(o: DesignOverrides | undefined): CSSProperties 
   if (typeof o.rotate === "number") transforms.push(`rotate(${o.rotate}deg)`);
   if (transforms.length > 0) s.transform = transforms.join(" ");
 
+  // Background image — emitted as CSS variables (--fl-bg-light / --fl-bg-dark)
+  // so light/dark modes can switch via globals.css rules without React having
+  // to know which theme is active. The `.dark [data-design-id]` and
+  // `.fl-night-preview [data-design-id]` selectors there read these vars.
   if (o.bgImageUrl) {
-    s.backgroundImage = `url(${o.bgImageUrl})`;
-    s.backgroundPosition = o.bgPosition ?? "center";
-    s.backgroundSize = o.bgSize ?? "cover";
+    const sv = s as Record<string, string>;
+    sv["--fl-bg-light"] = `url(${o.bgImageUrl})`;
+    sv["--fl-bg-pos-light"] = o.bgPosition ?? "center";
+    sv["--fl-bg-size-light"] = o.bgSize ?? "cover";
     s.backgroundRepeat = "no-repeat";
   }
+  if (o.bgImageUrlDark) {
+    const sv = s as Record<string, string>;
+    sv["--fl-bg-dark"] = `url(${o.bgImageUrlDark})`;
+    sv["--fl-bg-pos-dark"] = o.bgPositionDark ?? "center";
+    sv["--fl-bg-size-dark"] = o.bgSizeDark ?? "cover";
+    s.backgroundRepeat = "no-repeat";
+  }
+
+  // Element dimensions (mode-agnostic)
+  if (o.width) s.width = o.width;
+  if (o.height) s.height = o.height;
 
   // Floating elements: free-positioned overlay.
   if (o._kind === "floating") {
