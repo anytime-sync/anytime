@@ -449,15 +449,28 @@ export default function DesignPage() {
                   </select>
                 </Row>
                 <Row label="Size">
-                  <input
-                    type="text"
-                    placeholder="e.g. 5rem, 72px"
-                    value={overrides.fontSize ?? ""}
-                    onChange={(e) =>
-                      setOverride({ fontSize: e.target.value || undefined })
-                    }
-                    className="input h-8 text-xs w-full"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={8}
+                      max={200}
+                      step={1}
+                      value={parseFontSizePx(overrides.fontSize)}
+                      onChange={(e) =>
+                        setOverride({ fontSize: e.target.value + "px" })
+                      }
+                      className="flex-1 accent-accent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="72px"
+                      value={overrides.fontSize ?? ""}
+                      onChange={(e) =>
+                        setOverride({ fontSize: e.target.value || undefined })
+                      }
+                      className="input h-8 text-xs w-20"
+                    />
+                  </div>
                 </Row>
                 <Row label="Weight">
                   <div className="flex flex-wrap gap-1">
@@ -809,6 +822,18 @@ function FloatingTextEditor({
       </div>
     </section>
   );
+}
+
+function parseFontSizePx(s: string | undefined): number {
+  if (!s) return 16;
+  const m = /^([\d.]+)\s*(px|rem|em|%)?$/.exec(s.trim());
+  if (!m) return 16;
+  const n = parseFloat(m[1]!);
+  const unit = m[2] || "px";
+  if (unit === "px") return Math.round(n);
+  if (unit === "rem" || unit === "em") return Math.round(n * 16);
+  if (unit === "%") return Math.round((n / 100) * 16);
+  return 16;
 }
 
 function parseBgZoomPct(bgSize: string | undefined): number {
