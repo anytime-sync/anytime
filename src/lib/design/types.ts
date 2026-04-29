@@ -1,13 +1,21 @@
 /**
  * Per-element design overrides written by the /admin/design editor.
- * Style is shared across locales; per-locale TEXT overrides live in
- * the existing site_content table.
  *
- * Floating elements (created via the editor's "+ Text" button) live
- * in the same table. They are identified by `_kind: 'floating'` and
+ * Day-mode style is stored at the top level of DesignOverrides.
+ * Night-mode overrides live in the optional `night` sub-object below;
+ * any field unset there falls back to the matching top-level day
+ * value, which itself falls back to the Tailwind/component default.
+ *
+ * This shape stays backward-compatible: existing rows without a
+ * `night` block continue to render the same value in both modes,
+ * exactly as they always have. The editor now scopes new edits to
+ * the active Day/Night tab.
+ *
+ * Floating elements (created via the editor's "+ Text" button) use
+ * the same DesignOverrides shape but add `_kind: 'floating'` and
  * carry their own page binding, text, and absolute coordinates.
  */
-export type DesignOverrides = {
+export type StyleFields = {
   // --- Typography ---
   fontFamily?: string;
   fontSize?: string;
@@ -30,15 +38,25 @@ export type DesignOverrides = {
   bgPosition?: string;
   bgSize?: string;
 
-  // --- Background image (dark/night mode). Falls back to the light variant
-  //     when unset, so a single image keeps working unchanged. ---
+  // --- Element dimensions ---
+  width?: string;
+  height?: string;
+};
+
+export type DesignOverrides = StyleFields & {
+  /**
+   * Per-mode override block. When the runtime detects dark theme
+   * (`.dark` class or `.fl-night-preview` editor marker), each style
+   * field falls through `night.X ?? X ?? <Tailwind default>`.
+   */
+  night?: StyleFields;
+
+  // --- Legacy day/night bg image fields (predate `night`) ---
+  // Kept for backward-compat with rows already saved with these keys;
+  // `night.bgImageUrl` (etc.) takes precedence when both are present.
   bgImageUrlDark?: string | null;
   bgPositionDark?: string;
   bgSizeDark?: string;
-
-  // --- Element dimensions (shared across modes) ---
-  width?: string;
-  height?: string;
 
   // --- Visibility ---
   hidden?: boolean;
