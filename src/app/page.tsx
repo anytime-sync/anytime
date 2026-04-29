@@ -25,12 +25,12 @@ export default function Home() {
   }, []);
 
   const principles = [
-    { kicker: "01", id: "landing.principle.1", title: t(lang, "landing.principle1Title"), body: t(lang, "landing.principle1Body"), Glyph: SmallSun  },
-    { kicker: "02", id: "landing.principle.2", title: t(lang, "landing.principle2Title"), body: t(lang, "landing.principle2Body"), Glyph: BeamLight },
-    { kicker: "03", id: "landing.principle.3", title: t(lang, "landing.principle3Title"), body: t(lang, "landing.principle3Body"), Glyph: SunHorizon },
-    { kicker: "04", id: "landing.principle.4", title: t(lang, "landing.principle4Title"), body: t(lang, "landing.principle4Body"), Glyph: SoftOrb   },
-    { kicker: "05", id: "landing.principle.5", title: t(lang, "landing.principle5Title"), body: t(lang, "landing.principle5Body"), Glyph: RadialSun },
-  ];
+    { kicker: "01", id: "landing.principle.1", titleKey: "landing.principle1Title", bodyKey: "landing.principle1Body", Glyph: SmallSun  },
+    { kicker: "02", id: "landing.principle.2", titleKey: "landing.principle2Title", bodyKey: "landing.principle2Body", Glyph: BeamLight },
+    { kicker: "03", id: "landing.principle.3", titleKey: "landing.principle3Title", bodyKey: "landing.principle3Body", Glyph: SunHorizon },
+    { kicker: "04", id: "landing.principle.4", titleKey: "landing.principle4Title", bodyKey: "landing.principle4Body", Glyph: SoftOrb   },
+    { kicker: "05", id: "landing.principle.5", titleKey: "landing.principle5Title", bodyKey: "landing.principle5Body", Glyph: RadialSun },
+  ] as const;
 
   return (
     <DesignSlot id="landing.main" as="main" className="min-h-screen flex flex-col">
@@ -49,21 +49,26 @@ export default function Home() {
 
       <DesignSlot id="landing.hero" as="section" className="flex-1 grid place-items-center px-6 py-20">
         <div className="max-w-3xl text-center space-y-6">
-          <DesignSlot id="landing.hero.kicker" as="p" className="editorial-number text-xs">
+          <DesignSlot id="landing.hero.kicker" as="p" textKey="landing.kicker" className="editorial-number text-xs">
             {t(lang, "landing.kicker")}
           </DesignSlot>
-          <DesignSlot id="landing.hero.title" as="h1" className="font-display text-5xl md:text-7xl leading-[1.05] tracking-tight">
-            {t(lang, "landing.heroLine1")}
+          <h1 className="font-display text-5xl md:text-7xl leading-[1.05] tracking-tight">
+            <DesignSlot id="landing.hero.title.line1" as="span" textKey="landing.heroLine1">
+              {t(lang, "landing.heroLine1")}
+            </DesignSlot>
             <br />
-            <em className="font-display">{t(lang, "landing.heroLine2")}</em>
-          </DesignSlot>
-          <DesignSlot id="landing.hero.body" as="p" className="text-base md:text-lg text-muted-fg max-w-xl mx-auto">
+            <DesignSlot id="landing.hero.title.line2" as="em" textKey="landing.heroLine2" className="font-display">
+              {t(lang, "landing.heroLine2")}
+            </DesignSlot>
+          </h1>
+          <DesignSlot id="landing.hero.body" as="p" textKey="landing.heroBody" className="text-base md:text-lg text-muted-fg max-w-xl mx-auto">
             {t(lang, "landing.heroBody")}
           </DesignSlot>
           <div className="flex items-center justify-center gap-3 pt-2">
             <DesignSlot
               id="landing.hero.signupCta"
               as="button"
+              textKey="landing.signupCta"
               type="button"
               onClick={() => setAuthMode("signup")}
               className="btn-primary px-5 h-11"
@@ -73,6 +78,7 @@ export default function Home() {
             <DesignSlot
               id="landing.hero.loginCta"
               as="button"
+              textKey="landing.loginCta"
               type="button"
               onClick={() => setAuthMode("login")}
               className="btn-outline px-5 h-11"
@@ -80,7 +86,7 @@ export default function Home() {
               {t(lang, "landing.loginCta")}
             </DesignSlot>
           </div>
-          <DesignSlot id="landing.hero.note" as="p" className="text-xs text-muted-fg pt-2">
+          <DesignSlot id="landing.hero.note" as="p" textKey="landing.ctaNote" className="text-xs text-muted-fg pt-2">
             {t(lang, "landing.ctaNote")}
           </DesignSlot>
         </div>
@@ -93,20 +99,22 @@ export default function Home() {
       <DesignSlot id="landing.principles" as="section" className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <DesignSlot id="landing.principles.kicker" as="p" className="editorial-number text-xs">
+            <DesignSlot id="landing.principles.kicker" as="p" textKey="landing.principlesKicker" className="editorial-number text-xs">
               {t(lang, "landing.principlesKicker")}
             </DesignSlot>
-            <DesignSlot id="landing.principles.heading" as="h2" className="font-display text-3xl md:text-4xl mt-2">
-              <em>{t(lang, "landing.principlesHeading")}</em>
-            </DesignSlot>
+            <h2 className="font-display text-3xl md:text-4xl mt-2">
+              <DesignSlot id="landing.principles.heading" as="em" textKey="landing.principlesHeading">
+                {t(lang, "landing.principlesHeading")}
+              </DesignSlot>
+            </h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-12">
-            {principles.map(({ kicker, id, title, body, Glyph }) => (
+            {principles.map(({ kicker, id, titleKey, bodyKey, Glyph }) => (
               <DesignSlot key={kicker} id={id} as="article" className="space-y-3 text-center">
                 <Glyph className="size-16 mx-auto text-accent" />
                 <div className="editorial-number text-[10px]">{kicker}</div>
-                <DesignSlot id={`${id}.title`} as="h3" className="font-display text-xl leading-tight">{title}</DesignSlot>
-                <DesignSlot id={`${id}.body`} as="p" className="text-sm text-muted-fg leading-relaxed">{body}</DesignSlot>
+                <DesignSlot id={`${id}.title`} as="h3" textKey={titleKey} className="font-display text-xl leading-tight">{t(lang, titleKey)}</DesignSlot>
+                <DesignSlot id={`${id}.body`} as="p" textKey={bodyKey} className="text-sm text-muted-fg leading-relaxed">{t(lang, bodyKey)}</DesignSlot>
               </DesignSlot>
             ))}
           </div>
@@ -115,10 +123,11 @@ export default function Home() {
 
       <DesignSlot id="landing.footer" as="footer" className="px-6 py-8 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
-          <DesignSlot id="landing.footer.credit" as="span">{t(lang, "landing.footerCredit")}</DesignSlot>
+          <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
           <DesignSlot
             id="landing.footer.source"
             as="a"
+            textKey="landing.footerSource"
             href="https://github.com/anytime-sync/anytime"
             className="hover:text-fg"
           >
@@ -191,21 +200,4 @@ function SoftOrb({ className }: { className?: string }) {
         </radialGradient>
       </defs>
       <circle cx="32" cy="32" r="22" fill="url(#orb)" />
-      <circle cx="32" cy="32" r="14" fill="currentColor" fillOpacity="0.15" />
-    </svg>
-  );
-}
-
-function RadialSun({ className }: { className?: string }) {
-  const rays = Array.from({ length: 16 }, (_, i) => i * 22.5);
-  return (
-    <svg viewBox="0 0 64 64" className={className} fill="none"
-      stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden>
-      <circle cx="32" cy="32" r="7" />
-      {rays.map((deg, i) => (
-        <line key={i} x1="32" y1="20" x2="32" y2="9"
-          transform={`rotate(${deg} 32 32)`} />
-      ))}
-    </svg>
-  );
-}
+      <circle cx="32" cy="32" r="14" 
