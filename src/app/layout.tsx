@@ -61,6 +61,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Force every route through this layout to be rendered on demand.
+// Several client components below (RouteTracker, DesignEditMode,
+// PhotoBackground, the per-locale i18n bootstrap) read URL params and
+// cookies that don't exist at static build time. With static
+// rendering Next.js bails out with "useSearchParams() should be
+// wrapped in a suspense boundary" even when we wrap them ourselves.
+// Forcing dynamic here keeps things simple AND lets the design slot
+// system render fresh overrides on every request.
+export const dynamic = "force-dynamic";
+
 // Google Fonts URL bundling the CJK families used per language.
 // All loaded eagerly but the browser only fetches the unicode-range
 // segments that contain characters actually present on the page —
@@ -98,9 +108,10 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href={CJK_FONTS_HREF} rel="stylesheet" />
         {/* Plausible — privacy-respecting analytics. Loaded only when
-            NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set (Vercel env var). The script
-            is < 1kb, sets no cookies, sends no personal data. The "manual"
-            extension lets us track custom events via window.plausible(). */}
+            NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set (Vercel env var). The
+            script is < 1kb, sets no cookies, sends no personal data, and
+            ignores DNT. The "manual" extension lets us track custom
+            events via window.plausible() (see src/lib/track.ts). */}
         {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
           <>
             <script
@@ -123,8 +134,8 @@ export default async function RootLayout({
         <DesignProvider initial={designMap}>
           <Providers>
             <PhotoBackground />
-            {/* useSearchParams suspends in App Router; wrap so the rest of
-                the tree streams in regardless. */}
+            {/* useSearchParams suspends in App Router; wrap in Suspense
+                so the rest of the tree streams in regardless. */}
             <Suspense fallback={null}>
               <RouteTracker />
               <DesignEditMode />
