@@ -11,6 +11,8 @@ import {
   Move,
   Eye,
   EyeOff,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -96,6 +98,7 @@ export default function DesignPage() {
         | { type: "fl.design.select"; elementId: string }
         | { type: "fl.design.ready" }
         | { type: "fl.design.text"; textKey: string; value: string; locale: string }
+        | { type: "fl.design.move"; elementId: string; x: number; y: number }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.select") setSelected(data.elementId);
@@ -106,6 +109,20 @@ export default function DesignPage() {
       if (data.type === "fl.design.text") {
         void saveText(data.textKey, data.value, data.locale);
       }
+      if (data.type === "fl.design.move") {
+        void persistMove(data.elementId, data.x, data.y);
+      }
+    }
+    async function persistMove(elementId: string, x: number, y: number) {
+      const current = map[elementId] ?? {};
+      const merged = { ...current, _x: x, _y: y };
+      setMap((prev) => ({ ...prev, [elementId]: merged }));
+      const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ overrides: merged }),
+      });
+      if (!r.ok) toast.error("Move failed");
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
@@ -176,6 +193,50 @@ export default function DesignPage() {
     toast.success("Reverted");
   }
 
+  async function addFloating() {
+    const slug = page.replace(/\//g, "_") || "_root";
+    const uuid = (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2)
+    ).slice(0, 8);
+    const elementId = `floating.${slug}.${uuid}`;
+    const overrides: DesignOverrides = {
+      _kind: "floating",
+      _page: page,
+      _text: "New text",
+      _x: 120,
+      _y: 200,
+      fontFamily: "var(--font-display)",
+      fontSize: "1.5rem",
+      color: "#000000",
+    };
+    const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ overrides }),
+    });
+    if (!r.ok) { toast.error("Could not add text"); return; }
+    setMap((prev) => ({ ...prev, [elementId]: overrides }));
+    setSelected(elementId);
+    const w = iframeRef.current?.contentWindow;
+    if (w) w.postMessage({ type: "fl.design.update", elementId, overrides }, "*");
+    toast.success("Text added \u2014 drag to position");
+  }
+
+  async function deleteSelected() {
+    if (!selected) return;
+    if (!confirm("Delete this element?")) return;
+    setSavingId(selected);
+    const r = await fetch(`/api/design/${encodeURIComponent(selected)}`, { method: "DELETE" });
+    setSavingId(null);
+    if (!r.ok) { toast.error("Delete failed"); return; }
+    setMap((prev) => { const next = { ...prev }; delete next[selected]; return next; });
+    const w = iframeRef.current?.contentWindow;
+    if (w) w.postMessage({ type: "fl.design.update", elementId: selected, overrides: null }, "*");
+    setSelected(null);
+    toast.success("Deleted");
+  }
+
   async function uploadBg(file: File) {
     if (!selected) return;
     const fd = new FormData();
@@ -216,6 +277,14 @@ export default function DesignPage() {
               </option>
             ))}
           </select>
+          <button
+            onClick={addFloating}
+            className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
+            title="Add a free-positioned text element to this page"
+          >
+            <Plus className="size-3" />
+            Text
+          </button>
           <button
             onClick={() => setIframeKey((k) => k + 1)}
             className="btn-ghost h-9 text-xs"
@@ -270,6 +339,17 @@ export default function DesignPage() {
                     {overrides.hidden ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
                     {overrides.hidden ? "Show" : "Hide"}
                   </button>
+                  {selected.startsWith("floating.") && (
+                    <button
+                      onClick={deleteSelected}
+                      disabled={savingId === selected}
+                      className="btn-ghost h-8 text-xs px-3 inline-flex items-center gap-1.5 text-danger"
+                      title="Delete this floating element"
+                    >
+                      <Trash2 className="size-3" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -509,6 +589,14 @@ export default function DesignPage() {
                     className="input h-8 text-xs w-full"
                   />
                 </Row>
+                <Row label="Zoom">
+                  <NumberSlider
+                    value={parseBgZoomPct(overrides.bgSize)}
+                    min={50} max={300} step={5}
+                    onChange={(v) => setOverride({ bgSize: v === 100 ? undefined : `${v}%` })}
+                    suffix="%"
+                  />
+                </Row>
                 <Row label="Size">
                   <input
                     type="text"
@@ -574,6 +662,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <div>{children}</div>
     </div>
   );
+}
+
+function parseBgZoomPct(bgSize: string | undefined): number {
+  if (!bgSize) return 100;
+  const m = /^(\d+(?:\.\d+)?)%$/.exec(bgSize.trim());
+  if (m) return parseFloat(m[1]!);
+  return 100;
 }
 
 function NumberSlider({
