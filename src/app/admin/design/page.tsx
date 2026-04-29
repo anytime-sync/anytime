@@ -379,6 +379,14 @@ export default function DesignPage() {
             ))}
           </select>
           <button
+            onClick={() => setSelected("app.background.photo")}
+            className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
+            title="Edit the global day/night ambient backdrop — defaults are the current visible state"
+          >
+            <ImageIcon className="size-3" />
+            Backdrop
+          </button>
+          <button
             onClick={addFloating}
             className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
             title="Add a free-positioned text element to this page"
@@ -613,10 +621,13 @@ export default function DesignPage() {
                 </Row>
               </Section>
 
-              {/* Transform */}
+              {/* Transform — slider + numeric input combo on each row.
+                  The Backdrop slot pre-populates the dark-mode scale at
+                  2.4× when no override is set, so adjustments start
+                  from the current visible focal-slice crop. */}
               <Section icon={Move} title="Transform">
                 <Row label="Translate X">
-                  <NumberSlider
+                  <NumberSliderInput
                     value={overrides.translateX ?? 0}
                     min={-500} max={500} step={1}
                     onChange={(v) =>
@@ -626,7 +637,7 @@ export default function DesignPage() {
                   />
                 </Row>
                 <Row label="Translate Y">
-                  <NumberSlider
+                  <NumberSliderInput
                     value={overrides.translateY ?? 0}
                     min={-500} max={500} step={1}
                     onChange={(v) =>
@@ -636,16 +647,20 @@ export default function DesignPage() {
                   />
                 </Row>
                 <Row label="Scale">
-                  <NumberSlider
-                    value={overrides.scale ?? 1}
-                    min={0.2} max={3} step={0.05}
+                  <NumberSliderInput
+                    value={
+                      overrides.scale ??
+                      (selected === "app.background.photo" && bgMode === "night" ? 2.4 : 1)
+                    }
+                    min={0.1} max={3} step={0.05}
                     onChange={(v) =>
                       setOverride({ scale: v === 1 ? undefined : v })
                     }
+                    decimals={2}
                   />
                 </Row>
                 <Row label="Rotate">
-                  <NumberSlider
+                  <NumberSliderInput
                     value={overrides.rotate ?? 0}
                     min={-180} max={180} step={1}
                     onChange={(v) =>
@@ -655,12 +670,13 @@ export default function DesignPage() {
                   />
                 </Row>
                 <Row label="Opacity">
-                  <NumberSlider
+                  <NumberSliderInput
                     value={overrides.opacity ?? 1}
                     min={0} max={1} step={0.05}
                     onChange={(v) =>
                       setOverride({ opacity: v === 1 ? undefined : v })
                     }
+                    decimals={2}
                   />
                 </Row>
               </Section>
@@ -751,7 +767,11 @@ export default function DesignPage() {
                 <Row label="Position">
                   <input
                     type="text"
-                    placeholder="center / 50% 30%"
+                    placeholder={
+                      selected === "app.background.photo"
+                        ? "center  (current default)"
+                        : "center / 50% 30%"
+                    }
                     value={
                       bgMode === "day"
                         ? overrides.bgPosition ?? ""
@@ -784,7 +804,11 @@ export default function DesignPage() {
                 <Row label="Size">
                   <input
                     type="text"
-                    placeholder="cover / contain / 120%"
+                    placeholder={
+                      selected === "app.background.photo"
+                        ? "min(78vmin, 1900px) auto  (current default)"
+                        : "cover / contain / 120%"
+                    }
                     value={
                       bgMode === "day"
                         ? overrides.bgSize ?? ""
@@ -998,6 +1022,62 @@ function NumberSlider({
         {value.toFixed(step < 1 ? 2 : 0)}
         {suffix ?? ""}
       </span>
+    </div>
+  );
+}
+
+/**
+ * NumberSliderInput — slider paired with a numeric text input so the
+ * user can drag for coarse changes and type for precise ones. Same
+ * pattern as the font-size control. Both stay in sync; out-of-range
+ * typed values clamp to [min, max] before they're committed.
+ */
+function NumberSliderInput({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  suffix,
+  decimals,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  suffix?: string;
+  decimals?: number;
+}) {
+  const fixed = decimals ?? (step < 1 ? 2 : 0);
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="flex-1 accent-accent"
+      />
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value.toFixed(fixed)}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^\d.\-]/g, "");
+          if (raw === "" || raw === "-" || raw === ".") return;
+          const n = parseFloat(raw);
+          if (!Number.isFinite(n)) return;
+          const clamped = Math.max(min, Math.min(max, n));
+          onChange(clamped);
+        }}
+        className="input h-8 text-xs w-16 text-right tabular-nums"
+      />
+      {suffix && (
+        <span className="text-[10px] text-muted-fg -ml-1">{suffix}</span>
+      )}
     </div>
   );
 }
