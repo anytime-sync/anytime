@@ -246,6 +246,12 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    // Default new accounts to "Stay signed in" — the browser client
+    // and middleware both honour this flag when stamping Max-Age on
+    // the freshly-issued auth cookies.
+    document.cookie = `fl.auth.persist=1; path=/; max-age=${
+      60 * 60 * 24 * 365
+    }; SameSite=Lax`;
     const supabase = createClient();
     const { error, data } = await supabase.auth.signUp({
       email,
