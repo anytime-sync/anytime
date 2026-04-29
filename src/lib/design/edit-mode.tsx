@@ -33,24 +33,30 @@ export function DesignEditMode() {
       window.parent?.postMessage({ type: "fl.design.ready" }, "*");
     } catch {}
 
-    // Listen for preview-mode toggles from the parent editor (Day/Night tab).
-    // We tag <html> with `fl-night-preview` instead of flipping next-themes,
-    // so we can preview night styling without changing the user's real theme
-    // and so dragging on the bg image saves to the correct mode's overrides.
-    function onParentMsg(ev: MessageEvent) {
-      const d = ev.data as { type?: string; mode?: string } | undefined;
-      if (!d || typeof d !== "object") return;
-      if (d.type === "fl.design.preview-mode") {
-        const isNight = d.mode === "night";
-        document.documentElement.classList.toggle("fl-night-preview", isNight);
+    // Listen for the parent admin page flipping which mode (day/night)
+    // it's editing. We mirror that as an `.fl-night-preview` class on
+    // <html> so `useIsDark()` resolves to the right value and every
+    // DesignSlot re-styles instantly.
+    function onModeMsg(ev: MessageEvent) {
+      const data = ev.data as
+        | { type: "fl.design.set-mode"; mode: "day" | "night" }
+        | { type: "fl.design.set-bg-pan"; on: boolean }
+        | undefined;
+      if (!data || typeof data !== "object" || !("type" in data)) return;
+      if (data.type === "fl.design.set-mode") {
+        const cl = document.documentElement.classList;
+        if (data.mode === "night") cl.add("fl-night-preview");
+        else cl.remove("fl-night-preview");
+        return;
+      }
+      if (data.type === "fl.design.set-bg-pan") {
+        const cl = document.documentElement.classList;
+        if (data.on) cl.add("fl-bg-pan");
+        else cl.remove("fl-bg-pan");
+        return;
       }
     }
-    window.addEventListener("message", onParentMsg);
-
-    function isNightActive(): boolean {
-      const cl = document.documentElement.classList;
-      return cl.contains("dark") || cl.contains("fl-night-preview");
-    }
+    window.addEventListener("message", onModeMsg);
 
     let selectedId: string | null = null;
     let editingEl: HTMLElement | null = null;
@@ -96,6 +102,35 @@ export function DesignEditMode() {
         background: rgba(202, 162, 80, 0.08);
         cursor: text;
       }
+      /* Pan-backdrop mode — lifts the photo layer above all content
+         and dims everything else, so the user can click-and-drag the
+         photo from anywhere on screen. The outer fixed wrapper is
+         what holds the z-index, so we target it. */
+      .fl-bg-pan [data-fl-photo-wrapper="1"] {
+        z-index: 99998 !important;
+      }
+      .fl-bg-pan [data-design-id="page.background.photo"] {
+        cursor: grab;
+      }
+      .fl-bg-pan [data-design-id="page.background.photo"]:active {
+        cursor: grabbing;
+      }
+      .fl-bg-pan body::after {
+        content: "Drag the photo to pan · Esc to exit";
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 99999;
+        background: rgba(20, 18, 14, 0.78);
+        color: rgba(255, 246, 220, 0.92);
+        font: 500 11px/1.4 ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: 0.04em;
+        padding: 6px 12px;
+        border-radius: 999px;
+        backdrop-filter: blur(6px);
+        pointer-events: none;
+      }
     `;
     document.head.appendChild(style);
 
@@ -120,6 +155,15 @@ export function DesignEditMode() {
         }
         el = el.parentElement;
       }
+      // Fell through to body without finding a slot or interactive
+      // element. Fall back to the photo backdrop so clicking on
+      // "empty" page space selects + drags the photo. The backdrop
+      // sits at z-index -10 and would otherwise be unreachable, since
+      // body always wins hit testing over a negative-z-index layer.
+      const photo = document.querySelector(
+        '[data-design-id="page.background.photo"]'
+      ) as HTMLElement | null;
+      if (photo) return { type: "select", slot: photo };
       return null;
     }
 
@@ -151,7 +195,12 @@ export function DesignEditMode() {
       try {
         if (isFloating) {
           window.parent?.postMessage(
-            { type: "fl.design.floating-text", elementId: id, value: newText, locale },
+            {
+              type: "fl.design.floating-text",
+              elementId: id,
+              value: newText,
+              locale,
+            },
             "*"
           );
         } else if (textKey) {
@@ -190,6 +239,8 @@ export function DesignEditMode() {
       const id = slot.dataset.designId ?? "";
       const isFloating = id.startsWith("floating.");
       const textKey = slot.dataset.designTextKey;
+      // Floating elements are always text-editable; structured slots
+      // need an explicit textKey.
       if (!textKey && !isFloating) return;
       ev.preventDefault();
       ev.stopPropagation();
@@ -208,6 +259,20 @@ export function DesignEditMode() {
     }
 
     function onKeyDown(ev: KeyboardEvent) {
+      // Esc exits bg-pan mode regardless of editing state.
+      if (
+        ev.key === "Escape" &&
+        document.documentElement.classList.contains("fl-bg-pan")
+      ) {
+        document.documentElement.classList.remove("fl-bg-pan");
+        try {
+          window.parent?.postMessage(
+            { type: "fl.design.bg-pan-exited" },
+            "*"
+          );
+        } catch {}
+        return;
+      }
       if (!editingEl) return;
       if (ev.key === "Enter" && !ev.shiftKey) {
         ev.preventDefault();
@@ -226,44 +291,87 @@ export function DesignEditMode() {
       }
     }
 
+    // ---------- Drag-to-move for floating elements ----------
     function parsePct(s: string | null | undefined): number {
       if (!s) return 50;
       const m = /^([\d.]+)%$/.exec(s.trim());
       if (m) return parseFloat(m[1]!);
       return 50;
     }
+
     function onMouseDown(ev: MouseEvent) {
       if (editingEl) return;
-      if (ev.button !== 0) return;
+      if (ev.button !== 0) return; // left click only
       const action = pickAction(ev.target);
       if (!action || action.type !== "select") return;
       const slot = action.slot;
       const id = slot.dataset.designId!;
+
+      // Branch A: floating element → drag-to-position.
       if (id.startsWith("floating.")) {
         ev.preventDefault();
         ev.stopPropagation();
         const cs = window.getComputedStyle(slot);
         const origX = parseFloat(cs.left) || 0;
         const origY = parseFloat(cs.top) || 0;
-        dragState = { id, el: slot, startMx: ev.clientX, startMy: ev.clientY, origX, origY };
+        dragState = {
+          id,
+          el: slot,
+          startMx: ev.clientX,
+          startMy: ev.clientY,
+          origX,
+          origY,
+        };
         slot.style.cursor = "grabbing";
         return;
       }
-      if (id !== selectedId) return;
+
+      // Branch B: slot with a background image → pan it.
       const cs = window.getComputedStyle(slot);
       if (!cs.backgroundImage || cs.backgroundImage === "none") return;
+
+      // Regular slots require a prior selection click before they
+      // become drag-pannable (so a stray click doesn't pan something).
+      // The photo backdrop is the exception: it sits at z-index -10
+      // and is the obvious target for any "empty space" drag, so we
+      // let the user click-and-drag in a single motion. If it's not
+      // selected yet, select it now AND start the pan.
+      const isBackdrop = id === "page.background.photo";
+      if (!isBackdrop && id !== selectedId) return;
+      if (id !== selectedId) {
+        clearSelected();
+        selectedId = id;
+        slot.setAttribute("data-fl-selected", "1");
+        try {
+          window.parent?.postMessage(
+            { type: "fl.design.select", elementId: id },
+            "*"
+          );
+        } catch {}
+      }
+
       ev.preventDefault();
       ev.stopPropagation();
       const [pxStr, pyStr] = (cs.backgroundPosition || "50% 50%").split(" ");
       const rect = slot.getBoundingClientRect();
       bgPanState = {
-        id, el: slot,
-        startMx: ev.clientX, startMy: ev.clientY,
-        origPx: parsePct(pxStr), origPy: parsePct(pyStr),
-        w: rect.width, h: rect.height,
+        id,
+        el: slot,
+        startMx: ev.clientX,
+        startMy: ev.clientY,
+        origPx: parsePct(pxStr),
+        origPy: parsePct(pyStr),
+        w: rect.width,
+        h: rect.height,
       };
       slot.style.cursor = "grabbing";
+      // Body wins hit-testing over a z-index -10 layer (the photo
+      // backdrop), so set the grabbing cursor here too — otherwise
+      // dragging on "empty" space would still show the default cursor.
+      document.body.style.cursor = "grabbing";
+      document.documentElement.style.userSelect = "none";
     }
+
     function onMouseMove(ev: MouseEvent) {
       if (dragState) {
         const dx = ev.clientX - dragState.startMx;
@@ -275,6 +383,7 @@ export function DesignEditMode() {
       if (bgPanState) {
         const dx = ev.clientX - bgPanState.startMx;
         const dy = ev.clientY - bgPanState.startMy;
+        // Drag right → image moves left visually, so subtract.
         const dpx = -(dx / bgPanState.w) * 100;
         const dpy = -(dy / bgPanState.h) * 100;
         const px = Math.max(0, Math.min(100, bgPanState.origPx + dpx));
@@ -282,13 +391,22 @@ export function DesignEditMode() {
         bgPanState.el.style.backgroundPosition = `${px.toFixed(1)}% ${py.toFixed(1)}%`;
       }
     }
+
     function onMouseUp() {
       if (dragState) {
         const newX = parseFloat(dragState.el.style.left) || 0;
         const newY = parseFloat(dragState.el.style.top) || 0;
         dragState.el.style.cursor = "";
         try {
-          window.parent?.postMessage({ type: "fl.design.move", elementId: dragState.id, x: newX, y: newY }, "*");
+          window.parent?.postMessage(
+            {
+              type: "fl.design.move",
+              elementId: dragState.id,
+              x: newX,
+              y: newY,
+            },
+            "*"
+          );
         } catch {}
         dragState = null;
         return;
@@ -297,12 +415,22 @@ export function DesignEditMode() {
         const cs = window.getComputedStyle(bgPanState.el);
         const bgPosition = cs.backgroundPosition;
         bgPanState.el.style.cursor = "";
+        document.body.style.cursor = "";
+        document.documentElement.style.userSelect = "";
         try {
-          window.parent?.postMessage({ type: "fl.design.bg-pan", elementId: bgPanState.id, bgPosition, mode: isNightActive() ? "dark" : "light" }, "*");
+          window.parent?.postMessage(
+            {
+              type: "fl.design.bg-pan",
+              elementId: bgPanState.id,
+              bgPosition,
+            },
+            "*"
+          );
         } catch {}
         bgPanState = null;
       }
     }
+
     document.addEventListener("click", onClick, { capture: true });
     document.addEventListener("dblclick", onDblClick, { capture: true });
     document.addEventListener("keydown", onKeyDown, { capture: true });
@@ -319,7 +447,7 @@ export function DesignEditMode() {
       document.removeEventListener("mousedown", onMouseDown, { capture: true });
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("message", onParentMsg);
+      window.removeEventListener("message", onModeMsg);
       document.documentElement.classList.remove("fl-night-preview");
       style.remove();
     };
