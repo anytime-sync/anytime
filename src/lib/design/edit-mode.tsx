@@ -35,6 +35,14 @@ export function DesignEditMode() {
 
     let selectedId: string | null = null;
     let editingEl: HTMLElement | null = null;
+    let dragState: {
+      id: string;
+      el: HTMLElement;
+      startMx: number;
+      startMy: number;
+      origX: number;
+      origY: number;
+    } | null = null;
 
     const style = document.createElement("style");
     style.dataset.flDesignEdit = "1";
@@ -178,16 +186,55 @@ export function DesignEditMode() {
       }
     }
 
+    function onMouseDown(ev: MouseEvent) {
+      if (editingEl) return;
+      if (ev.button !== 0) return;
+      const action = pickAction(ev.target);
+      if (!action || action.type !== "select") return;
+      const slot = action.slot;
+      const id = slot.dataset.designId!;
+      if (!id.startsWith("floating.")) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const cs = window.getComputedStyle(slot);
+      const origX = parseFloat(cs.left) || 0;
+      const origY = parseFloat(cs.top) || 0;
+      dragState = { id, el: slot, startMx: ev.clientX, startMy: ev.clientY, origX, origY };
+      slot.style.cursor = "grabbing";
+    }
+    function onMouseMove(ev: MouseEvent) {
+      if (!dragState) return;
+      const dx = ev.clientX - dragState.startMx;
+      const dy = ev.clientY - dragState.startMy;
+      dragState.el.style.left = dragState.origX + dx + "px";
+      dragState.el.style.top = dragState.origY + dy + "px";
+    }
+    function onMouseUp() {
+      if (!dragState) return;
+      const newX = parseFloat(dragState.el.style.left) || 0;
+      const newY = parseFloat(dragState.el.style.top) || 0;
+      dragState.el.style.cursor = "";
+      try {
+        window.parent?.postMessage({ type: "fl.design.move", elementId: dragState.id, x: newX, y: newY }, "*");
+      } catch {}
+      dragState = null;
+    }
     document.addEventListener("click", onClick, { capture: true });
     document.addEventListener("dblclick", onDblClick, { capture: true });
     document.addEventListener("keydown", onKeyDown, { capture: true });
     document.addEventListener("focusout", onFocusOut, { capture: true });
+    document.addEventListener("mousedown", onMouseDown, { capture: true });
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
 
     return () => {
       document.removeEventListener("click", onClick, { capture: true });
       document.removeEventListener("dblclick", onDblClick, { capture: true });
       document.removeEventListener("keydown", onKeyDown, { capture: true });
       document.removeEventListener("focusout", onFocusOut, { capture: true });
+      document.removeEventListener("mousedown", onMouseDown, { capture: true });
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
       style.remove();
     };
   }, [mode]);
