@@ -55,7 +55,7 @@ export default async function AdminLayout({
                 {kicker}
               </span>
               <Icon className="size-4 text-muted-fg group-hover:text-fg transition-colors" />
-              <span className="group-hover:font-display group-hover:italic group-hover:text-base transition-all">
+              <span className="group-hover:text-fg transition-colors">
                 {label}
               </span>
             </Link>
