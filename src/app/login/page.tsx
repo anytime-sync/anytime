@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
+import { FloatingLayer } from "@/lib/design/floating-layer";
 import { readStoredLanguage, t, type LanguageCode } from "@/lib/i18n";
 
 function LoginForm() {
@@ -133,10 +134,11 @@ function Divider({ children }: { children: React.ReactNode }) {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen grid place-items-center px-6">
+    <main className="min-h-screen grid place-items-center px-6 relative">
       <Suspense fallback={<div className="text-muted-fg">Loading…</div>}>
         <LoginForm />
       </Suspense>
+      <FloatingLayer page="/login" />
     </main>
   );
 }
