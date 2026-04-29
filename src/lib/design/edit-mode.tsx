@@ -43,6 +43,16 @@ export function DesignEditMode() {
       origX: number;
       origY: number;
     } | null = null;
+    let bgPanState: {
+      id: string;
+      el: HTMLElement;
+      startMx: number;
+      startMy: number;
+      origPx: number;
+      origPy: number;
+      w: number;
+      h: number;
+    } | null = null;
 
     const style = document.createElement("style");
     style.dataset.flDesignEdit = "1";
@@ -107,6 +117,8 @@ export function DesignEditMode() {
     function commitEditing() {
       if (!editingEl) return;
       const el = editingEl;
+      const id = el.dataset.designId ?? "";
+      const isFloating = id.startsWith("floating.");
       const textKey = el.dataset.designTextKey;
       const original = el.dataset.flOriginalText ?? "";
       const newText = (el.textContent || "").trim();
@@ -114,14 +126,21 @@ export function DesignEditMode() {
       el.removeAttribute("data-fl-editing");
       delete el.dataset.flOriginalText;
       editingEl = null;
-      if (!textKey) return;
+      if (!textKey && !isFloating) return;
       if (newText === original.trim()) return;
       const locale = readStoredLanguage();
       try {
-        window.parent?.postMessage(
-          { type: "fl.design.text", textKey, value: newText, locale },
-          "*"
-        );
+        if (isFloating) {
+          window.parent?.postMessage(
+            { type: "fl.design.floating-text", elementId: id, value: newText, locale },
+            "*"
+          );
+        } else if (textKey) {
+          window.parent?.postMessage(
+            { type: "fl.design.text", textKey, value: newText, locale },
+            "*"
+          );
+        }
       } catch {}
     }
 
@@ -149,8 +168,10 @@ export function DesignEditMode() {
       const action = pickAction(ev.target);
       if (!action || action.type !== "select") return;
       const slot = action.slot;
+      const id = slot.dataset.designId ?? "";
+      const isFloating = id.startsWith("floating.");
       const textKey = slot.dataset.designTextKey;
-      if (!textKey) return;
+      if (!textKey && !isFloating) return;
       ev.preventDefault();
       ev.stopPropagation();
       if (slot === editingEl) return;
@@ -186,6 +207,12 @@ export function DesignEditMode() {
       }
     }
 
+    function parsePct(s: string | null | undefined): number {
+      if (!s) return 50;
+      const m = /^([\d.]+)%$/.exec(s.trim());
+      if (m) return parseFloat(m[1]!);
+      return 50;
+    }
     function onMouseDown(ev: MouseEvent) {
       if (editingEl) return;
       if (ev.button !== 0) return;
@@ -193,31 +220,69 @@ export function DesignEditMode() {
       if (!action || action.type !== "select") return;
       const slot = action.slot;
       const id = slot.dataset.designId!;
-      if (!id.startsWith("floating.")) return;
+      if (id.startsWith("floating.")) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cs = window.getComputedStyle(slot);
+        const origX = parseFloat(cs.left) || 0;
+        const origY = parseFloat(cs.top) || 0;
+        dragState = { id, el: slot, startMx: ev.clientX, startMy: ev.clientY, origX, origY };
+        slot.style.cursor = "grabbing";
+        return;
+      }
+      if (id !== selectedId) return;
+      const cs = window.getComputedStyle(slot);
+      if (!cs.backgroundImage || cs.backgroundImage === "none") return;
       ev.preventDefault();
       ev.stopPropagation();
-      const cs = window.getComputedStyle(slot);
-      const origX = parseFloat(cs.left) || 0;
-      const origY = parseFloat(cs.top) || 0;
-      dragState = { id, el: slot, startMx: ev.clientX, startMy: ev.clientY, origX, origY };
+      const [pxStr, pyStr] = (cs.backgroundPosition || "50% 50%").split(" ");
+      const rect = slot.getBoundingClientRect();
+      bgPanState = {
+        id, el: slot,
+        startMx: ev.clientX, startMy: ev.clientY,
+        origPx: parsePct(pxStr), origPy: parsePct(pyStr),
+        w: rect.width, h: rect.height,
+      };
       slot.style.cursor = "grabbing";
     }
     function onMouseMove(ev: MouseEvent) {
-      if (!dragState) return;
-      const dx = ev.clientX - dragState.startMx;
-      const dy = ev.clientY - dragState.startMy;
-      dragState.el.style.left = dragState.origX + dx + "px";
-      dragState.el.style.top = dragState.origY + dy + "px";
+      if (dragState) {
+        const dx = ev.clientX - dragState.startMx;
+        const dy = ev.clientY - dragState.startMy;
+        dragState.el.style.left = dragState.origX + dx + "px";
+        dragState.el.style.top = dragState.origY + dy + "px";
+        return;
+      }
+      if (bgPanState) {
+        const dx = ev.clientX - bgPanState.startMx;
+        const dy = ev.clientY - bgPanState.startMy;
+        const dpx = -(dx / bgPanState.w) * 100;
+        const dpy = -(dy / bgPanState.h) * 100;
+        const px = Math.max(0, Math.min(100, bgPanState.origPx + dpx));
+        const py = Math.max(0, Math.min(100, bgPanState.origPy + dpy));
+        bgPanState.el.style.backgroundPosition = `${px.toFixed(1)}% ${py.toFixed(1)}%`;
+      }
     }
     function onMouseUp() {
-      if (!dragState) return;
-      const newX = parseFloat(dragState.el.style.left) || 0;
-      const newY = parseFloat(dragState.el.style.top) || 0;
-      dragState.el.style.cursor = "";
-      try {
-        window.parent?.postMessage({ type: "fl.design.move", elementId: dragState.id, x: newX, y: newY }, "*");
-      } catch {}
-      dragState = null;
+      if (dragState) {
+        const newX = parseFloat(dragState.el.style.left) || 0;
+        const newY = parseFloat(dragState.el.style.top) || 0;
+        dragState.el.style.cursor = "";
+        try {
+          window.parent?.postMessage({ type: "fl.design.move", elementId: dragState.id, x: newX, y: newY }, "*");
+        } catch {}
+        dragState = null;
+        return;
+      }
+      if (bgPanState) {
+        const cs = window.getComputedStyle(bgPanState.el);
+        const bgPosition = cs.backgroundPosition;
+        bgPanState.el.style.cursor = "";
+        try {
+          window.parent?.postMessage({ type: "fl.design.bg-pan", elementId: bgPanState.id, bgPosition }, "*");
+        } catch {}
+        bgPanState = null;
+      }
     }
     document.addEventListener("click", onClick, { capture: true });
     document.addEventListener("dblclick", onDblClick, { capture: true });
