@@ -6,10 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 /**
  * Admin Insights — cohort retention, signup growth, feature usage.
- *
- * Charts are pure SVG/CSS so we don't drag in a charting library; the
- * dataset is small (≤ 30 bars) and readability matters more than fancy
- * tooltips here.
+ * Editorial spread: kicker + italic serif title, soft surfaces, gold rule.
  */
 
 type Summary = {
@@ -37,8 +34,6 @@ export default function InsightsPage() {
       const { data: s } = await supabase.rpc("admin_dashboard_summary");
       setSummary(s as Summary);
 
-      // D1/D3/D7/D14/D30 retention proxy: % of all members who touched
-      // a task within the past N days.
       const { data: users } = await supabase
         .from("profiles")
         .select("id, created_at");
@@ -63,43 +58,52 @@ export default function InsightsPage() {
   }, []);
 
   return (
-    <div className="px-6 md:px-10 py-8 max-w-6xl">
-      <header className="mb-8">
-        <p className="editorial-number text-xs mb-1">Admin</p>
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight">
-          Insights
-        </h1>
-        <p className="text-sm text-muted-fg mt-1">
-          Cohort retention, growth, and feature usage.
+    <div className="px-8 md:px-12 py-12 max-w-6xl">
+      <header className="mb-12">
+        <p className="editorial-number text-[11px] mb-3">
+          The Admin Edition · Issue No. 03
         </p>
+        <h1 className="font-display text-5xl md:text-6xl tracking-tight leading-[1.05]">
+          Insights<em className="font-display">, in detail.</em>
+        </h1>
+        <p className="text-sm text-muted-fg mt-4 italic font-display">
+          Cohort retention, growth, and the quiet shape of usage.
+        </p>
+        <div className="mt-8 h-px bg-accent/40 w-24" />
       </header>
 
-      {loading && <p className="text-sm text-muted-fg">Loading…</p>}
+      {loading && (
+        <p className="text-sm text-muted-fg italic font-display">Reading the tea leaves…</p>
+      )}
 
       {summary && (
-        <div className="space-y-8">
-          {/* Signups over time */}
+        <div className="space-y-12">
           <Section
-            title="Signups · last 30 days"
+            kicker="Growth"
+            title="A month of arrivals"
             subtitle={`${summary.signups_7d} new in the past week`}
           >
             <SignupsBars data={summary.signups_by_day} />
           </Section>
 
-          {/* Retention */}
+          <Rule />
+
           <Section
-            title="Activity retention"
-            subtitle="% of all members who touched a task within N days"
+            kicker="Retention"
+            title="Who came back"
+            subtitle="Share of all members who touched a task within N days"
           >
             <RetentionBars data={retention} />
           </Section>
 
-          {/* Feature usage matrix */}
+          <Rule />
+
           <Section
-            title="Feature usage"
+            kicker="Usage"
+            title="What the readership did"
             subtitle="Total interactions across the product"
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Pill label="Tasks created" value={summary.total_tasks} />
               <Pill
                 label="Tasks completed"
@@ -123,25 +127,36 @@ export default function InsightsPage() {
 }
 
 function Section({
+  kicker,
   title,
   subtitle,
   children,
 }: {
+  kicker: string;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <div className="mb-3">
-        <p className="editorial-number text-[10px] mb-0.5">{title}</p>
-        {subtitle && <p className="text-xs text-muted-fg">{subtitle}</p>}
+      <div className="mb-5">
+        <p className="editorial-number text-[10px] mb-1">{kicker}</p>
+        <h2 className="font-display text-2xl md:text-3xl tracking-tight">
+          <em>{title}</em>
+        </h2>
+        {subtitle && (
+          <p className="text-xs text-muted-fg mt-1.5 italic font-display">
+            {subtitle}
+          </p>
+        )}
       </div>
-      <div className="surface border border-border rounded-lg p-4">
-        {children}
-      </div>
+      {children}
     </section>
   );
+}
+
+function Rule() {
+  return <div className="h-px bg-border" />;
 }
 
 function SignupsBars({
@@ -151,22 +166,25 @@ function SignupsBars({
 }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
-    <div>
+    <div className="surface border border-border rounded-lg p-6 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
       <div className="flex items-end gap-1 h-32">
         {data.length === 0 && (
-          <p className="text-xs text-muted-fg">No signups in this window.</p>
+          <p className="text-xs text-muted-fg italic font-display">
+            No signups in this window.
+          </p>
         )}
         {data.map((d) => (
           <div
             key={d.day}
             title={`${format(new Date(d.day), "MMM d")} · ${d.count} signups`}
-            className="flex-1 bg-accent/70 hover:bg-accent rounded-sm min-h-[2px] transition-colors"
+            className="flex-1 bg-accent/60 hover:bg-accent rounded-sm min-h-[2px] transition-colors"
             style={{ height: `${(d.count / max) * 100}%` }}
           />
         ))}
       </div>
       {data.length > 0 && (
-        <div className="flex justify-between text-[10px] text-muted-fg tabular-nums mt-2">
+        <div className="flex justify-between text-[10px] tabular-nums mt-3 editorial-number">
           <span>{format(new Date(data[0]!.day), "MMM d")}</span>
           <span>{format(new Date(data[data.length - 1]!.day), "MMM d")}</span>
         </div>
@@ -181,12 +199,15 @@ function RetentionBars({
   data: Array<{ day: number; pct: number }>;
 }) {
   if (data.length === 0)
-    return <p className="text-sm text-muted-fg">No data yet.</p>;
+    return (
+      <p className="text-sm text-muted-fg italic font-display">No data yet.</p>
+    );
   return (
-    <div className="space-y-2">
+    <div className="surface border border-border rounded-lg p-6 space-y-3 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
       {data.map((r) => (
-        <div key={r.day} className="flex items-center gap-3">
-          <span className="w-10 text-xs uppercase tracking-wider text-muted-fg tabular-nums">
+        <div key={r.day} className="flex items-center gap-4">
+          <span className="w-12 editorial-number text-[10px] tabular-nums">
             D{r.day}
           </span>
           <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
@@ -214,10 +235,17 @@ function Pill({
   hint?: string;
 }) {
   return (
-    <div className="surface border border-border rounded-md p-3">
-      <p className="editorial-number text-[10px] mb-1">{label}</p>
-      <p className="font-display text-xl tabular-nums">{value}</p>
-      {hint && <p className="text-[10px] text-muted-fg mt-1">{hint}</p>}
+    <div className="surface border border-border rounded-lg p-5 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
+      <p className="editorial-number text-[10px] mb-2">{label}</p>
+      <p className="font-display text-2xl md:text-3xl tabular-nums leading-none">
+        {value.toLocaleString()}
+      </p>
+      {hint && (
+        <p className="text-[10px] text-muted-fg mt-2 italic font-display">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
