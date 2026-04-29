@@ -3,43 +3,50 @@
  * Style is shared across locales; per-locale TEXT overrides live in
  * the existing site_content table.
  *
- * Every annotated <DesignSlot id="..."/> reads its row at render time
- * and applies these as inline styles, beating the Tailwind defaults
- * because inline style wins specificity.
+ * Floating elements (created via the editor's "+ Text" button) live
+ * in the same table. They are identified by `_kind: 'floating'` and
+ * carry their own page binding, text, and absolute coordinates.
  */
 export type DesignOverrides = {
   // --- Typography ---
   fontFamily?: string;
-  fontSize?: string;        // e.g. "5rem", "72px"
-  fontWeight?: string;      // "300" | "normal" | "bold" | "900"
+  fontSize?: string;
+  fontWeight?: string;
   fontStyle?: "normal" | "italic";
-  letterSpacing?: string;   // "-0.02em"
-  lineHeight?: string;      // "1.05"
-  color?: string;           // any CSS color
+  letterSpacing?: string;
+  lineHeight?: string;
+  color?: string;
   textAlign?: "left" | "center" | "right";
 
   // --- Transform / position nudge ---
-  translateX?: number;      // px
-  translateY?: number;      // px
-  scale?: number;           // 1.0 = default
-  rotate?: number;          // degrees
-  opacity?: number;         // 0..1
+  translateX?: number;
+  translateY?: number;
+  scale?: number;
+  rotate?: number;
+  opacity?: number;
 
   // --- Background image ---
   bgImageUrl?: string | null;
-  bgPosition?: string;      // "center", "50% 30%"
-  bgSize?: string;          // "cover" | "contain" | "120%"
+  bgPosition?: string;
+  bgSize?: string;
 
   // --- Visibility ---
   hidden?: boolean;
+
+  // --- Floating-element fields (only present on `_kind: 'floating'`) ---
+  _kind?: "floating";
+  _page?: string;
+  /** English text. Per-locale text deferred to Phase 3b. */
+  _text?: string;
+  /** Absolute position in pixels from the document's top-left corner. */
+  _x?: number;
+  _y?: number;
 };
 
 export type DesignMap = Record<string, DesignOverrides>;
 
-/** A registered slot — used so the editor can show a list of every
- *  editable element on a page even before the admin has clicked one. */
 export type SlotMeta = {
   id: string;
-  label: string;            // "Hero · Title"
-  page: string;             // "/", "/app/today", etc.
+  label: string;
+  page: string;
 };
