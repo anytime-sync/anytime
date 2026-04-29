@@ -203,4 +203,21 @@ function SoftOrb({ className }: { className?: string }) {
         </radialGradient>
       </defs>
       <circle cx="32" cy="32" r="22" fill="url(#orb)" />
-      <circle cx="32" cy="32" r="14" 
+      <circle cx="32" cy="32" r="14" fill="currentColor" fillOpacity="0.15" />
+    </svg>
+  );
+}
+
+function RadialSun({ className }: { className?: string }) {
+  const rays = Array.from({ length: 16 }, (_, i) => i * 22.5);
+  return (
+    <svg viewBox="0 0 64 64" className={className} fill="none"
+      stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden>
+      <circle cx="32" cy="32" r="7" />
+      {rays.map((deg, i) => (
+        <line key={i} x1="32" y1="20" x2="32" y2="9"
+          transform={`rotate(${deg} 32 32)`} />
+      ))}
+    </svg>
+  );
+}
