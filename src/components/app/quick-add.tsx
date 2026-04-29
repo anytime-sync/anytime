@@ -482,7 +482,7 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
           );
         })}
       </div>
-      <div className="text-[10px] text-muted-fg text-center mt-1">Eisenhower · click to apply</div>
+      <div className="text-[10px] text-muted-fg text-center mt-1">The Sift · click to apply</div>
     </div>
   );
 }
