@@ -496,9 +496,27 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   },
 };
 
+/**
+ * Runtime override map populated by <I18nOverridesBootstrap/> from
+ * site_content. Allows /admin/content (and inline-edit in /admin/design)
+ * to surface translation overrides without a redeploy.
+ *
+ * Shape: overrides[locale][key] = "Custom translated string"
+ */
+const overrides: Partial<Record<LanguageCode, Record<string, string>>> = {};
+
+export function setI18nOverrides(
+  locale: LanguageCode,
+  map: Record<string, string>
+): void {
+  overrides[locale] = map;
+}
+
 export function t(language: string | null | undefined, key: StringKey): string {
   const code = (LANGUAGES.find((l) => l.code === language)?.code ??
     DEFAULT_LANGUAGE) as LanguageCode;
+  const localeOverrides = overrides[code];
+  if (localeOverrides && localeOverrides[key]) return localeOverrides[key];
   return STRINGS[code][key] ?? STRINGS.en[key] ?? key;
 }
 
