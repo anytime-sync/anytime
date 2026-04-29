@@ -27,7 +27,8 @@
     --font-display: var(--font-cormorant), ui-serif, "Iowan Old Style",
       "Apple Garamond", Baskerville, "Times New Roman", Times, serif;
   }
-  .dark {
+  .dark,
+  .fl-night-preview {
     --bg: 0 0% 7%;
     --panel: 0 0% 11%;
     --border: 0 0% 18%;
@@ -146,38 +147,6 @@
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .surface, .card { background-color: hsl(var(--panel) / 0.92); }
-}
-
-/* ============================================================
-   Design slots — per-mode background images.
-
-   The /admin/design editor stores two image variants per slot
-   (light/day and dark/night) plus their position/size. We write
-   them as CSS custom properties on inline style and read them
-   here, so the active theme picks the right one without React
-   needing to know which mode is on.
-
-   `.fl-night-preview` is set on <html> by the editor's iframe
-   (via DesignEditMode) when the user toggles the Night tab in
-   the side panel — it lets us preview night styling without
-   actually flipping the user's real next-themes preference.
-
-   The attribute selector (`[style*="..."]`) ensures we only
-   apply when the slot actually has the variable, so slots
-   without bg images keep their Tailwind/inline defaults.
-   ============================================================ */
-[data-design-id][style*="--fl-bg-light"] {
-  background-image: var(--fl-bg-light);
-  background-position: var(--fl-bg-pos-light, center);
-  background-size: var(--fl-bg-size-light, cover);
-  background-repeat: no-repeat;
-}
-.dark [data-design-id][style*="--fl-bg-dark"],
-.fl-night-preview [data-design-id][style*="--fl-bg-dark"] {
-  background-image: var(--fl-bg-dark);
-  background-position: var(--fl-bg-pos-dark, center);
-  background-size: var(--fl-bg-size-dark, cover);
-  background-repeat: no-repeat;
 }
 
 /* ============================================================
