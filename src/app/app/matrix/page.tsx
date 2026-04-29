@@ -92,7 +92,7 @@ export default function MatrixPage() {
     <div className="flex flex-col h-full">
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Eisenhower</h1>
+          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">The Sift</h1>
           <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency × importance.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
