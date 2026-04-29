@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DesignSlot } from "@/lib/design/slot";
+import { FloatingLayer } from "@/lib/design/floating-layer";
 import {
   readStoredLanguage,
   t,
@@ -135,6 +136,8 @@ export default function Home() {
           </DesignSlot>
         </div>
       </DesignSlot>
+
+      <FloatingLayer page="/" />
 
       {authMode && (
         <AuthCard initialMode={authMode} onClose={() => setAuthMode(null)} />
