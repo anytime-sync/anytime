@@ -25,10 +25,20 @@ export type DesignOverrides = {
   rotate?: number;
   opacity?: number;
 
-  // --- Background image ---
+  // --- Background image (light/day mode) ---
   bgImageUrl?: string | null;
   bgPosition?: string;
   bgSize?: string;
+
+  // --- Background image (dark/night mode). Falls back to the light variant
+  //     when unset, so a single image keeps working unchanged. ---
+  bgImageUrlDark?: string | null;
+  bgPositionDark?: string;
+  bgSizeDark?: string;
+
+  // --- Element dimensions (shared across modes) ---
+  width?: string;
+  height?: string;
 
   // --- Visibility ---
   hidden?: boolean;
