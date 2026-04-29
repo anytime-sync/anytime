@@ -72,10 +72,16 @@ export function useDesignMap(): DesignMap {
 }
 
 /**
- * Reactive flag for whether the runtime is currently in dark mode —
- * either via the real `.dark` class on <html> (next-themes) or via
- * the editor's `.fl-night-preview` marker class. Updates live as
- * those classes flip so style overrides switch without a refresh.
+ * Returns whether the document is currently rendering in dark mode.
+ *
+ * Two signals trigger dark-mode resolution:
+ *   1. `<html class="dark">` — set by next-themes when the user
+ *      actually flips to the dark palette.
+ *   2. `<html class="fl-night-preview">` — set by the /admin/design
+ *      editor when the operator clicks "Editing Night" so they can
+ *      preview night styles regardless of their own theme choice.
+ *
+ * Updates reactively via a MutationObserver on `<html>`'s class list.
  */
 export function useIsDark(): boolean {
   const [isDark, setIsDark] = useState(false);
