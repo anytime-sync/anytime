@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register";
 import { PhotoBackground } from "@/components/photo-background";
 import { LanguageBootstrap } from "@/components/app/language-bootstrap";
+import { I18nOverridesBootstrap } from "@/components/app/i18n-overrides-bootstrap";
 import { RouteTracker } from "@/components/app/route-tracker";
 import { Suspense } from "react";
 import { DesignProvider } from "@/lib/design/provider";
@@ -118,6 +119,7 @@ export default async function RootLayout({
       </head>
       <body>
         <LanguageBootstrap />
+        <I18nOverridesBootstrap />
         <DesignProvider initial={designMap}>
           <Providers>
             <PhotoBackground />
