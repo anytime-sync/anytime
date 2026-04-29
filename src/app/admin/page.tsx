@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
+import Link from "next/link";
 
 type Summary = {
   total_users: number;
@@ -42,16 +43,21 @@ export default async function AdminOverviewPage() {
 
       {summary && (
         <>
-          <Section kicker="The Numbers" title="By the readership">
+          <Section
+            kicker="The Numbers"
+            title="By the readership"
+            hint="Click any figure for a full reading."
+          >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Kpi label="Members" value={summary.total_users} />
-              <Kpi label="Signups · 7d" value={summary.signups_7d} />
-              <Kpi label="Active · 7d" value={summary.active_7d} />
-              <Kpi label="Signups · 30d" value={summary.signups_30d} />
-              <Kpi label="Tasks created" value={summary.total_tasks} />
+              <Kpi label="Members" value={summary.total_users} metric="members" />
+              <Kpi label="Signups · 7d" value={summary.signups_7d} metric="signups-7d" />
+              <Kpi label="Active · 7d" value={summary.active_7d} metric="active-7d" />
+              <Kpi label="Signups · 30d" value={summary.signups_30d} metric="signups-30d" />
+              <Kpi label="Tasks created" value={summary.total_tasks} metric="tasks-created" />
               <Kpi
                 label="Tasks completed"
                 value={summary.completed_tasks}
+                metric="tasks-completed"
                 hint={`${
                   summary.total_tasks > 0
                     ? Math.round(
@@ -60,8 +66,8 @@ export default async function AdminOverviewPage() {
                     : 0
                 }% rate`}
               />
-              <Kpi label="Pomodoros" value={summary.total_pomodoros} />
-              <Kpi label="Habits" value={summary.total_habits} />
+              <Kpi label="Pomodoros" value={summary.total_pomodoros} metric="pomodoros" />
+              <Kpi label="Habits" value={summary.total_habits} metric="habits" />
             </div>
           </Section>
 
@@ -85,10 +91,12 @@ export default async function AdminOverviewPage() {
 function Section({
   kicker,
   title,
+  hint,
   children,
 }: {
   kicker: string;
   title: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -98,6 +106,11 @@ function Section({
         <h2 className="font-display text-2xl md:text-3xl tracking-tight">
           <em>{title}</em>
         </h2>
+        {hint && (
+          <p className="text-xs text-muted-fg mt-1.5 italic font-display">
+            {hint}
+          </p>
+        )}
       </div>
       {children}
     </section>
@@ -112,15 +125,22 @@ function Kpi({
   label,
   value,
   hint,
+  metric,
 }: {
   label: string;
   value: number;
   hint?: string;
+  metric: string;
 }) {
   return (
-    <div className="surface border border-border rounded-lg p-5 relative overflow-hidden">
+    <Link
+      href={`/admin/insights/${metric}`}
+      className="surface border border-border rounded-lg p-5 relative overflow-hidden block group hover:border-accent/40 transition-colors"
+    >
       <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
-      <p className="editorial-number text-[10px] mb-2">{label}</p>
+      <p className="editorial-number text-[10px] mb-2 group-hover:text-accent transition-colors">
+        {label}
+      </p>
       <p className="font-display text-3xl md:text-4xl tabular-nums leading-none">
         {value.toLocaleString()}
       </p>
@@ -129,7 +149,7 @@ function Kpi({
           {hint}
         </p>
       )}
-    </div>
+    </Link>
   );
 }
 
