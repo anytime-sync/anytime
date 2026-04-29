@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { readStoredLanguage } from "@/lib/i18n";
 
 /**
  * Mounted at the root layout. When the page is loaded inside the
@@ -10,14 +11,15 @@ import { useSearchParams } from "next/navigation";
  *
  *   1. Injects a small CSS that outlines every [data-design-id] on
  *      hover and the currently-selected one with a gold ring.
- *   2. Captures clicks anywhere on the page and, if the click hit a
- *      DesignSlot, postMessages the element_id up to the parent
- *      window so the side panel can swap to that slot.
- *   3. Posts a `fl.design.ready` message so the parent can flush the
- *      latest map back into the iframe's DesignProvider.
- *
- * Outside edit mode this component renders nothing and attaches no
- * listeners — the runtime cost is one render with `mode = null`.
+ *   2. Captures clicks anywhere on the page. If the click lands on a
+ *      DesignSlot (via its data-design-id ancestor), select it and
+ *      postMessage up. If the click lands on a non-slot interactive
+ *      element (language picker button, anchor, etc.), let it through
+ *      so the user can still navigate / change locale inside the
+ *      preview.
+ *   3. On double-click of a slot with `data-design-text-key`, makes
+ *      the element contentEditable. On blur, posts the new text +
+ *      i18n key + current locale to the parent for persistence.
  */
 export function DesignEditMode() {
   const sp = useSearchParams();
@@ -27,15 +29,13 @@ export function DesignEditMode() {
     if (mode !== "edit") return;
     if (typeof window === "undefined") return;
 
-    // Tell the parent we're alive and ready to receive bulk updates.
     try {
       window.parent?.postMessage({ type: "fl.design.ready" }, "*");
     } catch {}
 
     let selectedId: string | null = null;
+    let editingEl: HTMLElement | null = null;
 
-    // Inject overlay styles. Scoped to a stylesheet we own so we can
-    // tear it down cleanly.
     const style = document.createElement("style");
     style.dataset.flDesignEdit = "1";
     style.textContent = `
@@ -43,7 +43,6 @@ export function DesignEditMode() {
         outline: 1px dashed transparent;
         outline-offset: 2px;
         transition: outline-color 120ms ease;
-        cursor: pointer !important;
       }
       [data-design-id]:hover {
         outline-color: rgba(202, 162, 80, 0.55);
@@ -52,33 +51,84 @@ export function DesignEditMode() {
         outline: 2px solid rgba(202, 162, 80, 0.95) !important;
         outline-offset: 3px;
       }
-      /* Disable any link/button navigation so clicks land on selection */
-      a[data-design-id], button[data-design-id] { pointer-events: auto; }
+      [data-design-id][data-design-text-key]:hover {
+        cursor: text;
+      }
+      [data-design-id][data-fl-editing="1"] {
+        outline: 2px solid rgba(202, 162, 80, 0.95) !important;
+        background: rgba(202, 162, 80, 0.08);
+        cursor: text;
+      }
     `;
     document.head.appendChild(style);
 
-    function findSlot(target: EventTarget | null): HTMLElement | null {
+    function pickAction(
+      target: EventTarget | null
+    ): { type: "select"; slot: HTMLElement } | { type: "passthrough" } | null {
       let el = target as HTMLElement | null;
       while (el && el !== document.body) {
-        if (el.dataset && el.dataset.designId) return el;
+        if (el.dataset && el.dataset.designId) {
+          return { type: "select", slot: el };
+        }
+        const tag = el.tagName;
+        if (
+          tag === "BUTTON" ||
+          tag === "A" ||
+          tag === "INPUT" ||
+          tag === "SELECT" ||
+          tag === "TEXTAREA" ||
+          el.getAttribute("role") === "button"
+        ) {
+          return { type: "passthrough" };
+        }
         el = el.parentElement;
       }
       return null;
     }
 
+    function clearSelected() {
+      if (!selectedId) return;
+      document
+        .querySelectorAll(`[data-design-id="${cssEscape(selectedId)}"]`)
+        .forEach((n) =>
+          (n as HTMLElement).removeAttribute("data-fl-selected")
+        );
+      selectedId = null;
+    }
+
+    function commitEditing() {
+      if (!editingEl) return;
+      const el = editingEl;
+      const textKey = el.dataset.designTextKey;
+      const original = el.dataset.flOriginalText ?? "";
+      const newText = (el.textContent || "").trim();
+      el.removeAttribute("contenteditable");
+      el.removeAttribute("data-fl-editing");
+      delete el.dataset.flOriginalText;
+      editingEl = null;
+      if (!textKey) return;
+      if (newText === original.trim()) return;
+      const locale = readStoredLanguage();
+      try {
+        window.parent?.postMessage(
+          { type: "fl.design.text", textKey, value: newText, locale },
+          "*"
+        );
+      } catch {}
+    }
+
     function onClick(ev: MouseEvent) {
-      const slot = findSlot(ev.target);
-      if (!slot) return;
+      if (editingEl && !editingEl.contains(ev.target as Node)) {
+        commitEditing();
+      }
+      const action = pickAction(ev.target);
+      if (!action) return;
+      if (action.type === "passthrough") return;
       ev.preventDefault();
       ev.stopPropagation();
-      // Clear previous selection mark.
-      if (selectedId) {
-        document
-          .querySelectorAll(`[data-design-id="${cssEscape(selectedId)}"]`)
-          .forEach((n) => (n as HTMLElement).removeAttribute("data-fl-selected"));
-      }
-      selectedId = slot.dataset.designId!;
-      slot.setAttribute("data-fl-selected", "1");
+      clearSelected();
+      selectedId = action.slot.dataset.designId!;
+      action.slot.setAttribute("data-fl-selected", "1");
       try {
         window.parent?.postMessage(
           { type: "fl.design.select", elementId: selectedId },
@@ -87,11 +137,57 @@ export function DesignEditMode() {
       } catch {}
     }
 
-    // Use capture phase so we beat e.g. button onclick handlers.
+    function onDblClick(ev: MouseEvent) {
+      const action = pickAction(ev.target);
+      if (!action || action.type !== "select") return;
+      const slot = action.slot;
+      const textKey = slot.dataset.designTextKey;
+      if (!textKey) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (slot === editingEl) return;
+      if (editingEl) commitEditing();
+      slot.dataset.flOriginalText = slot.textContent || "";
+      slot.setAttribute("contenteditable", "plaintext-only");
+      slot.setAttribute("data-fl-editing", "1");
+      editingEl = slot;
+      slot.focus();
+      const range = document.createRange();
+      range.selectNodeContents(slot);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+
+    function onKeyDown(ev: KeyboardEvent) {
+      if (!editingEl) return;
+      if (ev.key === "Enter" && !ev.shiftKey) {
+        ev.preventDefault();
+        editingEl.blur();
+      } else if (ev.key === "Escape") {
+        if (editingEl.dataset.flOriginalText !== undefined) {
+          editingEl.textContent = editingEl.dataset.flOriginalText!;
+        }
+        editingEl.blur();
+      }
+    }
+
+    function onFocusOut(ev: FocusEvent) {
+      if (editingEl && ev.target === editingEl) {
+        commitEditing();
+      }
+    }
+
     document.addEventListener("click", onClick, { capture: true });
+    document.addEventListener("dblclick", onDblClick, { capture: true });
+    document.addEventListener("keydown", onKeyDown, { capture: true });
+    document.addEventListener("focusout", onFocusOut, { capture: true });
 
     return () => {
       document.removeEventListener("click", onClick, { capture: true });
+      document.removeEventListener("dblclick", onDblClick, { capture: true });
+      document.removeEventListener("keydown", onKeyDown, { capture: true });
+      document.removeEventListener("focusout", onFocusOut, { capture: true });
       style.remove();
     };
   }, [mode]);
@@ -100,8 +196,6 @@ export function DesignEditMode() {
 }
 
 function cssEscape(s: string): string {
-  // Minimal CSS.escape polyfill — modern browsers have it but we
-  // shouldn't assume.
   if (typeof CSS !== "undefined" && (CSS as { escape?: (s: string) => string }).escape) {
     return (CSS as { escape: (s: string) => string }).escape(s);
   }
