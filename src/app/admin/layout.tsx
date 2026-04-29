@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
-import { Users, BarChart3, FileText, Home } from "lucide-react";
+import { Users, BarChart3, FileText, Home, Palette } from "lucide-react";
 
 /**
  * Admin layout — server-rendered auth gate + editorial sidebar shell.
@@ -29,6 +29,7 @@ export default async function AdminLayout({
     { kicker: "02", href: "/admin/members",  label: "Members",  icon: Users      },
     { kicker: "03", href: "/admin/insights", label: "Insights", icon: BarChart3  },
     { kicker: "04", href: "/admin/content",  label: "Content",  icon: FileText   },
+    { kicker: "05", href: "/admin/design",   label: "Design",   icon: Palette    },
   ];
 
   return (
