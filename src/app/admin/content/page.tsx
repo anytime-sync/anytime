@@ -7,25 +7,15 @@ import { Save, RotateCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Admin Content CMS
- *
- * Full editor for every translatable string in the app. The default
- * value (left column) is the hardcoded fallback from src/lib/i18n.ts —
- * read here through dynamic import so we don't have to maintain a
- * second source of truth. The right column is the editable override
- * stored in `site_content`. Save writes one row per (locale, key);
- * "Restore" deletes the row and the app falls back to the hardcoded
- * default on next render.
- *
- * Strings are grouped by their dotted prefix (landing.* / sidebar.* /
- * view.* / etc.) so the page reads like a structured manifest.
+ * Admin Content CMS — editorial styling matches the public landing.
+ * Each section reads like a numbered chapter with an italic serif
+ * heading. Save writes to site_content; empty override deletes the row.
  */
 
 type StringRow = {
   key: string;
   defaultValue: string;
   override: string | null;
-  /** Original override loaded from the DB — used to detect dirty rows. */
   pristine: string | null;
 };
 
@@ -37,20 +27,15 @@ export default function ContentPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load the hardcoded defaults for the chosen locale.
   useEffect(() => {
     (async () => {
       setLoading(true);
       const i18n = await import("@/lib/i18n");
       const langDef = i18n.LANGUAGES.find((l) => l.code === locale);
       if (!langDef) return;
-      // Each language file is a `Record<TranslationKey, string>`. The
-      // module exports them as named consts (enUS, zhTW, etc.) — we
-      // pluck the right one based on the locale code.
       const map = i18n.getTranslations(locale) as Record<string, string>;
       setDefaults(map);
 
-      // Pull existing overrides for this locale.
       const supabase = createClient();
       const { data } = await supabase
         .from("site_content")
@@ -72,7 +57,6 @@ export default function ContentPage() {
     })();
   }, [locale]);
 
-  // Group keys by section (everything before the first dot).
   const grouped = useMemo(() => {
     const filtered = rows.filter((r) => {
       if (!search) return true;
@@ -103,7 +87,6 @@ export default function ContentPage() {
     const supabase = createClient();
     const value = (row.override ?? "").trim();
     if (!value) {
-      // Empty override = delete (revert to default).
       await supabase
         .from("site_content")
         .delete()
@@ -122,9 +105,7 @@ export default function ContentPage() {
         updated_at: new Date().toISOString(),
       });
       setRows((rs) =>
-        rs.map((r) =>
-          r.key === row.key ? { ...r, pristine: value } : r
-        )
+        rs.map((r) => (r.key === row.key ? { ...r, pristine: value } : r))
       );
     }
     setSaving(null);
@@ -147,19 +128,22 @@ export default function ContentPage() {
   }
 
   return (
-    <div className="px-6 md:px-10 py-8 max-w-5xl">
-      <header className="mb-6">
-        <p className="editorial-number text-xs mb-1">Admin</p>
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight">
-          Content
+    <div className="px-8 md:px-12 py-12 max-w-5xl">
+      <header className="mb-12">
+        <p className="editorial-number text-[11px] mb-3">
+          The Admin Edition · Issue No. 04
+        </p>
+        <h1 className="font-display text-5xl md:text-6xl tracking-tight leading-[1.05]">
+          Content<em className="font-display">, in five tongues.</em>
         </h1>
-        <p className="text-sm text-muted-fg mt-1">
+        <p className="text-sm text-muted-fg mt-4 italic font-display">
           Edit every translatable string per language. Empty overrides fall
           back to the hardcoded defaults.
         </p>
+        <div className="mt-8 h-px bg-accent/40 w-24" />
       </header>
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-8">
         <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
           {LANGUAGES.map((l) => (
             <button
@@ -189,13 +173,23 @@ export default function ContentPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-fg">Loading strings…</p>
+        <p className="text-sm text-muted-fg italic font-display">
+          Setting the type…
+        </p>
       ) : (
-        <div className="space-y-6">
-          {grouped.map(([section, items]) => (
+        <div className="space-y-8">
+          {grouped.map(([section, items], idx) => (
             <section key={section}>
-              <p className="editorial-number text-[10px] mb-2">{section}</p>
-              <div className="surface border border-border rounded-lg divide-y divide-border">
+              <div className="mb-3 flex items-baseline gap-3">
+                <span className="editorial-number text-[10px]">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <h2 className="font-display text-xl tracking-tight">
+                  <em>{section}</em>
+                </h2>
+              </div>
+              <div className="surface border border-border rounded-lg divide-y divide-border relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
                 {items.map((row) => {
                   const dirty =
                     (row.override ?? "") !== (row.pristine ?? "");
@@ -219,7 +213,9 @@ export default function ContentPage() {
                         <div className="flex flex-col gap-1.5">
                           <textarea
                             value={row.override ?? ""}
-                            onChange={(e) => setOverride(row.key, e.target.value)}
+                            onChange={(e) =>
+                              setOverride(row.key, e.target.value)
+                            }
                             placeholder="(uses default)"
                             rows={Math.max(
                               1,
@@ -233,8 +229,7 @@ export default function ContentPage() {
                               disabled={!dirty || saving === row.key}
                               className={cn(
                                 "btn-ghost px-2 h-7 inline-flex items-center gap-1.5",
-                                dirty &&
-                                  "text-fg hover:bg-accent/10",
+                                dirty && "text-fg hover:bg-accent/10",
                                 !dirty && "opacity-40 cursor-not-allowed"
                               )}
                             >
@@ -261,7 +256,9 @@ export default function ContentPage() {
             </section>
           ))}
           {grouped.length === 0 && (
-            <p className="text-sm text-muted-fg">No matches.</p>
+            <p className="text-sm text-muted-fg italic font-display">
+              No matches.
+            </p>
           )}
         </div>
       )}
