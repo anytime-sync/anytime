@@ -70,3 +70,28 @@ export function useDesign(elementId: string): DesignOverrides {
 export function useDesignMap(): DesignMap {
   return useContext(DesignContext);
 }
+
+/**
+ * Reactive flag for whether the runtime is currently in dark mode —
+ * either via the real `.dark` class on <html> (next-themes) or via
+ * the editor's `.fl-night-preview` marker class. Updates live as
+ * those classes flip so style overrides switch without a refresh.
+ */
+export function useIsDark(): boolean {
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    function update() {
+      const cl = document.documentElement.classList;
+      setIsDark(cl.contains("dark") || cl.contains("fl-night-preview"));
+    }
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => obs.disconnect();
+  }, []);
+  return isDark;
+}
