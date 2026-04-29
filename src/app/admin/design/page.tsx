@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { DesignOverrides, DesignMap } from "@/lib/design/types";
+import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
 
 /**
  * /admin/design — visual editor.
@@ -99,6 +100,8 @@ export default function DesignPage() {
         | { type: "fl.design.ready" }
         | { type: "fl.design.text"; textKey: string; value: string; locale: string }
         | { type: "fl.design.move"; elementId: string; x: number; y: number }
+        | { type: "fl.design.floating-text"; elementId: string; value: string; locale: string }
+        | { type: "fl.design.bg-pan"; elementId: string; bgPosition: string }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.select") setSelected(data.elementId);
@@ -112,6 +115,44 @@ export default function DesignPage() {
       if (data.type === "fl.design.move") {
         void persistMove(data.elementId, data.x, data.y);
       }
+      if (data.type === "fl.design.floating-text") {
+        void persistFloatingText(data.elementId, data.value, data.locale);
+      }
+      if (data.type === "fl.design.bg-pan") {
+        void persistBgPan(data.elementId, data.bgPosition);
+      }
+    }
+    async function persistFloatingText(elementId: string, value: string, locale: string) {
+      const current = map[elementId] ?? {};
+      const trimmed = value.trim();
+      let merged: DesignOverrides;
+      if (locale === "en") {
+        merged = { ...current, _text: trimmed };
+      } else {
+        const _texts = { ...(current._texts ?? {}) };
+        if (trimmed) _texts[locale] = trimmed;
+        else delete _texts[locale];
+        merged = { ...current, _texts: Object.keys(_texts).length ? _texts : undefined };
+      }
+      setMap((prev) => ({ ...prev, [elementId]: merged }));
+      const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ overrides: merged }),
+      });
+      if (!r.ok) toast.error("Save failed");
+      else toast.success(`Saved (${locale})`);
+    }
+    async function persistBgPan(elementId: string, bgPosition: string) {
+      const current = map[elementId] ?? {};
+      const merged = { ...current, bgPosition };
+      setMap((prev) => ({ ...prev, [elementId]: merged }));
+      const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ overrides: merged }),
+      });
+      if (!r.ok) toast.error("Save failed");
     }
     async function persistMove(elementId: string, x: number, y: number) {
       const current = map[elementId] ?? {};
@@ -191,6 +232,34 @@ export default function DesignPage() {
       );
     }
     toast.success("Reverted");
+  }
+
+  async function persistFloatingTextDirect(
+    elementId: string,
+    value: string,
+    locale: string
+  ) {
+    const current = map[elementId] ?? {};
+    const trimmed = value.trim();
+    let merged: DesignOverrides;
+    if (locale === "en") {
+      merged = { ...current, _text: trimmed };
+    } else {
+      const _texts = { ...(current._texts ?? {}) };
+      if (trimmed) _texts[locale] = trimmed;
+      else delete _texts[locale];
+      merged = { ...current, _texts: Object.keys(_texts).length ? _texts : undefined };
+    }
+    setMap((prev) => ({ ...prev, [elementId]: merged }));
+    const w = iframeRef.current?.contentWindow;
+    if (w) w.postMessage({ type: "fl.design.update", elementId, overrides: merged }, "*");
+    const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ overrides: merged }),
+    });
+    if (!r.ok) toast.error("Save failed");
+    else toast.success(`Saved (${locale})`);
   }
 
   async function addFloating() {
@@ -352,6 +421,16 @@ export default function DesignPage() {
                   )}
                 </div>
               </div>
+
+              {/* Per-locale text content (floating elements only) */}
+              {selected.startsWith("floating.") && (
+                <FloatingTextEditor
+                  overrides={overrides}
+                  onSaveLocale={(locale, value) => {
+                    void persistFloatingTextDirect(selected, value, locale);
+                  }}
+                />
+              )}
 
               {/* Typography */}
               <Section icon={Type} title="Typography">
@@ -661,6 +740,74 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <label className="text-[11px] text-muted-fg">{label}</label>
       <div>{children}</div>
     </div>
+  );
+}
+
+function FloatingTextEditor({
+  overrides,
+  onSaveLocale,
+}: {
+  overrides: DesignOverrides;
+  onSaveLocale: (locale: LanguageCode, value: string) => void;
+}) {
+  const [tab, setTab] = useState<LanguageCode>("en");
+  const current = tab === "en" ? overrides._text ?? "" : overrides._texts?.[tab] ?? "";
+  const [draft, setDraft] = useState(current);
+  useEffect(() => { setDraft(current); }, [tab, overrides._text, overrides._texts]);
+  const dirty = draft !== current;
+  return (
+    <section className="space-y-2.5 border-t border-border pt-4">
+      <div className="flex items-center gap-2">
+        <Type className="size-3.5 text-accent" />
+        <p className="editorial-number text-[10px]">Text content</p>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {LANGUAGES.map((l) => {
+          const has = l.code === "en" ? Boolean(overrides._text) : Boolean(overrides._texts?.[l.code]);
+          return (
+            <button
+              key={l.code}
+              onClick={() => setTab(l.code)}
+              className={cn(
+                "h-7 px-2 text-[11px] rounded border border-border inline-flex items-center gap-1",
+                tab === l.code ? "bg-fg text-bg" : "btn-ghost"
+              )}
+            >
+              {l.code}
+              {has && <span className="size-1.5 rounded-full bg-accent inline-block" aria-hidden />}
+            </button>
+          );
+        })}
+      </div>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={2}
+        placeholder={tab === "en" ? "Baseline text (English)" : `${tab} override (falls back to English when empty)`}
+        className="input w-full text-sm leading-relaxed resize-y min-h-[34px]"
+      />
+      <div className="flex items-center gap-2 text-xs">
+        <button
+          onClick={() => onSaveLocale(tab, draft)}
+          disabled={!dirty}
+          className={cn(
+            "btn-ghost px-2 h-7 inline-flex items-center gap-1.5",
+            dirty && "text-fg hover:bg-accent/10",
+            !dirty && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          Save {tab}
+        </button>
+        {tab !== "en" && (overrides._texts?.[tab] ?? "") && (
+          <button
+            onClick={() => onSaveLocale(tab, "")}
+            className="btn-ghost px-2 h-7 text-muted-fg"
+          >
+            Clear override
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 
