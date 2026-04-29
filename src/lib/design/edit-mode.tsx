@@ -33,6 +33,25 @@ export function DesignEditMode() {
       window.parent?.postMessage({ type: "fl.design.ready" }, "*");
     } catch {}
 
+    // Listen for preview-mode toggles from the parent editor (Day/Night tab).
+    // We tag <html> with `fl-night-preview` instead of flipping next-themes,
+    // so we can preview night styling without changing the user's real theme
+    // and so dragging on the bg image saves to the correct mode's overrides.
+    function onParentMsg(ev: MessageEvent) {
+      const d = ev.data as { type?: string; mode?: string } | undefined;
+      if (!d || typeof d !== "object") return;
+      if (d.type === "fl.design.preview-mode") {
+        const isNight = d.mode === "night";
+        document.documentElement.classList.toggle("fl-night-preview", isNight);
+      }
+    }
+    window.addEventListener("message", onParentMsg);
+
+    function isNightActive(): boolean {
+      const cl = document.documentElement.classList;
+      return cl.contains("dark") || cl.contains("fl-night-preview");
+    }
+
     let selectedId: string | null = null;
     let editingEl: HTMLElement | null = null;
     let dragState: {
@@ -279,7 +298,7 @@ export function DesignEditMode() {
         const bgPosition = cs.backgroundPosition;
         bgPanState.el.style.cursor = "";
         try {
-          window.parent?.postMessage({ type: "fl.design.bg-pan", elementId: bgPanState.id, bgPosition }, "*");
+          window.parent?.postMessage({ type: "fl.design.bg-pan", elementId: bgPanState.id, bgPosition, mode: isNightActive() ? "dark" : "light" }, "*");
         } catch {}
         bgPanState = null;
       }
@@ -300,6 +319,8 @@ export function DesignEditMode() {
       document.removeEventListener("mousedown", onMouseDown, { capture: true });
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("message", onParentMsg);
+      document.documentElement.classList.remove("fl-night-preview");
       style.remove();
     };
   }, [mode]);
