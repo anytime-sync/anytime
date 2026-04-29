@@ -3,8 +3,11 @@ import type { DesignOverrides } from "./types";
 
 /**
  * Translate a DesignOverrides blob into a React inline-style object.
- * Inline style is what we apply at runtime — it beats Tailwind class
+ * Inline style is what we apply at runtime - it beats Tailwind class
  * defaults via CSS specificity, which is the whole point.
+ *
+ * Floating elements (`_kind: 'floating'`) get position:absolute and
+ * left/top from `_x` / `_y` on top of all the typography overrides.
  */
 export function overridesToStyle(o: DesignOverrides | undefined): CSSProperties {
   const s: CSSProperties = {};
@@ -34,6 +37,14 @@ export function overridesToStyle(o: DesignOverrides | undefined): CSSProperties 
     s.backgroundPosition = o.bgPosition ?? "center";
     s.backgroundSize = o.bgSize ?? "cover";
     s.backgroundRepeat = "no-repeat";
+  }
+
+  // Floating elements: free-positioned overlay.
+  if (o._kind === "floating") {
+    s.position = "absolute";
+    if (typeof o._x === "number") s.left = o._x + "px";
+    if (typeof o._y === "number") s.top = o._y + "px";
+    if (s.zIndex === undefined) s.zIndex = 30;
   }
   return s;
 }
