@@ -13,6 +13,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import type { DesignOverrides, DesignMap } from "@/lib/design/types";
 
 /**
@@ -71,20 +72,39 @@ export default function DesignPage() {
     })();
   }, []);
 
-  // ---------- listen to selection messages from iframe ----------
+  // ---------- listen to selection / inline-text messages from iframe ----------
   useEffect(() => {
+    async function saveText(textKey: string, value: string, locale: string) {
+      const supabase = createClient();
+      const trimmed = value.trim();
+      if (!trimmed) {
+        await supabase.from("site_content").delete().eq("locale", locale).eq("key", textKey);
+        toast.success(`Reverted to default (${locale})`);
+      } else {
+        const { error } = await supabase.from("site_content").upsert({
+          locale,
+          key: textKey,
+          value: trimmed,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) { toast.error("Save failed: " + error.message); return; }
+        toast.success(`Saved (${locale})`);
+      }
+    }
     function onMsg(ev: MessageEvent) {
       const data = ev.data as
         | { type: "fl.design.select"; elementId: string }
         | { type: "fl.design.ready" }
+        | { type: "fl.design.text"; textKey: string; value: string; locale: string }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.select") setSelected(data.elementId);
       if (data.type === "fl.design.ready") {
-        // After iframe boots, push the full map so its DesignProvider
-        // mirrors our local edits.
         const w = iframeRef.current?.contentWindow;
         if (w) w.postMessage({ type: "fl.design.bulk", map }, "*");
+      }
+      if (data.type === "fl.design.text") {
+        void saveText(data.textKey, data.value, data.locale);
       }
     }
     window.addEventListener("message", onMsg);
