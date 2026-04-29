@@ -8,6 +8,9 @@ import { PhotoBackground } from "@/components/photo-background";
 import { LanguageBootstrap } from "@/components/app/language-bootstrap";
 import { RouteTracker } from "@/components/app/route-tracker";
 import { Suspense } from "react";
+import { DesignProvider } from "@/lib/design/provider";
+import { DesignEditMode } from "@/lib/design/edit-mode";
+import { fetchDesignMap } from "@/lib/design/fetch-server";
 
 // Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
@@ -75,11 +78,14 @@ const CJK_FONTS_HREF =
     "display=swap",
   ].join("&");
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Seed the DesignProvider with the full site_design map. Public read
+  // policy means anonymous landing visitors get overrides too.
+  const designMap = await fetchDesignMap();
   return (
     <html
       lang="en"
@@ -112,15 +118,18 @@ export default function RootLayout({
       </head>
       <body>
         <LanguageBootstrap />
-        <Providers>
-          <PhotoBackground />
-          {/* useSearchParams suspends in App Router; wrap so the rest of
-              the tree streams in regardless. */}
-          <Suspense fallback={null}>
-            <RouteTracker />
-          </Suspense>
-          {children}
-        </Providers>
+        <DesignProvider initial={designMap}>
+          <Providers>
+            <PhotoBackground />
+            {/* useSearchParams suspends in App Router; wrap so the rest of
+                the tree streams in regardless. */}
+            <Suspense fallback={null}>
+              <RouteTracker />
+              <DesignEditMode />
+            </Suspense>
+            {children}
+          </Providers>
+        </DesignProvider>
         <Toaster position="bottom-right" richColors closeButton />
         <SwRegister />
       </body>
