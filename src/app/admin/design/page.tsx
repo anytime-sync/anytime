@@ -13,6 +13,9 @@ import {
   EyeOff,
   Plus,
   Trash2,
+  SunMedium,
+  Moon,
+  Maximize2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -62,7 +65,22 @@ export default function DesignPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
+  // Day/Night editing mode for background-image fields. Drives a
+  // preview-mode marker on the iframe (.fl-night-preview) so the user
+  // can see night styling without flipping the actual theme, and routes
+  // bg-image edits to the right side of the override pair.
+  const [bgMode, setBgMode] = useState<"day" | "night">("day");
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Forward bgMode -> iframe whenever it changes (or after iframe reload).
+  useEffect(() => {
+    const w = iframeRef.current?.contentWindow;
+    if (!w) return;
+    w.postMessage(
+      { type: "fl.design.preview-mode", mode: bgMode === "night" ? "night" : "day" },
+      "*"
+    );
+  }, [bgMode, iframeKey]);
 
   // ---------- load full design map on mount ----------
   useEffect(() => {
@@ -101,7 +119,7 @@ export default function DesignPage() {
         | { type: "fl.design.text"; textKey: string; value: string; locale: string }
         | { type: "fl.design.move"; elementId: string; x: number; y: number }
         | { type: "fl.design.floating-text"; elementId: string; value: string; locale: string }
-        | { type: "fl.design.bg-pan"; elementId: string; bgPosition: string }
+        | { type: "fl.design.bg-pan"; elementId: string; bgPosition: string; mode?: "light" | "dark" }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.select") setSelected(data.elementId);
@@ -119,7 +137,7 @@ export default function DesignPage() {
         void persistFloatingText(data.elementId, data.value, data.locale);
       }
       if (data.type === "fl.design.bg-pan") {
-        void persistBgPan(data.elementId, data.bgPosition);
+        void persistBgPan(data.elementId, data.bgPosition, data.mode === "dark" ? "dark" : "light");
       }
     }
     async function persistFloatingText(elementId: string, value: string, locale: string) {
@@ -143,9 +161,11 @@ export default function DesignPage() {
       if (!r.ok) toast.error("Save failed");
       else toast.success(`Saved (${locale})`);
     }
-    async function persistBgPan(elementId: string, bgPosition: string) {
+    async function persistBgPan(elementId: string, bgPosition: string, mode: "light" | "dark") {
       const current = map[elementId] ?? {};
-      const merged = { ...current, bgPosition };
+      const merged: DesignOverrides = mode === "dark"
+        ? { ...current, bgPositionDark: bgPosition }
+        : { ...current, bgPosition };
       setMap((prev) => ({ ...prev, [elementId]: merged }));
       const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
         method: "PUT",
@@ -306,7 +326,7 @@ export default function DesignPage() {
     toast.success("Deleted");
   }
 
-  async function uploadBg(file: File) {
+  async function uploadBg(file: File, mode: "day" | "night") {
     if (!selected) return;
     const fd = new FormData();
     fd.append("file", file);
@@ -316,8 +336,20 @@ export default function DesignPage() {
       return;
     }
     const j = (await r.json()) as { url: string };
-    setOverride({ bgImageUrl: j.url, bgSize: "cover", bgPosition: "center" });
-    toast.success("Image set");
+    if (mode === "night") {
+      setOverride({
+        bgImageUrlDark: j.url,
+        bgSizeDark: "cover",
+        bgPositionDark: "center",
+      });
+    } else {
+      setOverride({
+        bgImageUrl: j.url,
+        bgSize: "cover",
+        bgPosition: "center",
+      });
+    }
+    toast.success(`Image set (${mode})`);
   }
 
   const pageMeta = useMemo(() => PAGES.find((p) => p.path === page) ?? PAGES[0]!, [page]);
@@ -633,18 +665,63 @@ export default function DesignPage() {
                 </Row>
               </Section>
 
-              {/* Background image */}
+              {/* Background image — per-mode (day / night) */}
               <Section icon={ImageIcon} title="Background image">
+                {/* Day / Night tabs. Selecting Night flips the iframe into
+                    .fl-night-preview so the user sees night styling without
+                    changing their actual theme; all uploads + sliders below
+                    are wired to the active mode's override fields. */}
+                <div className="flex items-center gap-1 mb-1">
+                  <button
+                    onClick={() => setBgMode("day")}
+                    className={cn(
+                      "h-7 px-2.5 text-[11px] rounded border border-border inline-flex items-center gap-1.5",
+                      bgMode === "day" ? "bg-fg text-bg" : "btn-ghost"
+                    )}
+                  >
+                    <SunMedium className="size-3" />
+                    Day
+                    {overrides.bgImageUrl && (
+                      <span className="size-1.5 rounded-full bg-accent inline-block" aria-hidden />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setBgMode("night")}
+                    className={cn(
+                      "h-7 px-2.5 text-[11px] rounded border border-border inline-flex items-center gap-1.5",
+                      bgMode === "night" ? "bg-fg text-bg" : "btn-ghost"
+                    )}
+                  >
+                    <Moon className="size-3" />
+                    Night
+                    {overrides.bgImageUrlDark && (
+                      <span className="size-1.5 rounded-full bg-accent inline-block" aria-hidden />
+                    )}
+                  </button>
+                  {bgMode === "night" && !overrides.bgImageUrlDark && overrides.bgImageUrl && (
+                    <span className="text-[10px] text-muted-fg italic font-display ml-auto">
+                      Falls back to Day
+                    </span>
+                  )}
+                </div>
+
+                {/* Active-mode preview + remove + upload */}
                 <div className="space-y-2">
-                  {overrides.bgImageUrl ? (
+                  {(bgMode === "day" ? overrides.bgImageUrl : overrides.bgImageUrlDark) ? (
                     <div className="relative">
                       <img
-                        src={overrides.bgImageUrl}
+                        src={(bgMode === "day" ? overrides.bgImageUrl : overrides.bgImageUrlDark) ?? ""}
                         alt=""
                         className="w-full rounded border border-border"
                       />
                       <button
-                        onClick={() => setOverride({ bgImageUrl: null })}
+                        onClick={() =>
+                          setOverride(
+                            bgMode === "day"
+                              ? { bgImageUrl: null }
+                              : { bgImageUrlDark: null }
+                          )
+                        }
                         className="absolute top-1 right-1 btn-ghost text-[10px] h-6 px-2 bg-bg/80"
                       >
                         Remove
@@ -652,40 +729,55 @@ export default function DesignPage() {
                     </div>
                   ) : (
                     <p className="text-[11px] text-muted-fg italic font-display">
-                      No image. Upload one below.
+                      No {bgMode} image. Upload one below.
                     </p>
                   )}
                   <label className="btn-ghost h-8 text-xs px-3 inline-flex items-center gap-1.5 cursor-pointer">
                     <Upload className="size-3" />
-                    Upload image
+                    Upload {bgMode} image
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
-                        if (f) uploadBg(f);
+                        if (f) uploadBg(f, bgMode);
                         e.target.value = "";
                       }}
                       className="hidden"
                     />
                   </label>
                 </div>
+
                 <Row label="Position">
                   <input
                     type="text"
                     placeholder="center / 50% 30%"
-                    value={overrides.bgPosition ?? ""}
-                    onChange={(e) =>
-                      setOverride({ bgPosition: e.target.value || undefined })
+                    value={
+                      bgMode === "day"
+                        ? overrides.bgPosition ?? ""
+                        : overrides.bgPositionDark ?? ""
                     }
+                    onChange={(e) => {
+                      const v = e.target.value || undefined;
+                      setOverride(
+                        bgMode === "day" ? { bgPosition: v } : { bgPositionDark: v }
+                      );
+                    }}
                     className="input h-8 text-xs w-full"
                   />
                 </Row>
                 <Row label="Zoom">
                   <NumberSlider
-                    value={parseBgZoomPct(overrides.bgSize)}
+                    value={parseBgZoomPct(
+                      bgMode === "day" ? overrides.bgSize : overrides.bgSizeDark
+                    )}
                     min={50} max={300} step={5}
-                    onChange={(v) => setOverride({ bgSize: v === 100 ? undefined : `${v}%` })}
+                    onChange={(v) => {
+                      const next = v === 100 ? undefined : `${v}%`;
+                      setOverride(
+                        bgMode === "day" ? { bgSize: next } : { bgSizeDark: next }
+                      );
+                    }}
                     suffix="%"
                   />
                 </Row>
@@ -693,9 +785,42 @@ export default function DesignPage() {
                   <input
                     type="text"
                     placeholder="cover / contain / 120%"
-                    value={overrides.bgSize ?? ""}
+                    value={
+                      bgMode === "day"
+                        ? overrides.bgSize ?? ""
+                        : overrides.bgSizeDark ?? ""
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value || undefined;
+                      setOverride(
+                        bgMode === "day" ? { bgSize: v } : { bgSizeDark: v }
+                      );
+                    }}
+                    className="input h-8 text-xs w-full"
+                  />
+                </Row>
+              </Section>
+
+              {/* Element dimensions (shared across modes) */}
+              <Section icon={Maximize2} title="Dimensions">
+                <Row label="Width">
+                  <input
+                    type="text"
+                    placeholder="auto / 100% / 480px"
+                    value={overrides.width ?? ""}
                     onChange={(e) =>
-                      setOverride({ bgSize: e.target.value || undefined })
+                      setOverride({ width: e.target.value || undefined })
+                    }
+                    className="input h-8 text-xs w-full"
+                  />
+                </Row>
+                <Row label="Height">
+                  <input
+                    type="text"
+                    placeholder="auto / 50vh / 360px"
+                    value={overrides.height ?? ""}
+                    onChange={(e) =>
+                      setOverride({ height: e.target.value || undefined })
                     }
                     className="input h-8 text-xs w-full"
                   />
