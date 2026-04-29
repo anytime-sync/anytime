@@ -21,8 +21,15 @@ export default function SignupPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    // Default to "Stay signed in" for new accounts — most users want
+    // their browser to remember them after signup. The browser client
+    // and middleware both read `fl.auth.persist` and stamp 30-day
+    // Max-Age on the auth cookies when it's "1" (or absent).
+    document.cookie = `fl.auth.persist=1; path=/; max-age=${
+      60 * 60 * 24 * 365
+    }; SameSite=Lax`;
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -33,7 +40,15 @@ export default function SignupPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success(t(lang, "auth.signup.created"));
-    router.replace("/login");
+    // If email confirmation is OFF in Supabase, signUp returns a live
+    // session — drop the user straight into the app instead of forcing
+    // them through /login a second time. Hard navigation so the just-
+    // set auth cookies are committed before middleware runs.
+    if (data.session) {
+      window.location.replace("/app");
+    } else {
+      router.replace("/login");
+    }
   }
 
   return (
