@@ -379,14 +379,6 @@ export default function DesignPage() {
             ))}
           </select>
           <button
-            onClick={() => setSelected("app.background.photo")}
-            className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
-            title="Edit the global day/night ambient backdrop photos"
-          >
-            <ImageIcon className="size-3" />
-            Backdrop
-          </button>
-          <button
             onClick={addFloating}
             className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
             title="Add a free-positioned text element to this page"
