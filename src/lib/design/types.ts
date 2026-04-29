@@ -36,8 +36,10 @@ export type DesignOverrides = {
   // --- Floating-element fields (only present on `_kind: 'floating'`) ---
   _kind?: "floating";
   _page?: string;
-  /** English text. Per-locale text deferred to Phase 3b. */
+  /** Baseline text (English fallback when no per-locale entry exists). */
   _text?: string;
+  /** Per-locale text overrides, keyed by language code (en, zh-TW, ...). */
+  _texts?: Record<string, string>;
   /** Absolute position in pixels from the document's top-left corner. */
   _x?: number;
   _y?: number;
