@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
+import { FloatingLayer } from "@/lib/design/floating-layer";
 import { readStoredLanguage, t, type LanguageCode } from "@/lib/i18n";
 
 export default function SignupPage() {
@@ -52,7 +53,8 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-6">
+    <main className="min-h-screen grid place-items-center px-6 relative">
+      <FloatingLayer page="/signup" />
       <div className="card w-full max-w-md p-8 space-y-5 relative">
         <div className="absolute top-3 right-3">
           <LanguagePicker mode="local" onChange={setLang} />
