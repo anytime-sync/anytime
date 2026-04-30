@@ -15,7 +15,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import type { DesignOverrides, DesignMap, StyleFields } from "@/lib/design/types";
 import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
 
@@ -151,29 +150,25 @@ export default function DesignPage() {
   // ---------- listen to selection / inline-text messages from iframe ----------
   useEffect(() => {
     async function saveText(textKey: string, value: string, locale: string) {
-      const supabase = createClient();
+      // Route through the admin API instead of writing site_content
+      // directly from the browser. RLS on that table references
+      // auth.users, and the anon role doesn't have SELECT on `users` —
+      // so direct upserts came back as "permission denied for table
+      // users". The /api/design/content endpoint runs with the
+      // service-role client after verifying admin auth.
       const trimmed = value.trim();
-      if (!trimmed) {
-        // Empty → fall back to default by deleting the override.
-        await supabase
-          .from("site_content")
-          .delete()
-          .eq("locale", locale)
-          .eq("key", textKey);
-        toast.success(`Reverted to default (${locale})`);
-      } else {
-        const { error } = await supabase.from("site_content").upsert({
-          locale,
-          key: textKey,
-          value: trimmed,
-          updated_at: new Date().toISOString(),
-        });
-        if (error) {
-          toast.error("Save failed: " + error.message);
-          return;
-        }
-        toast.success(`Saved (${locale})`);
+      const r = await fetch("/api/design/content", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locale, key: textKey, value: trimmed }),
+      });
+      if (!r.ok) {
+        const j = (await r.json().catch(() => ({}))) as { error?: string };
+        toast.error("Save failed: " + (j.error ?? r.statusText));
+        return;
       }
+      if (!trimmed) toast.success(`Reverted to default (${locale})`);
+      else toast.success(`Saved (${locale})`);
     }
 
     function onMsg(ev: MessageEvent) {
@@ -576,43 +571,7 @@ export default function DesignPage() {
             title="Lift the photo backdrop above content so you can drag-pan it from anywhere"
           >
             <ImageIcon className="size-3" />
-            {bgPanMode ? "Panning… Esc to exit" : "Pan backdrop"}
-          </button>
-          <button
-            onClick={() => setIframeKey((k) => k + 1)}
-            className="btn-ghost h-9 text-xs"
-          >
-            Reload preview
-          </button>
-        </div>
-      </header>
-
-      <div className="flex-1 grid grid-cols-[1fr_360px] overflow-hidden">
-        {/* iframe preview */}
-        <div className="bg-muted/30 overflow-hidden">
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src={`${pageMeta.path}?design=edit`}
-            title={`Preview: ${pageMeta.label}`}
-            className="w-full h-full border-0"
-          />
-        </div>
-
-        {/* Side panel */}
-        <aside className="border-l border-border surface overflow-y-auto">
-          {!selected ? (
-            <EmptyHint />
-          ) : (
-            <div className="p-5 space-y-5">
-              <div>
-                <p className="editorial-number text-[10px]">Selected</p>
-                <code className="text-[11px] font-mono break-all">{selected}</code>
-                <div className="mt-3 flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 text-[10px] tabular-nums px-2 h-7 rounded border border-border",
-                      autoSaveStatus === "saving" && "text-muted-fg",
+            {bgPanMode ? "utoSaveStatus === "saving" && "text-muted-fg",
                       autoSaveStatus === "saved" && "text-success",
                       autoSaveStatus === "error" && "text-danger",
                       autoSaveStatus === "idle" && "text-muted-fg italic"
