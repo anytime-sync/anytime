@@ -571,7 +571,43 @@ export default function DesignPage() {
             title="Lift the photo backdrop above content so you can drag-pan it from anywhere"
           >
             <ImageIcon className="size-3" />
-            {bgPanMode ? "utoSaveStatus === "saving" && "text-muted-fg",
+            {bgPanMode ? "Panning… Esc to exit" : "Pan backdrop"}
+          </button>
+          <button
+            onClick={() => setIframeKey((k) => k + 1)}
+            className="btn-ghost h-9 text-xs"
+          >
+            Reload preview
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 grid grid-cols-[1fr_360px] overflow-hidden">
+        {/* iframe preview */}
+        <div className="bg-muted/30 overflow-hidden">
+          <iframe
+            key={iframeKey}
+            ref={iframeRef}
+            src={`${pageMeta.path}?design=edit`}
+            title={`Preview: ${pageMeta.label}`}
+            className="w-full h-full border-0"
+          />
+        </div>
+
+        {/* Side panel */}
+        <aside className="border-l border-border surface overflow-y-auto">
+          {!selected ? (
+            <EmptyHint />
+          ) : (
+            <div className="p-5 space-y-5">
+              <div>
+                <p className="editorial-number text-[10px]">Selected</p>
+                <code className="text-[11px] font-mono break-all">{selected}</code>
+                <div className="mt-3 flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 text-[10px] tabular-nums px-2 h-7 rounded border border-border",
+                      autoSaveStatus === "saving" && "text-muted-fg",
                       autoSaveStatus === "saved" && "text-success",
                       autoSaveStatus === "error" && "text-danger",
                       autoSaveStatus === "idle" && "text-muted-fg italic"
