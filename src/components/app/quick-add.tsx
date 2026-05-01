@@ -9,7 +9,9 @@ import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import {
   Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles, ChevronDown,
+  ScanLine,
 } from "lucide-react";
+import { ScanTasksSheet } from "./scan-tasks-sheet";
 import { addDays, isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +73,11 @@ export function QuickAdd() {
   const [activeChip, setActiveChip] = useState<
     "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags" | null
   >(null);
+  // "Scan tasks" sheet — opens from the camera button next to the input.
+  // The sheet handles the camera/upload, AI extraction, preview, and
+  // bulk-create itself; we just need to know when it succeeds so we can
+  // close QuickAdd as well (consistent with the single-task submit flow).
+  const [scanOpen, setScanOpen] = useState(false);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -272,6 +279,15 @@ export function QuickAdd() {
             }}
           />
           <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
+          <button
+            type="button"
+            onClick={() => setScanOpen(true)}
+            className="btn-ghost h-9 w-9 inline-flex items-center justify-center rounded-full border border-border text-muted-fg hover:text-fg shrink-0"
+            title="Scan tasks from a photo or screenshot"
+            aria-label="Scan tasks from an image"
+          >
+            <ScanLine className="size-4" />
+          </button>
         </div>
 
         {/* Conversational preview */}
@@ -389,6 +405,15 @@ export function QuickAdd() {
           </span>
         </div>
       </div>
+      <ScanTasksSheet
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onCreated={() => {
+          // After bulk-create, close QuickAdd too — same end state as
+          // submitting a single task.
+          setOpen(false);
+        }}
+      />
     </div>
   );
 }
