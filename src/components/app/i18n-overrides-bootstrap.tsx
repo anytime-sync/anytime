@@ -9,6 +9,34 @@ import {
   type LanguageCode,
 } from "@/lib/i18n";
 
+// ---------------------------------------------------------------------
+// Synchronous client-side seed.
+//
+// The root layout (server component) fetches site_content and inlines
+// the result into a <script> tag as `window.__I18N_INITIAL_OVERRIDES`.
+// We read it here at module-load time — which runs before React renders
+// the tree — and feed it into the i18n module's overrides map. Result:
+// the very first hydration pass already has admin-edited text, so the
+// browser never paints the hardcoded defaults first.
+// ---------------------------------------------------------------------
+type ClientSeed = Partial<Record<LanguageCode, Record<string, string>>>;
+declare global {
+  interface Window {
+    __I18N_INITIAL_OVERRIDES?: ClientSeed;
+    __FL_OVERRIDES_SEEDED?: boolean;
+  }
+}
+if (typeof window !== "undefined" && !window.__FL_OVERRIDES_SEEDED) {
+  window.__FL_OVERRIDES_SEEDED = true;
+  const seed = window.__I18N_INITIAL_OVERRIDES;
+  if (seed && typeof seed === "object") {
+    for (const code of Object.keys(seed) as LanguageCode[]) {
+      const map = seed[code];
+      if (map) setI18nOverrides(code, map);
+    }
+  }
+}
+
 /**
  * Patches the DOM directly so admin-edited text shows up even if the
  * React tree never re-renders (e.g. when a stale `useLanguage` chunk
