@@ -1290,4 +1290,5 @@ function NumberSlider({
         {suffix ?? ""}
       </span>
     </div>
- 
+  );
+}
