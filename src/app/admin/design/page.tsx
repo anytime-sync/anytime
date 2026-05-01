@@ -64,6 +64,11 @@ export default function DesignPage() {
   // Day vs Night editing — drives BOTH the iframe preview palette AND
   // where each style edit gets persisted (top-level vs `night` sub).
   const [bgMode, setBgMode] = useState<"day" | "night">("day");
+  // Per-language editing scope. "en" is the baseline (writes go to the
+  // top-level / `night` buckets, unchanged behaviour). Any other code
+  // routes writes into `langs[code]` / `langs[code].night` so the same
+  // element can have different fontSize/color/etc. per locale.
+  const [langMode, setLangMode] = useState<LanguageCode>("en");
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [bgPanMode, setBgPanMode] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -266,13 +271,29 @@ export default function DesignPage() {
 
   const overrides = selected ? map[selected] ?? {} : {};
 
-  // Effective override for READING input values: when in night mode,
-  // night-side fields win (with day fallback). When in day mode this
-  // is just `overrides` unchanged. Floating + meta fields stay shared.
-  const eff: DesignOverrides & Partial<StyleFields> =
-    bgMode === "night" && overrides.night
-      ? { ...overrides, ...overrides.night }
-      : overrides;
+  // Effective override for READING input values. We layer in the same
+  // precedence the renderer uses (overridesToStyle) so the inputs show
+  // exactly what the user will see on the live page in that lang+mode:
+  //   1. baseline (top-level)
+  //   2. baseline.night          (when bgMode === 'night')
+  //   3. langs[lang]              (when langMode !== 'en')
+  //   4. langs[lang].night        (when both)
+  const eff: DesignOverrides & Partial<StyleFields> = (() => {
+    let merged: DesignOverrides & Partial<StyleFields> = { ...overrides };
+    if (bgMode === "night" && overrides.night) {
+      merged = { ...merged, ...overrides.night };
+    }
+    if (langMode !== "en" && overrides.langs) {
+      const langOv = overrides.langs[langMode];
+      if (langOv) {
+        merged = { ...merged, ...(langOv as StyleFields) };
+        if (bgMode === "night" && langOv.night) {
+          merged = { ...merged, ...(langOv.night as StyleFields) };
+        }
+      }
+    }
+    return merged;
+  })();
 
   function setOverride(patch: Partial<DesignOverrides>) {
     if (!selected) return;
@@ -303,43 +324,114 @@ export default function DesignPage() {
   }
 
   /**
-   * Style-field setter — routes the patch into the right bucket based
-   * on bgMode. In day mode it writes top-level (so existing rows stay
-   * shaped exactly as before). In night mode it writes into the
-   * `night` sub-object, leaving the day value untouched as the
-   * fallback. Setting a field to `undefined` removes it from that
-   * bucket; if the night bucket becomes empty, it's stripped entirely.
+   * Build the next overrides blob for `selected` after applying a
+   * style patch routed by (langMode, bgMode):
+   *   - lang=en, mode=day   → top-level fields
+   *   - lang=en, mode=night → `night` sub
+   *   - lang≠en, mode=day   → `langs[lang]` sub
+   *   - lang≠en, mode=night → `langs[lang].night` sub
+   * Empty sub-objects are stripped so the JSON stays clean.
    */
-  function setStyle(patch: Partial<StyleFields>) {
-    if (!selected) return;
-    if (bgMode === "day") {
-      setOverride(patch);
-      return;
-    }
-    setMap((prev) => {
-      const next = { ...prev };
-      const current = next[selected] ?? {};
-      const nextNight: StyleFields = { ...(current.night ?? {}), ...patch };
-      for (const k of Object.keys(nextNight) as Array<keyof StyleFields>) {
-        if (nextNight[k] === undefined) delete nextNight[k];
+  function applyStylePatch(
+    current: DesignOverrides,
+    patch: Partial<StyleFields>
+  ): DesignOverrides {
+    const stripUndef = <T extends Record<string, unknown>>(obj: T): T => {
+      const out = { ...obj } as T;
+      for (const k of Object.keys(out)) {
+        if (out[k] === undefined) delete out[k];
       }
+      return out;
+    };
+    // ---- baseline (English) ----
+    if (langMode === "en") {
+      if (bgMode === "day") {
+        // Merge into top-level StyleFields.
+        const merged: DesignOverrides = stripUndef({ ...current, ...patch });
+        return merged;
+      }
+      // night
+      const nextNight = stripUndef({ ...(current.night ?? {}), ...patch });
       const merged: DesignOverrides = { ...current };
       if (Object.keys(nextNight).length > 0) merged.night = nextNight;
       else delete merged.night;
-      next[selected] = merged;
+      return merged;
+    }
+    // ---- non-English language override ----
+    const langs = { ...(current.langs ?? {}) };
+    const cur = langs[langMode] ?? {};
+    let nextLang: StyleFields & { night?: StyleFields };
+    if (bgMode === "day") {
+      nextLang = stripUndef({ ...cur, ...patch }) as StyleFields & {
+        night?: StyleFields;
+      };
+    } else {
+      const nextNight = stripUndef({ ...(cur.night ?? {}), ...patch });
+      nextLang = { ...cur };
+      if (Object.keys(nextNight).length > 0) nextLang.night = nextNight;
+      else delete nextLang.night;
+    }
+    if (
+      Object.keys(nextLang).filter((k) => k !== "night").length === 0 &&
+      !nextLang.night
+    ) {
+      // Bucket emptied — drop it entirely.
+      delete langs[langMode];
+    } else {
+      langs[langMode] = nextLang;
+    }
+    const merged: DesignOverrides = { ...current };
+    if (Object.keys(langs).length > 0) merged.langs = langs;
+    else delete merged.langs;
+    return merged;
+  }
+
+  /**
+   * Style-field setter — routes the patch into the right bucket based
+   * on (langMode, bgMode). Behaviour is unchanged when langMode === 'en'.
+   */
+  function setStyle(patch: Partial<StyleFields>) {
+    if (!selected) return;
+    setMap((prev) => {
+      const next = { ...prev };
+      const cur = next[selected] ?? {};
+      next[selected] = applyStylePatch(cur, patch);
       return next;
     });
     // Echo into iframe.
     const w = iframeRef.current?.contentWindow;
     if (w && selected) {
-      const current = map[selected] ?? {};
-      const nextNight: StyleFields = { ...(current.night ?? {}), ...patch };
-      for (const k of Object.keys(nextNight) as Array<keyof StyleFields>) {
-        if (nextNight[k] === undefined) delete nextNight[k];
-      }
+      const merged = applyStylePatch(map[selected] ?? {}, patch);
+      w.postMessage(
+        { type: "fl.design.update", elementId: selected, overrides: merged },
+        "*"
+      );
+    }
+    autoSave(selected);
+  }
+
+  function clearLangOverrides() {
+    if (!selected || langMode === "en") return;
+    setMap((prev) => {
+      const next = { ...prev };
+      const current = next[selected] ?? {};
+      if (!current.langs?.[langMode]) return prev;
+      const langs = { ...current.langs };
+      delete langs[langMode];
       const merged: DesignOverrides = { ...current };
-      if (Object.keys(nextNight).length > 0) merged.night = nextNight;
-      else delete merged.night;
+      if (Object.keys(langs).length > 0) merged.langs = langs;
+      else delete merged.langs;
+      next[selected] = merged;
+      return next;
+    });
+    const w = iframeRef.current?.contentWindow;
+    if (w && selected) {
+      const current = map[selected] ?? {};
+      const langs = { ...(current.langs ?? {}) };
+      delete langs[langMode];
+      const merged: DesignOverrides = { ...current };
+      if (Object.keys(langs).length > 0) merged.langs = langs;
+      else delete merged.langs;
       w.postMessage(
         { type: "fl.design.update", elementId: selected, overrides: merged },
         "*"
@@ -523,7 +615,7 @@ export default function DesignPage() {
     }
     const j = (await r.json()) as { url: string };
     setStyle({ bgImageUrl: j.url, bgSize: "cover", bgPosition: "center" });
-    toast.success(`Image set (${bgMode})`);
+    toast.success(`Image set (${langMode}, ${bgMode})`);
   }
 
   const pageMeta = useMemo(() => PAGES.find((p) => p.path === page) ?? PAGES[0]!, [page]);
@@ -649,9 +741,14 @@ export default function DesignPage() {
                 </div>
               </div>
 
-              {/* Day / Night editing scope — drives BOTH the iframe preview
-                  palette AND where every style edit below gets saved. */}
-              <div className="rounded-md border border-border bg-bg/40 p-2.5 space-y-1.5">
+              {/* Day / Night + Language editing scope — drives BOTH the
+                  iframe preview palette AND which bucket every style
+                  edit below gets saved into:
+                    en + day   → top-level
+                    en + night → `night`
+                    xx + day   → `langs[xx]`
+                    xx + night → `langs[xx].night` */}
+              <div className="rounded-md border border-border bg-bg/40 p-2.5 space-y-2">
                 <div className="flex items-center gap-2">
                   <p className="editorial-number text-[10px]">Editing</p>
                   <div className="ml-auto inline-flex rounded-md border border-border overflow-hidden">
@@ -671,20 +768,71 @@ export default function DesignPage() {
                     ))}
                   </div>
                 </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="editorial-number text-[10px]">Language</p>
+                  <div className="ml-auto inline-flex rounded-md border border-border overflow-hidden flex-wrap">
+                    {LANGUAGES.map((l) => {
+                      const has =
+                        l.code === "en"
+                          ? false
+                          : Boolean(overrides.langs?.[l.code]);
+                      return (
+                        <button
+                          key={l.code}
+                          onClick={() => setLangMode(l.code)}
+                          className={cn(
+                            "h-7 px-2 text-[11px] inline-flex items-center gap-1",
+                            langMode === l.code
+                              ? "bg-fg text-bg"
+                              : "btn-ghost"
+                          )}
+                          title={
+                            l.code === "en"
+                              ? "Baseline (English) — applies to every locale until overridden"
+                              : `Tweak ${l.label} only`
+                          }
+                        >
+                          {l.code === "en" ? "en (base)" : l.code}
+                          {has && (
+                            <span
+                              className="size-1.5 rounded-full bg-accent inline-block"
+                              aria-hidden
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <p className="text-[10px] text-muted-fg leading-snug">
-                  {bgMode === "day"
-                    ? "Edits apply to the daytime appearance."
-                    : "Edits apply to nighttime only — empty fields fall back to the day value."}
+                  {langMode === "en"
+                    ? bgMode === "day"
+                      ? "Baseline edits — affect every language unless that language has its own override below."
+                      : "Baseline night edits — every language inherits these in dark mode unless overridden."
+                    : bgMode === "day"
+                    ? `Edits apply only to ${langMode}. Empty fields fall back to the baseline.`
+                    : `Edits apply only to ${langMode} in dark mode. Empty fields fall back to ${langMode}'s day value, then the baseline.`}
                 </p>
-                {bgMode === "night" && overrides.night && (
-                  <button
-                    onClick={clearNightOverrides}
-                    className="btn-ghost h-7 text-[11px] px-2 inline-flex items-center gap-1.5 text-muted-fg"
-                  >
-                    <Trash2 className="size-3" />
-                    Clear all night overrides
-                  </button>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {bgMode === "night" && overrides.night && (
+                    <button
+                      onClick={clearNightOverrides}
+                      className="btn-ghost h-7 text-[11px] px-2 inline-flex items-center gap-1.5 text-muted-fg"
+                    >
+                      <Trash2 className="size-3" />
+                      Clear baseline night
+                    </button>
+                  )}
+                  {langMode !== "en" && overrides.langs?.[langMode] && (
+                    <button
+                      onClick={clearLangOverrides}
+                      className="btn-ghost h-7 text-[11px] px-2 inline-flex items-center gap-1.5 text-muted-fg"
+                    >
+                      <Trash2 className="size-3" />
+                      Clear all {langMode} overrides
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Per-locale text content (floating elements only) */}
@@ -698,7 +846,7 @@ export default function DesignPage() {
               )}
 
               {/* Typography */}
-              <Section icon={Type} title={`Typography (${bgMode})`}>
+              <Section icon={Type} title={`Typography (${langMode}, ${bgMode})`}>
                 <Row label="Font face">
                   <select
                     value={eff.fontFamily ?? ""}
@@ -834,7 +982,7 @@ export default function DesignPage() {
               </Section>
 
               {/* Transform */}
-              <Section icon={Move} title={`Transform (${bgMode})`}>
+              <Section icon={Move} title={`Transform (${langMode}, ${bgMode})`}>
                 <Row label="Translate X">
                   <NumberSlider
                     value={eff.translateX ?? 0}
@@ -886,7 +1034,7 @@ export default function DesignPage() {
               </Section>
 
               {/* Background image */}
-              <Section icon={ImageIcon} title={`Background image (${bgMode})`}>
+              <Section icon={ImageIcon} title={`Background image (${langMode}, ${bgMode})`}>
                 <div className="space-y-2">
                   {eff.bgImageUrl ? (
                     <div className="relative">
