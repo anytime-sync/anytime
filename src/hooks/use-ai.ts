@@ -19,6 +19,49 @@ export type ParsedTask = {
   estimated_minutes: number | null;
 };
 
+/**
+ * One task extracted from a scanned image. Mirrors the server-side
+ * ScannedTaskSchema in src/lib/ai/types.ts.
+ */
+export type ScannedTask = {
+  title: string;
+  start_at?: string | null;
+  due_at: string | null;
+  is_all_day?: boolean;
+  priority: 0 | 1 | 3 | 5;
+  tagNames?: string[];
+  projectName?: string | null;
+  rrule?: string | null;
+  reminder_at?: string | null;
+  estimated_minutes?: number | null;
+};
+
+/**
+ * Scan an image -> Claude vision -> array of tasks. Resolves to null when
+ * AI is disabled (503) so the caller can prompt the user to enable it.
+ */
+export function useScanTasksAI() {
+  return useMutation({
+    mutationFn: async (
+      file: File
+    ): Promise<{ tasks: ScannedTask[] } | null> => {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("tz", tz());
+      const r = await fetch("/api/ai/scan-tasks", {
+        method: "POST",
+        body: fd,
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) {
+        const j = (await r.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? `scan_failed ${r.status}`);
+      }
+      return (await r.json()) as { tasks: ScannedTask[] };
+    },
+  });
+}
+
 /** LLM-powered quick-add parser. Resolves to null when AI is disabled (503). */
 export function useParseTaskAI() {
   return useMutation({
