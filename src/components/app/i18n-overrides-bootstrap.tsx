@@ -91,8 +91,24 @@ export function I18nOverridesBootstrap() {
         // Belt-and-suspenders: directly patch any rendered text-key
         // elements in the DOM. This unblocks the case where the
         // useLanguage listener hasn't been deployed yet (Vercel build
-        // cache occasionally hands back a stale compiled chunk).
-        requestAnimationFrame(() => patchTextDom(grouped));
+        // cache occasionally hands back a stale compiled chunk). We
+        // run several times across the first ~1.5s to survive any
+        // React hydration / re-render that would otherwise re-stamp
+        // the default text on top of our patch.
+        const stamps = [0, 60, 200, 500, 1000, 1500];
+        for (const ms of stamps) {
+          setTimeout(() => patchTextDom(grouped), ms);
+        }
+        // And keep enforcing on every subsequent React re-render via
+        // a MutationObserver on the text-key elements themselves.
+        try {
+          const obs = new MutationObserver(() => patchTextDom(grouped));
+          document.querySelectorAll<HTMLElement>(
+            "[data-design-text-key]"
+          ).forEach((el) => {
+            obs.observe(el, { childList: true, characterData: true, subtree: true });
+          });
+        } catch {}
       } catch {
         // Ignore — fall back to hardcoded defaults.
       }
