@@ -22,15 +22,29 @@ const LS_KEY = "fl.language";
  */
 export function useLanguage(): LanguageCode {
   const [lang, setLang] = useState<LanguageCode>(DEFAULT_LANGUAGE);
+  // `_v` is a hidden re-render counter. We bump it whenever runtime
+  // i18n overrides change, so every `t()` consumer that calls
+  // useLanguage() re-evaluates with the fresh override map without
+  // needing to also call a separate hook.
+  const [, setOverrideVersion] = useState(0);
   useEffect(() => {
     setLang(readStoredLanguage());
     function onChange() { setLang(readStoredLanguage()); }
     function onStorage(e: StorageEvent) { if (e.key === LS_KEY) onChange(); }
+    function onOverrides() { setOverrideVersion((v) => v + 1); }
     window.addEventListener("storage", onStorage);
     window.addEventListener("fl.language.change", onChange as EventListener);
+    window.addEventListener(
+      "fl.i18n.overrides-changed",
+      onOverrides as EventListener
+    );
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("fl.language.change", onChange as EventListener);
+      window.removeEventListener(
+        "fl.i18n.overrides-changed",
+        onOverrides as EventListener
+      );
     };
   }, []);
   return lang;
