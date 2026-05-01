@@ -68,7 +68,7 @@ export type DesignOverrides = StyleFields & {
   hidden?: boolean;
 
   // --- Floating-element fields (only present on `_kind: 'floating'`) ---
-  _kind?: "floating";
+  _kind?: "floating" | "class";
   _page?: string;
   /** Baseline text (English fallback when no per-locale entry exists). */
   _text?: string;
@@ -77,6 +77,28 @@ export type DesignOverrides = StyleFields & {
   /** Absolute position in pixels from the document's top-left corner. */
   _x?: number;
   _y?: number;
+
+  // --- Class-targeted overrides (only when `_kind === 'class'`) ---
+  /**
+   * CSS class name (without leading dot) this entry targets. The server
+   * generator emits one rule per (class, lang, mode) bucket present in
+   * top-level / `night` / `langs[xx]` / `langs[xx].night`.
+   *
+   * Stored under element_id `class:<classname>` so the same upsert path
+   * the editor already uses for per-element overrides keeps working.
+   *
+   * Selectors emitted (compiled into a server-rendered <style> block):
+   *   .CLASS                                                 (baseline / day / English)
+   *   html.dark .CLASS, html.fl-night-preview .CLASS         (baseline night)
+   *   html[lang="xx"] .CLASS                                 (xx day)
+   *   html[lang="xx"].dark .CLASS,
+   *   html[lang="xx"].fl-night-preview .CLASS                (xx night)
+   *
+   * The same DesignOverrides shape is reused — top-level fields are the
+   * baseline, `night` is the dark-mode override, `langs[xx]` is the
+   * per-language override, `langs[xx].night` is per-language-and-dark.
+   */
+  _class?: string;
 };
 
 export type DesignMap = Record<string, DesignOverrides>;

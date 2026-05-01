@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DesignMap, DesignOverrides } from "./types";
+import { generateClassOverridesCss } from "./class-css";
 
 /**
  * Client-side design context. The root layout fetches the full
@@ -55,6 +56,27 @@ export function DesignProvider({
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, []);
+
+  // Keep the server-rendered <style id="fl-class-overrides"> tag in sync
+  // with live edits. The root layout emits initial CSS from server-side
+  // generation; whenever the operator tweaks a class override in the
+  // /admin/design editor, the iframe receives a postMessage update and
+  // we regenerate + replace the tag's textContent so the preview reflects
+  // the change without a reload. Outside the editor this is harmless —
+  // the map only changes on initial mount.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const css = generateClassOverridesCss(map);
+    let tag = document.getElementById(
+      "fl-class-overrides"
+    ) as HTMLStyleElement | null;
+    if (!tag) {
+      tag = document.createElement("style");
+      tag.id = "fl-class-overrides";
+      document.head.appendChild(tag);
+    }
+    if (tag.textContent !== css) tag.textContent = css;
+  }, [map]);
 
   const value = useMemo(() => map, [map]);
   return (
