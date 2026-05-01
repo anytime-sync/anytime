@@ -12,6 +12,8 @@ import { Suspense } from "react";
 import { DesignProvider } from "@/lib/design/provider";
 import { DesignEditMode } from "@/lib/design/edit-mode";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
+import { fetchSiteOverrides } from "@/lib/i18n-server";
+import { setI18nOverrides, type LanguageCode } from "@/lib/i18n";
 
 // Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
@@ -97,6 +99,16 @@ export default async function RootLayout({
   // Seed the DesignProvider with the full site_design map. Public read
   // policy means anonymous landing visitors get overrides too.
   const designMap = await fetchDesignMap();
+
+  // Pull admin-edited text overrides server-side so SSR HTML already
+  // has the saved strings. The same map is also serialized into a
+  // window var below so the client i18n module is seeded BEFORE
+  // hydration, which kills the flash of hardcoded defaults.
+  const i18nOverrides = await fetchSiteOverrides();
+  for (const code of Object.keys(i18nOverrides) as LanguageCode[]) {
+    setI18nOverrides(code, i18nOverrides[code]!);
+  }
+
   return (
     <html
       lang="en"
@@ -129,6 +141,17 @@ export default async function RootLayout({
         )}
       </head>
       <body>
+        {/* Hand the freshly-fetched i18n overrides to the client BEFORE
+            React hydrates. The bootstrap component reads this window
+            var on module load and seeds setI18nOverrides synchronously,
+            so t() returns overrides on the very first hydration pass. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__I18N_INITIAL_OVERRIDES = ${JSON.stringify(
+              i18nOverrides
+            )};`,
+          }}
+        />
         <LanguageBootstrap />
         <I18nOverridesBootstrap />
         <DesignProvider initial={designMap}>
