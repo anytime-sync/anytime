@@ -1,5 +1,5 @@
 "use client";
-
+// per-language flattened list view + class targets
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -747,7 +747,15 @@ export default function DesignPage() {
         {/* Side panel */}
         <aside className="border-l border-border surface overflow-y-auto">
           {!selected ? (
-            <EmptyHint map={map} onPickClass={(id) => setSelected(id)} />
+            <EmptyHint
+              map={map}
+              onPickClass={(id) => setSelected(id)}
+              onPickEntry={(id, lang, mode) => {
+                setSelected(id);
+                setLangMode(lang);
+                setBgMode(mode);
+              }}
+            />
           ) : (
             <div className="p-5 space-y-5">
               <div>
@@ -1179,15 +1187,107 @@ export default function DesignPage() {
 function EmptyHint({
   map,
   onPickClass,
+  onPickEntry,
 }: {
   map: DesignMap;
   onPickClass: (elementId: string) => void;
+  /**
+   * Click a flattened per-language row → jump straight into that
+   * (entry, language, mode) bucket: selects the entry AND sets
+   * langMode + bgMode in the parent so the side panel renders the
+   * right tabs and the inputs read the right values.
+   */
+  onPickEntry: (
+    elementId: string,
+    lang: LanguageCode,
+    mode: "day" | "night"
+  ) => void;
 }) {
   // List existing class-targeted overrides so the operator can re-open
   // any of them for editing without re-typing the class name.
   const classEntries = Object.entries(map).filter(
     ([id, ov]) => id.startsWith("class:") && ov._kind === "class"
   );
+
+  // Flatten every (entry, lang, mode) bucket into a single list so the
+  // operator can see — and click into — each language variant of every
+  // element/class at a glance. We don't surface a row when a bucket is
+  // empty, so the list stays focused on what's actually been customized.
+  type FlatRow = {
+    elementId: string;
+    cls?: string;
+    lang: LanguageCode;
+    mode: "day" | "night";
+    fieldCount: number;
+  };
+  const flatRows: FlatRow[] = [];
+  for (const [elementId, ov] of Object.entries(map)) {
+    const cls = ov._kind === "class" ? ov._class : undefined;
+    // Top-level (en, day) — count any non-meta key
+    const topFields = Object.keys(ov).filter(
+      (k) =>
+        k !== "night" &&
+        k !== "langs" &&
+        k !== "hidden" &&
+        !k.startsWith("_")
+    );
+    if (topFields.length > 0) {
+      flatRows.push({
+        elementId,
+        cls,
+        lang: "en" as LanguageCode,
+        mode: "day",
+        fieldCount: topFields.length,
+      });
+    }
+    // Top-level night
+    if (ov.night && Object.keys(ov.night).length > 0) {
+      flatRows.push({
+        elementId,
+        cls,
+        lang: "en" as LanguageCode,
+        mode: "night",
+        fieldCount: Object.keys(ov.night).length,
+      });
+    }
+    // Per-language buckets
+    if (ov.langs) {
+      for (const [lang, langOv] of Object.entries(ov.langs)) {
+        const langDayFields = Object.keys(langOv).filter(
+          (k) => k !== "night"
+        );
+        if (langDayFields.length > 0) {
+          flatRows.push({
+            elementId,
+            cls,
+            lang: lang as LanguageCode,
+            mode: "day",
+            fieldCount: langDayFields.length,
+          });
+        }
+        if (langOv.night && Object.keys(langOv.night).length > 0) {
+          flatRows.push({
+            elementId,
+            cls,
+            lang: lang as LanguageCode,
+            mode: "night",
+            fieldCount: Object.keys(langOv.night).length,
+          });
+        }
+      }
+    }
+  }
+  // Sort: per-element first (by id), then per-language alphabetical,
+  // English before other languages, day before night.
+  flatRows.sort((a, b) => {
+    if (a.elementId !== b.elementId) return a.elementId.localeCompare(b.elementId);
+    if (a.lang !== b.lang) {
+      if (a.lang === "en") return -1;
+      if (b.lang === "en") return 1;
+      return a.lang.localeCompare(b.lang);
+    }
+    return a.mode === "day" ? -1 : 1;
+  });
   return (
     <div className="p-8 space-y-3">
       <p className="editorial-number text-[10px]">Click any element</p>
@@ -1201,6 +1301,69 @@ function EmptyHint({
       <p className="text-[10px] text-muted-fg italic font-display pt-3">
         New element ids inherit the page&rsquo;s defaults until you save an override.
       </p>
+
+      {/* Saved overrides — flattened by (entry, language, mode) so the
+          operator can see and click each language variant separately.
+          Backed by the same nested storage; clicking jumps the side
+          panel straight to that lang+mode bucket. */}
+      <div className="pt-5 border-t border-border space-y-2">
+        <p className="editorial-number text-[10px]">
+          Saved overrides{" "}
+          <span className="text-muted-fg">· by language</span>
+        </p>
+        {flatRows.length === 0 ? (
+          <p className="text-[11px] text-muted-fg leading-relaxed">
+            None yet. Click any element in the preview to start, or use{" "}
+            <em>+ Class</em> in the header to target a CSS class.
+          </p>
+        ) : (
+          <ul className="space-y-1 max-h-[40vh] overflow-y-auto">
+            {flatRows.map((r, i) => {
+              const label = r.cls ? `.${r.cls}` : r.elementId;
+              const langBadge =
+                r.lang === "en" ? "en (base)" : r.lang;
+              return (
+                <li key={`${r.elementId}|${r.lang}|${r.mode}|${i}`}>
+                  <button
+                    onClick={() =>
+                      onPickEntry(r.elementId, r.lang, r.mode)
+                    }
+                    className="btn-ghost w-full text-left px-2 py-1.5 text-xs flex items-center gap-2"
+                    title={`${label} · ${r.lang} · ${r.mode} (${r.fieldCount} field${r.fieldCount === 1 ? "" : "s"} set)`}
+                  >
+                    <code className="font-mono text-[11px] truncate max-w-[140px]">
+                      {label}
+                    </code>
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 h-5 rounded inline-flex items-center",
+                        r.lang === "en"
+                          ? "bg-bg/40 text-muted-fg"
+                          : "bg-accent/15 text-accent"
+                      )}
+                    >
+                      {langBadge}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 h-5 rounded inline-flex items-center",
+                        r.mode === "day"
+                          ? "bg-bg/40 text-muted-fg"
+                          : "bg-fg text-bg"
+                      )}
+                    >
+                      {r.mode}
+                    </span>
+                    <span className="ml-auto text-[10px] text-muted-fg tabular-nums">
+                      {r.fieldCount} field{r.fieldCount === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
       {/* Class-targeted overrides — set once per class per language,
           applies to every instance anywhere. Use the "+ Class" button
