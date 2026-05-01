@@ -59,6 +59,10 @@ export default function DesignPage() {
   const [page, setPage] = useState<string>("/");
   const [map, setMap] = useState<DesignMap>({});
   const [selected, setSelected] = useState<string | null>(null);
+  // i18n key of the selected slot (if any). Set by the iframe whenever a
+  // slot with `data-design-text-key` is selected — drives the SlotTextEditor
+  // in the side panel.
+  const [selectedTextKey, setSelectedTextKey] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
   // Day vs Night editing — drives BOTH the iframe preview palette AND
@@ -208,6 +212,34 @@ export default function DesignPage() {
     })();
   }, []);
 
+  // Save a per-locale text override for a slot's i18n key. Routes
+  // through the admin API (same as inline editing) so RLS is bypassed
+  // by the service-role client. Returns true on success.
+  async function saveSlotText(
+    textKey: string,
+    value: string,
+    locale: string
+  ): Promise<boolean> {
+    const trimmed = value.trim();
+    const r = await fetch("/api/design/content", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale, key: textKey, value: trimmed }),
+    });
+    if (!r.ok) {
+      const j = (await r.json().catch(() => ({}))) as { error?: string };
+      toast.error("Save failed: " + (j.error ?? r.statusText));
+      return false;
+    }
+    if (!trimmed) toast.success(`Reverted to default (${locale})`);
+    else toast.success(`Saved (${locale})`);
+    // Reload iframe so the saved text shows up in the preview without
+    // a manual refresh. Cheap because the iframe is just a Next.js
+    // page render.
+    setIframeKey((k) => k + 1);
+    return true;
+  }
+
   // ---------- listen to selection / inline-text messages from iframe ----------
   useEffect(() => {
     async function saveText(textKey: string, value: string, locale: string) {
@@ -234,7 +266,7 @@ export default function DesignPage() {
 
     function onMsg(ev: MessageEvent) {
       const data = ev.data as
-        | { type: "fl.design.select"; elementId: string }
+        | { type: "fl.design.select"; elementId: string; textKey?: string }
         | { type: "fl.design.ready" }
         | { type: "fl.design.text"; textKey: string; value: string; locale: string }
         | { type: "fl.design.move"; elementId: string; x: number; y: number }
@@ -245,7 +277,10 @@ export default function DesignPage() {
         | { type: "fl.design.lang-changed"; lang: LanguageCode }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
-      if (data.type === "fl.design.select") setSelected(data.elementId);
+      if (data.type === "fl.design.select") {
+        setSelected(data.elementId);
+        setSelectedTextKey(data.textKey ?? null);
+      }
       if (data.type === "fl.design.ready") {
         // After iframe boots, push the full map so its DesignProvider
         // mirrors our local edits, then re-apply the active mode + lang
@@ -1009,6 +1044,20 @@ export default function DesignPage() {
                 </div>
               </div>
 
+              {/* Per-locale text edit for regular slots with an i18n key.
+                  Lets the operator edit text from the sidebar instead of
+                  having to double-click into the iframe. */}
+              {selectedTextKey && !selected.startsWith("floating.") && (
+                <SlotTextEditor
+                  elementId={selected}
+                  textKey={selectedTextKey}
+                  langMode={langMode}
+                  setLangMode={setLangMode}
+                  iframeRef={iframeRef}
+                  onSave={saveSlotText}
+                />
+              )}
+
               {/* Per-locale text content (floating elements only) */}
               {selected.startsWith("floating.") && (
                 <FloatingTextEditor
@@ -1540,6 +1589,158 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <label className="text-[11px] text-muted-fg">{label}</label>
       <div>{children}</div>
     </div>
+  );
+}
+
+/**
+ * Right-sidebar text editor for regular (non-floating) slots that have an
+ * i18n key. Lets the operator pick a language tab, see the current text
+ * pulled from the iframe, edit it in a textarea, and save back through
+ * the admin content API. Saving reloads the iframe so the new value shows
+ * up in the preview immediately.
+ */
+function SlotTextEditor({
+  elementId,
+  textKey,
+  langMode,
+  setLangMode,
+  iframeRef,
+  onSave,
+}: {
+  elementId: string;
+  textKey: string;
+  langMode: LanguageCode;
+  setLangMode: (l: LanguageCode) => void;
+  iframeRef: React.RefObject<HTMLIFrameElement>;
+  onSave: (textKey: string, value: string, locale: string) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState("");
+  const [original, setOriginal] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Read the slot's currently rendered text out of the iframe whenever
+  // the selection or active language changes. Same-origin iframe so
+  // contentDocument access just works. We retry briefly because the
+  // iframe may not have re-rendered yet after a langMode flip.
+  useEffect(() => {
+    let cancelled = false;
+    function read() {
+      if (cancelled) return;
+      try {
+        const doc = iframeRef.current?.contentDocument;
+        if (!doc) return false;
+        const sel =
+          typeof CSS !== "undefined" && (CSS as { escape?: (s: string) => string }).escape
+            ? (CSS as { escape: (s: string) => string }).escape(elementId)
+            : elementId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+        const el = doc.querySelector(`[data-design-id="${sel}"]`);
+        if (!el) return false;
+        const txt = (el.textContent ?? "").trim();
+        setDraft(txt);
+        setOriginal(txt);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    // Try a few times — iframe may still be rendering.
+    let attempts = 0;
+    const tick = () => {
+      if (read()) return;
+      attempts += 1;
+      if (attempts < 6) setTimeout(tick, 200);
+    };
+    tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [elementId, langMode, iframeRef]);
+
+  const dirty = draft !== original;
+
+  async function handleSave() {
+    setSaving(true);
+    const ok = await onSave(textKey, draft, langMode);
+    setSaving(false);
+    if (ok) setOriginal(draft);
+  }
+
+  return (
+    <section className="space-y-2.5 border-t border-border pt-4">
+      <div className="flex items-center gap-2">
+        <Type className="size-3.5 text-accent" />
+        <p className="editorial-number text-[10px]">Text content</p>
+        <code className="ml-auto text-[10px] text-muted-fg font-mono truncate max-w-[160px]" title={textKey}>
+          {textKey}
+        </code>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {LANGUAGES.map((l) => (
+          <button
+            key={l.code}
+            onClick={() => setLangMode(l.code)}
+            className={cn(
+              "h-7 px-2 text-[11px] rounded border border-border inline-flex items-center gap-1",
+              langMode === l.code ? "bg-fg text-bg" : "btn-ghost"
+            )}
+            title={`Edit ${l.displayName}`}
+          >
+            {l.code === "en" ? "en (base)" : l.code}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={3}
+        placeholder={
+          langMode === "en"
+            ? "Baseline text (English)"
+            : `${langMode} override (falls back to English when empty)`
+        }
+        className="input w-full text-sm leading-relaxed resize-y min-h-[60px]"
+      />
+      <div className="flex items-center gap-2 text-xs">
+        <button
+          onClick={handleSave}
+          disabled={!dirty || saving}
+          className={cn(
+            "btn-ghost px-3 h-8 inline-flex items-center gap-1.5",
+            dirty && !saving && "text-fg hover:bg-accent/10",
+            (!dirty || saving) && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          <Save className="size-3" />
+          {saving ? "Saving…" : `Save ${langMode}`}
+        </button>
+        {dirty && !saving && (
+          <button
+            onClick={() => setDraft(original)}
+            className="btn-ghost px-2 h-8 text-muted-fg"
+          >
+            Discard
+          </button>
+        )}
+        {langMode !== "en" && original && (
+          <button
+            onClick={() => {
+              setDraft("");
+              void onSave(textKey, "", langMode).then((ok) => {
+                if (ok) setOriginal("");
+              });
+            }}
+            className="btn-ghost px-2 h-8 text-muted-fg ml-auto"
+            title={`Clear ${langMode} override (falls back to English)`}
+          >
+            <Trash2 className="size-3" />
+            Clear
+          </button>
+        )}
+      </div>
+      <p className="text-[10px] text-muted-fg leading-snug italic">
+        Tip: you can also double-click any text in the preview to edit it inline.
+      </p>
+    </section>
   );
 }
 
