@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { DesignProvider } from "@/lib/design/provider";
 import { DesignEditMode } from "@/lib/design/edit-mode";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
+import { generateClassOverridesCss } from "@/lib/design/class-css";
 import { fetchSiteOverrides } from "@/lib/i18n-server";
 import { setI18nOverrides, type LanguageCode } from "@/lib/i18n";
 
@@ -100,6 +101,14 @@ export default async function RootLayout({
   // policy means anonymous landing visitors get overrides too.
   const designMap = await fetchDesignMap();
 
+  // Compile class-targeted overrides into a single CSS string injected
+  // into <head>. Per-class entries (id `class:editorial-number` etc.)
+  // produce rules selected by `[lang="xx"]` and `html.dark` /
+  // `html.fl-night-preview` so the right per-language per-mode style
+  // wins without any client-side resolution. Generated server-side, so
+  // the rules are present on the very first paint.
+  const classCss = generateClassOverridesCss(designMap);
+
   // Pull admin-edited text overrides server-side so SSR HTML already
   // has the saved strings. The same map is also serialized into a
   // window var below so the client i18n module is seeded BEFORE
@@ -119,6 +128,18 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href={CJK_FONTS_HREF} rel="stylesheet" />
+        {/* Class-targeted design overrides. Server-rendered as plain
+            CSS so per-language per-mode rules are present on the very
+            first paint (no FOUC). The selectors use [lang="xx"] and
+            html.dark / html.fl-night-preview which are already kept in
+            sync by LanguageBootstrap and the next-themes provider, so
+            no extra client wiring is needed. */}
+        {classCss && (
+          <style
+            id="fl-class-overrides"
+            dangerouslySetInnerHTML={{ __html: classCss }}
+          />
+        )}
         {/* Plausible — privacy-respecting analytics. Loaded only when
             NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set (Vercel env var). The
             script is < 1kb, sets no cookies, sends no personal data, and
