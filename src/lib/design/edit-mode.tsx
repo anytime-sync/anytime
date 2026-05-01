@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { readStoredLanguage } from "@/lib/i18n";
+import {
+  readStoredLanguage,
+  writeStoredLanguage,
+  type LanguageCode,
+} from "@/lib/i18n";
 
 /**
  * Mounted at the root layout. When the page is loaded inside the
@@ -41,6 +45,7 @@ export function DesignEditMode() {
       const data = ev.data as
         | { type: "fl.design.set-mode"; mode: "day" | "night" }
         | { type: "fl.design.set-bg-pan"; on: boolean }
+        | { type: "fl.design.set-lang"; lang: LanguageCode }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.set-mode") {
@@ -55,8 +60,41 @@ export function DesignEditMode() {
         else cl.remove("fl-bg-pan");
         return;
       }
+      if (data.type === "fl.design.set-lang") {
+        // Parent's lang tab changed → flip the iframe's stored language so
+        // (1) html[lang="xx"] selectors in <style id="fl-class-overrides">
+        // start matching, (2) every DesignSlot's useLanguage() resolves to
+        // the new value and re-renders with the right per-locale text +
+        // per-language style overrides. LanguageBootstrap inside the
+        // iframe listens for fl.language.change and patches html.lang,
+        // meta description, etc. — same path the in-iframe language
+        // picker uses.
+        try {
+          if (readStoredLanguage() !== data.lang) {
+            writeStoredLanguage(data.lang);
+          }
+        } catch {}
+        return;
+      }
     }
     window.addEventListener("message", onModeMsg);
+
+    // Bubble iframe-side language changes back up to the parent so the
+    // right sidebar's langMode tab reflects whatever language the user
+    // picked using the in-iframe LanguagePicker. Without this, the two
+    // controls drift and edits write to the wrong bucket.
+    function onIframeLangChange() {
+      try {
+        window.parent?.postMessage(
+          { type: "fl.design.lang-changed", lang: readStoredLanguage() },
+          "*"
+        );
+      } catch {}
+    }
+    window.addEventListener(
+      "fl.language.change",
+      onIframeLangChange as EventListener
+    );
 
     let selectedId: string | null = null;
     let editingEl: HTMLElement | null = null;
@@ -77,6 +115,20 @@ export function DesignEditMode() {
       origPy: number;
       w: number;
       h: number;
+    } | null = null;
+    // Drag-to-translate state for any selected non-floating, non-bg-image
+    // slot. Reads / writes the inline transform translate so the operator
+    // can nudge editorial-number, kickers, headlines, etc. into place
+    // without leaving the iframe. On mouseup we post-message the final
+    // (x, y) up so the parent persists translateX / translateY into the
+    // active (langMode, bgMode) bucket.
+    let translateState: {
+      id: string;
+      el: HTMLElement;
+      startMx: number;
+      startMy: number;
+      origTx: number;
+      origTy: number;
     } | null = null;
 
     const style = document.createElement("style");
@@ -326,9 +378,43 @@ export function DesignEditMode() {
         return;
       }
 
-      // Branch B: slot with a background image → pan it.
       const cs = window.getComputedStyle(slot);
-      if (!cs.backgroundImage || cs.backgroundImage === "none") return;
+
+      // Branch B: slot with a background image → pan it (regardless of
+      // selection state for the photo backdrop). Slots with a real bg
+      // image get pan-priority because that's the more common edit on
+      // them.
+      const hasBgImage = cs.backgroundImage && cs.backgroundImage !== "none";
+
+      // Branch C (when no bg image): selected slot → drag-translate.
+      // Reads the slot's current matrix translate so we don't snap when
+      // the slot already has translateX/translateY overrides applied.
+      if (!hasBgImage) {
+        if (id !== selectedId) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        let origTx = 0;
+        let origTy = 0;
+        const m = /matrix\(([^)]+)\)/.exec(cs.transform || "");
+        if (m) {
+          const parts = m[1]!.split(",").map((s) => parseFloat(s.trim()));
+          if (parts.length >= 6) {
+            origTx = parts[4] ?? 0;
+            origTy = parts[5] ?? 0;
+          }
+        }
+        translateState = {
+          id,
+          el: slot,
+          startMx: ev.clientX,
+          startMy: ev.clientY,
+          origTx,
+          origTy,
+        };
+        slot.style.cursor = "grabbing";
+        document.documentElement.style.userSelect = "none";
+        return;
+      }
 
       // Regular slots require a prior selection click before they
       // become drag-pannable (so a stray click doesn't pan something).
@@ -380,6 +466,17 @@ export function DesignEditMode() {
         dragState.el.style.top = dragState.origY + dy + "px";
         return;
       }
+      if (translateState) {
+        const dx = ev.clientX - translateState.startMx;
+        const dy = ev.clientY - translateState.startMy;
+        const newTx = translateState.origTx + dx;
+        const newTy = translateState.origTy + dy;
+        // Override just the translate component; preserve any other
+        // transforms (scale / rotate) by writing the full transform
+        // value. Simplest approach: append translate so it composes.
+        translateState.el.style.transform = `translate(${newTx}px, ${newTy}px)`;
+        return;
+      }
       if (bgPanState) {
         const dx = ev.clientX - bgPanState.startMx;
         const dy = ev.clientY - bgPanState.startMy;
@@ -409,6 +506,36 @@ export function DesignEditMode() {
           );
         } catch {}
         dragState = null;
+        return;
+      }
+      if (translateState) {
+        // Re-read final translate from the matrix the browser computed
+        // (in case other transforms were composed in).
+        const cs = window.getComputedStyle(translateState.el);
+        let finalTx = 0;
+        let finalTy = 0;
+        const m = /matrix\(([^)]+)\)/.exec(cs.transform || "");
+        if (m) {
+          const parts = m[1]!.split(",").map((s) => parseFloat(s.trim()));
+          if (parts.length >= 6) {
+            finalTx = parts[4] ?? 0;
+            finalTy = parts[5] ?? 0;
+          }
+        }
+        translateState.el.style.cursor = "";
+        document.documentElement.style.userSelect = "";
+        try {
+          window.parent?.postMessage(
+            {
+              type: "fl.design.translate",
+              elementId: translateState.id,
+              x: finalTx,
+              y: finalTy,
+            },
+            "*"
+          );
+        } catch {}
+        translateState = null;
         return;
       }
       if (bgPanState) {
@@ -448,6 +575,10 @@ export function DesignEditMode() {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("message", onModeMsg);
+      window.removeEventListener(
+        "fl.language.change",
+        onIframeLangChange as EventListener
+      );
       document.documentElement.classList.remove("fl-night-preview");
       style.remove();
     };
