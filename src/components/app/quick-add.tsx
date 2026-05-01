@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { parseQuickInput, describeParsed, describeNow, type ParsedQuickInput } from "@/lib/quick-parse";
 import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
+import { useTags } from "@/hooks/use-tags";
 import { useUIStore } from "@/store/ui";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
@@ -132,9 +133,21 @@ export function QuickAdd() {
   const updateTask = useUpdateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
+  // existing tag names — used both for color resolution on the preview
+  // pills AND as auto-detect context for the parser.
+  const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
 
-  const parsed = useMemo(() => parseQuickInput(text), [text]);
+  // Auto-detect the user's existing tags + projects whenever they're
+  // mentioned in plain prose. Same context the inline input uses.
+  const parseCtx = useMemo(
+    () => ({
+      existingTags: existingTags.map((t: any) => t.name),
+      existingProjects: projects.map((p: any) => p.name),
+    }),
+    [existingTags, projects]
+  );
+  const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
   const preview = useMemo(() => describeParsed(parsed, now), [parsed, now]);
   const quadrant = useMemo(() => classifyQuadrant(parsed, now), [parsed, now]);
 

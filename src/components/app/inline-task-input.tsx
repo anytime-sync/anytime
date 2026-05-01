@@ -40,7 +40,17 @@ export function InlineTaskInput({
   const { data: projects = [] } = useProjects();
   const aiParse = useParseTaskAI();
 
-  const parsed = useMemo(() => parseQuickInput(text), [text]);
+  // Pass the user's existing tags and lists in so the parser can
+  // auto-detect them in plain prose (e.g. "biz review meeting" picks
+  // up the "biz review" + "meeting" tags without typing #).
+  const parseCtx = useMemo(
+    () => ({
+      existingTags: existingTags.map((t: any) => t.name),
+      existingProjects: projects.map((p: any) => p.name),
+    }),
+    [existingTags, projects]
+  );
+  const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
   /**
@@ -175,12 +185,20 @@ export function InlineTaskInput({
             {parsed.rrule && (
               <PreviewChip icon={<Repeat className="size-3" />} label={shortRrule(parsed.rrule)} />
             )}
-            {parsed.reminder_at && (
+            {parsed.reminder_at ? (
               <PreviewChip
                 icon={<Bell className="size-3" />}
                 label={shortReminder(parsed.reminder_at, parsed.due_at)}
               />
-            )}
+            ) : parsed.reminder_offset_min ? (
+              // Offset parsed but no date yet — show "30m before · needs date"
+              // so the user sees the parser caught the reminder; once they
+              // add a date, it flips to a real reminder_at.
+              <PreviewChip
+                icon={<Bell className="size-3" />}
+                label={`${formatOffset(parsed.reminder_offset_min)} before · needs a date`}
+              />
+            ) : null}
             {parsed.priority > 0 && (
               <PreviewChip
                 icon={<Flag className="size-3" />}
@@ -264,6 +282,13 @@ function shortRrule(rule: string) {
   if (/FREQ=MONTHLY/i.test(rule)) return "Monthly";
   if (/FREQ=YEARLY/i.test(rule)) return "Yearly";
   return "Repeats";
+}
+function formatOffset(min: number): string {
+  if (min >= 60 && min % 60 === 0) {
+    const h = min / 60;
+    return `${h}h`;
+  }
+  return `${min}m`;
 }
 function shortReminder(reminderIso: string, dueIso: string | null) {
   if (!dueIso)
