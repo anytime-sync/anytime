@@ -119,6 +119,52 @@ export default function DesignPage() {
     }, 450);
   }
 
+  /**
+   * Cancel the autosave debounce and flush every dirty element NOW.
+   * Wired to the explicit "Save" button in the side panel — useful
+   * before navigating away or to force a confirmation toast even when
+   * autosave hasn't fired yet.
+   */
+  async function flushSaveNow() {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const ids = Array.from(dirtyIdsRef.current);
+    dirtyIdsRef.current.clear();
+    if (ids.length === 0) {
+      toast.success("Nothing to save");
+      return;
+    }
+    setAutoSaveStatus("saving");
+    let anyError = false;
+    for (const elementId of ids) {
+      const overrides = mapRef.current[elementId];
+      if (overrides === undefined) continue;
+      try {
+        const r = await fetch(
+          `/api/design/${encodeURIComponent(elementId)}`,
+          {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ overrides }),
+          }
+        );
+        if (!r.ok) anyError = true;
+      } catch {
+        anyError = true;
+      }
+    }
+    setAutoSaveStatus(anyError ? "error" : "saved");
+    if (anyError) toast.error("Some saves failed");
+    else toast.success(`Saved ${ids.length} change${ids.length === 1 ? "" : "s"}`);
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastTimerRef.current = setTimeout(
+      () => setAutoSaveStatus("idle"),
+      1500
+    );
+  }
+
   // When the operator flips Day/Night (or the iframe reloads), tell
   // the iframe to mirror the mode by toggling `.fl-night-preview` on
   // <html>. That class re-styles the entire palette + flips the
@@ -135,6 +181,16 @@ export default function DesignPage() {
     if (!w) return;
     w.postMessage({ type: "fl.design.set-bg-pan", on: bgPanMode }, "*");
   }, [bgPanMode, iframeKey]);
+
+  // Sync the sidebar's langMode tab → iframe's stored language. Without
+  // this, picking zh-TW in the sidebar wouldn't actually flip the iframe
+  // to zh-TW, so class-targeted CSS (`html[lang="zh-TW"] .editorial-number`)
+  // would never match in the preview and edits silently looked broken.
+  useEffect(() => {
+    const w = iframeRef.current?.contentWindow;
+    if (!w) return;
+    w.postMessage({ type: "fl.design.set-lang", lang: langMode }, "*");
+  }, [langMode, iframeKey]);
 
   // Reset pan mode whenever the user switches pages (iframe reload).
   useEffect(() => {
@@ -182,21 +238,37 @@ export default function DesignPage() {
         | { type: "fl.design.ready" }
         | { type: "fl.design.text"; textKey: string; value: string; locale: string }
         | { type: "fl.design.move"; elementId: string; x: number; y: number }
+        | { type: "fl.design.translate"; elementId: string; x: number; y: number }
         | { type: "fl.design.floating-text"; elementId: string; value: string; locale: string }
         | { type: "fl.design.bg-pan"; elementId: string; bgPosition: string }
         | { type: "fl.design.bg-pan-exited" }
+        | { type: "fl.design.lang-changed"; lang: LanguageCode }
         | undefined;
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.select") setSelected(data.elementId);
       if (data.type === "fl.design.ready") {
         // After iframe boots, push the full map so its DesignProvider
-        // mirrors our local edits, then re-apply the active mode so the
-        // night-preview class gets re-set after a reload.
+        // mirrors our local edits, then re-apply the active mode + lang
+        // so night-preview / html[lang] state survives the reload and
+        // matches the sidebar tabs.
         const w = iframeRef.current?.contentWindow;
         if (w) {
           w.postMessage({ type: "fl.design.bulk", map }, "*");
           w.postMessage({ type: "fl.design.set-mode", mode: bgMode }, "*");
+          w.postMessage({ type: "fl.design.set-lang", lang: langMode }, "*");
         }
+      }
+      if (data.type === "fl.design.lang-changed") {
+        // The user picked a language inside the iframe (LanguagePicker).
+        // Mirror that into the sidebar's langMode so subsequent edits
+        // route to the right (langs[xx]) bucket.
+        setLangMode(data.lang);
+      }
+      if (data.type === "fl.design.translate") {
+        // Drag-translated a selected slot inside the iframe — persist
+        // translateX / translateY through setStyle so the value lands
+        // in the active (langMode, bgMode) bucket and autosaves.
+        void persistTranslate(data.elementId, data.x, data.y);
       }
       if (data.type === "fl.design.text") {
         void saveText(data.textKey, data.value, data.locale);
@@ -254,6 +326,30 @@ export default function DesignPage() {
       });
       if (!r.ok) toast.error("Save failed");
     }
+    async function persistTranslate(elementId: string, x: number, y: number) {
+      // Route translateX/Y into the right bucket via applyStylePatch
+      // so dragging respects the active (langMode, bgMode) tabs.
+      const current = map[elementId] ?? {};
+      const merged = applyStylePatch(current, {
+        translateX: x === 0 ? undefined : x,
+        translateY: y === 0 ? undefined : y,
+      });
+      setMap((prev) => ({ ...prev, [elementId]: merged }));
+      // Echo into iframe for immediate sync.
+      const w = iframeRef.current?.contentWindow;
+      if (w) {
+        w.postMessage(
+          { type: "fl.design.update", elementId, overrides: merged },
+          "*"
+        );
+      }
+      const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ overrides: merged }),
+      });
+      if (!r.ok) toast.error("Move failed");
+    }
     async function persistMove(elementId: string, x: number, y: number) {
       const current = map[elementId] ?? {};
       const merged = { ...current, _x: x, _y: y };
@@ -267,7 +363,10 @@ export default function DesignPage() {
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
-  }, [map, bgMode]);
+    // langMode is read by applyStylePatch (called from persistTranslate)
+    // and by the ready/select branches that set lang on the iframe — so
+    // a fresh closure is required when it changes.
+  }, [map, bgMode, langMode]);
 
   const overrides = selected ? map[selected] ?? {} : {};
 
@@ -778,6 +877,15 @@ export default function DesignPage() {
                     {autoSaveStatus === "error" && "Save failed"}
                     {autoSaveStatus === "idle" && "Auto-save on"}
                   </span>
+                  <button
+                    onClick={flushSaveNow}
+                    disabled={autoSaveStatus === "saving"}
+                    className="btn-ghost h-8 text-xs px-3 inline-flex items-center gap-1.5"
+                    title="Flush any pending edits to the server immediately"
+                  >
+                    <Save className="size-3" />
+                    Save
+                  </button>
                   <button
                     onClick={reset}
                     disabled={savingId === selected}
