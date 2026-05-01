@@ -6,23 +6,42 @@ import type { DesignOverrides, StyleFields } from "./types";
  * Inline style is what we apply at runtime — it beats Tailwind class
  * defaults via CSS specificity, which is the whole point.
  *
- * Per-mode resolution: when `isDark` is true, every field defined
- * inside `o.night` wins over its day counterpart. Any field NOT
- * defined inside `night` still falls back to the top-level (day)
- * value, so existing rows render identically to before.
+ * Per-mode + per-language resolution. Last one wins per field:
+ *   1. top-level (baseline / English / day)
+ *   2. top-level `night` (when isDark)
+ *   3. langs[lang] (when lang is non-English and override exists)
+ *   4. langs[lang].night (when isDark, same condition)
+ *
+ * Existing rows without `langs` render identically to before, and
+ * rows without `night` still pick top-level fields cleanly.
  *
  * Floating elements (`_kind: 'floating'`) get position:absolute and
  * left/top from `_x` / `_y` on top of all the typography overrides.
  */
 export function overridesToStyle(
   o: DesignOverrides | undefined,
-  isDark = false
+  isDark = false,
+  lang: string = "en"
 ): CSSProperties {
   const s: CSSProperties = {};
   if (!o) return s;
   const ov: DesignOverrides = o;
+  // Skip the langs lookup for English — that's the baseline and
+  // editor writes never populate `langs.en`.
+  const langOv =
+    lang && lang !== "en" && ov.langs ? ov.langs[lang] : undefined;
 
   function pick<K extends keyof StyleFields>(key: K): StyleFields[K] | undefined {
+    if (
+      isDark &&
+      langOv?.night &&
+      (langOv.night as StyleFields)[key] !== undefined
+    ) {
+      return (langOv.night as StyleFields)[key];
+    }
+    if (langOv && (langOv as StyleFields)[key] !== undefined) {
+      return (langOv as StyleFields)[key];
+    }
     if (isDark && ov.night && ov.night[key] !== undefined) {
       return ov.night[key];
     }

@@ -7,6 +7,7 @@ import {
   forwardRef,
 } from "react";
 import { useDesign, useIsDark } from "./provider";
+import { useLanguage } from "@/lib/use-language";
 import { overridesToStyle } from "./style";
 
 /**
@@ -43,8 +44,12 @@ function DesignSlotInner(
   const Tag = (as ?? "div") as ElementType;
   const overrides = useDesign(id);
   const isDark = useIsDark();
+  const lang = useLanguage();
   if (overrides.hidden) return null;
-  const merged: CSSProperties = { ...style, ...overridesToStyle(overrides, isDark) };
+  const merged: CSSProperties = {
+    ...style,
+    ...overridesToStyle(overrides, isDark, lang),
+  };
   const dataAttrs: Record<string, string> = { "data-design-id": id };
   if (textKey) dataAttrs["data-design-text-key"] = textKey;
   return (

@@ -49,6 +49,21 @@ export type DesignOverrides = StyleFields & {
    */
   night?: StyleFields;
 
+  /**
+   * Per-language style overrides. Each entry can also nest a `night`
+   * sub-object for per-language-AND-dark-mode tweaks.
+   *
+   * Resolution precedence (per field, last one wins):
+   *   1. top-level (baseline / English)
+   *   2. top-level `night` (when isDark)
+   *   3. langs[lang]
+   *   4. langs[lang].night (when isDark)
+   *
+   * English is the implicit baseline — we don't store anything under
+   * `langs.en`. Existing rows without `langs` keep rendering identically.
+   */
+  langs?: Record<string, StyleFields & { night?: StyleFields }>;
+
   // --- Visibility ---
   hidden?: boolean;
 
