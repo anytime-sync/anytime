@@ -4,9 +4,40 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   LANGUAGES,
+  readStoredLanguage,
   setI18nOverrides,
   type LanguageCode,
 } from "@/lib/i18n";
+
+/**
+ * Patches the DOM directly so admin-edited text shows up even if the
+ * React tree never re-renders (e.g. when a stale `useLanguage` chunk
+ * is served from build cache and lacks the overrides-change listener).
+ *
+ * For every element with `data-design-text-key`, look up the override
+ * for the current locale and write it into textContent. We do this on
+ * the next animation frame so React's own initial paint commits first.
+ */
+function patchTextDom(
+  overrides: Partial<Record<LanguageCode, Record<string, string>>>
+) {
+  if (typeof window === "undefined") return;
+  const code = readStoredLanguage();
+  const map = overrides[code] ?? {};
+  const els = document.querySelectorAll<HTMLElement>("[data-design-text-key]");
+  els.forEach((el) => {
+    const key = el.dataset.designTextKey;
+    if (!key) return;
+    const value = map[key];
+    // Only patch when there's an override for THIS locale AND it differs
+    // from what's already rendered. We deliberately don't fall back to
+    // the English override here — that would replace correctly-translated
+    // hardcoded strings with the English version.
+    if (typeof value === "string" && value && el.textContent !== value) {
+      el.textContent = value;
+    }
+  });
+}
 
 /**
  * Loads runtime translation overrides from `site_content` and seeds
@@ -57,6 +88,11 @@ export function I18nOverridesBootstrap() {
         // override map mutates but the tree keeps showing hardcoded
         // defaults until some other state change forces a render.
         window.dispatchEvent(new Event("fl.i18n.overrides-changed"));
+        // Belt-and-suspenders: directly patch any rendered text-key
+        // elements in the DOM. This unblocks the case where the
+        // useLanguage listener hasn't been deployed yet (Vercel build
+        // cache occasionally hands back a stale compiled chunk).
+        requestAnimationFrame(() => patchTextDom(grouped));
       } catch {
         // Ignore — fall back to hardcoded defaults.
       }
@@ -84,6 +120,7 @@ export function I18nOverridesBootstrap() {
       setI18nOverrides(code, next);
       bump((n) => n + 1);
       window.dispatchEvent(new Event("fl.i18n.overrides-changed"));
+      requestAnimationFrame(() => patchTextDom(cacheRef.current));
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
