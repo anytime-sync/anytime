@@ -12,6 +12,28 @@ export type ParsedQuickInput = {
   projectName?: string;
   rrule: string | null;
   reminder_at: string | null;
+  /**
+   * Parsed minutes-before-due offset when the user typed
+   * "remind me 30m before" without (yet) typing a date. We can't
+   * compute reminder_at without due_at, but we surface the offset so
+   * the live preview chip can still say "30m before" while the user
+   * keeps typing.
+   */
+  reminder_offset_min?: number | null;
+};
+
+/**
+ * Optional context passed in by callers that have access to the user's
+ * existing tags + projects. When provided, the parser scans the
+ * leftover title for any tag or project NAME mentioned in plain text
+ * (no leading # or ~) and auto-attaches them. Lets a user type
+ * "biz review meeting" and have the existing tags "biz review" and
+ * "meeting" picked up automatically; "work" routes the task to the
+ * existing "Work" list without typing ~Work.
+ */
+export type QuickParseContext = {
+  existingTags?: string[];
+  existingProjects?: string[];
 };
 
 /**
@@ -33,7 +55,7 @@ export type ParsedQuickInput = {
  *   - #tag → tags
  *   - ~ListName → project routing
  */
-export function parseQuickInput(raw: string): ParsedQuickInput {
+export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQuickInput {
   // Normalize common typos / shorthands so the chrono fallback still gets
   // useful date phrases when the LLM parser is unavailable.
   let s = raw
@@ -188,6 +210,45 @@ export function parseQuickInput(raw: string): ParsedQuickInput {
     .replace(/[\s,;.\-—:]+$/, "")
     .trim();
 
+  // ---------- auto-detect existing tags / projects in the title ----------
+  // The user may type a tag or list name in plain prose ("biz review
+  // meeting" instead of "#biz-review #meeting"). When a context with
+  // existing names is supplied, scan the title and auto-attach matches.
+  // Longer names go first so "biz review" wins over a stray "biz" tag.
+  if (ctx) {
+    if (ctx.existingTags && ctx.existingTags.length > 0) {
+      const sortedTags = [...ctx.existingTags].sort(
+        (a, b) => b.length - a.length
+      );
+      for (const tagName of sortedTags) {
+        if (!tagName) continue;
+        // Case-insensitive whole-name match. We match on the title
+        // (post-extraction) so a user can still type "#tag" explicitly
+        // without it stacking with the auto-detected one.
+        if (tagNames.some((t) => t.toLowerCase() === tagName.toLowerCase())) continue;
+        const re = nameToWordRegex(tagName);
+        if (re.test(title)) tagNames.push(tagName);
+      }
+    }
+    if (
+      !projectName &&
+      ctx.existingProjects &&
+      ctx.existingProjects.length > 0
+    ) {
+      const sortedProjects = [...ctx.existingProjects].sort(
+        (a, b) => b.length - a.length
+      );
+      for (const projName of sortedProjects) {
+        if (!projName) continue;
+        const re = nameToWordRegex(projName);
+        if (re.test(title)) {
+          projectName = projName;
+          break;
+        }
+      }
+    }
+  }
+
   return {
     title,
     start_at,
@@ -198,7 +259,21 @@ export function parseQuickInput(raw: string): ParsedQuickInput {
     projectName,
     rrule,
     reminder_at,
+    reminder_offset_min: reminderOffsetMin,
   };
+}
+
+/**
+ * Build a regex that matches the given tag/project name as a whole
+ * "word" (or whole multi-word phrase) in free text. CJK names match
+ * verbatim because there's no \b word boundary in those scripts.
+ */
+function nameToWordRegex(name: string): RegExp {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Detect whether the name has any latin word chars; if not (CJK
+  // names like "工作" / "회의"), skip word-boundary anchoring.
+  const hasLatin = /[A-Za-z0-9_]/.test(name);
+  return new RegExp(hasLatin ? `\\b${escaped}\\b` : escaped, "i");
 }
 
 /**
