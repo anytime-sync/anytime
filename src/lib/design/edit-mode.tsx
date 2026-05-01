@@ -278,7 +278,11 @@ export function DesignEditMode() {
       action.slot.setAttribute("data-fl-selected", "1");
       try {
         window.parent?.postMessage(
-          { type: "fl.design.select", elementId: selectedId },
+          {
+            type: "fl.design.select",
+            elementId: selectedId,
+            textKey: action.slot.dataset.designTextKey,
+          },
           "*"
         );
       } catch {}
@@ -430,7 +434,11 @@ export function DesignEditMode() {
         slot.setAttribute("data-fl-selected", "1");
         try {
           window.parent?.postMessage(
-            { type: "fl.design.select", elementId: id },
+            {
+              type: "fl.design.select",
+              elementId: id,
+              textKey: slot.dataset.designTextKey,
+            },
             "*"
           );
         } catch {}
