@@ -576,6 +576,56 @@ export default function DesignPage() {
     toast.success("Text added — drag to position");
   }
 
+  /**
+   * Create or open a class-targeted override entry. Class entries
+   * live in the same site_design table under id `class:CLASSNAME` and
+   * are resolved at render time by class-css.ts. The same per-language
+   * + day/night controls in the side panel below all work because
+   * they operate on `map[selected]` regardless of whether `selected`
+   * is a per-element id or a `class:...` id.
+   */
+  async function addOrEditClass() {
+    const raw = window.prompt(
+      "CSS class name to target (e.g. editorial-number, font-display, wordmark)"
+    );
+    const cls = (raw ?? "").trim().replace(/^\./, "");
+    if (!cls) return;
+    if (!/^[\w-]+$/.test(cls)) {
+      toast.error("Class names can only contain letters, digits, _ and -");
+      return;
+    }
+    const elementId = `class:${cls}`;
+    const existing = map[elementId];
+    if (existing) {
+      // Already have overrides for this class — just select it for editing.
+      setSelected(elementId);
+      toast.success(`Editing class .${cls}`);
+      return;
+    }
+    const overrides: DesignOverrides = { _kind: "class", _class: cls };
+    const r = await fetch(`/api/design/${encodeURIComponent(elementId)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ overrides }),
+    });
+    if (!r.ok) {
+      toast.error("Could not create class override");
+      return;
+    }
+    setMap((prev) => ({ ...prev, [elementId]: overrides }));
+    setSelected(elementId);
+    // Echo into iframe so its DesignProvider re-generates the
+    // <style id="fl-class-overrides"> tag for live preview.
+    const w = iframeRef.current?.contentWindow;
+    if (w) {
+      w.postMessage(
+        { type: "fl.design.update", elementId, overrides },
+        "*"
+      );
+    }
+    toast.success(`Class .${cls} ready — tweak below`);
+  }
+
   async function deleteSelected() {
     if (!selected) return;
     if (!confirm("Delete this element?")) return;
@@ -653,6 +703,14 @@ export default function DesignPage() {
             Text
           </button>
           <button
+            onClick={addOrEditClass}
+            className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
+            title="Target a CSS class (e.g. editorial-number) — set per-language fontSize, color, weight, etc. once and it applies to every instance everywhere"
+          >
+            <Plus className="size-3" />
+            Class
+          </button>
+          <button
             onClick={() => setBgPanMode((v) => !v)}
             className={cn(
               "h-9 text-xs px-3 inline-flex items-center gap-1.5 rounded-md border",
@@ -689,7 +747,7 @@ export default function DesignPage() {
         {/* Side panel */}
         <aside className="border-l border-border surface overflow-y-auto">
           {!selected ? (
-            <EmptyHint />
+            <EmptyHint map={map} onPickClass={(id) => setSelected(id)} />
           ) : (
             <div className="p-5 space-y-5">
               <div>
@@ -1118,7 +1176,18 @@ export default function DesignPage() {
   );
 }
 
-function EmptyHint() {
+function EmptyHint({
+  map,
+  onPickClass,
+}: {
+  map: DesignMap;
+  onPickClass: (elementId: string) => void;
+}) {
+  // List existing class-targeted overrides so the operator can re-open
+  // any of them for editing without re-typing the class name.
+  const classEntries = Object.entries(map).filter(
+    ([id, ov]) => id.startsWith("class:") && ov._kind === "class"
+  );
   return (
     <div className="p-8 space-y-3">
       <p className="editorial-number text-[10px]">Click any element</p>
@@ -1132,6 +1201,44 @@ function EmptyHint() {
       <p className="text-[10px] text-muted-fg italic font-display pt-3">
         New element ids inherit the page&rsquo;s defaults until you save an override.
       </p>
+
+      {/* Class-targeted overrides — set once per class per language,
+          applies to every instance anywhere. Use the "+ Class" button
+          in the header to add a new one. */}
+      <div className="pt-5 border-t border-border space-y-2">
+        <p className="editorial-number text-[10px]">Class targets</p>
+        {classEntries.length === 0 ? (
+          <p className="text-[11px] text-muted-fg leading-relaxed">
+            None yet. Click <em>+ Class</em> in the header to set
+            per-language styles for any CSS class — e.g. tweak{" "}
+            <code className="text-[10px]">editorial-number</code>{" "}
+            to a different size on zh-TW.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {classEntries.map(([id, ov]) => {
+              const cls = ov._class || id.replace(/^class:/, "");
+              const langCount = ov.langs ? Object.keys(ov.langs).length : 0;
+              const hasNight = !!ov.night;
+              return (
+                <li key={id}>
+                  <button
+                    onClick={() => onPickClass(id)}
+                    className="btn-ghost w-full text-left px-2 py-1.5 text-xs flex items-center gap-2"
+                  >
+                    <code className="font-mono text-[11px]">.{cls}</code>
+                    <span className="ml-auto text-[10px] text-muted-fg tabular-nums">
+                      {langCount > 0 && `${langCount + 1} langs`}
+                      {langCount === 0 && hasNight && "day + night"}
+                      {langCount === 0 && !hasNight && "baseline only"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
