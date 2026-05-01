@@ -789,7 +789,7 @@ export default function DesignPage() {
                           title={
                             l.code === "en"
                               ? "Baseline (English) — applies to every locale until overridden"
-                              : `Tweak ${l.label} only`
+                              : `Tweak ${l.displayName} only`
                           }
                         >
                           {l.code === "en" ? "en (base)" : l.code}
@@ -1290,5 +1290,4 @@ function NumberSlider({
         {suffix ?? ""}
       </span>
     </div>
-  );
-}
+ 
