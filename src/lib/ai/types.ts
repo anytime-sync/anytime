@@ -16,6 +16,33 @@ export const ParsedTaskSchema = z.object({
 });
 export type ParsedTask = z.infer<typeof ParsedTaskSchema>;
 
+/**
+ * One task extracted from a scanned image. Same shape as ParsedTaskSchema
+ * minus the `min(1)` on title (the model sometimes returns short notes
+ * with empty titles which we want to filter out client-side rather than
+ * fail the whole batch on).
+ */
+export const ScannedTaskSchema = z.object({
+  title: z.string(),
+  start_at: z.string().nullable().optional(),
+  due_at: z.string().nullable(),
+  is_all_day: z.boolean().optional().default(false),
+  priority: z
+    .union([z.literal(0), z.literal(1), z.literal(3), z.literal(5)])
+    .default(0),
+  tagNames: z.array(z.string()).default([]),
+  projectName: z.string().nullable().optional(),
+  rrule: z.string().nullable().optional(),
+  reminder_at: z.string().nullable().optional(),
+  estimated_minutes: z.number().int().positive().nullable().optional(),
+});
+export type ScannedTask = z.infer<typeof ScannedTaskSchema>;
+
+export const ScannedTasksSchema = z.object({
+  tasks: z.array(ScannedTaskSchema),
+});
+export type ScannedTasks = z.infer<typeof ScannedTasksSchema>;
+
 export const QuadrantResultSchema = z.object({
   quadrant: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   reason: z.string(),

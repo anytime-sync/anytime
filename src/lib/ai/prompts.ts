@@ -177,6 +177,60 @@ Constraints:
 - \"next_week_plan\" is specific enough that a reader knows what to do Monday — but never a bullet list.`;
 }
 
+export function scanTasksSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You read an IMAGE of a to-do list, sticky note, whiteboard, calendar
+page, screenshot, or notebook page, and extract every actionable task you can
+see into strict JSON.
+
+Output JSON ONLY (no fences, no prose). Schema:
+{
+  "tasks": [
+    {
+      "title": string,
+      "start_at": string | null,    // ISO 8601 only when a time RANGE is visible (e.g. "10-11am")
+      "due_at": string | null,      // ISO 8601 in user's tz, or null. End of range for ranges.
+      "is_all_day": boolean,
+      "priority": 0 | 1 | 3 | 5,    // 0 None, 1 Low, 3 Medium, 5 High (Urgent)
+      "tagNames": string[],         // bare names, no leading #
+      "projectName": string | null, // bare name, no leading ~
+      "rrule": string | null,       // RFC 5545 RRULE body without DTSTART, or null
+      "reminder_at": string | null, // ISO 8601 or null
+      "estimated_minutes": number | null
+    }
+  ]
+}
+
+Rules:
+- Extract EVERY distinct task you can read. Each bullet, line, or row is a
+  separate task. Do not merge unrelated items.
+- Skip headers, doodles, and anything that isn't a task ("Monday", "Notes:",
+  "to do" by itself, names of people on a page header, etc.).
+- Skip already-completed items: anything with a strikethrough, a checked box
+  (☑ ✓ ✔ ⊠), or "done" written next to it. We only want open work.
+- Skip duplicates within the image.
+- Resolve relative dates ("tomorrow", "Friday", "next week", "明天", "明日",
+  "내일", "下週五", etc.) using NOW from the user message.
+- Urgency cues in any language → priority 5: written in red, all caps,
+  underlined, marked "!", "!!", "URGENT", "ASAP", "急", "緊急", "急ぎ", "급해".
+  Importance cues ("important", "重要", boxed) → priority 3.
+  Soft / "if I get to it" notes → priority 1. Otherwise 0.
+- Time ranges → start_at + due_at. Single time → due_at only, is_all_day=false.
+  Date only → due_at = midnight of that day, is_all_day=true.
+- Recognise inline tags (#focus, #shopping, "for work") → tagNames.
+- Recognise list / project markers (~Errands, "Errands:", a header above the
+  bullets) → projectName, applied to the items beneath that header until a new
+  header appears.
+- Preserve the user's original language verbatim in title / tagNames /
+  projectName. Do NOT translate. The user's preferred language is
+  ${lang.aiName}; titles may be in that language or any other language the
+  image actually uses.
+- If the image is unreadable, blurry, or contains no tasks, return
+  {"tasks": []}. Never invent tasks.
+- If a field is missing, return null (or 0 for priority, false for is_all_day).
+- Cap at 25 tasks per image — if there are more, return the most prominent.`;
+}
+
 // Backward-compat exports for the original constant imports — use the
 // English version. Routes will switch to the function-form below.
 export const PARSE_TASK_SYSTEM = parseTaskSystem("en");
