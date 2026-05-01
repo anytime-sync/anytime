@@ -19,6 +19,9 @@ const LS_KEY = "fl.language";
  * Listens to:
  *   - 'storage' (cross-tab updates)
  *   - 'fl.language.change' (same-tab updates dispatched by writeStoredLanguage)
+ *   - 'fl.i18n.overrides-changed' (admin/design text overrides loaded from
+ *      site_content; bumps a hidden version state so every t() consumer
+ *      re-renders with the fresh override map)
  */
 export function useLanguage(): LanguageCode {
   const [lang, setLang] = useState<LanguageCode>(DEFAULT_LANGUAGE);
