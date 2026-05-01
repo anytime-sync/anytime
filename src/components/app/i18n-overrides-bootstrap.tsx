@@ -53,6 +53,10 @@ export function I18nOverridesBootstrap() {
           setI18nOverrides(code, grouped[code]!);
         }
         bump((n) => n + 1);
+        // Tell every useLanguage() consumer to re-render. Without this the
+        // override map mutates but the tree keeps showing hardcoded
+        // defaults until some other state change forces a render.
+        window.dispatchEvent(new Event("fl.i18n.overrides-changed"));
       } catch {
         // Ignore — fall back to hardcoded defaults.
       }
@@ -79,6 +83,7 @@ export function I18nOverridesBootstrap() {
       cacheRef.current[code] = next;
       setI18nOverrides(code, next);
       bump((n) => n + 1);
+      window.dispatchEvent(new Event("fl.i18n.overrides-changed"));
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
