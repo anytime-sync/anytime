@@ -42,8 +42,14 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: "First Light — your space for clarity, focus, intentional progress",
+  // English baseline for the meta description. LanguageBootstrap swaps
+  // this for the localized poetic version on the client when the user's
+  // stored language isn't English — so search bots / link previews see
+  // English (acceptable, this is the canonical SEO copy), but visitors
+  // see their language in the browser tab and any Open Graph readers
+  // that re-resolve after page load.
   description:
-    "A calm operating system for getting things done. Tasks, calendar, habits, Pomodoro — synced anywhere.",
+    "First Light · A calm daily productivity tool for getting things done.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
