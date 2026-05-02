@@ -251,7 +251,7 @@ function MonthView({
                 style={{
                   gridRow: bar.weekRow + 1,
                   gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
-                  marginTop: `${30 + bar.lane * 22}px`,
+                  marginTop: `${36 + bar.lane * 22}px`,
                   marginLeft: bar.isFirstSegment ? "6px" : "0px",
                   marginRight: bar.isLastSegment ? "6px" : "0px",
                   alignSelf: "start",
@@ -259,7 +259,7 @@ function MonthView({
                   pointerEvents: "none",
                 }}
                 className={cn(
-                  "px-1.5 py-1 text-[11px] truncate font-medium text-fg",
+                  "bg-bg px-1.5 py-1 text-[11px] truncate font-medium text-fg",
                   bar.task.is_completed && "line-through opacity-60"
                 )}
                 title={bar.task.title}
@@ -311,7 +311,7 @@ function DayCell({
         "hover:bg-muted/40"
       )}
     >
-      <div className="flex items-center justify-between text-xs" data-day-cell-hit="1">
+      <div className="relative z-10 flex items-center justify-between text-xs" data-day-cell-hit="1">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
