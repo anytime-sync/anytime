@@ -7,7 +7,7 @@ import { Save, RotateCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Admin Content CMS — editorial styling matches the public landing.
+ * Admin Content CMS â editorial styling matches the public landing.
  * Each section reads like a numbered chapter with an italic serif
  * heading. Save writes to site_content; empty override deletes the row.
  */
@@ -131,7 +131,7 @@ export default function ContentPage() {
     <div className="px-8 md:px-12 py-12 max-w-5xl">
       <header className="mb-12">
         <p className="editorial-number text-[11px] mb-3">
-          The Admin Edition · Issue No. 04
+          The Admin Edition Â· Issue No. 04
         </p>
         <h1 className="font-display text-5xl md:text-6xl tracking-tight leading-[1.05]">
           Content<em className="font-display">, in five tongues.</em>
@@ -166,7 +166,7 @@ export default function ContentPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search keys or text…"
+            placeholder="Search keys or textâ¦"
             className="input w-full pl-8"
           />
         </div>
@@ -174,7 +174,7 @@ export default function ContentPage() {
 
       {loading ? (
         <p className="text-sm text-muted-fg italic font-display">
-          Setting the type…
+          Setting the typeâ¦
         </p>
       ) : (
         <div className="space-y-8">
@@ -202,27 +202,22 @@ export default function ContentPage() {
                         </code>
                         {overridden && (
                           <span className="text-[10px] uppercase tracking-wider text-accent">
-                            · overridden
+                            Â· overridden
                           </span>
                         )}
                       </div>
-                      <div className="grid md:grid-cols-2 gap-2">
-                        <div className="text-xs text-muted-fg p-2 bg-muted/40 rounded leading-relaxed">
-                          {row.defaultValue}
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <textarea
-                            value={row.override ?? ""}
-                            onChange={(e) =>
-                              setOverride(row.key, e.target.value)
-                            }
-                            placeholder="(uses default)"
-                            rows={Math.max(
-                              1,
-                              Math.ceil(row.defaultValue.length / 60)
-                            )}
-                            className="input text-sm leading-relaxed resize-y min-h-[34px]"
-                          />
+                      <div className="flex flex-col gap-1.5">
+                        <textarea
+                          value={row.override ?? row.defaultValue}
+                          onChange={(e) =>
+                            setOverride(row.key, e.target.value)
+                          }
+                          rows={Math.max(
+                            1,
+                            Math.ceil((row.override ?? row.defaultValue).length / 60)
+                          )}
+                          className="input text-sm leading-relaxed resize-y min-h-[34px]"
+                        />
                           <div className="flex items-center gap-2 text-xs">
                             <button
                               onClick={() => save(row)}
@@ -234,7 +229,7 @@ export default function ContentPage() {
                               )}
                             >
                               <Save className="size-3" />
-                              {saving === row.key ? "Saving…" : "Save"}
+                              {saving === row.key ? "Savingâ¦" : "Save"}
                             </button>
                             {overridden && (
                               <button
@@ -246,7 +241,6 @@ export default function ContentPage() {
                                 Restore default
                               </button>
                             )}
-                          </div>
                         </div>
                       </div>
                     </div>
