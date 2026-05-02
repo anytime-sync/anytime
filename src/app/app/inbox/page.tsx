@@ -8,6 +8,7 @@ export default function InboxPage() {
       subtitle="Tasks not assigned to a list."
       filter={{ view: "inbox" }}
       defaults={{ project_id: null }}
+      groupByDate
     />
   );
 }
