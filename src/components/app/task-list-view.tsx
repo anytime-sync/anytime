@@ -29,6 +29,11 @@ type Props = {
   /** localStorage key suffix (e.g. "today", "tomorrow"). Required when
    *  sortBy="due_at" so the manual-override flag can persist per view. */
   sortKey?: string;
+  /** Split incomplete tasks into date-bucket sections (Today / Tomorrow /
+   *  Next 7 days / Next 90 days / No date). Used by Inbox so a long flat
+   *  list reads like a calendar at a glance. Each section is its own
+   *  SortableTaskList — drag-to-reorder still works within a bucket. */
+  groupByDate?: boolean;
 };
 
 /** Sort tasks ascending by due_at; tasks without a due_at fall to the
@@ -62,6 +67,7 @@ export function TaskListView({
   headerExtra,
   sortBy = "manual",
   sortKey,
+  groupByDate = false,
 }: Props) {
   const { data: tasks = [], isLoading } = useTasks(filter);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
@@ -163,18 +169,25 @@ export function TaskListView({
           </div>
         ) : null}
 
-        {/* Always wrap in SortableTaskList so drag works in every view.
-            In date-sorted views, dragging flips the view to manual mode
-            (per-device, via localStorage) — the new positions stick and
-            the "Sort by date" chip appears to revert. */}
-        <SortableTaskList
-          tasks={incomplete}
-          onManualReorder={
-            sortBy === "due_at" && manualOverride !== "manual"
-              ? flipToManual
-              : undefined
-          }
-        />
+        {groupByDate ? (
+          <GroupedSections
+            tasks={incomplete}
+            onManualReorder={
+              sortBy === "due_at" && manualOverride !== "manual"
+                ? flipToManual
+                : undefined
+            }
+          />
+        ) : (
+          <SortableTaskList
+            tasks={incomplete}
+            onManualReorder={
+              sortBy === "due_at" && manualOverride !== "manual"
+                ? flipToManual
+                : undefined
+            }
+          />
+        )}
 
         {completed.length > 0 && (
           <div className="pt-4">
@@ -189,6 +202,99 @@ export function TaskListView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * Date-bucket grouping for Inbox (and any future view that opts in via
+ * `groupByDate`). Splits incomplete tasks into editorial sections that
+ * read like a small calendar. Each bucket renders its own SortableTaskList
+ * so drag-to-reorder still works within a section without leaking across
+ * boundaries.
+ */
+function GroupedSections({
+  tasks,
+  onManualReorder,
+}: {
+  tasks: TaskWithTags[];
+  onManualReorder?: () => void;
+}) {
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startTomorrow = new Date(startToday);
+  startTomorrow.setDate(startTomorrow.getDate() + 1);
+  const startDayAfter = new Date(startTomorrow);
+  startDayAfter.setDate(startDayAfter.getDate() + 1);
+  const startIn7 = new Date(startToday);
+  startIn7.setDate(startIn7.getDate() + 7);
+  const startIn90 = new Date(startToday);
+  startIn90.setDate(startIn90.getDate() + 90);
+
+  const today: TaskWithTags[] = [];
+  const tomorrow: TaskWithTags[] = [];
+  const next7: TaskWithTags[] = [];
+  const next90: TaskWithTags[] = [];
+  const noDate: TaskWithTags[] = [];
+
+  for (const t of tasks) {
+    if (!t.due_at) {
+      noDate.push(t);
+      continue;
+    }
+    const d = new Date(t.due_at);
+    if (d < startTomorrow) today.push(t);
+    else if (d < startDayAfter) tomorrow.push(t);
+    else if (d < startIn7) next7.push(t);
+    else if (d < startIn90) next90.push(t);
+    else noDate.push(t);
+  }
+
+  const sortBucket = (a: TaskWithTags, b: TaskWithTags) => {
+    const ad = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+    const bd = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+    if (ad !== bd) return ad - bd;
+    return (a.created_at ? new Date(a.created_at).getTime() : 0) -
+      (b.created_at ? new Date(b.created_at).getTime() : 0);
+  };
+  today.sort(sortBucket);
+  tomorrow.sort(sortBucket);
+  next7.sort(sortBucket);
+  next90.sort(sortBucket);
+
+  return (
+    <div className="space-y-4">
+      <Section title="Today" tasks={today} onManualReorder={onManualReorder} />
+      <Section title="Tomorrow" tasks={tomorrow} onManualReorder={onManualReorder} />
+      <Section title="Next 7 days" tasks={next7} onManualReorder={onManualReorder} />
+      <Section title="Next 90 days" tasks={next90} onManualReorder={onManualReorder} />
+      <Section title="No date" tasks={noDate} onManualReorder={onManualReorder} />
+    </div>
+  );
+}
+
+function Section({
+  title,
+  tasks,
+  onManualReorder,
+}: {
+  title: string;
+  tasks: TaskWithTags[];
+  onManualReorder?: () => void;
+}) {
+  if (tasks.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <div className="px-3 pt-1 flex items-baseline gap-2">
+        <p className="editorial-number text-[10px] uppercase tracking-[0.18em] text-muted-fg">
+          {title}
+        </p>
+        <span className="text-[10px] text-muted-fg/70 tabular-nums">
+          ({tasks.length})
+        </span>
+      </div>
+      <SortableTaskList tasks={tasks} onManualReorder={onManualReorder} />
     </div>
   );
 }
