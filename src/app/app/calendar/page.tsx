@@ -127,7 +127,15 @@ function MonthView({
           <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto">
             {days.map((d) => {
               const key = format(d, "yyyy-MM-dd");
-              const dayTasks = tasks.filter((t) => t.due_at && isSameDay(new Date(t.due_at), d));
+              const dayTasks = tasks.filter((t) => {
+                if (!t.due_at) return false;
+                const due = new Date(t.due_at);
+                const start = t.start_at ? new Date(t.start_at) : due;
+                // Compare date-only so we cover every day in the range,
+                // regardless of the time component on either bound.
+                const dStart = startOfDay(d);
+                return dStart >= startOfDay(start) && dStart <= startOfDay(due);
+              });
               return (
                 <DayCell
                   key={key}
@@ -194,7 +202,7 @@ function DayCell({
       </div>
       <div className="flex-1 flex flex-col gap-1 overflow-hidden" data-day-cell-hit="1">
         {tasks.slice(0, 4).map((t) => (
-          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} />
+          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} dayDate={date} />
         ))}
         {tasks.length > 4 && (
           <button
@@ -210,9 +218,35 @@ function DayCell({
   );
 }
 
-function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean }) {
+function DraggableTask({
+  task,
+  dimmed,
+  dayDate,
+}: {
+  task: TaskWithTags;
+  dimmed?: boolean;
+  /** The cell date this chip is being drawn in. Lets the chip detect
+   *  multi-day ranges and render with a continuation arrow on days that
+   *  aren't the start (and round only the matching corners). */
+  dayDate?: Date;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
+  // Multi-day shaping — only the first day of a range shows the title;
+  // continuation days show "→ title" so the eye can follow the bar.
+  // Corners stay rounded only on the matching end so adjacent cells read
+  // as one continuous bar.
+  let isStart = true;
+  let isEnd = true;
+  if (dayDate && task.start_at && task.due_at) {
+    const start = new Date(task.start_at);
+    const due = new Date(task.due_at);
+    if (start.toDateString() !== due.toDateString()) {
+      const dDay = startOfDay(dayDate);
+      isStart = dDay.getTime() === startOfDay(start).getTime();
+      isEnd = dDay.getTime() === startOfDay(due).getTime();
+    }
+  }
   return (
     <div
       ref={setNodeRef}
@@ -221,13 +255,18 @@ function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean 
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => { e.stopPropagation(); setSelected(task.id); }}
       className={cn(
-        "px-1.5 py-1 rounded text-[11px] truncate cursor-grab active:cursor-grabbing",
+        "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing",
         priorityBg(task.priority),
         task.is_completed && "line-through opacity-60",
-        (dimmed || isDragging) && "opacity-30"
+        (dimmed || isDragging) && "opacity-30",
+        // Square the inner edge of a multi-day bar so adjacent cells
+        // visually fuse; round only the outer end.
+        isStart && isEnd && "rounded",
+        isStart && !isEnd && "rounded-l",
+        !isStart && isEnd && "rounded-r"
       )}
     >
-      {task.title}
+      {!isStart && <span aria-hidden>→ </span>}{task.title}
     </div>
   );
 }
