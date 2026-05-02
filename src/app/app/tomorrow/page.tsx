@@ -4,22 +4,25 @@ import { Plus } from "lucide-react";
 import { TaskListView } from "@/components/app/task-list-view";
 import { DayTimeline, DayViewToggle, useDayViewMode } from "@/components/app/day-timeline";
 import { useUIStore } from "@/store/ui";
+import { t } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 
 /**
- * Tomorrow — same shape as Today: toggleable between the editorial list
+ * Tomorrow â same shape as Today: toggleable between the editorial list
  * (default) and the vertical timeline. The view-mode preference is
  * shared with Today via the `fl.dayMode` localStorage key, so flipping
- * one flips the other — a single mental setting for "how do I see a day".
+ * one flips the other â a single mental setting for "how do I see a day".
  */
 export default function TomorrowPage() {
   const [mode, setMode] = useDayViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const lang = useLanguage();
   const tomorrow = addDays(new Date(), 1);
 
   if (mode === "list") {
     return (
       <TaskListView
-        title="Tomorrow"
+        title={t(lang, "sidebar.tomorrow")}
         subtitle={format(tomorrow, "EEEE, MMMM d")}
         filter={{ view: "tomorrow" }}
         sortBy="due_at"
@@ -35,7 +38,7 @@ export default function TomorrowPage() {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              Tomorrow
+              {t(lang, "sidebar.tomorrow")}
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">
               {format(tomorrow, "EEEE, MMMM d")}
