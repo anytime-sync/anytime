@@ -25,7 +25,7 @@ import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
- * WeekTimeline ÃÂ¢ÃÂÃÂ MonÃÂ¢ÃÂÃÂSun, 7-column timeline view of the current ISO week.
+ * WeekTimeline ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ MonÃÂÃÂ¢ÃÂÃÂÃÂÃÂSun, 7-column timeline view of the current ISO week.
  */
 
 const RAIL_START_HOUR = 6;
@@ -208,11 +208,11 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
       <div ref={containerRef} className="flex-1 overflow-auto">
         <div className="flex relative">
           <div
-            className="shrink-0 sticky left-0 bg-bg/40 backdrop-blur-md z-30 border-r border-border/40"
+            className="shrink-0 sticky left-0 z-30 border-r border-border/40"
             style={{ width: RAIL_WIDTH }}
           >
             <div
-              className="border-b border-border/40 bg-bg/40 backdrop-blur-md"
+              className="border-b border-border/40"
               style={{ height: HEADER_HEIGHT }}
             />
             <div className="relative" style={{ height: RAIL_HEIGHT }}>
@@ -304,7 +304,7 @@ function DayColumn({
     >
       <div
         className={cn(
-          "sticky top-0 z-20 bg-bg/40 backdrop-blur-md border-b border-border/40",
+          "sticky top-0 z-20 border-b border-border/40",
           "px-2 flex flex-col items-center justify-center text-center"
         )}
         style={{ height: HEADER_HEIGHT }}
@@ -358,9 +358,9 @@ function DayColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "relative",
-          isOver && "bg-accent/[0.06]",
-          isToday && "bg-accent/[0.02]"
+          "relative bg-bg/40",
+          isOver && "bg-accent/[0.08]",
+          isToday && "bg-accent/[0.04]"
         )}
         style={{ height: RAIL_HEIGHT }}
       >
