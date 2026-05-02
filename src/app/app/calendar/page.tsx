@@ -315,7 +315,7 @@ function DayCell({
         "hover:bg-muted/40"
       )}
     >
-      <div className="flex items-center justify-between text-xs" data-day-cell-hit="1">
+      <div className="relative z-10 flex items-center justify-between text-xs" data-day-cell-hit="1">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
