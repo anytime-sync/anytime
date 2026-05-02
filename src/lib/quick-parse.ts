@@ -170,14 +170,77 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     }
   }
 
+  // ---------- explicit cross-date range (M/D-M/D, M/D to M/D) ----------
+  // Catches phrases chrono is unreliable on, like "5/5-5/8 biz trip" or
+  // "May 5 to May 8". When matched, we set start_at / due_at directly
+  // (all-day) and STRIP the phrase from `s` so the chrono pass below
+  // doesn't double-parse it. The year defaults to the current year, but
+  // if the range would fall more than 6 months in the past we bump it to
+  // next year (so a January range parsed in November still lands forward).
+  let rangeStartIso: string | null = null;
+  let rangeEndIso: string | null = null;
+  {
+    const numericRangeRx = /\b(\d{1,2})\/(\d{1,2})\s*(?:[-\u2013\u2014]|to)\s*(\d{1,2})\/(\d{1,2})\b/i;
+    const sameMonthRangeRx = /\b(\d{1,2})\/(\d{1,2})\s*[-\u2013\u2014]\s*(\d{1,2})\b(?!\/)/;
+    const m = s.match(numericRangeRx);
+    let m1: number | undefined, d1: number | undefined, m2: number | undefined, d2: number | undefined;
+    let matchText: string | undefined;
+    if (m) {
+      m1 = parseInt(m[1]!, 10);
+      d1 = parseInt(m[2]!, 10);
+      m2 = parseInt(m[3]!, 10);
+      d2 = parseInt(m[4]!, 10);
+      matchText = m[0];
+    } else {
+      const m2nd = s.match(sameMonthRangeRx);
+      if (m2nd) {
+        m1 = parseInt(m2nd[1]!, 10);
+        d1 = parseInt(m2nd[2]!, 10);
+        m2 = m1;
+        d2 = parseInt(m2nd[3]!, 10);
+        matchText = m2nd[0];
+      }
+    }
+    if (
+      m1 !== undefined && d1 !== undefined && m2 !== undefined && d2 !== undefined &&
+      m1 >= 1 && m1 <= 12 && d1 >= 1 && d1 <= 31 &&
+      m2 >= 1 && m2 <= 12 && d2 >= 1 && d2 <= 31 &&
+      matchText
+    ) {
+      const now = new Date();
+      let year = now.getFullYear();
+      let startDate = new Date(year, m1 - 1, d1);
+      // If the parsed start is more than 6 months in the past, assume
+      // the user meant next year.
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      if (startDate < sixMonthsAgo) {
+        year += 1;
+        startDate = new Date(year, m1 - 1, d1);
+      }
+      let endDate = new Date(year, m2 - 1, d2);
+      // Range crosses a year boundary (e.g. 12/30-1/3). Bump the end.
+      if (endDate < startDate) {
+        endDate = new Date(year + 1, m2 - 1, d2);
+      }
+      rangeStartIso = startDate.toISOString();
+      rangeEndIso = endDate.toISOString();
+      s = s.replace(matchText, " ").replace(/\s+/g, " ").trim();
+    }
+  }
+
   // ---------- chrono date ----------
   // chrono returns BOTH start and end for range phrases like "10am-11am",
   // "from 9 to 10", "5-7pm tomorrow" — we use that to fill start_at + due_at.
   // Single anchors ("at 9am") set due_at only.
-  let start_at: string | null = null;
-  let due_at: string | null = null;
-  let is_all_day = true;
-  const results = chrono.parse(s, new Date(), { forwardDate: true });
+  let start_at: string | null = rangeStartIso;
+  let due_at: string | null = rangeEndIso;
+  let is_all_day = rangeStartIso !== null;
+  // Skip chrono entirely when the explicit range already filled both
+  // start_at and due_at — re-parsing risks chrono pulling a phantom date
+  // out of leftover words.
+  const results = rangeStartIso
+    ? []
+    : chrono.parse(s, new Date(), { forwardDate: true });
   if (results.length) {
     const r = results[0]!;
     const startC = r.start;
@@ -288,7 +351,11 @@ export function describeParsed(p: ParsedQuickInput, now: Date = new Date()): str
 
   parts.push(`I'll add "${p.title}"`);
 
-  if (p.start_at && p.due_at) {
+  if (p.start_at && p.due_at && p.is_all_day) {
+    // Multi-day all-day range — describe as "May 5 to May 8" rather than
+    // pretending we have a time component.
+    parts.push(`from ${formatDue(p.start_at, true, now)} to ${formatDue(p.due_at, true, now)}`);
+  } else if (p.start_at && p.due_at) {
     parts.push(`from ${formatDue(p.start_at, false, now)} to ${formatTimeOnly(p.due_at)}`);
   } else if (p.due_at) {
     parts.push(`due ${formatDue(p.due_at, p.is_all_day, now)}`);
