@@ -174,12 +174,39 @@ function MonthView({
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
-    const taskId = String(e.active.id);
+    const aid = String(e.active.id);
+    const taskId = aid.startsWith("bar:") ? aid.split(":")[1] : aid;
     const date = String(e.over.id); // yyyy-mm-dd
     const t = tasks.find((x) => x.id === taskId);
     if (!t) return;
-    const orig = t.due_at ? new Date(t.due_at) : new Date();
     const [y, m, d] = date.split("-").map(Number);
+    // Multi-day: preserve duration. Treat drop date as the new start; shift due_at by same offset.
+    if (t.start_at && t.due_at) {
+      const sDay = startOfDay(new Date(t.start_at));
+      const dDay = startOfDay(new Date(t.due_at));
+      if (sDay.getTime() !== dDay.getTime()) {
+        const origStart = new Date(t.start_at);
+        const origDue = new Date(t.due_at);
+        const durationMs = dDay.getTime() - sDay.getTime();
+        const newStart = new Date(
+          y, m - 1, d,
+          t.is_all_day ? 0 : origStart.getHours(),
+          t.is_all_day ? 0 : origStart.getMinutes()
+        );
+        const newDue = new Date(newStart.getTime() + durationMs);
+        if (!t.is_all_day) {
+          newDue.setHours(origDue.getHours(), origDue.getMinutes());
+        }
+        update.mutate({
+          id: t.id,
+          start_at: newStart.toISOString(),
+          due_at: newDue.toISOString(),
+        });
+        return;
+      }
+    }
+    // Single-day fallback
+    const orig = t.due_at ? new Date(t.due_at) : new Date();
     const newDate = new Date(y, m - 1, d, t.is_all_day ? 0 : orig.getHours(), t.is_all_day ? 0 : orig.getMinutes());
     update.mutate({ id: t.id, due_at: newDate.toISOString() });
   }
@@ -247,30 +274,11 @@ function MonthView({
               );
             })}
             {multiDayBars.map((bar, i) => (
-              <div
+              <DraggableBar
                 key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
-                style={{
-                  gridRow: bar.weekRow + 1,
-                  gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
-                  marginTop: `${36 + bar.lane * 22}px`,
-                  marginLeft: bar.isFirstSegment ? "6px" : "0px",
-                  marginRight: bar.isLastSegment ? "6px" : "0px",
-                  alignSelf: "start",
-                  zIndex: 5,
-                  pointerEvents: "none",
-                }}
-                className={cn(
-                  "h-5 px-2 text-[11px] truncate cursor-pointer leading-5 flex items-center font-medium",
-                  priorityBg(bar.task.priority),
-                  bar.task.is_completed && "line-through opacity-60",
-                  bar.isFirstSegment && bar.isLastSegment && "rounded",
-                  bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
-                  !bar.isFirstSegment && bar.isLastSegment && "rounded-r"
-                )}
-                title={bar.task.title}
-              >
-                {bar.isFirstSegment ? bar.task.title : ""}
-              </div>
+                bar={bar}
+                dimmed={activeId === `bar:${bar.task.id}:${bar.weekRow}`}
+              />
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
@@ -391,6 +399,50 @@ function DragPreview({ task }: { task: TaskWithTags }) {
   );
 }
 
+type MultiDayBar = {
+  task: TaskWithTags;
+  weekRow: number;
+  startCol: number;
+  endCol: number;
+  isFirstSegment: boolean;
+  isLastSegment: boolean;
+  lane: number;
+};
+
+function DraggableBar({ bar, dimmed }: { bar: MultiDayBar; dimmed?: boolean }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `bar:${bar.task.id}:${bar.weekRow}`,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{
+        gridRow: bar.weekRow + 1,
+        gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
+        marginTop: `${36 + bar.lane * 22}px`,
+        marginLeft: bar.isFirstSegment ? "6px" : "0px",
+        marginRight: bar.isLastSegment ? "6px" : "0px",
+        alignSelf: "start",
+        zIndex: 5,
+      }}
+      className={cn(
+        "h-5 px-2 text-[11px] truncate cursor-grab active:cursor-grabbing leading-5 flex items-center font-medium",
+        priorityBg(bar.task.priority),
+        bar.task.is_completed && "line-through opacity-60",
+        (dimmed || isDragging) && "opacity-30",
+        bar.isFirstSegment && bar.isLastSegment && "rounded",
+        bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
+        !bar.isFirstSegment && bar.isLastSegment && "rounded-r"
+      )}
+      title={bar.task.title}
+    >
+      {bar.isFirstSegment ? bar.task.title : ""}
+    </div>
+  );
+}
+
 function priorityBg(priority: number) {
   if (priority >= 5) return "bg-p-high/15 text-p-high";
   if (priority >= 3) return "bg-p-med/15 text-p-med";
@@ -416,7 +468,17 @@ function DayView({
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
   const dayTasks = tasks
-    .filter((t) => t.due_at && new Date(t.due_at) >= dayStart && new Date(t.due_at) <= dayEnd)
+    .filter((t) => {
+      if (!t.due_at) return false;
+      const due = new Date(t.due_at);
+      if (due >= dayStart && due <= dayEnd) return true;
+      // Multi-day: include this task on every day its range covers
+      if (t.start_at) {
+        const s = new Date(t.start_at);
+        if (s <= dayEnd && due >= dayStart) return true;
+      }
+      return false;
+    })
     .sort((a, b) => {
       // All-day first, then by time ascending. Completed bubble down.
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
