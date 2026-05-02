@@ -16,12 +16,13 @@ import {
   useHabitLogs,
   useToggleHabitLog,
   useCreateHabit,
+  useDeleteHabit,
 } from "@/hooks/use-habits";
-import { Plus, Check, ChevronLeft, ChevronRight, Flame } from "lucide-react";
+import { Plus, Check, ChevronLeft, ChevronRight, Flame, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Habits — weekly grid where each row is a habit and each column is a
+ * Habits â weekly grid where each row is a habit and each column is a
  * day. Click a cell to log/unlog a completion. Streak count is computed
  * from consecutive days back from today (or the latest day with a log)
  * so it's always meaningful even when reviewing past weeks.
@@ -31,6 +32,7 @@ export default function HabitsPage() {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("\ud83c\udfaf");
   const create = useCreateHabit();
+  const remove = useDeleteHabit();
 
   // Week offset: 0 = this week, -1 = last week, +1 = next week, etc.
   const [weekOffset, setWeekOffset] = useState(0);
@@ -95,7 +97,7 @@ export default function HabitsPage() {
       ? `Next week \u00b7 ${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`
       : `${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`;
 
-  const colTemplate = "minmax(160px,1fr) repeat(7, 48px) 56px";
+  const colTemplate = "minmax(160px,1fr) repeat(7, 48px) 56px 28px";
 
   return (
     <div className="flex flex-col h-full">
@@ -177,6 +179,7 @@ export default function HabitsPage() {
             <div className="text-center text-xs text-muted-fg uppercase tracking-wider">
               Streak
             </div>
+            <div />
           </div>
 
           <div className="mt-3 space-y-1">
@@ -266,6 +269,23 @@ export default function HabitsPage() {
                     {streak > 0 && <Flame className="size-3.5" />}
                     {streak}
                   </div>
+                  <button
+                    type="button"
+                    aria-label={`Delete habit ${h.name}`}
+                    title={`Delete habit "${h.name}"`}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete habit "${h.name}"? This hides it from the list. Past logs are preserved.`
+                        )
+                      ) {
+                        remove.mutate(h.id);
+                      }
+                    }}
+                    className="mx-auto size-7 grid place-items-center rounded-md text-muted-fg/50 hover:text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 </div>
               );
             })}
