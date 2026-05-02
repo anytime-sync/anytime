@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
 import { TaskListView } from "@/components/app/task-list-view";
 import {
@@ -9,15 +10,17 @@ import {
   useWeekViewMode,
 } from "@/components/app/week-timeline";
 import { useUIStore } from "@/store/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Next 7 Days — toggleable between the editorial list (default) and the
- * Mon–Sun week timeline. List shows date-sorted tasks; timeline shows a
+ * Mon-Sun week timeline. List shows date-sorted tasks; timeline shows a
  * 7-column hour grid with drag-to-reschedule across days and times.
  */
 export default function Next7Page() {
   const [mode, setMode] = useWeekViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   if (mode === "list") {
     return (
@@ -27,15 +30,15 @@ export default function Next7Page() {
         filter={{ view: "next7" }}
         sortBy="due_at"
         sortKey="next7"
-        groupByDate
         headerExtra={<WeekViewToggle mode={mode} setMode={setMode} />}
       />
     );
   }
 
-  // Timeline mode — show the current ISO week (Mon–Sun) in the subtitle so
-  // the header matches the underlying date range the timeline renders.
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  // Timeline mode — reflect the offset in the subtitle so the header
+  // matches the underlying date range the timeline renders.
+  const baseStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekStart = addDays(baseStart, weekOffset * 7);
   const weekEnd = addDays(weekStart, 6);
   const subtitle = `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`;
 
@@ -49,7 +52,35 @@ export default function Next7Page() {
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              className="btn-ghost size-7 p-0 grid place-items-center"
+              onClick={() => setWeekOffset((o) => o - 1)}
+              aria-label="Previous week"
+              title="Previous week"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              className={cn(
+                "btn-ghost h-7 px-2 text-[11px]",
+                weekOffset === 0 && "opacity-40 cursor-not-allowed"
+              )}
+              onClick={() => setWeekOffset(0)}
+              disabled={weekOffset === 0}
+              aria-label="This week"
+              title="This week"
+            >
+              This
+            </button>
+            <button
+              className="btn-ghost size-7 p-0 grid place-items-center"
+              onClick={() => setWeekOffset((o) => o + 1)}
+              aria-label="Next week"
+              title="Next week"
+            >
+              <ChevronRight className="size-4" />
+            </button>
             <WeekViewToggle mode={mode} setMode={setMode} />
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
@@ -63,7 +94,7 @@ export default function Next7Page() {
           </div>
         </div>
       </div>
-      <WeekTimeline />
+      <WeekTimeline weekOffset={weekOffset} />
     </div>
   );
 }
