@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   readStoredLanguage,
   writeStoredLanguage,
@@ -28,6 +29,7 @@ import {
 export function DesignEditMode() {
   const sp = useSearchParams();
   const mode = sp?.get("design");
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -50,8 +52,13 @@ export function DesignEditMode() {
       if (!data || typeof data !== "object" || !("type" in data)) return;
       if (data.type === "fl.design.set-mode") {
         const cl = document.documentElement.classList;
-        if (data.mode === "night") cl.add("fl-night-preview");
-        else cl.remove("fl-night-preview");
+        if (data.mode === "night") {
+          cl.add("fl-night-preview");
+          setTheme("dark");
+        } else {
+          cl.remove("fl-night-preview");
+          setTheme("light");
+        }
         return;
       }
       if (data.type === "fl.design.set-bg-pan") {
