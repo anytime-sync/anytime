@@ -109,7 +109,11 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         touchAction: "pan-y",
       }}
       className={cn(
-        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border border-transparent relative bg-bg",
+        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border border-transparent relative",
+        // Opaque only while a swipe is in progress so the red delete
+        // background doesn't bleed through the row's content. At rest
+        // (swipeX === 0) the row is fully transparent.
+        swipeX !== 0 && "bg-bg",
         isSelected ? "bg-muted border-border" : "hover:bg-muted/60"
       )}
     >
