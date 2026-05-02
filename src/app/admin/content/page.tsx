@@ -7,7 +7,7 @@ import { Save, RotateCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Admin Content CMS â editorial styling matches the public landing.
+ * Admin Content CMS Ã¢ÂÂ editorial styling matches the public landing.
  * Each section reads like a numbered chapter with an italic serif
  * heading. Save writes to site_content; empty override deletes the row.
  */
@@ -84,28 +84,29 @@ export default function ContentPage() {
 
   async function save(row: StringRow) {
     setSaving(row.key);
-    const supabase = createClient();
     const value = (row.override ?? "").trim();
+    // Route through the admin endpoint so the service-role client
+    // bypasses RLS. The browser-side supabase client returns
+    // "permission denied for table users" because RLS on site_content
+    // references auth.users which the anon role can\u2019t SELECT.
+    const r = await fetch("/api/design/content", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale, key: row.key, value }),
+    });
+    if (!r.ok) {
+      setSaving(null);
+      return;
+    }
     if (!value) {
-      await supabase
-        .from("site_content")
-        .delete()
-        .eq("locale", locale)
-        .eq("key", row.key);
       setRows((rs) =>
-        rs.map((r) =>
-          r.key === row.key ? { ...r, override: null, pristine: null } : r
+        rs.map((r2) =>
+          r2.key === row.key ? { ...r2, override: null, pristine: null } : r2
         )
       );
     } else {
-      await supabase.from("site_content").upsert({
-        locale,
-        key: row.key,
-        value,
-        updated_at: new Date().toISOString(),
-      });
       setRows((rs) =>
-        rs.map((r) => (r.key === row.key ? { ...r, pristine: value } : r))
+        rs.map((r2) => (r2.key === row.key ? { ...r2, pristine: value } : r2))
       );
     }
     setSaving(null);
@@ -113,12 +114,10 @@ export default function ContentPage() {
 
   async function restore(row: StringRow) {
     setSaving(row.key);
-    const supabase = createClient();
-    await supabase
-      .from("site_content")
-      .delete()
-      .eq("locale", locale)
-      .eq("key", row.key);
+    await fetch(
+      `/api/design/content?locale=${encodeURIComponent(locale)}&key=${encodeURIComponent(row.key)}`,
+      { method: "DELETE" }
+    );
     setRows((rs) =>
       rs.map((r) =>
         r.key === row.key ? { ...r, override: null, pristine: null } : r
@@ -131,7 +130,7 @@ export default function ContentPage() {
     <div className="px-8 md:px-12 py-12 max-w-5xl">
       <header className="mb-12">
         <p className="editorial-number text-[11px] mb-3">
-          The Admin Edition Â· Issue No. 04
+          The Admin Edition ÃÂ· Issue No. 04
         </p>
         <h1 className="font-display text-5xl md:text-6xl tracking-tight leading-[1.05]">
           Content<em className="font-display">, in five tongues.</em>
@@ -166,7 +165,7 @@ export default function ContentPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search keys or textâ¦"
+            placeholder="Search keys or textÃ¢ÂÂ¦"
             className="input w-full pl-8"
           />
         </div>
@@ -174,7 +173,7 @@ export default function ContentPage() {
 
       {loading ? (
         <p className="text-sm text-muted-fg italic font-display">
-          Setting the typeâ¦
+          Setting the typeÃ¢ÂÂ¦
         </p>
       ) : (
         <div className="space-y-8">
@@ -202,7 +201,7 @@ export default function ContentPage() {
                         </code>
                         {overridden && (
                           <span className="text-[10px] uppercase tracking-wider text-accent">
-                            Â· overridden
+                            ÃÂ· overridden
                           </span>
                         )}
                       </div>
@@ -229,7 +228,7 @@ export default function ContentPage() {
                               )}
                             >
                               <Save className="size-3" />
-                              {saving === row.key ? "Savingâ¦" : "Save"}
+                              {saving === row.key ? "SavingÃ¢ÂÂ¦" : "Save"}
                             </button>
                             {overridden && (
                               <button
