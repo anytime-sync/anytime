@@ -25,7 +25,7 @@ import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
- * WeekTimeline — Mon–Sun, 7-column timeline view of the current ISO week.
+ * WeekTimeline â MonâSun, 7-column timeline view of the current ISO week.
  */
 
 const RAIL_START_HOUR = 6;
@@ -87,7 +87,7 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
   return out;
 }
 
-export function WeekTimeline() {
+export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
   const update = useUpdateTask();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
@@ -100,8 +100,8 @@ export function WeekTimeline() {
   }, []);
 
   const weekStart = useMemo(
-    () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-    [now.toDateString()]
+    () => addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), weekOffset * 7),
+    [now.toDateString(), weekOffset]
   );
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
