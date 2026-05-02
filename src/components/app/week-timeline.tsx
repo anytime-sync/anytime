@@ -25,7 +25,7 @@ import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
- * WeekTimeline ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ MonÃÂÃÂ¢ÃÂÃÂÃÂÃÂSun, 7-column timeline view of the current ISO week.
+ * WeekTimeline ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ MonÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂSun, 7-column timeline view of the current ISO week.
  */
 
 const RAIL_START_HOUR = 6;
@@ -328,7 +328,7 @@ function DayColumn({
       </div>
 
       {allDayTasks.length > 0 && (
-        <div className="flex flex-col gap-0.5 px-1.5 py-1.5 border-b border-border/40 bg-bg/40">
+        <div className="flex flex-col gap-0.5 px-1.5 py-1.5 border-b border-border/40 bg-bg/15">
           {allDayTasks.slice(0, 3).map((t) => (
             <button
               key={t.id}
@@ -358,7 +358,7 @@ function DayColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "relative bg-bg/40",
+          "relative bg-bg/15",
           isOver && "bg-accent/[0.08]",
           isToday && "bg-accent/[0.04]"
         )}
