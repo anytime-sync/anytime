@@ -12,6 +12,7 @@ export default function Next90Page() {
       filter={{ view: "next90" }}
       sortBy="due_at"
       sortKey="next90"
+      groupByDate
     />
   );
 }
