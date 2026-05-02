@@ -17,10 +17,10 @@ import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
 
 /**
- * Calendar â month grid with click-through to single-day view.
+ * Calendar Ã¢ÂÂ month grid with click-through to single-day view.
  *
  * Two modes, switched by `mode` state:
- *   - "month": classic 7Ã6 grid, drag tasks across days, see at-a-glance
+ *   - "month": classic 7ÃÂ6 grid, drag tasks across days, see at-a-glance
  *   - "day":   single day shown as a clean editorial list with prev/next
  *              arrows; lands when the user clicks a date number on the
  *              month grid OR the empty area of a day cell.
@@ -104,7 +104,7 @@ function MonthView({
       if (!t.start_at || !t.due_at) continue;
       const s = startOfDay(new Date(t.start_at)).getTime();
       const e = startOfDay(new Date(t.due_at)).getTime();
-      if (s === e) continue; // single-day â rendered in its cell
+      if (s === e) continue; // single-day Ã¢ÂÂ rendered in its cell
       if (s > lastDay || e < firstDay) continue; // outside visible grid
 
       const clampedStart = Math.max(s, firstDay);
@@ -159,7 +159,7 @@ function MonthView({
       }
     }
 
-    // For each cell index, the number of bar lanes occupying it â so the
+    // For each cell index, the number of bar lanes occupying it Ã¢ÂÂ so the
     // cell can reserve vertical space above its single-day task chips.
     const cellLanes: number[] = new Array(days.length).fill(0);
     for (const bar of bars) {
@@ -246,7 +246,7 @@ function MonthView({
           <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
-              // Single-day tasks only â multi-day tasks become overlay
+              // Single-day tasks only Ã¢ÂÂ multi-day tasks become overlay
               // bars rendered as siblings below.
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
@@ -429,7 +429,7 @@ function DraggableBar({ bar, dimmed }: { bar: MultiDayBar; dimmed?: boolean }) {
       }}
       className={cn(
         "h-5 px-2 text-[11px] truncate cursor-grab active:cursor-grabbing leading-5 flex items-center font-medium",
-        priorityBg(bar.task.priority),
+        "bg-accent/20 text-accent-fg ring-1 ring-accent/40",
         bar.task.is_completed && "line-through opacity-60",
         (dimmed || isDragging) && "opacity-30",
         bar.isFirstSegment && bar.isLastSegment && "rounded",
@@ -540,7 +540,7 @@ function DayView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
-        {/* Inline add â pre-fills due_at to this date so anything typed
+        {/* Inline add Ã¢ÂÂ pre-fills due_at to this date so anything typed
             here lands on the visible day, even if the AI parser doesn't
             see an explicit date in the user's text. */}
         <InlineTaskInput
@@ -550,7 +550,7 @@ function DayView({
 
         {dayTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
-            <div className="text-3xl mb-2 font-display"><em>â</em></div>
+            <div className="text-3xl mb-2 font-display"><em>Ã¢ÂÂ</em></div>
             <p className="text-sm">Nothing scheduled for this day.</p>
           </div>
         ) : (
@@ -564,7 +564,7 @@ function DayView({
         {completed.length > 0 && (
           <div className="pt-4">
             <p className="px-3 text-xs text-muted-fg mb-1">
-              Completed Â· {completed.length}
+              Completed ÃÂ· {completed.length}
             </p>
             {completed.map((t) => (
               <TaskItem key={t.id} task={t} />
