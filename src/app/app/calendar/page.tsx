@@ -17,10 +17,10 @@ import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
 
 /**
- * Calendar Ã¢ÂÂ month grid with click-through to single-day view.
+ * Calendar ÃÂ¢ÃÂÃÂ month grid with click-through to single-day view.
  *
  * Two modes, switched by `mode` state:
- *   - "month": classic 7ÃÂ6 grid, drag tasks across days, see at-a-glance
+ *   - "month": classic 7ÃÂÃÂ6 grid, drag tasks across days, see at-a-glance
  *   - "day":   single day shown as a clean editorial list with prev/next
  *              arrows; lands when the user clicks a date number on the
  *              month grid OR the empty area of a day cell.
@@ -77,6 +77,7 @@ function MonthView({
   const update = useUpdateTask();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [dragBarRect, setDragBarRect] = useState<{ width: number; height: number } | null>(null);
   const activeTaskId = activeId?.startsWith("bar:") ? activeId.split(":")[1] : activeId;
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
 
@@ -104,7 +105,7 @@ function MonthView({
       if (!t.start_at || !t.due_at) continue;
       const s = startOfDay(new Date(t.start_at)).getTime();
       const e = startOfDay(new Date(t.due_at)).getTime();
-      if (s === e) continue; // single-day Ã¢ÂÂ rendered in its cell
+      if (s === e) continue; // single-day ÃÂ¢ÃÂÃÂ rendered in its cell
       if (s > lastDay || e < firstDay) continue; // outside visible grid
 
       const clampedStart = Math.max(s, firstDay);
@@ -159,7 +160,7 @@ function MonthView({
       }
     }
 
-    // For each cell index, the number of bar lanes occupying it Ã¢ÂÂ so the
+    // For each cell index, the number of bar lanes occupying it ÃÂ¢ÃÂÃÂ so the
     // cell can reserve vertical space above its single-day task chips.
     const cellLanes: number[] = new Array(days.length).fill(0);
     for (const bar of bars) {
@@ -239,14 +240,26 @@ function MonthView({
         </div>
         <DndContext
           sensors={sensors}
-          onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+          onDragStart={(e: DragStartEvent) => {
+            const aid = String(e.active.id);
+            setActiveId(aid);
+            if (aid.startsWith("bar:")) {
+              const el = document.querySelector(`[data-bar-id="${aid}"]`);
+              if (el) {
+                const r = el.getBoundingClientRect();
+                setDragBarRect({ width: r.width, height: r.height });
+              }
+            } else {
+              setDragBarRect(null);
+            }
+          }}
           onDragEnd={onDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
           <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
-              // Single-day tasks only Ã¢ÂÂ multi-day tasks become overlay
+              // Single-day tasks only ÃÂ¢ÃÂÃÂ multi-day tasks become overlay
               // bars rendered as siblings below.
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
@@ -282,7 +295,13 @@ function MonthView({
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
-            {activeTask ? <DragPreview task={activeTask} /> : null}
+            {activeTask ? (
+              activeId?.startsWith("bar:") && dragBarRect ? (
+                <MultiDayBarPreview task={activeTask} width={dragBarRect.width} />
+              ) : (
+                <DragPreview task={activeTask} />
+              )
+            ) : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -418,6 +437,7 @@ function DraggableBar({ bar, dimmed }: { bar: MultiDayBar; dimmed?: boolean }) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      data-bar-id={`bar:${bar.task.id}:${bar.weekRow}`}
       style={{
         gridRow: bar.weekRow + 1,
         gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
@@ -439,6 +459,21 @@ function DraggableBar({ bar, dimmed }: { bar: MultiDayBar; dimmed?: boolean }) {
       title={bar.task.title}
     >
       {bar.isFirstSegment ? bar.task.title : ""}
+    </div>
+  );
+}
+
+function MultiDayBarPreview({ task, width }: { task: TaskWithTags; width: number }) {
+  return (
+    <div
+      style={{ width }}
+      className={cn(
+        "h-5 px-2 text-[11px] truncate leading-5 flex items-center font-medium rounded shadow-2xl",
+        "bg-accent/30 text-accent-fg ring-2 ring-accent",
+        task.is_completed && "line-through opacity-60"
+      )}
+    >
+      {task.title}
     </div>
   );
 }
@@ -540,7 +575,7 @@ function DayView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
-        {/* Inline add Ã¢ÂÂ pre-fills due_at to this date so anything typed
+        {/* Inline add ÃÂ¢ÃÂÃÂ pre-fills due_at to this date so anything typed
             here lands on the visible day, even if the AI parser doesn't
             see an explicit date in the user's text. */}
         <InlineTaskInput
@@ -550,7 +585,7 @@ function DayView({
 
         {dayTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
-            <div className="text-3xl mb-2 font-display"><em>Ã¢ÂÂ</em></div>
+            <div className="text-3xl mb-2 font-display"><em>ÃÂ¢ÃÂÃÂ</em></div>
             <p className="text-sm">Nothing scheduled for this day.</p>
           </div>
         ) : (
@@ -564,7 +599,7 @@ function DayView({
         {completed.length > 0 && (
           <div className="pt-4">
             <p className="px-3 text-xs text-muted-fg mb-1">
-              Completed ÃÂ· {completed.length}
+              Completed ÃÂÃÂ· {completed.length}
             </p>
             {completed.map((t) => (
               <TaskItem key={t.id} task={t} />
