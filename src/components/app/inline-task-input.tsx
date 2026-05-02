@@ -9,6 +9,7 @@ import {
 } from "@/lib/quick-parse";
 import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
+import { useTags } from "@/hooks/use-tags";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,10 @@ export function InlineTaskInput({
   const update = useUpdateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
+  // Resolve known tag colors so #tag in the preview pills matches the
+  // sidebar / task-row look. New tag names (no row yet) fall back to the
+  // accent gold so they still read as a tag, not a generic chip.
+  const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
 
   // Pass the user's existing tags and lists in so the parser can
@@ -209,9 +214,21 @@ export function InlineTaskInput({
             {parsed.projectName && (
               <PreviewChip icon={<Folder className="size-3" />} label={parsed.projectName} />
             )}
-            {parsed.tagNames.map((t) => (
-              <PreviewChip key={t} icon={<Hash className="size-3" />} label={t} />
-            ))}
+            {parsed.tagNames.map((t) => {
+              const existing = existingTags.find(
+                (x) => x.name.toLowerCase() === t.toLowerCase()
+              );
+              const color = existing?.color ?? "var(--accent, #b8860b)";
+              return (
+                <span
+                  key={t}
+                  className="inline-flex items-center h-5 rounded px-1.5 text-[10px] font-medium leading-none"
+                  style={{ backgroundColor: color, color: "#fff" }}
+                >
+                  {t}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
