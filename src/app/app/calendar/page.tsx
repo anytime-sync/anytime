@@ -223,16 +223,14 @@ function MonthView({
               // bars rendered as siblings below.
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
-                const due = new Date(t.due_at);
-                if (isSameDay(due, d)) return true;
-                // Multi-day: include in every cell from start_at..due_at
-                if (t.start_at) {
-                  const s = startOfDay(new Date(t.start_at)).getTime();
-                  const e = startOfDay(new Date(t.due_at)).getTime();
-                  const day = startOfDay(d).getTime();
-                  if (day >= s && day <= e) return true;
+                if (!isSameDay(new Date(t.due_at), d)) return false;
+                if (
+                  t.start_at &&
+                  !isSameDay(new Date(t.start_at), new Date(t.due_at))
+                ) {
+                  return false;
                 }
-                return false;
+                return true;
               });
               return (
                 <DayCell
@@ -243,10 +241,37 @@ function MonthView({
                   tasks={dayTasks}
                   activeId={activeId}
                   onPickDay={onPickDay}
+                  reservedLanes={cellLanes[i] ?? 0}
                   style={{ gridRow: Math.floor(i / 7) + 1, gridColumn: (i % 7) + 1 }}
                 />
               );
             })}
+            {multiDayBars.map((bar, i) => (
+              <div
+                key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
+                style={{
+                  gridRow: bar.weekRow + 1,
+                  gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
+                  marginTop: `${36 + bar.lane * 22}px`,
+                  marginLeft: bar.isFirstSegment ? "6px" : "0px",
+                  marginRight: bar.isLastSegment ? "6px" : "0px",
+                  alignSelf: "start",
+                  zIndex: 5,
+                  pointerEvents: "none",
+                }}
+                className={cn(
+                  "h-5 px-2 text-[11px] truncate cursor-pointer leading-5 flex items-center font-medium",
+                  priorityBg(bar.task.priority),
+                  bar.task.is_completed && "line-through opacity-60",
+                  bar.isFirstSegment && bar.isLastSegment && "rounded",
+                  bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
+                  !bar.isFirstSegment && bar.isLastSegment && "rounded-r"
+                )}
+                title={bar.task.title}
+              >
+                {bar.isFirstSegment ? bar.task.title : ""}
+              </div>
+            ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
             {activeTask ? <DragPreview task={activeTask} /> : null}
@@ -258,7 +283,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay, style,
+  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, style,
 }: {
   dateKey: string;
   date: Date;
@@ -266,10 +291,14 @@ function DayCell({
   tasks: TaskWithTags[];
   activeId: string | null;
   onPickDay: (d: Date) => void;
+  reservedLanes: number;
   style?: React.CSSProperties;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
+  // Reserve vertical room above task chips for any multi-day bars
+  // passing through this cell (each lane = 22px).
+  const reservedHeight = reservedLanes * 22;
   return (
     <div
       ref={setNodeRef}
@@ -304,6 +333,13 @@ function DayCell({
           {format(date, "d")}
         </button>
       </div>
+      {reservedHeight > 0 && (
+        <div
+          aria-hidden
+          style={{ height: reservedHeight }}
+          data-day-cell-hit="1"
+        />
+      )}
       <div className="flex-1 flex flex-col gap-1 overflow-hidden" data-day-cell-hit="1">
         {tasks.slice(0, 4).map((t) => (
           <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} />
