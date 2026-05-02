@@ -10,22 +10,25 @@ import {
   useWeekViewMode,
 } from "@/components/app/week-timeline";
 import { useUIStore } from "@/store/ui";
+import { t } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 import { cn } from "@/lib/utils";
 
 /**
- * Next 7 Days â toggleable between the editorial list (default) and the
+ * Next 7 Days Ã¢ÂÂ toggleable between the editorial list (default) and the
  * Mon-Sun week timeline. List shows date-sorted tasks; timeline shows a
  * 7-column hour grid with drag-to-reschedule across days and times.
  */
 export default function Next7Page() {
   const [mode, setMode] = useWeekViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const lang = useLanguage();
   const [weekOffset, setWeekOffset] = useState(0);
 
   if (mode === "list") {
     return (
       <TaskListView
-        title="Next 7 Days"
+        title={t(lang, "sidebar.next7")}
         subtitle="Tasks due within the next week."
         filter={{ view: "next7" }}
         sortBy="due_at"
@@ -35,12 +38,12 @@ export default function Next7Page() {
     );
   }
 
-  // Timeline mode â reflect the offset in the subtitle so the header
+  // Timeline mode Ã¢ÂÂ reflect the offset in the subtitle so the header
   // matches the underlying date range the timeline renders.
   const baseStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekStart = addDays(baseStart, weekOffset * 7);
   const weekEnd = addDays(weekStart, 6);
-  const subtitle = `${format(weekStart, "MMM d")} â ${format(weekEnd, "MMM d")}`;
+  const subtitle = `${format(weekStart, "MMM d")} Ã¢ÂÂ ${format(weekEnd, "MMM d")}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -48,7 +51,7 @@ export default function Next7Page() {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              Next 7 Days
+              {t(lang, "sidebar.next7")}
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">{subtitle}</p>
           </div>
