@@ -52,6 +52,24 @@ export function useCreateHabit() {
   });
 }
 
+export function useDeleteHabit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (habitId: string) => {
+      const supabase = createClient();
+      // Archive instead of hard-delete so existing habit_logs (and their
+      // streak history) stay intact and can be restored later.
+      const { error } = await supabase
+        .from("habits")
+        .update({ is_archived: true })
+        .eq("id", habitId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["habits"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useToggleHabitLog() {
   const qc = useQueryClient();
   return useMutation({
