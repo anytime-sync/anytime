@@ -242,6 +242,7 @@ function MonthView({
                   activeId={activeId}
                   onPickDay={onPickDay}
                   reservedLanes={cellLanes[i] ?? 0}
+                  style={{ gridRow: Math.floor(i / 7) + 1, gridColumn: (i % 7) + 1 }}
                 />
               );
             })}
@@ -278,7 +279,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes,
+  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, style,
 }: {
   dateKey: string;
   date: Date;
@@ -287,6 +288,7 @@ function DayCell({
   activeId: string | null;
   onPickDay: (d: Date) => void;
   reservedLanes: number;
+  style?: React.CSSProperties;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
@@ -296,6 +298,7 @@ function DayCell({
   return (
     <div
       ref={setNodeRef}
+      style={style}
       onClick={(e) => {
         // Open day view if user clicked the cell itself, not a child
         // (drag handles, task chips). Tasks have stopPropagation in
