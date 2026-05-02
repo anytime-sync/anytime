@@ -381,18 +381,32 @@ function SortableSidebarList({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.45 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
+  // Listeners go on the wrapper itself — same pattern as SortableLink
+  // for the top-nav rows (Today, Tomorrow, …). PointerSensor's 5px
+  // activation distance lets a short click pass through to the inner
+  // Link or the ⋯ menu button without ever starting a drag. No
+  // overlay required, so the cursor + hover affordances behave
+  // identically to the other rows.
   return (
-    <div ref={setNodeRef} style={style} className="relative">
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "group relative",
+        isDragging ? "cursor-grabbing" : "cursor-grab"
+      )}
+    >
       <SidebarListItem project={project} active={active} />
-      {/* Drag overlay — cuts a 36px gutter on the right so the ⋯ menu
-          button isn't covered by the drag-handle layer. */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute inset-0 right-9 cursor-grab active:cursor-grabbing"
+      {/* Hover-revealed grip dot — sits in the gap between the title
+          and the ⋯ menu button (which lives at right-1) so the two
+          never collide. Matches SortableLink's affordance. */}
+      <GripVertical
+        className="absolute top-1/2 right-7 -translate-y-1/2 size-3.5 text-muted-fg/0 group-hover:text-muted-fg/60 transition-colors pointer-events-none"
         aria-hidden
       />
     </div>
