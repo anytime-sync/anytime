@@ -19,7 +19,7 @@ import type { DesignOverrides, DesignMap, StyleFields } from "@/lib/design/types
 import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
 
 /**
- * /admin/design — visual editor.
+ * /admin/design â visual editor.
  *
  * Layout: page-picker top bar + iframe preview on the left + side
  * panel on the right. The iframe loads each editable page with
@@ -27,7 +27,7 @@ import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
  * postMessages (selection, override updates) and shoots back the
  * element_id of any clicked DesignSlot.
  *
- * Style overrides are SHARED across all locales — text per-locale
+ * Style overrides are SHARED across all locales â text per-locale
  * still lives in the existing /admin/content CMS.
  */
 
@@ -60,12 +60,12 @@ export default function DesignPage() {
   const [map, setMap] = useState<DesignMap>({});
   const [selected, setSelected] = useState<string | null>(null);
   // i18n key of the selected slot (if any). Set by the iframe whenever a
-  // slot with `data-design-text-key` is selected — drives the SlotTextEditor
+  // slot with `data-design-text-key` is selected â drives the SlotTextEditor
   // in the side panel.
   const [selectedTextKey, setSelectedTextKey] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
-  // Day vs Night editing — drives BOTH the iframe preview palette AND
+  // Day vs Night editing â drives BOTH the iframe preview palette AND
   // where each style edit gets persisted (top-level vs `night` sub).
   const [bgMode, setBgMode] = useState<"day" | "night">("day");
   // Per-language editing scope. "en" is the baseline (writes go to the
@@ -125,7 +125,7 @@ export default function DesignPage() {
 
   /**
    * Cancel the autosave debounce and flush every dirty element NOW.
-   * Wired to the explicit "Save" button in the side panel — useful
+   * Wired to the explicit "Save" button in the side panel â useful
    * before navigating away or to force a confirmation toast even when
    * autosave hasn't fired yet.
    */
@@ -186,7 +186,7 @@ export default function DesignPage() {
     w.postMessage({ type: "fl.design.set-bg-pan", on: bgPanMode }, "*");
   }, [bgPanMode, iframeKey]);
 
-  // Sync the sidebar's langMode tab → iframe's stored language. Without
+  // Sync the sidebar's langMode tab â iframe's stored language. Without
   // this, picking zh-TW in the sidebar wouldn't actually flip the iframe
   // to zh-TW, so class-targeted CSS (`html[lang="zh-TW"] .editorial-number`)
   // would never match in the preview and edits silently looked broken.
@@ -245,7 +245,7 @@ export default function DesignPage() {
     async function saveText(textKey: string, value: string, locale: string) {
       // Route through the admin API instead of writing site_content
       // directly from the browser. RLS on that table references
-      // auth.users, and the anon role doesn't have SELECT on `users` —
+      // auth.users, and the anon role doesn't have SELECT on `users` â
       // so direct upserts came back as "permission denied for table
       // users". The /api/design/content endpoint runs with the
       // service-role client after verifying admin auth.
@@ -262,6 +262,10 @@ export default function DesignPage() {
       }
       if (!trimmed) toast.success(`Reverted to default (${locale})`);
       else toast.success(`Saved (${locale})`);
+      // Reload the iframe so the saved text is reflected in the preview.
+      // Without this the DB has the new value but the iframe still shows
+      // whatever was rendered on the last load — so edits look "lost".
+      setIframeKey((k) => k + 1);
     }
 
     function onMsg(ev: MessageEvent) {
@@ -300,7 +304,7 @@ export default function DesignPage() {
         setLangMode(data.lang);
       }
       if (data.type === "fl.design.translate") {
-        // Drag-translated a selected slot inside the iframe — persist
+        // Drag-translated a selected slot inside the iframe â persist
         // translateX / translateY through setStyle so the value lands
         // in the active (langMode, bgMode) bucket and autosaves.
         void persistTranslate(data.elementId, data.x, data.y);
@@ -345,7 +349,7 @@ export default function DesignPage() {
     }
     async function persistBgPan(elementId: string, bgPosition: string) {
       const current = map[elementId] ?? {};
-      // Route to the active mode: day → top-level bgPosition, night → night.bgPosition
+      // Route to the active mode: day â top-level bgPosition, night â night.bgPosition
       let merged: DesignOverrides;
       if (bgMode === "night") {
         const night = { ...(current.night ?? {}), bgPosition };
@@ -399,7 +403,7 @@ export default function DesignPage() {
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
     // langMode is read by applyStylePatch (called from persistTranslate)
-    // and by the ready/select branches that set lang on the iframe — so
+    // and by the ready/select branches that set lang on the iframe â so
     // a fresh closure is required when it changes.
   }, [map, bgMode, langMode]);
 
@@ -460,10 +464,10 @@ export default function DesignPage() {
   /**
    * Build the next overrides blob for `selected` after applying a
    * style patch routed by (langMode, bgMode):
-   *   - lang=en, mode=day   → top-level fields
-   *   - lang=en, mode=night → `night` sub
-   *   - lang≠en, mode=day   → `langs[lang]` sub
-   *   - lang≠en, mode=night → `langs[lang].night` sub
+   *   - lang=en, mode=day   â top-level fields
+   *   - lang=en, mode=night â `night` sub
+   *   - langâ en, mode=day   â `langs[lang]` sub
+   *   - langâ en, mode=night â `langs[lang].night` sub
    * Empty sub-objects are stripped so the JSON stays clean.
    */
   function applyStylePatch(
@@ -509,7 +513,7 @@ export default function DesignPage() {
       Object.keys(nextLang).filter((k) => k !== "night").length === 0 &&
       !nextLang.night
     ) {
-      // Bucket emptied — drop it entirely.
+      // Bucket emptied â drop it entirely.
       delete langs[langMode];
     } else {
       langs[langMode] = nextLang;
@@ -521,7 +525,7 @@ export default function DesignPage() {
   }
 
   /**
-   * Style-field setter — routes the patch into the right bucket based
+   * Style-field setter â routes the patch into the right bucket based
    * on (langMode, bgMode). Behaviour is unchanged when langMode === 'en'.
    */
   function setStyle(patch: Partial<StyleFields>) {
@@ -707,7 +711,7 @@ export default function DesignPage() {
         "*"
       );
     }
-    toast.success("Text added — drag to position");
+    toast.success("Text added â drag to position");
   }
 
   /**
@@ -731,7 +735,7 @@ export default function DesignPage() {
     const elementId = `class:${cls}`;
     const existing = map[elementId];
     if (existing) {
-      // Already have overrides for this class — just select it for editing.
+      // Already have overrides for this class â just select it for editing.
       setSelected(elementId);
       toast.success(`Editing class .${cls}`);
       return;
@@ -757,7 +761,7 @@ export default function DesignPage() {
         "*"
       );
     }
-    toast.success(`Class .${cls} ready — tweak below`);
+    toast.success(`Class .${cls} ready â tweak below`);
   }
 
   async function deleteSelected() {
@@ -809,7 +813,7 @@ export default function DesignPage() {
       {/* Header */}
       <header className="px-8 py-5 border-b border-border flex items-center gap-6">
         <div>
-          <p className="editorial-number text-[10px]">The Admin Edition · Issue No. 05</p>
+          <p className="editorial-number text-[10px]">The Admin Edition Â· Issue No. 05</p>
           <h1 className="font-display text-2xl tracking-tight"><em>Design</em>, by hand.</h1>
         </div>
         <div className="ml-auto flex items-center gap-3">
@@ -824,7 +828,7 @@ export default function DesignPage() {
           >
             {PAGES.map((p) => (
               <option key={p.path} value={p.path}>
-                {p.kicker} · {p.label}
+                {p.kicker} Â· {p.label}
               </option>
             ))}
           </select>
@@ -839,7 +843,7 @@ export default function DesignPage() {
           <button
             onClick={addOrEditClass}
             className="btn-ghost h-9 text-xs inline-flex items-center gap-1.5"
-            title="Target a CSS class (e.g. editorial-number) — set per-language fontSize, color, weight, etc. once and it applies to every instance everywhere"
+            title="Target a CSS class (e.g. editorial-number) â set per-language fontSize, color, weight, etc. once and it applies to every instance everywhere"
           >
             <Plus className="size-3" />
             Class
@@ -855,7 +859,7 @@ export default function DesignPage() {
             title="Lift the photo backdrop above content so you can drag-pan it from anywhere"
           >
             <ImageIcon className="size-3" />
-            {bgPanMode ? "Panning… Esc to exit" : "Pan backdrop"}
+            {bgPanMode ? "Panningâ¦ Esc to exit" : "Pan backdrop"}
           </button>
           <button
             onClick={() => setIframeKey((k) => k + 1)}
@@ -907,7 +911,7 @@ export default function DesignPage() {
                     title="Changes save automatically"
                   >
                     <Save className="size-3" />
-                    {autoSaveStatus === "saving" && "Saving…"}
+                    {autoSaveStatus === "saving" && "Savingâ¦"}
                     {autoSaveStatus === "saved" && "Saved"}
                     {autoSaveStatus === "error" && "Save failed"}
                     {autoSaveStatus === "idle" && "Auto-save on"}
@@ -950,13 +954,13 @@ export default function DesignPage() {
                 </div>
               </div>
 
-              {/* Day / Night + Language editing scope — drives BOTH the
+              {/* Day / Night + Language editing scope â drives BOTH the
                   iframe preview palette AND which bucket every style
                   edit below gets saved into:
-                    en + day   → top-level
-                    en + night → `night`
-                    xx + day   → `langs[xx]`
-                    xx + night → `langs[xx].night` */}
+                    en + day   â top-level
+                    en + night â `night`
+                    xx + day   â `langs[xx]`
+                    xx + night â `langs[xx].night` */}
               <div className="rounded-md border border-border bg-bg/40 p-2.5 space-y-2">
                 <div className="flex items-center gap-2">
                   <p className="editorial-number text-[10px]">Editing</p>
@@ -997,7 +1001,7 @@ export default function DesignPage() {
                           )}
                           title={
                             l.code === "en"
-                              ? "Baseline (English) — applies to every locale until overridden"
+                              ? "Baseline (English) â applies to every locale until overridden"
                               : `Tweak ${l.displayName} only`
                           }
                         >
@@ -1016,8 +1020,8 @@ export default function DesignPage() {
                 <p className="text-[10px] text-muted-fg leading-snug">
                   {langMode === "en"
                     ? bgMode === "day"
-                      ? "Baseline edits — affect every language unless that language has its own override below."
-                      : "Baseline night edits — every language inherits these in dark mode unless overridden."
+                      ? "Baseline edits â affect every language unless that language has its own override below."
+                      : "Baseline night edits â every language inherits these in dark mode unless overridden."
                     : bgMode === "day"
                     ? `Edits apply only to ${langMode}. Empty fields fall back to the baseline.`
                     : `Edits apply only to ${langMode} in dark mode. Empty fields fall back to ${langMode}'s day value, then the baseline.`}
@@ -1242,7 +1246,7 @@ export default function DesignPage() {
                     onChange={(v) =>
                       setStyle({ rotate: v === 0 ? undefined : v })
                     }
-                    suffix="°"
+                    suffix="Â°"
                   />
                 </Row>
                 <Row label="Opacity">
@@ -1349,7 +1353,7 @@ function EmptyHint({
   map: DesignMap;
   onPickClass: (elementId: string) => void;
   /**
-   * Click a flattened per-language row → jump straight into that
+   * Click a flattened per-language row â jump straight into that
    * (entry, language, mode) bucket: selects the entry AND sets
    * langMode + bgMode in the parent so the side panel renders the
    * right tabs and the inputs read the right values.
@@ -1367,7 +1371,7 @@ function EmptyHint({
   );
 
   // Flatten every (entry, lang, mode) bucket into a single list so the
-  // operator can see — and click into — each language variant of every
+  // operator can see â and click into â each language variant of every
   // element/class at a glance. We don't surface a row when a bucket is
   // empty, so the list stays focused on what's actually been customized.
   type FlatRow = {
@@ -1380,7 +1384,7 @@ function EmptyHint({
   const flatRows: FlatRow[] = [];
   for (const [elementId, ov] of Object.entries(map)) {
     const cls = ov._kind === "class" ? ov._class : undefined;
-    // Top-level (en, day) — count any non-meta key
+    // Top-level (en, day) â count any non-meta key
     const topFields = Object.keys(ov).filter(
       (k) =>
         k !== "night" &&
@@ -1450,7 +1454,7 @@ function EmptyHint({
       <p className="editorial-number text-[10px]">Click any element</p>
       <h2 className="font-display text-xl"><em>Pick something</em></h2>
       <p className="text-xs text-muted-fg leading-relaxed">
-        Hover over the preview — every editable element will outline. Click
+        Hover over the preview â every editable element will outline. Click
         to select. Then tune typography, transform, or upload a background
         image. Style overrides apply across all languages; per-locale text
         still lives in <code>/admin/content</code>.
@@ -1459,14 +1463,14 @@ function EmptyHint({
         New element ids inherit the page&rsquo;s defaults until you save an override.
       </p>
 
-      {/* Saved overrides — flattened by (entry, language, mode) so the
+      {/* Saved overrides â flattened by (entry, language, mode) so the
           operator can see and click each language variant separately.
           Backed by the same nested storage; clicking jumps the side
           panel straight to that lang+mode bucket. */}
       <div className="pt-5 border-t border-border space-y-2">
         <p className="editorial-number text-[10px]">
           Saved overrides{" "}
-          <span className="text-muted-fg">· by language</span>
+          <span className="text-muted-fg">Â· by language</span>
         </p>
         {flatRows.length === 0 ? (
           <p className="text-[11px] text-muted-fg leading-relaxed">
@@ -1486,7 +1490,7 @@ function EmptyHint({
                       onPickEntry(r.elementId, r.lang, r.mode)
                     }
                     className="btn-ghost w-full text-left px-2 py-1.5 text-xs flex items-center gap-2"
-                    title={`${label} · ${r.lang} · ${r.mode} (${r.fieldCount} field${r.fieldCount === 1 ? "" : "s"} set)`}
+                    title={`${label} Â· ${r.lang} Â· ${r.mode} (${r.fieldCount} field${r.fieldCount === 1 ? "" : "s"} set)`}
                   >
                     <code className="font-mono text-[11px] truncate max-w-[140px]">
                       {label}
@@ -1522,7 +1526,7 @@ function EmptyHint({
         )}
       </div>
 
-      {/* Class-targeted overrides — set once per class per language,
+      {/* Class-targeted overrides â set once per class per language,
           applies to every instance anywhere. Use the "+ Class" button
           in the header to add a new one. */}
       <div className="pt-5 border-t border-border space-y-2">
@@ -1530,7 +1534,7 @@ function EmptyHint({
         {classEntries.length === 0 ? (
           <p className="text-[11px] text-muted-fg leading-relaxed">
             None yet. Click <em>+ Class</em> in the header to set
-            per-language styles for any CSS class — e.g. tweak{" "}
+            per-language styles for any CSS class â e.g. tweak{" "}
             <code className="text-[10px]">editorial-number</code>{" "}
             to a different size on zh-TW.
           </p>
@@ -1643,7 +1647,7 @@ function SlotTextEditor({
         return false;
       }
     }
-    // Try a few times — iframe may still be rendering.
+    // Try a few times â iframe may still be rendering.
     let attempts = 0;
     const tick = () => {
       if (read()) return;
@@ -1711,7 +1715,7 @@ function SlotTextEditor({
           )}
         >
           <Save className="size-3" />
-          {saving ? "Saving…" : `Save ${langMode}`}
+          {saving ? "Savingâ¦" : `Save ${langMode}`}
         </button>
         {dirty && !saving && (
           <button
