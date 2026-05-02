@@ -20,13 +20,13 @@ import { InlineTaskInput } from "@/components/app/inline-task-input";
  * Calendar — month grid with click-through to single-day view.
  *
  * Two modes, switched by `mode` state:
- *   - "month": classic 7×6 grid, drag tasks across days
+ *   - "month": classic 7×6 grid, drag tasks across days, see at-a-glance
  *   - "day":   single day shown as a clean editorial list with prev/next
  *              arrows; lands when the user clicks a date number on the
  *              month grid OR the empty area of a day cell.
  *
  * Day view re-uses TaskItem + InlineTaskInput so behavior matches the
- * Today page exactly.
+ * Today page exactly (drag-to-reorder, inline AI parsing, tag pills).
  */
 export default function CalendarPage() {
   const [mode, setMode] = useState<"month" | "day">("month");
@@ -63,6 +63,7 @@ function MonthView({
   onPickDay: (d: Date) => void;
 }) {
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const setSelected = useUIStore((s) => s.setSelectedTaskId);
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
@@ -79,11 +80,103 @@ function MonthView({
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null;
 
+  // Multi-day bars: tasks whose start_at and due_at land on different
+  // calendar days render as a single horizontal bar that overlays and
+  // spans the relevant date cells (iOS-style). One segment per week row,
+  // greedy lane-packed so parallel ranges stack without overlapping.
+  const { multiDayBars, cellLanes } = useMemo(() => {
+    type Bar = {
+      task: TaskWithTags;
+      weekRow: number;
+      startCol: number; // 1-indexed grid col
+      endCol: number;
+      isFirstSegment: boolean;
+      isLastSegment: boolean;
+      lane: number;
+    };
+    const bars: Bar[] = [];
+    if (days.length === 0) return { multiDayBars: bars, cellLanes: [] as number[] };
+
+    const firstDay = startOfDay(days[0]).getTime();
+    const lastDay = startOfDay(days[days.length - 1]).getTime();
+
+    for (const t of tasks) {
+      if (!t.start_at || !t.due_at) continue;
+      const s = startOfDay(new Date(t.start_at)).getTime();
+      const e = startOfDay(new Date(t.due_at)).getTime();
+      if (s === e) continue; // single-day → rendered in its cell
+      if (s > lastDay || e < firstDay) continue; // outside visible grid
+
+      const clampedStart = Math.max(s, firstDay);
+      const clampedEnd = Math.min(e, lastDay);
+      const startIdx = days.findIndex(
+        (d) => startOfDay(d).getTime() === clampedStart
+      );
+      const endIdx = days.findIndex(
+        (d) => startOfDay(d).getTime() === clampedEnd
+      );
+      if (startIdx < 0 || endIdx < 0) continue;
+      const isFirst = s === clampedStart;
+      const isLast = e === clampedEnd;
+
+      const startRow = Math.floor(startIdx / 7);
+      const endRow = Math.floor(endIdx / 7);
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * 7;
+        const rowEnd = rowStart + 6;
+        const segStart = Math.max(startIdx, rowStart);
+        const segEnd = Math.min(endIdx, rowEnd);
+        bars.push({
+          task: t,
+          weekRow: row,
+          startCol: segStart - rowStart + 1,
+          endCol: segEnd - rowStart + 1,
+          isFirstSegment: row === startRow && isFirst,
+          isLastSegment: row === endRow && isLast,
+          lane: 0,
+        });
+      }
+    }
+
+    // Greedy lane assignment per week row
+    for (let row = 0; row < 6; row++) {
+      const segs = bars
+        .filter((b) => b.weekRow === row)
+        .sort((a, b) => a.startCol - b.startCol);
+      const lanes: { startCol: number; endCol: number }[][] = [];
+      for (const seg of segs) {
+        let lane = 0;
+        while (
+          lanes[lane]?.some(
+            (s) => !(seg.endCol < s.startCol || seg.startCol > s.endCol)
+          )
+        ) {
+          lane++;
+        }
+        seg.lane = lane;
+        if (!lanes[lane]) lanes[lane] = [];
+        lanes[lane].push({ startCol: seg.startCol, endCol: seg.endCol });
+      }
+    }
+
+    // For each cell index, the number of bar lanes occupying it — so the
+    // cell can reserve vertical space above its single-day task chips.
+    const cellLanes: number[] = new Array(days.length).fill(0);
+    for (const bar of bars) {
+      const rowStart = bar.weekRow * 7;
+      for (let c = bar.startCol - 1; c <= bar.endCol - 1; c++) {
+        cellLanes[rowStart + c] = Math.max(cellLanes[rowStart + c], bar.lane + 1);
+      }
+    }
+
+    return { multiDayBars: bars, cellLanes };
+  }, [tasks, days]);
+
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
     const taskId = String(e.active.id);
-    const date = String(e.over.id);
+    const date = String(e.over.id); // yyyy-mm-dd
     const t = tasks.find((x) => x.id === taskId);
     if (!t) return;
     const orig = t.due_at ? new Date(t.due_at) : new Date();
@@ -124,17 +217,21 @@ function MonthView({
           onDragEnd={onDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto">
-            {days.map((d) => {
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto relative">
+            {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
+              // Single-day tasks only — multi-day tasks become overlay
+              // bars rendered as siblings below.
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
-                const due = new Date(t.due_at);
-                const start = t.start_at ? new Date(t.start_at) : due;
-                // Compare date-only so we cover every day in the range,
-                // regardless of the time component on either bound.
-                const dStart = startOfDay(d);
-                return dStart >= startOfDay(start) && dStart <= startOfDay(due);
+                if (!isSameDay(new Date(t.due_at), d)) return false;
+                if (
+                  t.start_at &&
+                  !isSameDay(new Date(t.start_at), new Date(t.due_at))
+                ) {
+                  return false;
+                }
+                return true;
               });
               return (
                 <DayCell
@@ -145,9 +242,39 @@ function MonthView({
                   tasks={dayTasks}
                   activeId={activeId}
                   onPickDay={onPickDay}
+                  reservedLanes={cellLanes[i] ?? 0}
                 />
               );
             })}
+            {multiDayBars.map((bar, i) => (
+              <div
+                key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
+                style={{
+                  gridRow: bar.weekRow + 1,
+                  gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
+                  marginTop: `${30 + bar.lane * 22}px`,
+                  marginLeft: bar.isFirstSegment ? "6px" : "0px",
+                  marginRight: bar.isLastSegment ? "6px" : "0px",
+                  alignSelf: "start",
+                  zIndex: 5,
+                }}
+                className={cn(
+                  "h-5 px-2 text-[11px] truncate cursor-pointer leading-5 flex items-center font-medium",
+                  priorityBg(bar.task.priority),
+                  bar.task.is_completed && "line-through opacity-60",
+                  bar.isFirstSegment && bar.isLastSegment && "rounded",
+                  bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
+                  !bar.isFirstSegment && bar.isLastSegment && "rounded-r"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(bar.task.id);
+                }}
+                title={bar.task.title}
+              >
+                {bar.isFirstSegment ? bar.task.title : ""}
+              </div>
+            ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
             {activeTask ? <DragPreview task={activeTask} /> : null}
@@ -159,7 +286,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay,
+  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes,
 }: {
   dateKey: string;
   date: Date;
@@ -167,13 +294,20 @@ function DayCell({
   tasks: TaskWithTags[];
   activeId: string | null;
   onPickDay: (d: Date) => void;
+  reservedLanes: number;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
+  // Reserve vertical room above task chips for any multi-day bars
+  // passing through this cell (each lane = 22px).
+  const reservedHeight = reservedLanes * 22;
   return (
     <div
       ref={setNodeRef}
       onClick={(e) => {
+        // Open day view if user clicked the cell itself, not a child
+        // (drag handles, task chips). Tasks have stopPropagation in
+        // DraggableTask so this fires for the empty area / date number.
         if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.dayCellHit === "1") {
           onPickDay(date);
         }
@@ -200,9 +334,16 @@ function DayCell({
           {format(date, "d")}
         </button>
       </div>
+      {reservedHeight > 0 && (
+        <div
+          aria-hidden
+          style={{ height: reservedHeight }}
+          data-day-cell-hit="1"
+        />
+      )}
       <div className="flex-1 flex flex-col gap-1 overflow-hidden" data-day-cell-hit="1">
         {tasks.slice(0, 4).map((t) => (
-          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} dayDate={date} />
+          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} />
         ))}
         {tasks.length > 4 && (
           <button
@@ -218,35 +359,9 @@ function DayCell({
   );
 }
 
-function DraggableTask({
-  task,
-  dimmed,
-  dayDate,
-}: {
-  task: TaskWithTags;
-  dimmed?: boolean;
-  /** The cell date this chip is being drawn in. Lets the chip detect
-   *  multi-day ranges and render with a continuation arrow on days that
-   *  aren't the start (and round only the matching corners). */
-  dayDate?: Date;
-}) {
+function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
-  // Multi-day shaping — only the first day of a range shows the title;
-  // continuation days show "→ title" so the eye can follow the bar.
-  // Corners stay rounded only on the matching end so adjacent cells read
-  // as one continuous bar.
-  let isStart = true;
-  let isEnd = true;
-  if (dayDate && task.start_at && task.due_at) {
-    const start = new Date(task.start_at);
-    const due = new Date(task.due_at);
-    if (start.toDateString() !== due.toDateString()) {
-      const dDay = startOfDay(dayDate);
-      isStart = dDay.getTime() === startOfDay(start).getTime();
-      isEnd = dDay.getTime() === startOfDay(due).getTime();
-    }
-  }
   return (
     <div
       ref={setNodeRef}
@@ -255,18 +370,13 @@ function DraggableTask({
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => { e.stopPropagation(); setSelected(task.id); }}
       className={cn(
-        "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing",
+        "px-1.5 py-1 rounded text-[11px] truncate cursor-grab active:cursor-grabbing",
         priorityBg(task.priority),
         task.is_completed && "line-through opacity-60",
-        (dimmed || isDragging) && "opacity-30",
-        // Square the inner edge of a multi-day bar so adjacent cells
-        // visually fuse; round only the outer end.
-        isStart && isEnd && "rounded",
-        isStart && !isEnd && "rounded-l",
-        !isStart && isEnd && "rounded-r"
+        (dimmed || isDragging) && "opacity-30"
       )}
     >
-      {!isStart && <span aria-hidden>→ </span>}{task.title}
+      {task.title}
     </div>
   );
 }
@@ -300,6 +410,8 @@ function DayView({
   onChangeDate: (d: Date) => void;
   onBack: () => void;
 }) {
+  // Pull all tasks; client-filter to this day. Cheap because day pages
+  // are bounded; avoids needing a date-range Tasks filter on the API.
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
 
   const dayStart = startOfDay(date);
@@ -307,6 +419,7 @@ function DayView({
   const dayTasks = tasks
     .filter((t) => t.due_at && new Date(t.due_at) >= dayStart && new Date(t.due_at) <= dayEnd)
     .sort((a, b) => {
+      // All-day first, then by time ascending. Completed bubble down.
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
       const ad = a.due_at ? new Date(a.due_at).getTime() : 0;
       const bd = b.due_at ? new Date(b.due_at).getTime() : 0;
@@ -367,6 +480,9 @@ function DayView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
+        {/* Inline add — pre-fills due_at to this date so anything typed
+            here lands on the visible day, even if the AI parser doesn't
+            see an explicit date in the user's text. */}
         <InlineTaskInput
           defaultProjectId={null}
           defaultDueAt={dayStart.toISOString()}
