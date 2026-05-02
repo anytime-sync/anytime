@@ -25,7 +25,7 @@ import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
- * WeekTimeline Ã¢ÂÂ MonÃ¢ÂÂSun, 7-column timeline view of the current ISO week.
+ * WeekTimeline ÃÂ¢ÃÂÃÂ MonÃÂ¢ÃÂÃÂSun, 7-column timeline view of the current ISO week.
  */
 
 const RAIL_START_HOUR = 6;
@@ -208,11 +208,11 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
       <div ref={containerRef} className="flex-1 overflow-auto">
         <div className="flex relative">
           <div
-            className="shrink-0 sticky left-0 bg-bg/60 backdrop-blur-md z-30 border-r border-border"
+            className="shrink-0 sticky left-0 bg-bg/40 backdrop-blur-md z-30 border-r border-border/40"
             style={{ width: RAIL_WIDTH }}
           >
             <div
-              className="border-b border-border bg-bg/60 backdrop-blur-md"
+              className="border-b border-border/40 bg-bg/40 backdrop-blur-md"
               style={{ height: HEADER_HEIGHT }}
             />
             <div className="relative" style={{ height: RAIL_HEIGHT }}>
@@ -299,12 +299,12 @@ function DayColumn({
       className={cn(
         "flex flex-col snap-start shrink-0 md:shrink",
         "min-w-[60vw] md:min-w-0",
-        "border-l border-border first:border-l-0"
+        "border-l border-border/40 first:border-l-0"
       )}
     >
       <div
         className={cn(
-          "sticky top-0 z-20 bg-bg/60 backdrop-blur-md border-b border-border",
+          "sticky top-0 z-20 bg-bg/40 backdrop-blur-md border-b border-border/40",
           "px-2 flex flex-col items-center justify-center text-center"
         )}
         style={{ height: HEADER_HEIGHT }}
@@ -328,7 +328,7 @@ function DayColumn({
       </div>
 
       {allDayTasks.length > 0 && (
-        <div className="flex flex-col gap-0.5 px-1.5 py-1.5 border-b border-border bg-bg/60">
+        <div className="flex flex-col gap-0.5 px-1.5 py-1.5 border-b border-border/40 bg-bg/40">
           {allDayTasks.slice(0, 3).map((t) => (
             <button
               key={t.id}
@@ -370,7 +370,7 @@ function DayColumn({
             <div
               key={i}
               aria-hidden
-              className="absolute left-0 right-0 border-t border-border/60"
+              className="absolute left-0 right-0 border-t border-border/40"
               style={{ top: i * PX_PER_HOUR }}
             />
           )
