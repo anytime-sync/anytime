@@ -4,9 +4,11 @@ import { Plus } from "lucide-react";
 import { TaskListView } from "@/components/app/task-list-view";
 import { DayTimeline, DayViewToggle, useDayViewMode } from "@/components/app/day-timeline";
 import { useUIStore } from "@/store/ui";
+import { t } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 
 /**
- * Today — toggleable between the editorial list (default) and the new
+ * Today â toggleable between the editorial list (default) and the new
  * vertical timeline that shows time-blocked tasks against an hour rail.
  *
  * Choice persists per-device via localStorage (see useDayViewMode).
@@ -14,11 +16,12 @@ import { useUIStore } from "@/store/ui";
 export default function TodayPage() {
   const [mode, setMode] = useDayViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const lang = useLanguage();
 
   if (mode === "list") {
     return (
       <TaskListView
-        title="Today"
+        title={t(lang, "sidebar.today")}
         subtitle={format(new Date(), "EEEE, MMMM d")}
         filter={{ view: "today" }}
         showDailyEdition
@@ -35,7 +38,7 @@ export default function TodayPage() {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              Today
+              {t(lang, "sidebar.today")}
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">
               {format(new Date(), "EEEE, MMMM d")}
