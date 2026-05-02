@@ -25,7 +25,7 @@ import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 /**
- * WeekTimeline â MonâSun, 7-column timeline view of the current ISO week.
+ * WeekTimeline Ã¢ÂÂ MonÃ¢ÂÂSun, 7-column timeline view of the current ISO week.
  */
 
 const RAIL_START_HOUR = 6;
@@ -127,6 +127,20 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
       if (t.is_all_day || !t.due_at) return false;
       const a = new Date(t.start_at ?? t.due_at).getTime();
       return a >= ds && a <= de;
+    });
+  }
+
+  // All-day tasks (single OR multi-day) whose [start_at, due_at] range
+  // covers this day. Rendered as colored chips in the strip above the
+  // hourly grid so multi-day spans like 5/5-5/7 are visible across cells.
+  function allDayTasksForDay(day: Date): TaskWithTags[] {
+    const ds = startOfDay(day).getTime();
+    const de = ds + 24 * 60 * 60_000 - 1;
+    return tasks.filter((t) => {
+      if (!t.is_all_day || !t.due_at) return false;
+      const dueMs = startOfDay(new Date(t.due_at)).getTime();
+      const startMs = t.start_at ? startOfDay(new Date(t.start_at)).getTime() : dueMs;
+      return startMs <= de && dueMs >= ds;
     });
   }
 
@@ -233,6 +247,7 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
                 key={d.toISOString()}
                 day={d}
                 tasks={tasksForDay(d)}
+                allDayTasks={allDayTasksForDay(d)}
                 isToday={isSameDay(d, now)}
                 now={now}
                 onSelect={setSelected}
@@ -248,12 +263,14 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
 function DayColumn({
   day,
   tasks,
+  allDayTasks,
   isToday,
   now,
   onSelect,
 }: {
   day: Date;
   tasks: TaskWithTags[];
+  allDayTasks: TaskWithTags[];
   isToday: boolean;
   now: Date;
   onSelect: (id: string) => void;
@@ -309,6 +326,34 @@ function DayColumn({
           {format(day, "MMM d")}
         </p>
       </div>
+
+      {allDayTasks.length > 0 && (
+        <div className="flex flex-col gap-0.5 px-1.5 py-1.5 border-b border-border bg-bg/60">
+          {allDayTasks.slice(0, 3).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(t.id);
+              }}
+              className={cn(
+                "px-1.5 py-0.5 rounded text-[11px] truncate text-left",
+                priorityBg(t.priority),
+                t.is_completed && "line-through opacity-60"
+              )}
+              title={t.title}
+            >
+              {t.title}
+            </button>
+          ))}
+          {allDayTasks.length > 3 && (
+            <span className="text-[10px] text-muted-fg px-1.5">
+              + {allDayTasks.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
 
       <div
         ref={setNodeRef}
@@ -414,9 +459,10 @@ function DraggableTask({
       style={style}
       className={cn(
         "absolute rounded-md text-left px-2 py-1.5",
-        "border border-border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
+        "hover:shadow-sm transition-shadow",
+        priorityBg(task.priority),
         "flex flex-col gap-0.5 overflow-hidden cursor-grab active:cursor-grabbing",
-        "border-l-[3px]",
+        "ring-1 ring-border/40",
         isDragging && "opacity-90 shadow-2xl ring-2 ring-accent z-20",
         task.is_completed && "opacity-60"
       )}
@@ -440,6 +486,13 @@ function DraggableTask({
       </span>
     </div>
   );
+}
+
+function priorityBg(priority: number): string {
+  if (priority >= 5) return "bg-p-high/60 text-fg";
+  if (priority >= 3) return "bg-p-med/60 text-fg";
+  if (priority >= 1) return "bg-p-low/60 text-fg";
+  return "bg-muted text-fg";
 }
 
 export function useWeekViewMode() {
