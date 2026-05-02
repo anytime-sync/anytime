@@ -352,7 +352,7 @@ export function QuickAdd() {
                 open={activeChip === "inbox"}
                 onClick={() => setActiveChip(activeChip === "inbox" ? null : "inbox")}
                 icon={<Folder className="size-3.5" />}
-                label={parsed.projectName ?? "Inbox"}
+                label={parsed.projectName ?? "List"}
               />
               {parsed.tagNames.map((t) => (
                 <Activator key={t} active icon={<Hash className="size-3.5" />} label={t} />
@@ -661,9 +661,7 @@ function ChipOptions({
       { label: "Low",       phrase: "low priority" },
       { label: "None",      phrase: "no priority" },
     ],
-    inbox: projects.length
-      ? projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name }))
-      : [{ label: "Inbox", phrase: "~Inbox" }],
+    inbox: projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name })),
     tags: [],
   };
 
