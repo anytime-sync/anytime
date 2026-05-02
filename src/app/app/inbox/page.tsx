@@ -5,9 +5,8 @@ export default function InboxPage() {
   return (
     <TaskListView
       title="Inbox"
-      subtitle="Tasks not assigned to a list."
-      filter={{ view: "inbox" }}
-      defaults={{ project_id: null }}
+      subtitle="Every active task, across every list."
+      filter={{ view: "all" }}
       groupByDate
     />
   );
