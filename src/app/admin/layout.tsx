@@ -82,35 +82,87 @@ export default async function AdminLayout({
 }
 
 function SmallSun({ className }: { className?: string }) {
-  // 36 rays cycling through 4 length variants so the burst looks
-  // hand-drawn rather than mechanical. Inner radius keeps a bright,
-  // empty center; rays taper out from there.
-  const RAY_COUNT = 36;
-  const lengths = [11, 5, 9, 6];
-  const rays = Array.from({ length: RAY_COUNT }, (_, i) => ({
-    angle: (i * 360) / RAY_COUNT,
-    len: lengths[i % lengths.length]!,
-  }));
+  // Hand-tuned 48-ray sunburst — wildly varying ray lengths so it reads
+  // as an explosion of light rather than a tidy clock-face. The radial
+  // gradient mask softens the inner ends of every ray into the bright
+  // empty centre, matching the reference illustration.
   return (
     <svg
       viewBox="0 0 64 64"
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
+      strokeWidth="0.7"
+      strokeLinecap="butt"
       aria-hidden
     >
-      {rays.map(({ angle, len }, i) => (
-        <line
-          key={i}
-          x1="32"
-          y1={24}
-          x2="32"
-          y2={24 - len}
-          transform={`rotate(${angle} 32 32)`}
-        />
-      ))}
+      <defs>
+        <radialGradient
+          id="fl-sun-fade"
+          cx="32"
+          cy="32"
+          r="32"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="black" />
+          <stop offset="22%" stopColor="black" />
+          <stop offset="55%" stopColor="white" />
+          <stop offset="100%" stopColor="white" />
+        </radialGradient>
+        <mask id="fl-sun-fade-mask">
+          <rect width="64" height="64" fill="url(#fl-sun-fade)" />
+        </mask>
+      </defs>
+      <g mask="url(#fl-sun-fade-mask)">
+        <line x1="32" y1="32" x2="32" y2={2} transform={`rotate(0 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={14} transform={`rotate(7.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={6} transform={`rotate(15 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={20} transform={`rotate(22.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={0} transform={`rotate(30 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={16} transform={`rotate(37.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={9} transform={`rotate(45 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={18} transform={`rotate(52.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={3} transform={`rotate(60 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={13} transform={`rotate(67.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={7} transform={`rotate(75 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={22} transform={`rotate(82.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={0} transform={`rotate(90 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={15} transform={`rotate(97.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={10} transform={`rotate(105 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={19} transform={`rotate(112.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={5} transform={`rotate(120 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={17} transform={`rotate(127.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={8} transform={`rotate(135 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={21} transform={`rotate(142.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={1} transform={`rotate(150 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={13} transform={`rotate(157.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={11} transform={`rotate(165 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={16} transform={`rotate(172.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={4} transform={`rotate(180 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={19} transform={`rotate(187.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={9} transform={`rotate(195 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={14} transform={`rotate(202.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={2} transform={`rotate(210 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={18} transform={`rotate(217.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={10} transform={`rotate(225 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={21} transform={`rotate(232.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={6} transform={`rotate(240 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={15} transform={`rotate(247.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={7} transform={`rotate(255 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={23} transform={`rotate(262.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={3} transform={`rotate(270 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={14} transform={`rotate(277.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={11} transform={`rotate(285 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={20} transform={`rotate(292.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={5} transform={`rotate(300 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={19} transform={`rotate(307.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={10} transform={`rotate(315 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={16} transform={`rotate(322.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={2} transform={`rotate(330 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={21} transform={`rotate(337.5 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={8} transform={`rotate(345 32 32)`} />
+        <line x1="32" y1="32" x2="32" y2={14} transform={`rotate(352.5 32 32)`} />
+      </g>
     </svg>
   );
 }
