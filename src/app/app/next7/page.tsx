@@ -13,7 +13,7 @@ import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
 
 /**
- * Next 7 Days — toggleable between the editorial list (default) and the
+ * Next 7 Days â toggleable between the editorial list (default) and the
  * Mon-Sun week timeline. List shows date-sorted tasks; timeline shows a
  * 7-column hour grid with drag-to-reschedule across days and times.
  */
@@ -35,12 +35,12 @@ export default function Next7Page() {
     );
   }
 
-  // Timeline mode — reflect the offset in the subtitle so the header
+  // Timeline mode â reflect the offset in the subtitle so the header
   // matches the underlying date range the timeline renders.
   const baseStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekStart = addDays(baseStart, weekOffset * 7);
   const weekEnd = addDays(weekStart, 6);
-  const subtitle = `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`;
+  const subtitle = `${format(weekStart, "MMM d")} â ${format(weekEnd, "MMM d")}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -63,15 +63,17 @@ export default function Next7Page() {
             </button>
             <button
               className={cn(
-                "btn-ghost h-7 px-2 text-[11px]",
-                weekOffset === 0 && "opacity-40 cursor-not-allowed"
+                "h-7 w-3 grid place-items-center text-muted-fg/60 text-[14px] font-display leading-none select-none",
+                weekOffset === 0
+                  ? "cursor-default"
+                  : "hover:text-fg cursor-pointer"
               )}
               onClick={() => setWeekOffset(0)}
               disabled={weekOffset === 0}
               aria-label="This week"
               title="This week"
             >
-              This
+              |
             </button>
             <button
               className="btn-ghost size-7 p-0 grid place-items-center"
