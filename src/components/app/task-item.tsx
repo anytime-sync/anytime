@@ -3,6 +3,7 @@
 import { Calendar, Clock, Flag, Hash, ListTree, Repeat } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
+import { useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -14,6 +15,14 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
   const isSelected = selectedId === task.id;
   const { data: counts = {} } = useSubtaskCounts([task.id]);
   const subCount = counts[task.id];
+  // Resolve the task's project so we can render a "~ListName" pill on the
+  // row. Smart views (Today / Tomorrow / Next 7 / Next 90) pull tasks
+  // from every list, so without this you can't tell at a glance which
+  // list a task belongs to.
+  const { data: projects = [] } = useProjects();
+  const project = task.project_id
+    ? projects.find((p: any) => p.id === task.project_id)
+    : null;
 
   return (
     <div
@@ -75,9 +84,33 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
               <Flag className={cn("size-3", priorityColorClass(task.priority))} />
             </span>
           )}
+          {/* Project pill — shows the list a task lives in. Hidden when
+              there's no project (Inbox tasks). Same coloring scheme as
+              the sidebar list dot. */}
+          {project && (
+            <span
+              className="inline-flex items-center h-5 rounded px-1.5 text-[11px] font-medium leading-none"
+              style={{
+                backgroundColor: (project as any).color
+                  ? `${(project as any).color}22`
+                  : "var(--muted)",
+                color: (project as any).color || "var(--muted-fg)",
+                border: `1px solid ${(project as any).color || "var(--border)"}`,
+              }}
+              title={`In list: ${(project as any).name}`}
+            >
+              ~{(project as any).name}
+            </span>
+          )}
+          {/* Tags render as color-block pills — same visual language as
+              the sidebar tag list, the inline preview, and the task-detail
+              tag editor, so a tag looks identical anywhere it appears. */}
           {task.tags.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1">
-              <Hash className="size-3" style={{ color: t.color }} />
+            <span
+              key={t.id}
+              className="inline-flex items-center h-5 rounded px-1.5 text-[11px] font-medium leading-none"
+              style={{ backgroundColor: t.color || "var(--accent)", color: "#fff" }}
+            >
               {t.name}
             </span>
           ))}
