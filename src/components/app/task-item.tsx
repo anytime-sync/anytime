@@ -1,8 +1,9 @@
 "use client";
 
-import { Calendar, Clock, Flag, Hash, ListTree, Repeat } from "lucide-react";
+import { useRef, useState } from "react";
+import { Calendar, Clock, Flag, Hash, ListTree, Repeat, Trash2 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
-import { useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
+import { useDeleteTask, useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
@@ -15,6 +16,58 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
   const isSelected = selectedId === task.id;
   const { data: counts = {} } = useSubtaskCounts([task.id]);
   const subCount = counts[task.id];
+
+  // Swipe-to-delete on touch devices. Mouse / pen pointer types fall
+  // through to no-ops so desktop click + drag-reorder are untouched. The
+  // dnd-kit TouchSensor (configured in SortableTaskList) requires a
+  // 250ms hold to begin a reorder, so a quick swipe never competes.
+  const del = useDeleteTask();
+  const [swipeX, setSwipeX] = useState(0);
+  const [swipeAnim, setSwipeAnim] = useState(false);
+  const [swiping, setSwiping] = useState(false);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const dirRef = useRef<"h" | "v" | null>(null);
+  const SWIPE_DELETE_AT = -110;
+  const SWIPE_MAX = -160;
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.pointerType !== "touch") return;
+    if (task.is_completed) return;
+    startRef.current = { x: e.clientX, y: e.clientY };
+    dirRef.current = null;
+    setSwipeAnim(false);
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!startRef.current) return;
+    const dx = e.clientX - startRef.current.x;
+    const dy = e.clientY - startRef.current.y;
+    if (dirRef.current === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      dirRef.current = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      if (dirRef.current === "h") setSwiping(true);
+    }
+    if (dirRef.current === "h" && dx < 0) {
+      setSwipeX(Math.max(dx, SWIPE_MAX));
+    }
+  }
+  function onPointerUp() {
+    if (!startRef.current) return;
+    startRef.current = null;
+    const wasHoriz = dirRef.current === "h";
+    dirRef.current = null;
+    if (!wasHoriz) {
+      setSwiping(false);
+      return;
+    }
+    setSwipeAnim(true);
+    if (swipeX <= SWIPE_DELETE_AT) {
+      setSwipeX(-1000);
+      setTimeout(() => del.mutate(task.id), 180);
+    } else {
+      setSwipeX(0);
+      setTimeout(() => setSwiping(false), 220);
+    }
+  }
   // Resolve the task's project so we can render a "~ListName" pill on the
   // row. Smart views (Today / Tomorrow / Next 7 / Next 90) pull tasks
   // from every list, so without this you can't tell at a glance which
@@ -25,10 +78,38 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
     : null;
 
   return (
+    <div className="relative">
+      <div
+        className={cn(
+          "absolute inset-0 rounded-md flex items-center justify-end pr-4 gap-2 pointer-events-none transition-opacity bg-danger text-white",
+          swipeX < -10 ? "opacity-100" : "opacity-0"
+        )}
+        aria-hidden
+      >
+        <span className="text-sm font-medium">
+          {swipeX <= SWIPE_DELETE_AT ? "Release to delete" : "Delete"}
+        </span>
+        <Trash2 className="size-5" />
+      </div>
     <div
-      onClick={() => setSelected(task.id)}
+      onClick={(e) => {
+        if (swiping) {
+          e.stopPropagation();
+          return;
+        }
+        setSelected(task.id);
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        transform: `translateX(${swipeX}px)`,
+        transition: swipeAnim ? "transform 200ms ease-out" : "none",
+        touchAction: "pan-y",
+      }}
       className={cn(
-        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border border-transparent",
+        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border border-transparent relative bg-bg",
         isSelected ? "bg-muted border-border" : "hover:bg-muted/60"
       )}
     >
@@ -126,6 +207,7 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

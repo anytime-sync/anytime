@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
-  PointerSensor, useSensor, useSensors, closestCenter,
+  MouseSensor, TouchSensor, useSensor, useSensors, closestCenter,
 } from "@dnd-kit/core";
 import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
@@ -26,7 +26,10 @@ export function SortableTaskList({
   onManualReorder?: () => void;
 }) {
   const reorder = useReorderTasks();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null;
 
