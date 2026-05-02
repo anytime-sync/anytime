@@ -17,10 +17,10 @@ type QuadrantKey = "q1" | "q2" | "q3" | "q4";
 
 /**
  * Each quadrant gets its own distinct hue.
- *  Q1 Do first   — red    (crisis)
- *  Q2 Schedule   — emerald (strategic / important growth)
- *  Q3 Delegate   — amber   (interrupts)
- *  Q4 Eliminate  — slate   (waste)
+ *  Q1 Do first   â red    (crisis)
+ *  Q2 Schedule   â emerald (strategic / important growth)
+ *  Q3 Delegate   â amber   (interrupts)
+ *  Q4 Eliminate  â slate   (waste)
  */
 type QuadMeta = {
   label: string;
@@ -32,10 +32,10 @@ type QuadMeta = {
 };
 
 const QUADRANTS: Record<QuadrantKey, QuadMeta> = {
-  q1: { label: "Do first",  subtitle: "Urgent · Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
-  q2: { label: "Schedule",  subtitle: "Not urgent · Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
-  q3: { label: "Delegate",  subtitle: "Urgent · Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
-  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
+  q1: { label: "Do first",  subtitle: "Urgent Â· Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
+  q2: { label: "Schedule",  subtitle: "Not urgent Â· Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
+  q3: { label: "Delegate",  subtitle: "Urgent Â· Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
+  q4: { label: "Eliminate", subtitle: "Not urgent Â· Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
 };
 
 function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
@@ -93,7 +93,7 @@ export default function MatrixPage() {
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">The Sift</h1>
-          <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency × importance.</p>
+          <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency Ã importance.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <PlanMyWeekButton tasks={tasks} onApply={(id, q, p) => {
@@ -232,7 +232,7 @@ function PlanMyWeekButton({
     } catch (e: any) {
       toast.error(e?.message?.includes("429")
         ? "Daily plan-week budget reached. Try again tomorrow."
-        : "Couldn't plan your week — try again.");
+        : "Couldn't plan your week â try again.");
       setOpen(false);
     } finally {
       setRunning(false);
@@ -257,11 +257,11 @@ function PlanMyWeekButton({
       <button
         onClick={run}
         disabled={running}
-        className="btn-primary gap-2 h-9 px-3 text-xs disabled:opacity-50"
+        className="btn-primary gap-2 disabled:opacity-50"
         title="AI plans the next 7 days as a coherent whole"
       >
-        <Sparkles className={cn("size-3.5", running && "animate-spin")} />
-        {running ? "Planning…" : "Plan my week"}
+        <Sparkles className={cn("size-4", running && "animate-spin")} />
+        {running ? "Planningâ¦" : "Plan my week"}
       </button>
 
       {open && (
@@ -283,7 +283,7 @@ function PlanMyWeekButton({
             </div>
 
             {running && (
-              <p className="text-sm text-muted-fg">Reading the whole list…</p>
+              <p className="text-sm text-muted-fg">Reading the whole listâ¦</p>
             )}
 
             {results && notes && (
@@ -303,7 +303,7 @@ function PlanMyWeekButton({
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{t.title}</div>
                         <div className="text-xs text-muted-fg mt-0.5">
-                          <span className="text-fg">Q{s.quadrant}</span> · p{s.suggested_priority} · {s.reason}
+                          <span className="text-fg">Q{s.quadrant}</span> Â· p{s.suggested_priority} Â· {s.reason}
                         </div>
                       </div>
                       <button
@@ -333,7 +333,7 @@ function PlanMyWeekButton({
             )}
 
             {results && results.length === 0 && !running && (
-              <p className="text-sm text-muted-fg">All clear — your week is already on track.</p>
+              <p className="text-sm text-muted-fg">All clear â your week is already on track.</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-2">
