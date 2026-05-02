@@ -259,12 +259,8 @@ function MonthView({
                   pointerEvents: "none",
                 }}
                 className={cn(
-                  "h-5 px-2 text-[11px] truncate cursor-pointer leading-5 flex items-center font-medium",
-                  priorityBg(bar.task.priority),
-                  bar.task.is_completed && "line-through opacity-60",
-                  bar.isFirstSegment && bar.isLastSegment && "rounded",
-                  bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
-                  !bar.isFirstSegment && bar.isLastSegment && "rounded-r"
+                  "px-1.5 py-1 text-[11px] truncate font-medium text-fg",
+                  bar.task.is_completed && "line-through opacity-60"
                 )}
                 title={bar.task.title}
               >
@@ -315,7 +311,7 @@ function DayCell({
         "hover:bg-muted/40"
       )}
     >
-      <div className="relative z-10 flex items-center justify-between text-xs" data-day-cell-hit="1">
+      <div className="flex items-center justify-between text-xs" data-day-cell-hit="1">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
