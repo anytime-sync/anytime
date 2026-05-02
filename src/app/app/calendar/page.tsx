@@ -17,10 +17,10 @@ import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
 
 /**
- * Calendar ÃÂ¢ÃÂÃÂ month grid with click-through to single-day view.
+ * Calendar ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ month grid with click-through to single-day view.
  *
  * Two modes, switched by `mode` state:
- *   - "month": classic 7ÃÂÃÂ6 grid, drag tasks across days, see at-a-glance
+ *   - "month": classic 7ÃÂÃÂÃÂÃÂ6 grid, drag tasks across days, see at-a-glance
  *   - "day":   single day shown as a clean editorial list with prev/next
  *              arrows; lands when the user clicks a date number on the
  *              month grid OR the empty area of a day cell.
@@ -78,6 +78,7 @@ function MonthView({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragBarRect, setDragBarRect] = useState<{ width: number; height: number } | null>(null);
+  const [overDate, setOverDate] = useState<string | null>(null);
   const activeTaskId = activeId?.startsWith("bar:") ? activeId.split(":")[1] : activeId;
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
 
@@ -105,7 +106,7 @@ function MonthView({
       if (!t.start_at || !t.due_at) continue;
       const s = startOfDay(new Date(t.start_at)).getTime();
       const e = startOfDay(new Date(t.due_at)).getTime();
-      if (s === e) continue; // single-day ÃÂ¢ÃÂÃÂ rendered in its cell
+      if (s === e) continue; // single-day ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ rendered in its cell
       if (s > lastDay || e < firstDay) continue; // outside visible grid
 
       const clampedStart = Math.max(s, firstDay);
@@ -160,7 +161,7 @@ function MonthView({
       }
     }
 
-    // For each cell index, the number of bar lanes occupying it ÃÂ¢ÃÂÃÂ so the
+    // For each cell index, the number of bar lanes occupying it ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ so the
     // cell can reserve vertical space above its single-day task chips.
     const cellLanes: number[] = new Array(days.length).fill(0);
     for (const bar of bars) {
@@ -173,7 +174,25 @@ function MonthView({
     return { multiDayBars: bars, cellLanes };
   }, [tasks, days]);
 
-  function onDragEnd(e: DragEndEvent) {
+  // While dragging a multi-day bar, highlight every cell the task
+  // would cover if dropped on the currently-hovered cell. The preview
+  // range = [hoverDate, hoverDate + originalDuration].
+  const previewRange = useMemo(() => {
+    if (!overDate || !activeId?.startsWith("bar:")) return null;
+    const taskId = activeId.split(":")[1];
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t || !t.start_at || !t.due_at) return null;
+    const sDay = startOfDay(new Date(t.start_at));
+    const dDay = startOfDay(new Date(t.due_at));
+    const durationMs = dDay.getTime() - sDay.getTime();
+    if (durationMs <= 0) return null;
+    const [y, m, d] = overDate.split("-").map(Number);
+    const start = new Date(y, m - 1, d);
+    const end = new Date(start.getTime() + durationMs);
+    return { startMs: startOfDay(start).getTime(), endMs: startOfDay(end).getTime() };
+  }, [overDate, activeId, tasks]);
+
+    function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
     const aid = String(e.active.id);
@@ -253,13 +272,14 @@ function MonthView({
               setDragBarRect(null);
             }
           }}
-          onDragEnd={onDragEnd}
-          onDragCancel={() => setActiveId(null)}
+          onDragOver={(e) => setOverDate(e.over ? String(e.over.id) : null)}
+          onDragEnd={(e) => { setOverDate(null); onDragEnd(e); }}
+          onDragCancel={() => { setActiveId(null); setOverDate(null); }}
         >
           <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
-              // Single-day tasks only ÃÂ¢ÃÂÃÂ multi-day tasks become overlay
+              // Single-day tasks only ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ multi-day tasks become overlay
               // bars rendered as siblings below.
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
@@ -283,6 +303,7 @@ function MonthView({
                   onPickDay={onPickDay}
                   reservedLanes={cellLanes[i] ?? 0}
                   style={{ gridRow: Math.floor(i / 7) + 1, gridColumn: (i % 7) + 1 }}
+                  isInPreview={previewRange ? (() => { const dt = startOfDay(d).getTime(); return dt >= previewRange.startMs && dt <= previewRange.endMs; })() : false}
                 />
               );
             })}
@@ -310,7 +331,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, style,
+  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, style, isInPreview,
 }: {
   dateKey: string;
   date: Date;
@@ -320,6 +341,7 @@ function DayCell({
   onPickDay: (d: Date) => void;
   reservedLanes: number;
   style?: React.CSSProperties;
+  isInPreview?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
@@ -341,7 +363,7 @@ function DayCell({
       className={cn(
         "bg-bg p-1.5 min-h-[112px] flex flex-col gap-1 transition-colors cursor-pointer",
         !inMonth && "opacity-50",
-        isOver && "bg-muted",
+        (isOver || isInPreview) && "bg-muted",
         "hover:bg-muted/40"
       )}
     >
@@ -575,7 +597,7 @@ function DayView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
-        {/* Inline add ÃÂ¢ÃÂÃÂ pre-fills due_at to this date so anything typed
+        {/* Inline add ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ pre-fills due_at to this date so anything typed
             here lands on the visible day, even if the AI parser doesn't
             see an explicit date in the user's text. */}
         <InlineTaskInput
@@ -585,7 +607,7 @@ function DayView({
 
         {dayTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
-            <div className="text-3xl mb-2 font-display"><em>ÃÂ¢ÃÂÃÂ</em></div>
+            <div className="text-3xl mb-2 font-display"><em>ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</em></div>
             <p className="text-sm">Nothing scheduled for this day.</p>
           </div>
         ) : (
@@ -599,7 +621,7 @@ function DayView({
         {completed.length > 0 && (
           <div className="pt-4">
             <p className="px-3 text-xs text-muted-fg mb-1">
-              Completed ÃÂÃÂ· {completed.length}
+              Completed ÃÂÃÂÃÂÃÂ· {completed.length}
             </p>
             {completed.map((t) => (
               <TaskItem key={t.id} task={t} />
