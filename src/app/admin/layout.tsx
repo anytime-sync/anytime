@@ -82,26 +82,33 @@ export default async function AdminLayout({
 }
 
 function SmallSun({ className }: { className?: string }) {
-  const rays = Array.from({ length: 12 }, (_, i) => i * 30);
+  // 36 rays cycling through 4 length variants so the burst looks
+  // hand-drawn rather than mechanical. Inner radius keeps a bright,
+  // empty center; rays taper out from there.
+  const RAY_COUNT = 36;
+  const lengths = [11, 5, 9, 6];
+  const rays = Array.from({ length: RAY_COUNT }, (_, i) => ({
+    angle: (i * 360) / RAY_COUNT,
+    len: lengths[i % lengths.length]!,
+  }));
   return (
     <svg
       viewBox="0 0 64 64"
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.4"
       strokeLinecap="round"
       aria-hidden
     >
-      <circle cx="32" cy="32" r="7" />
-      {rays.map((deg, i) => (
+      {rays.map(({ angle, len }, i) => (
         <line
           key={i}
           x1="32"
-          y1="18"
+          y1={24}
           x2="32"
-          y2="13"
-          transform={`rotate(${deg} 32 32)`}
+          y2={24 - len}
+          transform={`rotate(${angle} 32 32)`}
         />
       ))}
     </svg>
