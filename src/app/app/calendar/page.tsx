@@ -251,20 +251,15 @@ function MonthView({
                 style={{
                   gridRow: bar.weekRow + 1,
                   gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
-                  marginTop: `${28 + bar.lane * 22}px`,
+                  marginTop: `${30 + bar.lane * 22}px`,
                   marginLeft: bar.isFirstSegment ? "6px" : "0px",
                   marginRight: bar.isLastSegment ? "6px" : "0px",
                   alignSelf: "start",
                   zIndex: 5,
-                  // Pointer events fall through so a click on any day
-                  // inside the multi-day range opens that day's view via
-                  // the underlying DayCell's onClick handler.
                   pointerEvents: "none",
                 }}
                 className={cn(
-                  // Match single-day DraggableTask styling so the bar
-                  // visually reads as the same kind of chip, just stretched.
-                  "px-1.5 py-1 text-[11px] truncate",
+                  "h-5 px-2 text-[11px] truncate cursor-pointer leading-5 flex items-center font-medium",
                   priorityBg(bar.task.priority),
                   bar.task.is_completed && "line-through opacity-60",
                   bar.isFirstSegment && bar.isLastSegment && "rounded",
@@ -273,7 +268,7 @@ function MonthView({
                 )}
                 title={bar.task.title}
               >
-                {bar.isFirstSegment ? bar.task.title : " "}
+                {bar.isFirstSegment ? bar.task.title : ""}
               </div>
             ))}
           </div>
@@ -507,4 +502,12 @@ function DayView({
             <p className="px-3 text-xs text-muted-fg mb-1">
               Completed · {completed.length}
             </p>
-         
+            {completed.map((t) => (
+              <TaskItem key={t.id} task={t} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
