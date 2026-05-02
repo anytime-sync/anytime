@@ -11,6 +11,7 @@ import {
   startOfDay,
   startOfWeek,
 } from "date-fns";
+import type { Locale } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Clock, Loader2 } from "lucide-react";
 import { getLanguage } from "@/lib/i18n";
