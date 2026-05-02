@@ -2,7 +2,7 @@
 
 import { useWeeklyRetro, useUserPrefs } from "@/hooks/use-ai";
 import { useState } from "react";
-import { format } from "date-fns";
+import { addDays, format, startOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { getLanguage } from "@/lib/i18n";
@@ -10,13 +10,11 @@ import { getLanguage } from "@/lib/i18n";
 type Target = "last" | "current" | "next";
 
 export default function RetroPage() {
-  // Default to "current" (This week) per UX request — users land on the
-  // most-relevant view first and can flip to retrospect or look ahead.
   const [target, setTarget] = useState<Target>("current");
 
-  // "next" is a forward-looking pane that derives from this week's
-  // generated plan (raw_json.next_week_plan), so we always fetch the
-  // current week. For "last" / "current" we fetch their own data.
+  // "next" reads from the current-week review (which carries the
+  // forward plan in raw_json.next_week_plan); the network query is
+  // effectively the same fetch under either tab.
   const sourceTarget: "last" | "current" = target === "next" ? "current" : target;
   const { data, isLoading, isFetching, isError } = useWeeklyRetro(sourceTarget);
   const { data: prefs } = useUserPrefs();
@@ -29,6 +27,20 @@ export default function RetroPage() {
       : target === "current"
       ? "This week, so far"
       : "Next week, planned";
+
+  // Compute the date label for each tab.
+  let weekLabel: string | null = null;
+  if (data?.week_start) {
+    if (target === "next") {
+      const ns = addDays(startOfWeek(new Date(data.week_start), { weekStartsOn: 1 }), 7);
+      weekLabel = "Week of " + format(ns, "EEEE, MMMM d, yyyy", { locale });
+    } else {
+      weekLabel = "Week of " + format(new Date(data.week_start), "EEEE, MMMM d, yyyy", { locale });
+    }
+  }
+
+  const themes = (data?.raw_json as any)?.themes as string | undefined;
+  const nextWeekPlan = (data?.raw_json as any)?.next_week_plan as string | undefined;
 
   return (
     <div className="flex flex-col h-full">
@@ -84,51 +96,33 @@ export default function RetroPage() {
             </p>
           )}
 
-          {data && target !== "next" && (
+          {data && (
             <article className="space-y-7">
-              {data.week_start && (
-                <p className="text-xs text-muted-fg">
-                  Week of {format(new Date(data.week_start), "EEEE, MMMM d, yyyy", { locale })}
-                </p>
+              {weekLabel && (
+                <p className="text-xs text-muted-fg">{weekLabel}</p>
               )}
-              <Section kicker="Shipped" body={data.shipped} />
-              <Section kicker="Slipped" body={data.slipped} />
-              {(data.raw_json as any)?.themes && (
-                <Section kicker="Themes" body={(data.raw_json as any).themes} />
-              )}
-              <Section kicker="Worth dropping" body={data.drop_list} variant="muted" />
-              {(data.raw_json as any)?.next_week_plan && (
+              {/* Shipped / Slipped only meaningful for past or current
+                  weeks. The Section component returns null on empty body,
+                  so on the Next tab these naturally hide. */}
+              <Section
+                kicker="Shipped"
+                body={target === "next" ? "" : data.shipped}
+              />
+              <Section
+                kicker="Slipped"
+                body={target === "next" ? "" : data.slipped}
+              />
+              <Section kicker="Themes" body={themes ?? ""} />
+              <Section
+                kicker="Worth dropping"
+                body={data.drop_list}
+                variant="muted"
+              />
+              {nextWeekPlan && (
                 <Section
                   kicker="For next week"
-                  body={(data.raw_json as any).next_week_plan}
+                  body={nextWeekPlan}
                   variant="accent"
-                />
-              )}
-            </article>
-          )}
-
-          {data && target === "next" && (
-            <article className="space-y-6">
-              <p className="text-xs text-muted-fg">
-                Drafted from this week\u2019s themes
-              </p>
-              {(data.raw_json as any)?.next_week_plan ? (
-                <Section
-                  kicker="For next week"
-                  body={(data.raw_json as any).next_week_plan}
-                  variant="accent"
-                />
-              ) : (
-                <p className="text-sm text-muted-fg italic">
-                  No next-week plan yet. Once this week's review generates,
-                  the suggested plan will appear here.
-                </p>
-              )}
-              {(data.raw_json as any)?.themes && (
-                <Section
-                  kicker="Carrying forward"
-                  body={(data.raw_json as any).themes}
-                  variant="muted"
                 />
               )}
             </article>
