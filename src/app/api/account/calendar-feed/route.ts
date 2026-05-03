@@ -52,7 +52,10 @@ function buildUrl(req: Request, token: string): string {
   // they see in the browser (e.g. firstlight.to even if we're running
   // on a vercel.app preview alias).
   const base = process.env.APP_URL || `${url.protocol}//${url.host}`;
-  return `${base.replace(/\/$/, "")}/api/ics/${token}/calendar.ics`;
+  // Single path segment so the [token]/route.ts handler matches; the
+  // .ics suffix is stripped server-side. This is the form Apple
+  // Calendar / Google Calendar / Outlook all expect.
+  return `${base.replace(/\/$/, "")}/api/ics/${token}.ics`;
 }
 
 export async function GET(req: Request) {
