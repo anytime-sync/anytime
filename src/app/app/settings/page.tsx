@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
-import { Download, Trash2, LogOut, Bell, Upload } from "lucide-react";
+import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
@@ -297,6 +297,9 @@ export default function SettingsPage() {
             )}
           </Section>
 
+          {/* ---------- Calendar sync ---------- */}
+          <CalendarFeedSection />
+
           {/* ---------- Import ---------- */}
           <Section kicker="Import">
             <Row label="From">
@@ -397,6 +400,230 @@ export default function SettingsPage() {
           </Section>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Calendar sync — read-only iCalendar (.ics) subscription
+//
+// We expose a single per-user URL that any standards-compliant calendar
+// app (Apple Calendar, Google Calendar, Outlook, Fantastical, …) can
+// subscribe to. The URL embeds an opaque 32-byte token; rotating or
+// clearing the token invalidates every existing subscription on the
+// next refresh, so it doubles as the kill switch.
+// ---------------------------------------------------------------------
+function CalendarFeedSection() {
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<"enable" | "rotate" | "disable" | null>(null);
+  const [feedUrl, setFeedUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showHow, setShowHow] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/account/calendar-feed");
+        if (!r.ok) throw new Error("load_failed");
+        const j = (await r.json()) as { enabled: boolean; url: string | null };
+        setFeedUrl(j.url);
+      } catch {
+        // Non-fatal — section will show the "Enable" CTA.
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  async function enable() {
+    setBusy("enable");
+    try {
+      const r = await fetch("/api/account/calendar-feed", { method: "POST" });
+      if (!r.ok) throw new Error("enable_failed");
+      const j = (await r.json()) as { url: string };
+      setFeedUrl(j.url);
+      toast.success("Calendar subscription enabled");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't enable subscription");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function rotate() {
+    if (!confirm("Rotate the URL? Every device that's currently subscribed will stop syncing on its next refresh, and you'll need to re-add the new URL.")) {
+      return;
+    }
+    setBusy("rotate");
+    try {
+      const r = await fetch("/api/account/calendar-feed", { method: "POST" });
+      if (!r.ok) throw new Error("rotate_failed");
+      const j = (await r.json()) as { url: string };
+      setFeedUrl(j.url);
+      toast.success("New URL minted");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't rotate URL");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function disable() {
+    if (!confirm("Disable the subscription? Every subscribed calendar will stop syncing.")) {
+      return;
+    }
+    setBusy("disable");
+    try {
+      const r = await fetch("/api/account/calendar-feed", { method: "DELETE" });
+      if (!r.ok) throw new Error("disable_failed");
+      setFeedUrl(null);
+      toast.success("Subscription disabled");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't disable subscription");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copy() {
+    if (!feedUrl) return;
+    try {
+      await navigator.clipboard.writeText(feedUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Couldn't copy — please copy manually");
+    }
+  }
+
+  return (
+    <Section kicker="Calendar sync">
+      <Row label="Subscribe">
+        <div className="flex-1 min-w-0">
+          {loading ? (
+            <div className="text-sm text-muted-fg">Loading…</div>
+          ) : feedUrl ? (
+            <div className="space-y-2">
+              <div className="flex items-stretch gap-2">
+                <input
+                  readOnly
+                  value={feedUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="input flex-1 font-mono text-[12px]"
+                />
+                <button
+                  onClick={copy}
+                  className="btn-ghost h-9 px-3 text-sm gap-2 shrink-0"
+                  aria-label="Copy URL"
+                >
+                  {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={rotate}
+                  disabled={busy !== null}
+                  className="btn-ghost h-8 px-3 text-xs gap-1.5"
+                >
+                  <RefreshCw className={`size-3 ${busy === "rotate" ? "animate-spin" : ""}`} />
+                  Rotate URL
+                </button>
+                <button
+                  onClick={disable}
+                  disabled={busy !== null}
+                  className="btn-ghost h-8 px-3 text-xs gap-1.5 text-danger"
+                >
+                  <Trash2 className="size-3" />
+                  Disable
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={enable}
+              disabled={busy !== null}
+              className="btn-primary gap-2"
+            >
+              <Calendar className="size-4" />
+              {busy === "enable" ? "Generating…" : "Enable calendar subscription"}
+            </button>
+          )}
+        </div>
+      </Row>
+
+      <p className="text-xs text-muted-fg leading-relaxed">
+        Read-only feed. Apple Calendar, Google Calendar, Outlook, and any other
+        ICS-compatible app can subscribe — your tasks and meetings will appear
+        alongside your other calendars and refresh automatically (typically
+        every 15 minutes to a few hours, depending on the app). Edits made in
+        those calendars don&apos;t flow back to First Light. Two-way Google
+        Calendar sync is on the roadmap.
+      </p>
+
+      {feedUrl && (
+        <div>
+          <button
+            onClick={() => setShowHow((v) => !v)}
+            className="inline-flex items-center gap-1 text-xs text-fg hover:text-accent"
+          >
+            {showHow ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+            How to subscribe
+          </button>
+          {showHow && (
+            <div className="mt-3 space-y-3 text-xs leading-relaxed text-muted-fg border-l-2 border-border pl-4">
+              <HowTo
+                platform="iPhone / iPad"
+                steps={[
+                  "Settings → Calendar → Accounts → Add Account",
+                  'Tap "Other" → "Add Subscribed Calendar"',
+                  "Paste the URL above into Server, then Next → Save",
+                ]}
+              />
+              <HowTo
+                platform="macOS Calendar"
+                steps={[
+                  "Open Calendar → File → New Calendar Subscription",
+                  "Paste the URL above → Subscribe",
+                  'Choose how often to refresh (e.g. "Every 15 minutes")',
+                ]}
+              />
+              <HowTo
+                platform="Google Calendar (web)"
+                steps={[
+                  "Open calendar.google.com",
+                  'In the left sidebar, click "+" next to "Other calendars" → "From URL"',
+                  "Paste the URL above → Add calendar",
+                ]}
+              />
+              <HowTo
+                platform="Outlook (web)"
+                steps={[
+                  "Open Outlook calendar → Add calendar → Subscribe from web",
+                  "Paste the URL above, give the calendar a name, pick a color → Import",
+                ]}
+              />
+              <p className="pt-1 text-[11px]">
+                On Android, subscribe in Google Calendar (web) — your phone&apos;s
+                calendar will pick it up automatically through your Google account.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function HowTo({ platform, steps }: { platform: string; steps: string[] }) {
+  return (
+    <div>
+      <p className="text-fg mb-1">{platform}</p>
+      <ol className="list-decimal pl-5 space-y-0.5">
+        {steps.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+      </ol>
     </div>
   );
 }
