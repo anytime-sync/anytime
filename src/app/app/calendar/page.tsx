@@ -4,9 +4,9 @@ import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
   isSameDay, isSameMonth, startOfDay, endOfDay, startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent,
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
@@ -187,54 +187,6 @@ function MonthView({
     return set;
   }, [hoveredBarTaskId, tasks]);
 
-  // While the user is dragging a task, track which cell their cursor is
-  // over so we can light up the FULL range the bar would land on (not
-  // just the cell under the cursor). For a 3-day task, three cells light
-  // up; the offset preserves where in the bar the user grabbed from so
-  // the highlight matches the eventual drop result.
-  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
-  const dragHoverKeys = useMemo(() => {
-    const set = new Set<string>();
-    if (!activeId || !dragOverDateKey) return set;
-    const [taskId, fromKey] = activeId.split("::");
-    const t = tasks.find((x) => x.id === taskId);
-    if (!t?.start_at || !t?.due_at) return set;
-    const s = startOfDay(new Date(t.start_at)).getTime();
-    const e = startOfDay(new Date(t.due_at)).getTime();
-    const [oy, om, od] = dragOverDateKey.split("-").map(Number);
-    const dropDay = new Date(oy, om - 1, od);
-    let offsetMs: number;
-    if (fromKey) {
-      const [fy, fm, fd] = fromKey.split("-").map(Number);
-      const fromDay = new Date(fy, fm - 1, fd);
-      offsetMs = startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime();
-    } else {
-      offsetMs = startOfDay(dropDay).getTime() - s;
-    }
-    const newStart = s + offsetMs;
-    const newEnd = e + offsetMs;
-    for (let ms = newStart; ms <= newEnd; ms += 86400000) {
-      set.add(format(new Date(ms), "yyyy-MM-dd"));
-    }
-    return set;
-  }, [activeId, dragOverDateKey, tasks]);
-
-  // Measure the cell width so the DragOverlay can render multi-day
-  // tasks at their REAL bar width (cellWidth * duration) instead of a
-  // generic chip. ResizeObserver keeps it accurate across viewport
-  // resizes; gridRef points at the 7-col cell grid.
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const [cellWidth, setCellWidth] = useState(0);
-  useEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const measure = () => setCellWidth(el.clientWidth / 7);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
@@ -318,11 +270,10 @@ function MonthView({
         <DndContext
           sensors={sensors}
           onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
-          onDragOver={(e: DragOverEvent) => setDragOverDateKey(e.over ? String(e.over.id) : null)}
-          onDragEnd={(e) => { setDragOverDateKey(null); onDragEnd(e); }}
-          onDragCancel={() => { setActiveId(null); setDragOverDateKey(null); }}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setActiveId(null)}
         >
-          <div ref={gridRef} className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
               // Single-day tasks only — multi-day tasks render as a
@@ -349,7 +300,7 @@ function MonthView({
                   activeId={activeId}
                   onPickDay={onPickDay}
                   barLanesAbove={cellBarLanes.get(key) ?? 0}
-                  barHoverHighlight={hoverHighlightKeys.has(key) || dragHoverKeys.has(key)}
+                  barHoverHighlight={hoverHighlightKeys.has(key)}
                 />
               );
             })}
@@ -369,7 +320,7 @@ function MonthView({
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
-            {activeTask ? <DragPreview task={activeTask} cellWidth={cellWidth} /> : null}
+            {activeTask ? <DragPreview task={activeTask} /> : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -593,27 +544,12 @@ function DraggableTask({
   );
 }
 
-function DragPreview({ task, cellWidth }: { task: TaskWithTags; cellWidth: number }) {
-  // Multi-day tasks render the preview at their REAL width — cellWidth
-  // multiplied by the task's day-span — so the user sees a full-size
-  // bar tracking the cursor instead of a single-day chip.
-  let widthPx = 180;
-  if (task.start_at && task.due_at && cellWidth > 0) {
-    const s = startOfDay(new Date(task.start_at)).getTime();
-    const e = startOfDay(new Date(task.due_at)).getTime();
-    if (e > s) {
-      const days = Math.round((e - s) / 86400000) + 1;
-      widthPx = Math.max(80, cellWidth * days - 12);
-    }
-  }
+function DragPreview({ task }: { task: TaskWithTags }) {
   return (
-    <div
-      style={{ width: `${widthPx}px` }}
-      className={cn(
-        "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent",
-        priorityBg(task.priority)
-      )}
-    >
+    <div className={cn(
+      "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent w-[180px]",
+      priorityBg(task.priority)
+    )}>
       {task.title}
     </div>
   );
