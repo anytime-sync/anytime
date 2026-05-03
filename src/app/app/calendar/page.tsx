@@ -4,7 +4,7 @@ import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
   isSameDay, isSameMonth, startOfDay, endOfDay, startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
@@ -78,6 +78,14 @@ function MonthView({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  const [hoverBarId, setHoverBarId] = useState<string | null>(null);
+  // Captured at drag-start so the floating drag preview can match the
+  // original bar's pixel width (one grid cell × day count) instead of
+  // the default single-day chip width — multi-day bars should look
+  // exactly like themselves while flying with the cursor.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [cellWidth, setCellWidth] = useState<number>(0);
+
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null;
   const activeIsMultiDay = !!(
     activeTask &&
@@ -85,6 +93,31 @@ function MonthView({
     activeTask.due_at &&
     !isSameDay(new Date(activeTask.start_at), new Date(activeTask.due_at))
   );
+
+  // Day-count for the active multi-day bar — used to size the drag
+  // preview. +1 because both endpoints are inclusive (a 5/1–5/3 bar
+  // spans 3 days, not 2).
+  const activeDayCount = useMemo(() => {
+    if (!activeIsMultiDay || !activeTask?.start_at || !activeTask?.due_at) return 1;
+    const s = startOfDay(new Date(activeTask.start_at)).getTime();
+    const e = startOfDay(new Date(activeTask.due_at)).getTime();
+    return Math.max(1, Math.round((e - s) / 86400000) + 1);
+  }, [activeIsMultiDay, activeTask]);
+
+  // Hovering a multi-day bar should give every covered cell the same
+  // bg-muted/30 tint that a cell gets when its own contents are
+  // hovered (single-day chip hover). Since the bar is a sibling of the
+  // cells in the grid (not a child), CSS :hover can't propagate — so
+  // we track which bar is hovered and broadcast its day range.
+  const hoverRange = useMemo(() => {
+    if (!hoverBarId) return null;
+    const t = tasks.find((x) => x.id === hoverBarId);
+    if (!t || !t.start_at || !t.due_at) return null;
+    return {
+      start: startOfDay(new Date(t.start_at)).getTime(),
+      end: startOfDay(new Date(t.due_at)).getTime(),
+    };
+  }, [hoverBarId, tasks]);
 
   // While dragging a multi-day bar, derive the would-be new range from
   // the cell currently under the cursor. Drop position becomes the new
@@ -265,12 +298,18 @@ function MonthView({
         </div>
         <DndContext
           sensors={sensors}
-          onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+          onDragStart={(e: DragStartEvent) => {
+            setActiveId(String(e.active.id));
+            // Snapshot the live cell width so the floating preview can
+            // match the original bar's footprint exactly.
+            const w = gridRef.current?.clientWidth ?? 0;
+            if (w > 0) setCellWidth(w / 7);
+          }}
           onDragOver={(e) => setOverKey(e.over ? String(e.over.id) : null)}
           onDragEnd={onDragEnd}
           onDragCancel={() => { setActiveId(null); setOverKey(null); }}
         >
-          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
+          <div ref={gridRef} className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
               // Single-day tasks only — multi-day tasks become overlay
@@ -290,6 +329,9 @@ function MonthView({
               const inPreview = !!previewRange &&
                 dayMs >= previewRange.start &&
                 dayMs <= previewRange.end;
+              const inHover = !!hoverRange &&
+                dayMs >= hoverRange.start &&
+                dayMs <= hoverRange.end;
               return (
                 <DayCell
                   key={key}
@@ -301,6 +343,7 @@ function MonthView({
                   onPickDay={onPickDay}
                   reservedLanes={cellLanes[i] ?? 0}
                   inPreview={inPreview}
+                  inHover={inHover}
                 />
               );
             })}
@@ -310,11 +353,21 @@ function MonthView({
                 bar={bar}
                 dimmed={activeId === bar.task.id}
                 hideWhileDragging={activeId === bar.task.id}
+                onHover={setHoverBarId}
               />
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
-            {activeTask ? <DragPreview task={activeTask} /> : null}
+            {activeTask ? (
+              <DragPreview
+                task={activeTask}
+                widthPx={
+                  activeIsMultiDay && cellWidth > 0
+                    ? Math.round(cellWidth * activeDayCount)
+                    : undefined
+                }
+              />
+            ) : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -323,7 +376,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, inPreview,
+  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, inPreview, inHover,
 }: {
   dateKey: string;
   date: Date;
@@ -333,6 +386,7 @@ function DayCell({
   onPickDay: (d: Date) => void;
   reservedLanes: number;
   inPreview?: boolean;
+  inHover?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
@@ -358,6 +412,11 @@ function DayCell({
         // gets the accent ring so the user sees the full landing span,
         // not just the cell directly under the cursor.
         inPreview && "bg-accent/20 ring-2 ring-accent ring-inset",
+        // Multi-day bar hover: cells under a hovered bar pick up the
+        // same bg-muted/30 a cell would get when its single-day chip
+        // is hovered, so the visual response is consistent regardless
+        // of whether the task spans one day or many.
+        inHover && "bg-muted/30",
         "hover:bg-muted/30"
       )}
     >
@@ -412,6 +471,7 @@ function DraggableBar({
   bar,
   dimmed,
   hideWhileDragging,
+  onHover,
 }: {
   bar: {
     task: TaskWithTags;
@@ -424,6 +484,7 @@ function DraggableBar({
   };
   dimmed?: boolean;
   hideWhileDragging?: boolean;
+  onHover?: (taskId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: bar.task.id,
@@ -445,15 +506,18 @@ function DraggableBar({
       }}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => { e.stopPropagation(); setSelected(bar.task.id); }}
+      onMouseEnter={() => onHover?.(bar.task.id)}
+      onMouseLeave={() => onHover?.(null)}
       title={bar.task.title}
       className={cn(
-        // Match single-day DraggableTask styling so the bar visually
-        // reads as the same kind of chip, just stretched across days.
-        // Priority colors come straight from priorityBg() — same source
-        // as single-day chips, so saturation and theme inversion track
-        // together.
+        // Lower-opacity priority tint (vs the /70 used for single-day
+        // chips) so the bar reads as a label sitting on top of the
+        // cell — the cell's own bg-bg/15 shows through, keeping every
+        // cell visually consistent whether or not a multi-day task
+        // crosses it. Same hue family as single-day chips, just
+        // softer so the bar doesn't dominate.
         "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing",
-        priorityBg(bar.task.priority),
+        barBg(bar.task.priority),
         bar.task.is_completed && "line-through opacity-60",
         bar.isFirstSegment && bar.isLastSegment && "rounded",
         bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
@@ -488,12 +552,20 @@ function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean 
   );
 }
 
-function DragPreview({ task }: { task: TaskWithTags }) {
+function DragPreview({ task, widthPx }: { task: TaskWithTags; widthPx?: number }) {
+  // Multi-day drag passes widthPx = original_bar_pixel_width so the
+  // floating preview mirrors the bar's full footprint instead of
+  // shrinking down to a single-day chip. Single-day drag falls back
+  // to the fixed 180px chip width.
   return (
-    <div className={cn(
-      "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent w-[180px]",
-      priorityBg(task.priority)
-    )}>
+    <div
+      style={widthPx ? { width: widthPx } : undefined}
+      className={cn(
+        "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent",
+        widthPx ? "" : "w-[180px]",
+        priorityBg(task.priority)
+      )}
+    >
       {task.title}
     </div>
   );
@@ -507,6 +579,17 @@ function priorityBg(priority: number) {
   if (priority >= 3) return "bg-p-med/70 text-fg";
   if (priority >= 1) return "bg-p-low/70 text-fg";
   return "bg-muted text-fg";
+}
+
+// Same priority palette as priorityBg but at a lower opacity, so a
+// multi-day bar sitting across cells doesn't visually overpower the
+// underlying cell tint. Cells with bars stay close in tone to cells
+// without — the bar reads as a label, not a replacement surface.
+function barBg(priority: number) {
+  if (priority >= 5) return "bg-p-high/35 text-fg";
+  if (priority >= 3) return "bg-p-med/35 text-fg";
+  if (priority >= 1) return "bg-p-low/35 text-fg";
+  return "bg-muted/40 text-fg";
 }
 
 /* ------------------------ Day view ------------------------ */
