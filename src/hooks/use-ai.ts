@@ -8,7 +8,6 @@ const tz = () =>
 
 export type ParsedTask = {
   title: string;
-  start_at?: string | null;
   due_at: string | null;
   is_all_day: boolean;
   priority: 0 | 1 | 3 | 5;
@@ -120,7 +119,8 @@ export type PlanWeekResult = {
 
 /**
  * Batch-plan the next 7 days. Sends up to 30 tasks in one shot so the
- * model can weight them against each other.
+ * model can weight them against each other (one item is the most
+ * important THIS week — that's only visible across the whole list).
  */
 export function usePlanWeek() {
   return useMutation({
@@ -198,7 +198,8 @@ export type WeeklyRetroRow = {
   shipped: string;
   slipped: string;
   drop_list: string;
-  /** Smarter-retro additions live in raw_json so older rows still validate. */
+  // Smarter-retro additions live inside raw_json so older cached rows
+  // remain valid without a schema migration.
   raw_json?: {
     themes?: string;
     next_week_plan?: string;
@@ -241,6 +242,10 @@ export type UserPrefs = {
   language: "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
   email_reminders: boolean;
   push_reminders: boolean;
+  // ICS calendar subscription — token is opaque, never displayed
+  // verbatim outside Settings → Calendar sync.
+  ics_feed_token: string | null;
+  ics_feed_created_at: string | null;
 };
 
 export function useUserPrefs() {
