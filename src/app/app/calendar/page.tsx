@@ -216,7 +216,7 @@ function MonthView({
           onDragEnd={onDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border overflow-auto relative">
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
               // Single-day tasks only — multi-day tasks become overlay
@@ -273,7 +273,7 @@ function MonthView({
                 )}
                 title={bar.task.title}
               >
-                {bar.isFirstSegment ? bar.task.title : " "}
+                {bar.isFirstSegment ? bar.task.title : " "}
               </div>
             ))}
           </div>
@@ -314,10 +314,10 @@ function DayCell({
         }
       }}
       className={cn(
-        "bg-bg p-1.5 min-h-[112px] flex flex-col gap-1 transition-colors cursor-pointer",
-        !inMonth && "opacity-50",
-        isOver && "bg-muted",
-        "hover:bg-muted/40"
+        "p-1.5 min-h-[112px] flex flex-col gap-1 transition-colors cursor-pointer",
+        inMonth ? "bg-bg/15" : "bg-transparent opacity-60",
+        isOver && "bg-muted/60",
+        "hover:bg-muted/30"
       )}
     >
       <div className="flex items-center justify-between text-xs" data-day-cell-hit="1">
@@ -344,175 +344,4 @@ function DayCell({
       )}
       <div className="flex-1 flex flex-col gap-1 overflow-hidden" data-day-cell-hit="1">
         {tasks.slice(0, 4).map((t) => (
-          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} />
-        ))}
-        {tasks.length > 4 && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
-            className="text-[10px] text-muted-fg pl-1 hover:text-fg text-left"
-          >
-            + {tasks.length - 4} more
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
-  const setSelected = useUIStore((s) => s.setSelectedTaskId);
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => { e.stopPropagation(); setSelected(task.id); }}
-      className={cn(
-        "px-1.5 py-1 rounded text-[11px] truncate cursor-grab active:cursor-grabbing",
-        priorityBg(task.priority),
-        task.is_completed && "line-through opacity-60",
-        (dimmed || isDragging) && "opacity-30"
-      )}
-    >
-      {task.title}
-    </div>
-  );
-}
-
-function DragPreview({ task }: { task: TaskWithTags }) {
-  return (
-    <div className={cn(
-      "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent w-[180px]",
-      priorityBg(task.priority)
-    )}>
-      {task.title}
-    </div>
-  );
-}
-
-function priorityBg(priority: number) {
-  if (priority >= 5) return "bg-p-high/15 text-p-high";
-  if (priority >= 3) return "bg-p-med/15 text-p-med";
-  if (priority >= 1) return "bg-p-low/15 text-p-low";
-  return "bg-muted text-fg";
-}
-
-/* ------------------------ Day view ------------------------ */
-
-function DayView({
-  date,
-  onChangeDate,
-  onBack,
-}: {
-  date: Date;
-  onChangeDate: (d: Date) => void;
-  onBack: () => void;
-}) {
-  // Pull all tasks; client-filter to this day. Cheap because day pages
-  // are bounded; avoids needing a date-range Tasks filter on the API.
-  const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
-
-  const dayStart = startOfDay(date);
-  const dayEnd = endOfDay(date);
-  const dayTasks = tasks
-    .filter((t) => t.due_at && new Date(t.due_at) >= dayStart && new Date(t.due_at) <= dayEnd)
-    .sort((a, b) => {
-      // All-day first, then by time ascending. Completed bubble down.
-      if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
-      const ad = a.due_at ? new Date(a.due_at).getTime() : 0;
-      const bd = b.due_at ? new Date(b.due_at).getTime() : 0;
-      if (a.is_all_day && !b.is_all_day) return -1;
-      if (!a.is_all_day && b.is_all_day) return 1;
-      return ad - bd;
-    });
-
-  const incomplete = dayTasks.filter((t) => !t.is_completed);
-  const completed = dayTasks.filter((t) => t.is_completed);
-  const isToday = isSameDay(date, new Date());
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={onBack}
-              className="text-xs text-muted-fg hover:text-fg inline-flex items-center gap-1 mb-1"
-            >
-              <ArrowLeft className="size-3" />
-              {format(date, "MMMM yyyy")}
-            </button>
-            <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              {isToday ? "Today" : format(date, "EEEE")}
-            </h1>
-            <p className="text-sm text-muted-fg mt-1">
-              {format(date, "MMMM d, yyyy")}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              className="btn-ghost size-9 p-0 grid place-items-center"
-              onClick={() => onChangeDate(addDays(date, -1))}
-              aria-label="Previous day"
-              title="Previous day"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              className="btn-ghost h-9 px-2 text-xs"
-              onClick={() => onChangeDate(new Date())}
-            >
-              Today
-            </button>
-            <button
-              className="btn-ghost size-9 p-0 grid place-items-center"
-              onClick={() => onChangeDate(addDays(date, 1))}
-              aria-label="Next day"
-              title="Next day"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
-        {/* Inline add: pre-fills due_at to this date so anything typed
-            here lands on the visible day, even if the AI parser doesn't
-            see an explicit date in the user's text. */}
-        <InlineTaskInput
-          defaultProjectId={null}
-          defaultDueAt={dayStart.toISOString()}
-        />
-
-        {dayTasks.length === 0 ? (
-          <div className="px-3 py-12 text-center text-muted-fg">
-            <div className="text-3xl mb-2 font-display"><em>{"—"}</em></div>
-            <p className="text-sm">Nothing scheduled for this day.</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {incomplete.map((t) => (
-              <TaskItem key={t.id} task={t} />
-            ))}
-          </div>
-        )}
-
-        {completed.length > 0 && (
-          <div className="pt-4">
-            <p className="px-3 text-xs text-muted-fg mb-1">
-              Completed &middot; {completed.length}
-            </p>
-            {completed.map((t) => (
-              <TaskItem key={t.id} task={t} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id}
