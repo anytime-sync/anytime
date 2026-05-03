@@ -389,19 +389,22 @@ function DraggableBar({
     const idx = Math.min(n - 1, Math.max(0, Math.floor((rel / rect.width) * n)));
     onPickDay(bar.segDays[idx]);
   }
+  // Absolute-positioned overlay sitting on top of the cell grid. The
+  // bar takes ZERO grid space, so cells underneath retain their normal
+  // height and styling — every cell is identical, regardless of whether
+  // a multi-day bar is drawn over it. left/width are derived from the
+  // bar's start/end columns as percentages of the 7-col grid; top is
+  // weekRow * (100% / 6) plus a 28px offset to clear the date number.
+  const numCols = bar.endCol - bar.startCol + 1;
+  const leftPadPx = bar.isFirstSegment ? 6 : 0;
+  const rightPadPx = bar.isLastSegment ? 6 : 0;
   return (
     <div
       style={{
-        gridRow: bar.weekRow + 1,
-        gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
-        // Push down past the date number, leave room for any single-
-        // day chip that lands on the same cell. Margin trims the bar
-        // away from cell edges so click-through still hits the cell
-        // border area.
-        marginTop: "28px",
-        marginLeft: bar.isFirstSegment ? "6px" : "0px",
-        marginRight: bar.isLastSegment ? "6px" : "0px",
-        alignSelf: "start",
+        position: "absolute",
+        top: `calc(${(bar.weekRow * 100) / 6}% + 28px)`,
+        left: `calc(${((bar.startCol - 1) * 100) / 7}% + ${leftPadPx}px)`,
+        width: `calc(${(numCols * 100) / 7}% - ${leftPadPx + rightPadPx}px)`,
         // Wrapper has no pointer events; the inner chip re-enables
         // them so cells around the chip stay clickable.
         pointerEvents: "none",
