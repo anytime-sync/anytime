@@ -164,7 +164,7 @@ export function useCreateTask() {
       if (!u.user) throw new Error("Not authenticated");
 
       const { tagNames, ...taskInput } = input;
-      // Strip the synthetic optimistic id (if onMutate added one) before
+      // Strip the synthetic optimistic id (if the caller passed one) before
       // hitting Postgres — the DB assigns the real uuid.
       delete (taskInput as any).id;
       const { data: task, error } = await supabase
@@ -191,9 +191,9 @@ export function useCreateTask() {
     },
     /**
      * Optimistic insert — the new task appears in every visible list
-     * the instant the user hits Enter, before the server responds. The
-     * server roundtrip (~200-500ms) becomes invisible. Errors roll back
-     * to the prior list and surface a toast.
+     * the instant the user hits Enter, before the server responds.
+     * The server roundtrip (~200-500ms) becomes invisible. Any error
+     * rolls back to the prior list and surfaces a toast.
      */
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: ["tasks"] });
@@ -221,6 +221,8 @@ export function useCreateTask() {
         spent_pomodoros: 0,
         created_at: now,
         updated_at: now,
+        // Synthetic tags so the row renders pills immediately. They'll
+        // be replaced by the real tag rows on the next refetch.
         tags: (input.tagNames ?? []).map((name, i) => ({
           id: `temp-tag-${i}-${name}`,
           user_id: "optimistic",
@@ -295,7 +297,25 @@ export function useToggleTask() {
     if (!task.is_completed) {
       const next = nextOccurrence(task);
       if (next) {
-        update.mutate({ id: task.id, due_at: next.toISOString() });
+        // Slide BOTH ends of the meeting window forward by the same
+        // delta so the duration is preserved on the next occurrence.
+        // Without this, only due_at advanced — start_at stayed pinned
+        // to the very first occurrence, so a monthly meeting that
+        // started 4/30 10:15 AM would render as "starts 4/30, ends
+        // 5/30" after the first roll-over instead of "starts 5/30,
+        // ends 5/30".
+        const patch: Partial<Task> & { id: string } = {
+          id: task.id,
+          due_at: next.toISOString(),
+        };
+        if (task.start_at && task.due_at) {
+          const delta =
+            next.getTime() - new Date(task.due_at).getTime();
+          patch.start_at = new Date(
+            new Date(task.start_at).getTime() + delta
+          ).toISOString();
+        }
+        update.mutate(patch);
         return;
       }
     }
