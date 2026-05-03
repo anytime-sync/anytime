@@ -163,7 +163,7 @@ function buildIcs(tasks: TaskRow[]): string {
 
     lines.push(`SUMMARY:${escapeText(task.title || "(untitled)")}`);
     if (task.notes && task.notes.trim()) {
-      lines.push(`DESCRIPTION:${escapeText(task.otes)}`);
+      lines.push(`DESCRIPTION:${escapeText(task.notes)}`);
     }
     if (task.rrule) {
       // Pass the rrule through verbatim — date-fns / RRule library
