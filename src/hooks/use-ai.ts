@@ -8,6 +8,7 @@ const tz = () =>
 
 export type ParsedTask = {
   title: string;
+  start_at?: string | null;
   due_at: string | null;
   is_all_day: boolean;
   priority: 0 | 1 | 3 | 5;
