@@ -4,7 +4,7 @@ import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
   isSameDay, isSameMonth, startOfDay, endOfDay, startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
@@ -77,169 +77,32 @@ function MonthView({
   const update = useUpdateTask();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [overKey, setOverKey] = useState<string | null>(null);
-  const [hoverBarId, setHoverBarId] = useState<string | null>(null);
-  // Captured at drag-start so the floating drag preview can match the
-  // original bar's pixel width (one grid cell × day count) instead of
-  // the default single-day chip width — multi-day bars should look
-  // exactly like themselves while flying with the cursor.
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const [cellWidth, setCellWidth] = useState<number>(0);
-
-  const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null;
-  const activeIsMultiDay = !!(
-    activeTask &&
-    activeTask.start_at &&
-    activeTask.due_at &&
-    !isSameDay(new Date(activeTask.start_at), new Date(activeTask.due_at))
-  );
-
-  // Day-count for the active multi-day bar — used to size the drag
-  // preview. +1 because both endpoints are inclusive (a 5/1–5/3 bar
-  // spans 3 days, not 2).
-  const activeDayCount = useMemo(() => {
-    if (!activeIsMultiDay || !activeTask?.start_at || !activeTask?.due_at) return 1;
-    const s = startOfDay(new Date(activeTask.start_at)).getTime();
-    const e = startOfDay(new Date(activeTask.due_at)).getTime();
-    return Math.max(1, Math.round((e - s) / 86400000) + 1);
-  }, [activeIsMultiDay, activeTask]);
-
-  // Hovering a multi-day bar should give every covered cell the same
-  // bg-muted/30 tint that a cell gets when its own contents are
-  // hovered (single-day chip hover). Since the bar is a sibling of the
-  // cells in the grid (not a child), CSS :hover can't propagate — so
-  // we track which bar is hovered and broadcast its day range.
-  const hoverRange = useMemo(() => {
-    if (!hoverBarId) return null;
-    const t = tasks.find((x) => x.id === hoverBarId);
-    if (!t || !t.start_at || !t.due_at) return null;
-    return {
-      start: startOfDay(new Date(t.start_at)).getTime(),
-      end: startOfDay(new Date(t.due_at)).getTime(),
-    };
-  }, [hoverBarId, tasks]);
-
-  // While dragging a multi-day bar, derive the would-be new range from
-  // the cell currently under the cursor. Drop position becomes the new
-  // start day; duration is preserved from the original range. We use
-  // this to highlight every cell in the target span so the user sees
-  // exactly where the bar will land before they release.
-  const previewRange = useMemo(() => {
-    if (!activeIsMultiDay || !activeTask || !overKey) return null;
-    const [py, pm, pd] = overKey.split("-").map(Number);
-    const dropStart = new Date(py, pm - 1, pd);
-    const origStart = startOfDay(new Date(activeTask.start_at!));
-    const origEnd = startOfDay(new Date(activeTask.due_at!));
-    const dayCount = Math.round((origEnd.getTime() - origStart.getTime()) / 86400000);
-    const newEnd = new Date(dropStart);
-    newEnd.setDate(newEnd.getDate() + dayCount);
-    return { start: dropStart.getTime(), end: newEnd.getTime() };
-  }, [activeIsMultiDay, activeTask, overKey]);
-
-  // Multi-day bars: tasks whose start_at and due_at land on different
-  // calendar days render as a single horizontal bar that overlays and
-  // spans the relevant date cells (iOS-style). One segment per week row,
-  // greedy lane-packed so parallel ranges stack without overlapping.
-  const { multiDayBars, cellLanes } = useMemo(() => {
-    type Bar = {
-      task: TaskWithTags;
-      weekRow: number;
-      startCol: number; // 1-indexed grid col
-      endCol: number;
-      isFirstSegment: boolean;
-      isLastSegment: boolean;
-      lane: number;
-    };
-    const bars: Bar[] = [];
-    if (days.length === 0) return { multiDayBars: bars, cellLanes: [] as number[] };
-
-    const firstDay = startOfDay(days[0]).getTime();
-    const lastDay = startOfDay(days[days.length - 1]).getTime();
-
-    for (const t of tasks) {
-      if (!t.start_at || !t.due_at) continue;
-      const s = startOfDay(new Date(t.start_at)).getTime();
-      const e = startOfDay(new Date(t.due_at)).getTime();
-      if (s === e) continue; // single-day → rendered in its cell
-      if (s > lastDay || e < firstDay) continue; // outside visible grid
-
-      const clampedStart = Math.max(s, firstDay);
-      const clampedEnd = Math.min(e, lastDay);
-      const startIdx = days.findIndex(
-        (d) => startOfDay(d).getTime() === clampedStart
-      );
-      const endIdx = days.findIndex(
-        (d) => startOfDay(d).getTime() === clampedEnd
-      );
-      if (startIdx < 0 || endIdx < 0) continue;
-      const isFirst = s === clampedStart;
-      const isLast = e === clampedEnd;
-
-      const startRow = Math.floor(startIdx / 7);
-      const endRow = Math.floor(endIdx / 7);
-      for (let row = startRow; row <= endRow; row++) {
-        const rowStart = row * 7;
-        const rowEnd = rowStart + 6;
-        const segStart = Math.max(startIdx, rowStart);
-        const segEnd = Math.min(endIdx, rowEnd);
-        bars.push({
-          task: t,
-          weekRow: row,
-          startCol: segStart - rowStart + 1,
-          endCol: segEnd - rowStart + 1,
-          isFirstSegment: row === startRow && isFirst,
-          isLastSegment: row === endRow && isLast,
-          lane: 0,
-        });
-      }
-    }
-
-    // Greedy lane assignment per week row
-    for (let row = 0; row < 6; row++) {
-      const segs = bars
-        .filter((b) => b.weekRow === row)
-        .sort((a, b) => a.startCol - b.startCol);
-      const lanes: { startCol: number; endCol: number }[][] = [];
-      for (const seg of segs) {
-        let lane = 0;
-        while (
-          lanes[lane]?.some(
-            (s) => !(seg.endCol < s.startCol || seg.startCol > s.endCol)
-          )
-        ) {
-          lane++;
-        }
-        seg.lane = lane;
-        if (!lanes[lane]) lanes[lane] = [];
-        lanes[lane].push({ startCol: seg.startCol, endCol: seg.endCol });
-      }
-    }
-
-    // For each cell index, the number of bar lanes occupying it — so the
-    // cell can reserve vertical space above its single-day task chips.
-    const cellLanes: number[] = new Array(days.length).fill(0);
-    for (const bar of bars) {
-      const rowStart = bar.weekRow * 7;
-      for (let c = bar.startCol - 1; c <= bar.endCol - 1; c++) {
-        cellLanes[rowStart + c] = Math.max(cellLanes[rowStart + c], bar.lane + 1);
-      }
-    }
-
-    return { multiDayBars: bars, cellLanes };
-  }, [tasks, days]);
+  // The active drag's source day — encoded in the draggable id so
+  // multi-day chips know which of their covered days the user grabbed
+  // from. Format: "<taskId>::<yyyy-mm-dd>".
+  const activeTask = useMemo(() => {
+    if (!activeId) return null;
+    const taskId = activeId.split("::")[0];
+    return tasks.find((t) => t.id === taskId) ?? null;
+  }, [activeId, tasks]);
 
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
-    setOverKey(null);
     if (!e.over) return;
-    const taskId = String(e.active.id);
-    const date = String(e.over.id); // yyyy-mm-dd
+    // Drag id is "<taskId>::<from-day-yyyy-mm-dd>" — the second part
+    // is the cell the chip was dragged from, so multi-day chips can
+    // shift the whole range by exactly the displaced number of days
+    // instead of pinning the new start to the drop target.
+    const [taskId, fromKey] = String(e.active.id).split("::");
+    const date = String(e.over.id); // yyyy-mm-dd (drop target)
     const t = tasks.find((x) => x.id === taskId);
     if (!t) return;
     const [y, m, d] = date.split("-").map(Number);
-    // Multi-day task: drop position becomes the new start day; the
-    // duration (number of days between start and due) is preserved so
-    // a 5/1–5/3 bar dropped on 5/10 lands as 5/10–5/12.
+    const dropDay = new Date(y, m - 1, d);
+
+    // Multi-day task: shift both ends by (dropDay - fromDay) so a
+    // 5/4–5/6 chip dragged from its 5/5 cell to 5/10 lands as 5/9–5/11
+    // (preserves the original 3-day span).
     if (
       t.start_at &&
       t.due_at &&
@@ -247,17 +110,23 @@ function MonthView({
     ) {
       const origStart = new Date(t.start_at);
       const origEnd = new Date(t.due_at);
-      const dayCount = Math.round(
-        (startOfDay(origEnd).getTime() - startOfDay(origStart).getTime()) / 86400000
-      );
-      const newStart = new Date(
-        y, m - 1, d,
-        origStart.getHours(), origStart.getMinutes()
-      );
-      const newEnd = new Date(
-        y, m - 1, d + dayCount,
-        origEnd.getHours(), origEnd.getMinutes()
-      );
+      let offsetDays: number;
+      if (fromKey) {
+        const [fy, fm, fd] = fromKey.split("-").map(Number);
+        const fromDay = new Date(fy, fm - 1, fd);
+        offsetDays = Math.round(
+          (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
+        );
+      } else {
+        // Fallback: anchor drop to the original start day.
+        offsetDays = Math.round(
+          (startOfDay(dropDay).getTime() - startOfDay(origStart).getTime()) / 86400000
+        );
+      }
+      const newStart = new Date(origStart);
+      newStart.setDate(newStart.getDate() + offsetDays);
+      const newEnd = new Date(origEnd);
+      newEnd.setDate(newEnd.getDate() + offsetDays);
       update.mutate({
         id: t.id,
         start_at: newStart.toISOString(),
@@ -265,6 +134,7 @@ function MonthView({
       });
       return;
     }
+
     const orig = t.due_at ? new Date(t.due_at) : new Date();
     const newDate = new Date(y, m - 1, d, t.is_all_day ? 0 : orig.getHours(), t.is_all_day ? 0 : orig.getMinutes());
     update.mutate({ id: t.id, due_at: newDate.toISOString() });
@@ -298,40 +168,29 @@ function MonthView({
         </div>
         <DndContext
           sensors={sensors}
-          onDragStart={(e: DragStartEvent) => {
-            setActiveId(String(e.active.id));
-            // Snapshot the live cell width so the floating preview can
-            // match the original bar's footprint exactly.
-            const w = gridRef.current?.clientWidth ?? 0;
-            if (w > 0) setCellWidth(w / 7);
-          }}
-          onDragOver={(e) => setOverKey(e.over ? String(e.over.id) : null)}
+          onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
           onDragEnd={onDragEnd}
-          onDragCancel={() => { setActiveId(null); setOverKey(null); }}
+          onDragCancel={() => setActiveId(null)}
         >
-          <div ref={gridRef} className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
-              // Single-day tasks only — multi-day tasks become overlay
-              // bars rendered as siblings below.
+              // Multi-day tasks now render as a chip on every covered
+              // day (in addition to its own due day), so the same task
+              // shows in each day's task list — no more separate bar
+              // overlay with its own positioning math.
+              const dayMs = startOfDay(d).getTime();
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
-                if (!isSameDay(new Date(t.due_at), d)) return false;
-                if (
-                  t.start_at &&
-                  !isSameDay(new Date(t.start_at), new Date(t.due_at))
-                ) {
-                  return false;
+                const due = startOfDay(new Date(t.due_at)).getTime();
+                if (t.start_at) {
+                  const start = startOfDay(new Date(t.start_at)).getTime();
+                  if (start !== due) {
+                    return dayMs >= start && dayMs <= due;
+                  }
                 }
-                return true;
+                return due === dayMs;
               });
-              const dayMs = startOfDay(d).getTime();
-              const inPreview = !!previewRange &&
-                dayMs >= previewRange.start &&
-                dayMs <= previewRange.end;
-              const inHover = !!hoverRange &&
-                dayMs >= hoverRange.start &&
-                dayMs <= hoverRange.end;
               return (
                 <DayCell
                   key={key}
@@ -341,33 +200,12 @@ function MonthView({
                   tasks={dayTasks}
                   activeId={activeId}
                   onPickDay={onPickDay}
-                  reservedLanes={cellLanes[i] ?? 0}
-                  inPreview={inPreview}
-                  inHover={inHover}
                 />
               );
             })}
-            {multiDayBars.map((bar, i) => (
-              <DraggableBar
-                key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
-                bar={bar}
-                dimmed={activeId === bar.task.id}
-                hideWhileDragging={activeId === bar.task.id}
-                onHover={setHoverBarId}
-              />
-            ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
-            {activeTask ? (
-              <DragPreview
-                task={activeTask}
-                widthPx={
-                  activeIsMultiDay && cellWidth > 0
-                    ? Math.round(cellWidth * activeDayCount)
-                    : undefined
-                }
-              />
-            ) : null}
+            {activeTask ? <DragPreview task={activeTask} /> : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -376,7 +214,7 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay, reservedLanes, inPreview, inHover,
+  dateKey, date, inMonth, tasks, activeId, onPickDay,
 }: {
   dateKey: string;
   date: Date;
@@ -384,15 +222,9 @@ function DayCell({
   tasks: TaskWithTags[];
   activeId: string | null;
   onPickDay: (d: Date) => void;
-  reservedLanes: number;
-  inPreview?: boolean;
-  inHover?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
-  // Reserve vertical room above task chips for any multi-day bars
-  // passing through this cell (each lane = 22px).
-  const reservedHeight = reservedLanes * 22;
   return (
     <div
       ref={setNodeRef}
@@ -408,15 +240,6 @@ function DayCell({
         "p-1.5 min-h-[112px] flex flex-col gap-1 transition-colors cursor-pointer",
         inMonth ? "bg-bg/15" : "bg-transparent opacity-60",
         isOver && "bg-muted/60",
-        // Multi-day drag preview: every cell in the would-be new range
-        // gets the accent ring so the user sees the full landing span,
-        // not just the cell directly under the cursor.
-        inPreview && "bg-accent/20 ring-2 ring-accent ring-inset",
-        // Multi-day bar hover: cells under a hovered bar pick up the
-        // same bg-muted/30 a cell would get when its single-day chip
-        // is hovered, so the visual response is consistent regardless
-        // of whether the task spans one day or many.
-        inHover && "bg-muted/30",
         "hover:bg-muted/30"
       )}
     >
@@ -435,16 +258,14 @@ function DayCell({
           {format(date, "d")}
         </button>
       </div>
-      {reservedHeight > 0 && (
-        <div
-          aria-hidden
-          style={{ height: reservedHeight }}
-          data-day-cell-hit="1"
-        />
-      )}
       <div className="flex-1 flex flex-col gap-1 overflow-hidden" data-day-cell-hit="1">
         {tasks.slice(0, 4).map((t) => (
-          <DraggableTask key={t.id} task={t} dimmed={activeId === t.id} />
+          <DraggableTask
+            key={t.id}
+            task={t}
+            dayKey={dateKey}
+            dimmed={activeId === `${t.id}::${dateKey}`}
+          />
         ))}
         {tasks.length > 4 && (
           <button
@@ -460,78 +281,22 @@ function DayCell({
   );
 }
 
-/**
- * Multi-day overlay bar — rendered into the same 7×6 grid as DayCell
- * via gridRow/gridColumn so it stretches across the days the task
- * covers. Wired up as a draggable so the whole range can be moved
- * with a single grab; on drop the parent's onDragEnd preserves the
- * day-count duration (start_at and due_at slide together).
- */
-function DraggableBar({
-  bar,
+function DraggableTask({
+  task,
+  dayKey,
   dimmed,
-  hideWhileDragging,
-  onHover,
 }: {
-  bar: {
-    task: TaskWithTags;
-    weekRow: number;
-    startCol: number;
-    endCol: number;
-    isFirstSegment: boolean;
-    isLastSegment: boolean;
-    lane: number;
-  };
+  task: TaskWithTags;
+  // The calendar cell this chip lives in. Encoded into the drag id so
+  // the drop handler can shift a multi-day range by exactly the gap
+  // between source-day and drop-day, instead of pinning the new start
+  // to the drop target.
+  dayKey: string;
   dimmed?: boolean;
-  hideWhileDragging?: boolean;
-  onHover?: (taskId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: bar.task.id,
+    id: `${task.id}::${dayKey}`,
   });
-  const setSelected = useUIStore((s) => s.setSelectedTaskId);
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={{
-        gridRow: bar.weekRow + 1,
-        gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
-        marginTop: `${28 + bar.lane * 22}px`,
-        marginLeft: bar.isFirstSegment ? "6px" : "0px",
-        marginRight: bar.isLastSegment ? "6px" : "0px",
-        alignSelf: "start",
-        zIndex: 5,
-      }}
-      onClick={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => { e.stopPropagation(); setSelected(bar.task.id); }}
-      onMouseEnter={() => onHover?.(bar.task.id)}
-      onMouseLeave={() => onHover?.(null)}
-      title={bar.task.title}
-      className={cn(
-        // Lower-opacity priority tint (vs the /70 used for single-day
-        // chips) so the bar reads as a label sitting on top of the
-        // cell — the cell's own bg-bg/15 shows through, keeping every
-        // cell visually consistent whether or not a multi-day task
-        // crosses it. Same hue family as single-day chips, just
-        // softer so the bar doesn't dominate.
-        "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing",
-        barBg(bar.task.priority),
-        bar.task.is_completed && "line-through opacity-60",
-        bar.isFirstSegment && bar.isLastSegment && "rounded",
-        bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
-        !bar.isFirstSegment && bar.isLastSegment && "rounded-r",
-        (dimmed || isDragging || hideWhileDragging) && "opacity-30"
-      )}
-    >
-      {bar.isFirstSegment ? bar.task.title : " "}
-    </div>
-  );
-}
-
-function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   return (
     <div
@@ -552,20 +317,12 @@ function DraggableTask({ task, dimmed }: { task: TaskWithTags; dimmed?: boolean 
   );
 }
 
-function DragPreview({ task, widthPx }: { task: TaskWithTags; widthPx?: number }) {
-  // Multi-day drag passes widthPx = original_bar_pixel_width so the
-  // floating preview mirrors the bar's full footprint instead of
-  // shrinking down to a single-day chip. Single-day drag falls back
-  // to the fixed 180px chip width.
+function DragPreview({ task }: { task: TaskWithTags }) {
   return (
-    <div
-      style={widthPx ? { width: widthPx } : undefined}
-      className={cn(
-        "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent",
-        widthPx ? "" : "w-[180px]",
-        priorityBg(task.priority)
-      )}
-    >
+    <div className={cn(
+      "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent w-[180px]",
+      priorityBg(task.priority)
+    )}>
       {task.title}
     </div>
   );
@@ -579,17 +336,6 @@ function priorityBg(priority: number) {
   if (priority >= 3) return "bg-p-med/70 text-fg";
   if (priority >= 1) return "bg-p-low/70 text-fg";
   return "bg-muted text-fg";
-}
-
-// Same priority palette as priorityBg but at a lower opacity, so a
-// multi-day bar sitting across cells doesn't visually overpower the
-// underlying cell tint. Cells with bars stay close in tone to cells
-// without — the bar reads as a label, not a replacement surface.
-function barBg(priority: number) {
-  if (priority >= 5) return "bg-p-high/35 text-fg";
-  if (priority >= 3) return "bg-p-med/35 text-fg";
-  if (priority >= 1) return "bg-p-low/35 text-fg";
-  return "bg-muted/40 text-fg";
 }
 
 /* ------------------------ Day view ------------------------ */
