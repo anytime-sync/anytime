@@ -86,6 +86,55 @@ function MonthView({
     return tasks.find((t) => t.id === taskId) ?? null;
   }, [activeId, tasks]);
 
+  // Multi-day bars: one segment per visible week-row, positioned via
+  // CSS grid-column so the bar overlays exactly the covered cells.
+  // Re-uses the same 7×6 grid the cells live in; cells stay click-
+  // through because the bar is rendered above with pointer-events
+  // routed only at its draggable inner element.
+  const multiDayBars = useMemo(() => {
+    type Bar = {
+      task: TaskWithTags;
+      weekRow: number;       // 0..5
+      startCol: number;      // 1..7 (CSS grid col)
+      endCol: number;        // 1..7
+      isFirstSegment: boolean;
+      isLastSegment: boolean;
+    };
+    const out: Bar[] = [];
+    if (days.length === 0) return out;
+    const firstMs = startOfDay(days[0]).getTime();
+    const lastMs = startOfDay(days[days.length - 1]).getTime();
+    for (const t of tasks) {
+      if (!t.start_at || !t.due_at) continue;
+      const s = startOfDay(new Date(t.start_at)).getTime();
+      const e = startOfDay(new Date(t.due_at)).getTime();
+      if (s === e) continue; // single-day → rendered as a chip in its cell
+      if (s > lastMs || e < firstMs) continue;
+      const clampedS = Math.max(s, firstMs);
+      const clampedE = Math.min(e, lastMs);
+      const startIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedS);
+      const endIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedE);
+      if (startIdx < 0 || endIdx < 0) continue;
+      const startRow = Math.floor(startIdx / 7);
+      const endRow = Math.floor(endIdx / 7);
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * 7;
+        const rowEnd = rowStart + 6;
+        const segS = Math.max(startIdx, rowStart);
+        const segE = Math.min(endIdx, rowEnd);
+        out.push({
+          task: t,
+          weekRow: row,
+          startCol: segS - rowStart + 1,
+          endCol: segE - rowStart + 1,
+          isFirstSegment: row === startRow && s === clampedS,
+          isLastSegment: row === endRow && e === clampedE,
+        });
+      }
+    }
+    return out;
+  }, [tasks, days]);
+
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
@@ -175,19 +224,17 @@ function MonthView({
           <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
             {days.map((d, i) => {
               const key = format(d, "yyyy-MM-dd");
-              // Multi-day tasks now render as a chip on every covered
-              // day (in addition to its own due day), so the same task
-              // shows in each day's task list — no more separate bar
-              // overlay with its own positioning math.
+              // Single-day tasks only — multi-day tasks render as a
+              // single continuous bar overlay (below) so the user sees
+              // ONE chip spanning all covered days, not duplicate per-
+              // day chips.
               const dayMs = startOfDay(d).getTime();
               const dayTasks = tasks.filter((t) => {
                 if (!t.due_at) return false;
                 const due = startOfDay(new Date(t.due_at)).getTime();
                 if (t.start_at) {
                   const start = startOfDay(new Date(t.start_at)).getTime();
-                  if (start !== due) {
-                    return dayMs >= start && dayMs <= due;
-                  }
+                  if (start !== due) return false;
                 }
                 return due === dayMs;
               });
@@ -203,6 +250,18 @@ function MonthView({
                 />
               );
             })}
+            {/* Multi-day bar overlay: ONE bar per task per visible
+                week-row segment, positioned via grid-column so it spans
+                exactly the covered cells. pointer-events: none on the
+                wrapper so the cells underneath stay clickable; only the
+                inner draggable surface captures drag/click. */}
+            {multiDayBars.map((bar, i) => (
+              <DraggableBar
+                key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
+                bar={bar}
+                dimmed={activeId?.startsWith(`${bar.task.id}::`) ?? false}
+              />
+            ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
             {activeTask ? <DragPreview task={activeTask} /> : null}
@@ -281,6 +340,78 @@ function DayCell({
   );
 }
 
+/**
+ * One continuous bar overlay for a multi-day task — sits in the same
+ * 7×6 grid as the day cells via grid-row/grid-column, so it spans the
+ * exact cells the task covers (e.g. start_at=5/5, due_at=5/7 → cols
+ * 1-3 of the matching week-row). Wraps a transparent positioner so
+ * cells underneath the bar's margin stay click-through; only the
+ * inner colored chip captures the drag.
+ */
+function DraggableBar({
+  bar,
+  dimmed,
+}: {
+  bar: {
+    task: TaskWithTags;
+    weekRow: number;
+    startCol: number;
+    endCol: number;
+    isFirstSegment: boolean;
+    isLastSegment: boolean;
+  };
+  dimmed?: boolean;
+}) {
+  const dragId = `${bar.task.id}::${format(
+    // Anchor multi-day drag to the bar's leftmost visible day so the
+    // common onDragEnd shift-by-(drop − from) math lines up.
+    new Date(bar.task.start_at!),
+    "yyyy-MM-dd"
+  )}`;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId });
+  const setSelected = useUIStore((s) => s.setSelectedTaskId);
+  return (
+    <div
+      style={{
+        gridRow: bar.weekRow + 1,
+        gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
+        // Push down past the date number, leave room for any single-
+        // day chip that lands on the same cell. Margin trims the bar
+        // away from cell edges so click-through still hits the cell
+        // border area.
+        marginTop: "28px",
+        marginLeft: bar.isFirstSegment ? "6px" : "0px",
+        marginRight: bar.isLastSegment ? "6px" : "0px",
+        alignSelf: "start",
+        // Wrapper has no pointer events; the inner chip re-enables
+        // them so cells around the chip stay clickable.
+        pointerEvents: "none",
+        zIndex: 5,
+      }}
+    >
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => { e.stopPropagation(); setSelected(bar.task.id); }}
+        title={bar.task.title}
+        className={cn(
+          "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing pointer-events-auto",
+          priorityBg(bar.task.priority),
+          bar.task.is_completed && "line-through opacity-60",
+          bar.isFirstSegment && bar.isLastSegment && "rounded",
+          bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
+          !bar.isFirstSegment && bar.isLastSegment && "rounded-r",
+          (dimmed || isDragging) && "opacity-30"
+        )}
+      >
+        {bar.isFirstSegment ? bar.task.title : " "}
+      </div>
+    </div>
+  );
+}
+
 function DraggableTask({
   task,
   dayKey,
@@ -330,8 +461,7 @@ function DragPreview({ task }: { task: TaskWithTags }) {
 
 function priorityBg(priority: number) {
   // Saturated chip backgrounds that read clearly on the translucent
-  // calendar grid in both light and dark themes. Foreground stays
-  // tied to text-fg so it inverts correctly per theme.
+  // calendar grid in both light and dark themes.
   if (priority >= 5) return "bg-p-high/70 text-fg";
   if (priority >= 3) return "bg-p-med/70 text-fg";
   if (priority >= 1) return "bg-p-low/70 text-fg";
@@ -349,8 +479,6 @@ function DayView({
   onChangeDate: (d: Date) => void;
   onBack: () => void;
 }) {
-  // Pull all tasks; client-filter to this day. Cheap because day pages
-  // are bounded; avoids needing a date-range Tasks filter on the API.
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
 
   const dayStart = startOfDay(date);
@@ -358,7 +486,6 @@ function DayView({
   const dayTasks = tasks
     .filter((t) => t.due_at && new Date(t.due_at) >= dayStart && new Date(t.due_at) <= dayEnd)
     .sort((a, b) => {
-      // All-day first, then by time ascending. Completed bubble down.
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
       const ad = a.due_at ? new Date(a.due_at).getTime() : 0;
       const bd = b.due_at ? new Date(b.due_at).getTime() : 0;
@@ -419,9 +546,6 @@ function DayView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
-        {/* Inline add: pre-fills due_at to this date so anything typed
-            here lands on the visible day, even if the AI parser doesn't
-            see an explicit date in the user's text. */}
         <InlineTaskInput
           defaultProjectId={null}
           defaultDueAt={dayStart.toISOString()}
