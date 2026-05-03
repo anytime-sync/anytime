@@ -239,54 +239,48 @@ function MonthView({
     setActiveId(null);
     if (!e.over) return;
     // Drag id is "<taskId>::<from-day-yyyy-mm-dd>" — the second part
-    // is the cell the chip was dragged from, so multi-day chips can
-    // shift the whole range by exactly the displaced number of days
-    // instead of pinning the new start to the drop target.
+    // is the cell the chip was grabbed from. We always shift BOTH
+    // start_at and due_at by the same offset so the relative span is
+    // preserved (single-day stays single-day, 3-day stays 3-day).
+    // Hours/minutes are kept verbatim.
     const [taskId, fromKey] = String(e.active.id).split("::");
     const date = String(e.over.id); // yyyy-mm-dd (drop target)
     const t = tasks.find((x) => x.id === taskId);
-    if (!t) return;
+    if (!t || !t.due_at) return;
     const [y, m, d] = date.split("-").map(Number);
     const dropDay = new Date(y, m - 1, d);
 
-    // Multi-day task: shift both ends by (dropDay - fromDay) so a
-    // 5/4–5/6 chip dragged from its 5/5 cell to 5/10 lands as 5/9–5/11
-    // (preserves the original 3-day span).
-    if (
-      t.start_at &&
-      t.due_at &&
-      !isSameDay(new Date(t.start_at), new Date(t.due_at))
-    ) {
-      const origStart = new Date(t.start_at);
-      const origEnd = new Date(t.due_at);
-      let offsetDays: number;
-      if (fromKey) {
-        const [fy, fm, fd] = fromKey.split("-").map(Number);
-        const fromDay = new Date(fy, fm - 1, fd);
-        offsetDays = Math.round(
-          (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
-        );
-      } else {
-        // Fallback: anchor drop to the original start day.
-        offsetDays = Math.round(
-          (startOfDay(dropDay).getTime() - startOfDay(origStart).getTime()) / 86400000
-        );
-      }
-      const newStart = new Date(origStart);
-      newStart.setDate(newStart.getDate() + offsetDays);
-      const newEnd = new Date(origEnd);
-      newEnd.setDate(newEnd.getDate() + offsetDays);
-      update.mutate({
-        id: t.id,
-        start_at: newStart.toISOString(),
-        due_at: newEnd.toISOString(),
-      });
-      return;
+    let offsetDays: number;
+    if (fromKey) {
+      const [fy, fm, fd] = fromKey.split("-").map(Number);
+      const fromDay = new Date(fy, fm - 1, fd);
+      offsetDays = Math.round(
+        (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
+      );
+    } else {
+      const origDue = new Date(t.due_at);
+      offsetDays = Math.round(
+        (startOfDay(dropDay).getTime() - startOfDay(origDue).getTime()) / 86400000
+      );
     }
+    if (offsetDays === 0) return; // dropped on same cell
 
-    const orig = t.due_at ? new Date(t.due_at) : new Date();
-    const newDate = new Date(y, m - 1, d, t.is_all_day ? 0 : orig.getHours(), t.is_all_day ? 0 : orig.getMinutes());
-    update.mutate({ id: t.id, due_at: newDate.toISOString() });
+    const origDue = new Date(t.due_at);
+    const newDue = new Date(origDue);
+    newDue.setDate(newDue.getDate() + offsetDays);
+    const updateData: { id: string; due_at: string; start_at?: string } = {
+      id: t.id,
+      due_at: newDue.toISOString(),
+    };
+    if (t.start_at) {
+      const newStart = new Date(t.start_at);
+      newStart.setDate(newStart.getDate() + offsetDays);
+      // Guard: never let start drift past due (start <= due always).
+      if (newStart.getTime() <= newDue.getTime()) {
+        updateData.start_at = newStart.toISOString();
+      }
+    }
+    update.mutate(updateData);
   }
 
   return (
@@ -412,7 +406,10 @@ function DayCell({
         "p-1.5 min-h-[112px] flex flex-col gap-1 transition-colors cursor-pointer",
         inMonth ? "bg-bg/15" : "bg-transparent opacity-60",
         isOver && "bg-muted/60",
-        barHoverHighlight && "bg-muted/30",
+        // Same strength as isOver so every cell in a dragged multi-day
+        // task's range lights up uniformly, not just the cell directly
+        // under the cursor.
+        barHoverHighlight && "bg-muted/60",
         "hover:bg-muted/30"
       )}
     >
@@ -644,7 +641,14 @@ function DayView({
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
   const dayTasks = tasks
-    .filter((t) => t.due_at && new Date(t.due_at) >= dayStart && new Date(t.due_at) <= dayEnd)
+    .filter((t) => {
+      if (!t.due_at) return false;
+      const due = new Date(t.due_at);
+      // For multi-day tasks, treat the task as active on every day its
+      // [start_at, due_at] interval overlaps — not only the due day.
+      const start = t.start_at ? new Date(t.start_at) : due;
+      return start <= dayEnd && due >= dayStart;
+    })
     .sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
       const ad = a.due_at ? new Date(a.due_at).getTime() : 0;
