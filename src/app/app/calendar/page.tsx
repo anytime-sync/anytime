@@ -99,6 +99,7 @@ function MonthView({
       endCol: number;        // 1..7
       isFirstSegment: boolean;
       isLastSegment: boolean;
+      segDays: Date[];       // dates this bar segment covers, left-to-right
     };
     const out: Bar[] = [];
     if (days.length === 0) return out;
@@ -129,6 +130,7 @@ function MonthView({
           endCol: segE - rowStart + 1,
           isFirstSegment: row === startRow && s === clampedS,
           isLastSegment: row === endRow && e === clampedE,
+          segDays: days.slice(segS, segE + 1),
         });
       }
     }
@@ -260,6 +262,7 @@ function MonthView({
                 key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
                 bar={bar}
                 dimmed={activeId?.startsWith(`${bar.task.id}::`) ?? false}
+                onPickDay={onPickDay}
               />
             ))}
           </div>
@@ -351,6 +354,7 @@ function DayCell({
 function DraggableBar({
   bar,
   dimmed,
+  onPickDay,
 }: {
   bar: {
     task: TaskWithTags;
@@ -359,8 +363,10 @@ function DraggableBar({
     endCol: number;
     isFirstSegment: boolean;
     isLastSegment: boolean;
+    segDays: Date[];
   };
   dimmed?: boolean;
+  onPickDay: (d: Date) => void;
 }) {
   const dragId = `${bar.task.id}::${format(
     // Anchor multi-day drag to the bar's leftmost visible day so the
@@ -370,6 +376,19 @@ function DraggableBar({
   )}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId });
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
+  // A click on the bar should behave like clicking the cell underneath
+  // it: open the day view for that specific day. We compute which of
+  // the bar's covered days the user clicked on by mapping the click X
+  // to a column within the bar's bounding box.
+  function handleBarClick(e: React.MouseEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const n = bar.segDays.length;
+    if (n <= 0 || rect.width <= 0) return;
+    const rel = e.clientX - rect.left;
+    const idx = Math.min(n - 1, Math.max(0, Math.floor((rel / rect.width) * n)));
+    onPickDay(bar.segDays[idx]);
+  }
   return (
     <div
       style={{
@@ -393,7 +412,7 @@ function DraggableBar({
         ref={setNodeRef}
         {...listeners}
         {...attributes}
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleBarClick}
         onDoubleClick={(e) => { e.stopPropagation(); setSelected(bar.task.id); }}
         title={bar.task.title}
         className={cn(
