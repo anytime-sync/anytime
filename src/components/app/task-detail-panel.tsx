@@ -140,22 +140,51 @@ export function TaskDetailPanel() {
             <DateTimePicker
               value={task.start_at}
               placeholder="Pick a start time"
-              onChange={(iso) =>
-                update.mutate({ id: task.id, start_at: iso })
-              }
+              onChange={(iso) => {
+                // If the new start lands AFTER the current due, slide
+                // due forward by the same amount so the task keeps its
+                // original span (start <= due always holds).
+                const patch: { id: string; start_at: string | null; due_at?: string } = {
+                  id: task.id,
+                  start_at: iso,
+                };
+                if (iso && task.start_at && task.due_at) {
+                  const newStart = new Date(iso).getTime();
+                  const oldStart = new Date(task.start_at).getTime();
+                  const oldDue = new Date(task.due_at).getTime();
+                  if (newStart > oldDue) {
+                    const delta = oldDue - oldStart;
+                    patch.due_at = new Date(newStart + delta).toISOString();
+                  }
+                }
+                update.mutate(patch);
+              }}
             />
           </Field>
           <Field label={task.start_at ? "Ends" : "Due"}>
             <DateTimePicker
               value={task.due_at}
               placeholder="Pick a due time"
-              onChange={(iso) =>
-                update.mutate({
+              onChange={(iso) => {
+                // Mirror image: if the new due lands BEFORE the current
+                // start, slide start back by the same delta so the task
+                // keeps its original span.
+                const patch: { id: string; due_at: string | null; is_all_day: boolean; start_at?: string } = {
                   id: task.id,
                   due_at: iso,
                   is_all_day: false,
-                })
-              }
+                };
+                if (iso && task.start_at && task.due_at) {
+                  const newDue = new Date(iso).getTime();
+                  const oldStart = new Date(task.start_at).getTime();
+                  const oldDue = new Date(task.due_at).getTime();
+                  if (newDue < oldStart) {
+                    const delta = oldDue - oldStart;
+                    patch.start_at = new Date(newDue - delta).toISOString();
+                  }
+                }
+                update.mutate(patch);
+              }}
             />
           </Field>
         </div>
