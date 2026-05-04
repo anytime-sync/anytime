@@ -26,11 +26,15 @@ export function ScanTasksSheet({
   open,
   onClose,
   onCreated,
+  seedFile,
 }: {
   open: boolean;
   onClose: () => void;
   /** Fires after the user confirms the bulk create — lets QuickAdd close itself. */
   onCreated?: (count: number) => void;
+  /** Optional initial image (e.g. pasted from clipboard). When provided,
+   *  the sheet skips the file picker and runs the OCR immediately. */
+  seedFile?: File | null;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +46,13 @@ export function ScanTasksSheet({
   const createTask = useCreateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
+
+  useEffect(() => {
+    if (open && seedFile) {
+      handleFile(seedFile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, seedFile]);
 
   useEffect(() => {
     if (!open) {

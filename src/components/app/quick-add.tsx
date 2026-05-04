@@ -79,6 +79,10 @@ export function QuickAdd() {
   // bulk-create itself; we just need to know when it succeeds so we can
   // close QuickAdd as well (consistent with the single-task submit flow).
   const [scanOpen, setScanOpen] = useState(false);
+  // When the user pastes an image into the input, we open the
+  // ScanTasksSheet pre-loaded with that file so the vision OCR
+  // auto-runs without an extra click.
+  const [pastedFile, setPastedFile] = useState<File | null>(null);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -290,6 +294,26 @@ export function QuickAdd() {
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
             }}
+            onPaste={(e) => {
+              // Pull the first image off the clipboard (screenshots paste
+              // as image/png). If found, hand it to the ScanTasksSheet
+              // for vision OCR. Falls through to default text paste
+              // when no image is present.
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                if (it.kind === "file" && it.type.startsWith("image/")) {
+                  const f = it.getAsFile();
+                  if (f) {
+                    e.preventDefault();
+                    setPastedFile(f);
+                    setScanOpen(true);
+                  }
+                  return;
+                }
+              }
+            }}
           />
           <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
           <button
@@ -420,7 +444,8 @@ export function QuickAdd() {
       </div>
       <ScanTasksSheet
         open={scanOpen}
-        onClose={() => setScanOpen(false)}
+        seedFile={pastedFile}
+        onClose={() => { setScanOpen(false); setPastedFile(null); }}
         onCreated={() => {
           // After bulk-create, close QuickAdd too — same end state as
           // submitting a single task.
