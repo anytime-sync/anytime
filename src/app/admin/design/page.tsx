@@ -813,7 +813,7 @@ export default function DesignPage() {
       {/* Header */}
       <header className="px-8 py-5 border-b border-border flex items-center gap-6">
         <div>
-          <p className="editorial-number text-[10px]">The Admin Edition Â· Issue No. 05</p>
+          <p className="editorial-number text-[10px]">The Admin Edition · Issue No. 05</p>
           <h1 className="font-display text-2xl tracking-tight"><em>Design</em>, by hand.</h1>
         </div>
         <div className="ml-auto flex items-center gap-3">
@@ -828,7 +828,7 @@ export default function DesignPage() {
           >
             {PAGES.map((p) => (
               <option key={p.path} value={p.path}>
-                {p.kicker} Â· {p.label}
+                {p.kicker} · {p.label}
               </option>
             ))}
           </select>
@@ -1470,7 +1470,7 @@ function EmptyHint({
       <div className="pt-5 border-t border-border space-y-2">
         <p className="editorial-number text-[10px]">
           Saved overrides{" "}
-          <span className="text-muted-fg">Â· by language</span>
+          <span className="text-muted-fg">· by language</span>
         </p>
         {flatRows.length === 0 ? (
           <p className="text-[11px] text-muted-fg leading-relaxed">
@@ -1490,7 +1490,7 @@ function EmptyHint({
                       onPickEntry(r.elementId, r.lang, r.mode)
                     }
                     className="btn-ghost w-full text-left px-2 py-1.5 text-xs flex items-center gap-2"
-                    title={`${label} Â· ${r.lang} Â· ${r.mode} (${r.fieldCount} field${r.fieldCount === 1 ? "" : "s"} set)`}
+                    title={`${label} · ${r.lang} · ${r.mode} (${r.fieldCount} field${r.fieldCount === 1 ? "" : "s"} set)`}
                   >
                     <code className="font-mono text-[11px] truncate max-w-[140px]">
                       {label}
