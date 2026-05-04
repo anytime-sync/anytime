@@ -82,7 +82,10 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     const tests: Array<[RegExp, 0 | 1 | 3 | 5]> = [
       [/\b(urgent|asap|high\s*priority|top\s*priority)\b/i, 5],
       [/\b(important|medium\s*priority|med\s*priority)\b/i, 3],
-      [/\blow\s*priority\b/i, 1],
+      // "delegate" / "hand off" / "handoff" / "low priority" all map to
+      // priority 1 so they classify into the Delegate quadrant in the
+      // Eisenhower mini-matrix.
+      [/\b(delegate|hand[\s-]?off|low\s*priority)\b/i, 1],
       [/\bno\s*priority\b/i, 0],
     ];
     for (const [rx, p] of tests) {
