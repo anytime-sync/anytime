@@ -232,28 +232,54 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
   // chrono returns BOTH start and end for range phrases like "10am-11am",
   // "from 9 to 10", "5-7pm tomorrow" — we use that to fill start_at + due_at.
   // Single anchors ("at 9am") set due_at only.
-  let start_at: string | null = rangeStartIso;
-  let due_at: string | null = rangeEndIso;
-  let is_all_day = rangeStartIso !== null;
-  // Skip chrono entirely when the explicit range already filled both
-  // start_at and due_at — re-parsing risks chrono pulling a phantom date
-  // out of leftover words.
-  const results = rangeStartIso
-    ? []
-    : chrono.parse(s, new Date(), { forwardDate: true });
+  //
+  // When the user puts the time NOT adjacent to the date (e.g.
+  // "5/6 meeting 14:00-17:00"), chrono returns TWO separate results —
+  // one for the date, one for the time range. We merge them so the
+  // order/separation in the input doesn't matter.
+  let start_at: string | null = null;
+  let due_at: string | null = null;
+  let is_all_day = true;
+  const results = chrono.parse(s, new Date(), { forwardDate: true });
   if (results.length) {
-    const r = results[0]!;
-    const startC = r.start;
-    if (startC) {
-      const known = (k: string) => startC.isCertain(k as any);
-      is_all_day = !(known("hour") || known("minute"));
-      if (r.end) {
-        start_at = startC.date().toISOString();
-        due_at = r.end.date().toISOString();
+    const has = (r: any, k: string) => r?.start?.isCertain(k);
+    const dateRes = results.find((r) => has(r, "day") || has(r, "weekday") || has(r, "month"));
+    const timeRes = results.find((r) => has(r, "hour"));
+
+    if (dateRes && timeRes && dateRes !== timeRes) {
+      const baseDate = dateRes.start.date();
+      const t1 = timeRes.start.date();
+      const merged = new Date(baseDate);
+      merged.setHours(t1.getHours(), t1.getMinutes(), 0, 0);
+      if (timeRes.end) {
+        const t2 = timeRes.end.date();
+        const mergedEnd = new Date(baseDate);
+        mergedEnd.setHours(t2.getHours(), t2.getMinutes(), 0, 0);
+        start_at = merged.toISOString();
+        due_at = mergedEnd.toISOString();
       } else {
-        due_at = startC.date().toISOString();
+        due_at = merged.toISOString();
       }
-      s = (s.slice(0, r.index) + s.slice(r.index + r.text.length)).replace(/\s+/g, " ").trim();
+      is_all_day = false;
+      const spans = [dateRes, timeRes].sort((a, b) => b.index - a.index);
+      for (const sp of spans) {
+        s = (s.slice(0, sp.index) + s.slice(sp.index + sp.text.length));
+      }
+      s = s.replace(/\s+/g, " ").trim();
+    } else {
+      const r = results[0]!;
+      const startC = r.start;
+      if (startC) {
+        const known = (k: string) => startC.isCertain(k as any);
+        is_all_day = !(known("hour") || known("minute"));
+        if (r.end) {
+          start_at = startC.date().toISOString();
+          due_at = r.end.date().toISOString();
+        } else {
+          due_at = startC.date().toISOString();
+        }
+        s = (s.slice(0, r.index) + s.slice(r.index + r.text.length)).replace(/\s+/g, " ").trim();
+      }
     }
   }
 
