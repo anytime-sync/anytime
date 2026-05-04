@@ -466,18 +466,32 @@ type Quadrant = "q1" | "q2" | "q3" | "q4" | null;
 
 function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
   if (!p.title) return null;
+  // Priority alone gives a baseline mapping so typing just "urgent",
+  // "important", "low priority", or "no priority" lights up the
+  // matching cell even before a date is added:
+  //   p=5 → q1 Do first   (urgent + important)
+  //   p=3 → q2 Schedule   (important, not urgent)
+  //   p=1 → q3 Delegate   (not important — drop or hand off)
+  //   p=0 → q4 Eliminate
+  let q: Exclude<Quadrant, null>;
+  if (p.priority >= 5) q = "q1";
+  else if (p.priority >= 3) q = "q2";
+  else if (p.priority >= 1) q = "q3";
+  else q = "q4";
+  // A near-term date (today / tomorrow / past) adds the urgency layer:
+  // Schedule (q2) → Do first (q1), Eliminate (q4) → Delegate (q3).
   const tomorrow = addDays(now, 1);
-  const isUrgent = p.due_at
+  const dateUrgent = p.due_at
     ? (() => {
         const d = new Date(p.due_at);
         return isToday(d) || isPast(d) || d <= tomorrow;
       })()
     : false;
-  const isImportant = p.priority >= 3;
-  if (isUrgent && isImportant)   return "q1";
-  if (!isUrgent && isImportant)  return "q2";
-  if (isUrgent && !isImportant)  return "q3";
-  return "q4";
+  if (dateUrgent) {
+    if (q === "q2") q = "q1";
+    else if (q === "q4") q = "q3";
+  }
+  return q;
 }
 
 function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase: string) => void }) {
