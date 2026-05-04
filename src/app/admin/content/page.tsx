@@ -130,7 +130,7 @@ export default function ContentPage() {
     <div className="px-8 md:px-12 py-12 max-w-5xl">
       <header className="mb-12">
         <p className="editorial-number text-[11px] mb-3">
-          The Admin Edition ÃÂ· Issue No. 04
+          The Admin Edition Ã· Issue No. 04
         </p>
         <h1 className="font-display text-5xl md:text-6xl tracking-tight leading-[1.05]">
           Content<em className="font-display">, in five tongues.</em>
@@ -201,7 +201,7 @@ export default function ContentPage() {
                         </code>
                         {overridden && (
                           <span className="text-[10px] uppercase tracking-wider text-accent">
-                            ÃÂ· overridden
+                            Ã· overridden
                           </span>
                         )}
                       </div>
