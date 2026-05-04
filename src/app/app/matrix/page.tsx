@@ -32,10 +32,10 @@ type QuadMeta = {
 };
 
 const QUADRANTS: Record<QuadrantKey, QuadMeta> = {
-  q1: { label: "Do first",  subtitle: "Urgent Â· Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
-  q2: { label: "Schedule",  subtitle: "Not urgent Â· Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
-  q3: { label: "Delegate",  subtitle: "Urgent Â· Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
-  q4: { label: "Eliminate", subtitle: "Not urgent Â· Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
+  q1: { label: "Do first",  subtitle: "Urgent · Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
+  q2: { label: "Schedule",  subtitle: "Not urgent · Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
+  q3: { label: "Delegate",  subtitle: "Urgent · Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
+  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
 };
 
 function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
@@ -303,7 +303,7 @@ function PlanMyWeekButton({
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{t.title}</div>
                         <div className="text-xs text-muted-fg mt-0.5">
-                          <span className="text-fg">Q{s.quadrant}</span> Â· p{s.suggested_priority} Â· {s.reason}
+                          <span className="text-fg">Q{s.quadrant}</span> · p{s.suggested_priority} · {s.reason}
                         </div>
                       </div>
                       <button
