@@ -79,10 +79,6 @@ export function QuickAdd() {
   // bulk-create itself; we just need to know when it succeeds so we can
   // close QuickAdd as well (consistent with the single-task submit flow).
   const [scanOpen, setScanOpen] = useState(false);
-  // When the user pastes an image into the input, we open the
-  // ScanTasksSheet pre-loaded with that file so the vision OCR
-  // auto-runs without an extra click.
-  const [pastedFile, setPastedFile] = useState<File | null>(null);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -137,12 +133,11 @@ export function QuickAdd() {
   const updateTask = useUpdateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
-  // existing tag names — used both for color resolution on the preview
-  // pills AND as auto-detect context for the parser.
+  // Tag color lookup so parsed #tag pills match the sidebar pill style.
   const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
 
-  // Admin-curated priority phrases (\`site_priority_keywords\`) that
+  // Admin-curated priority phrases (`site_priority_keywords`) that
   // extend the parser's built-in list. Loaded once when the panel
   // opens; cached in React state so re-typing doesn't re-fetch.
   const [extraPhrases, setExtraPhrases] = useState<
@@ -160,7 +155,7 @@ export function QuickAdd() {
         const candidates = [locale, locale.split("-")[0] ?? "en", "en"];
         for (const c of candidates) {
           const res = await fetch(
-            \`/api/keywords/active?locale=\${encodeURIComponent(c)}\`
+            `/api/keywords/active?locale=${encodeURIComponent(c)}`
           );
           if (!res.ok) continue;
           const j = await res.json().catch(() => ({}));
@@ -230,10 +225,11 @@ export function QuickAdd() {
    *
    * Flow:
    *   1. Close the modal synchronously so the user is back to their list.
-   *   2. Insert via the optimistic useCreateTask path with the local parse;
-   *      the row paints in the same frame.
-   *   3. Run the Anthropic parser in the background and patch the new
-   *      task if it picks up structure the local parser missed.
+   *   2. Insert with the local chrono-based parse via the optimistic
+   *      useCreateTask path; the row paints in the same frame.
+   *   3. Run the Anthropic parser in the background. If it picks up
+   *      structure the local parser missed (multilingual title rewrite,
+   *      "the Friday before the offsite", etc.), patch the new task.
    */
   function submit() {
     const raw = text.trim();
@@ -245,6 +241,9 @@ export function QuickAdd() {
   }
 
   async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
+    // Resolve project id locally only if it already exists; defer
+    // creating a fresh project to the AI-refine step so the optimistic
+    // insert doesn't wait on a round-trip.
     let projectId: string | null = null;
     if (p.projectName) {
       const found = projects.find(
@@ -267,10 +266,12 @@ export function QuickAdd() {
         reminder_at: p.reminder_at,
       } as any);
     } catch {
-      return;
+      return; // useCreateTask shows a toast and rolls back optimistically.
     }
     if (!createdTask?.id) return;
 
+    // Skip the AI hop when local parse already captured everything
+    // obvious — saves an Anthropic call when the user typed plain English.
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
     if (localGotEnough) return;
@@ -289,7 +290,7 @@ export function QuickAdd() {
           : (await createProject.mutateAsync({ name: ai.projectName })).id;
       }
 
-      const patch: { id: string } & Record<string, any> = { id: createdTask.id };
+      const patch: Record<string, any> = { id: createdTask.id };
       if (ai.title && ai.title !== p.title) patch.title = ai.title;
       if (ai.due_at && !p.due_at) {
         patch.due_at = ai.due_at;
@@ -335,26 +336,6 @@ export function QuickAdd() {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
-            }}
-            onPaste={(e) => {
-              // Pull the first image off the clipboard (screenshots paste
-              // as image/png). If found, hand it to the ScanTasksSheet
-              // for vision OCR. Falls through to default text paste
-              // when no image is present.
-              const items = e.clipboardData?.items;
-              if (!items) return;
-              for (let i = 0; i < items.length; i++) {
-                const it = items[i];
-                if (it.kind === "file" && it.type.startsWith("image/")) {
-                  const f = it.getAsFile();
-                  if (f) {
-                    e.preventDefault();
-                    setPastedFile(f);
-                    setScanOpen(true);
-                  }
-                  return;
-                }
-              }
             }}
           />
           <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
@@ -418,11 +399,25 @@ export function QuickAdd() {
                 open={activeChip === "inbox"}
                 onClick={() => setActiveChip(activeChip === "inbox" ? null : "inbox")}
                 icon={<Folder className="size-3.5" />}
-                label={parsed.projectName ?? "List"}
+                label={parsed.projectName ?? "Inbox"}
               />
-              {parsed.tagNames.map((t) => (
-                <Activator key={t} active icon={<Hash className="size-3.5" />} label={t} />
-              ))}
+              {parsed.tagNames.map((t) => {
+                // Same color-pill treatment as the sidebar / inline input so
+                // a tag looks like a tag everywhere it shows up.
+                const existing = existingTags.find(
+                  (x: any) => x.name.toLowerCase() === t.toLowerCase()
+                );
+                const color = existing?.color ?? "var(--accent, #b8860b)";
+                return (
+                  <span
+                    key={t}
+                    className="inline-flex items-center h-6 rounded px-2 text-xs font-medium leading-none"
+                    style={{ backgroundColor: color, color: "#fff" }}
+                  >
+                    {t}
+                  </span>
+                );
+              })}
               <Chip
                 kind="tags"
                 active={false}
@@ -486,8 +481,7 @@ export function QuickAdd() {
       </div>
       <ScanTasksSheet
         open={scanOpen}
-        seedFile={pastedFile}
-        onClose={() => { setScanOpen(false); setPastedFile(null); }}
+        onClose={() => setScanOpen(false)}
         onCreated={() => {
           // After bulk-create, close QuickAdd too — same end state as
           // submitting a single task.
@@ -742,7 +736,9 @@ function ChipOptions({
       { label: "Low",       phrase: "low priority" },
       { label: "None",      phrase: "no priority" },
     ],
-    inbox: projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name })),
+    inbox: projects.length
+      ? projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name }))
+      : [{ label: "Inbox", phrase: "~Inbox" }],
     tags: [],
   };
 
@@ -783,7 +779,7 @@ function ChipOptions({
   return (
     <div className="flex flex-wrap items-center gap-1.5 pl-1">
       {options[kind]!.map((o) => (
-        <OptionPill key={o.label} label={o.label} onClick={() => onPick(o.phrase)} />
+        <OptionPill key={o.label} label={o.label} onClick={() => onPick(o,.phrase)} />
       ))}
       <button
         type="button"
