@@ -88,5 +88,55 @@ export async function POST(
     return NextResponse.json({ error: updateErr.message }, { status: 400 });
   }
 
+  // Look up the group name once for the notification body.
+  const { data: groupRow } = await supabase
+    .from("share_groups")
+    .select("name")
+    .eq("id", invite.group_id)
+    .maybeSingle();
+  const groupName = groupRow?.name ?? "the group";
+
+  const notifs: Array<Record<string, unknown>> = [];
+  if (action === "approve" && invite.invitee_user_id) {
+    notifs.push({
+      user_id: invite.invitee_user_id,
+      kind: "invite_received",
+      title: "You have an invite to " + groupName,
+      body: "Open Groups to accept or decline.",
+      payload: { invite_id: invite.id, group_id: invite.group_id },
+      action_url: "/app/groups",
+    });
+  } else if (action === "accept") {
+    notifs.push({
+      user_id: invite.inviter_id,
+      kind: "invite_accepted",
+      title: "Joined " + groupName,
+      body: "Your invitee accepted and is now a member.",
+      payload: { invite_id: invite.id, group_id: invite.group_id, member_id: user.id },
+      action_url: "/app/groups",
+    });
+  } else if (action === "decline" && invite.inviter_id !== user.id) {
+    notifs.push({
+      user_id: invite.inviter_id,
+      kind: "invite_declined",
+      title: "Invite declined",
+      body: "Your invitee declined to join " + groupName + ".",
+      payload: { invite_id: invite.id, group_id: invite.group_id },
+      action_url: "/app/groups",
+    });
+  } else if (action === "revoke" && invite.invitee_user_id) {
+    notifs.push({
+      user_id: invite.invitee_user_id,
+      kind: "invite_revoked",
+      title: "Invite revoked",
+      body: "The owner of " + groupName + " revoked your invite.",
+      payload: { invite_id: invite.id, group_id: invite.group_id },
+      action_url: "/app/groups",
+    });
+  }
+  if (notifs.length) {
+    await supabase.from("app_notifications").insert(notifs);
+  }
+
   return NextResponse.json({ ok: true, action });
 }
