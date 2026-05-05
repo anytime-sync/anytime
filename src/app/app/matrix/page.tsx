@@ -60,7 +60,7 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
           if (!res.ok) continue;
           const j = await res.json().catch(() => ({}));
           const rows = (j.rows ?? []) as Array<{
-            quadrant: 1 | 2 | 3 | 4;
+            quadrant: "q1" | "q2" | "q3" | "q4";
             label: string | null;
             fg_color: string | null;
             bg_color: string | null;
@@ -70,7 +70,8 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
             if (cancelled) return;
             const next: Record<QuadrantKey, QuadMeta> = { ...DEFAULT_QUADRANTS };
             for (const r of rows) {
-              const k = (`q${r.quadrant}`) as QuadrantKey;
+              const k = r.quadrant as QuadrantKey;
+              if (!(k in next)) continue; // ignore unknown quadrant values
               const base = next[k];
               next[k] = {
                 ...base,

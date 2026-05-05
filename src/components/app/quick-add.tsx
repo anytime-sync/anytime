@@ -588,7 +588,7 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
           if (!res.ok) continue;
           const j = await res.json().catch(() => ({}));
           const rows = (j.rows ?? []) as Array<{
-            quadrant: 1 | 2 | 3 | 4;
+            quadrant: "q1" | "q2" | "q3" | "q4";
             label: string | null;
             fg_color: string | null;
             bg_color: string | null;
@@ -598,7 +598,8 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
             if (!cancelled) {
               const map: typeof overrides = {};
               for (const r of rows) {
-                const k = (`q${r.quadrant}`) as Exclude<Quadrant, null>;
+                const k = r.quadrant as Exclude<Quadrant, null>;
+                if (!["q1","q2","q3","q4"].includes(k)) continue;
                 map[k] = {
                   label: r.label ?? undefined,
                   fg: r.fg_color ?? undefined,
