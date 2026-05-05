@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
-import { Plus, X, Trash2, ShieldOff, ShieldCheck } from "lucide-react";
+import { Plus, X, Trash2, ShieldOff, ShieldCheck, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -214,6 +214,26 @@ function EditDialog({
   const disabled =
     member.banned_until && new Date(member.banned_until) > new Date();
 
+  async function viewAs() {
+    setBusy(true);
+    const res = await fetch("/api/admin/impersonate/start", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user_id: member.id }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "Impersonate failed");
+      return;
+    }
+    const j = await res.json();
+    if (j.url) {
+      window.open(j.url, "_blank", "noopener,noreferrer");
+      toast.success(`Signing in as ${j.target_email} in a new tab`);
+    }
+  }
+
   async function save() {
     setBusy(true);
     const res = await fetch(`/api/admin/members/${member.id}`, {
@@ -329,6 +349,15 @@ function EditDialog({
             className="btn-primary px-4 h-9 text-sm"
           >
             Save changes
+          </button>
+          <button
+            onClick={viewAs}
+            disabled={busy}
+            className="btn-ghost px-3 h-9 text-sm inline-flex items-center gap-1.5 text-accent"
+            title="Open the member\u2019s app in a new tab as them"
+          >
+            <ExternalLink className="size-4" />
+            View as
           </button>
           <button
             onClick={toggleDisable}
