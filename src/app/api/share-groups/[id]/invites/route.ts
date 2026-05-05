@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * (status starts as `pending_approval`). After owner approval the
  * invite moves to `pending_acceptance` so the invitee can accept.
  *
- * The invitee may already be a registered user — we look them up by
+ * The invitee may already be a registered user â we look them up by
  * email and store their id in `invitee_user_id` so the invite shows
  * up in their inbox immediately. If they're not registered, just the
  * email is stored and resolves on signup.
@@ -42,7 +42,7 @@ export async function POST(
   }
 
   // Resolve invitee_user_id when possible (no service role here, so we
-  // query the profiles view instead — emails are stored in profiles
+  // query the profiles view instead â emails are stored in profiles
   // for already-registered users).
   const { data: prof } = await supabase
     .from("profiles")
@@ -65,6 +65,19 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  // Notify the inviter that their invite is queued and needs their
+  // approval before it goes out. (Owner-approval workflow: the same
+  // person creating the invite has to approve it.)
+  await supabase.from("app_notifications").insert({
+    user_id: user.id,
+    kind: "invite_pending_your_approval",
+    title: "Approve your invite",
+    body: `You created an invite for ${email}. Open Groups to approve it.`,
+    payload: { invite_id: data.id, group_id: groupId, invitee_email: email },
+    action_url: "/app/groups",
+  });
+
   return NextResponse.json({ row: data });
 }
 
