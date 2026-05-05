@@ -65,19 +65,6 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-
-  // Notify the inviter that their invite is queued and needs their
-  // approval before it goes out. (Owner-approval workflow: the same
-  // person creating the invite has to approve it.)
-  await supabase.from("app_notifications").insert({
-    user_id: user.id,
-    kind: "invite_pending_your_approval",
-    title: "Approve your invite",
-    body: \`You created an invite for \${email}. Open Groups to approve it.\`,
-    payload: { invite_id: data.id, group_id: groupId, invitee_email: email },
-    action_url: "/app/groups",
-  });
-
   return NextResponse.json({ row: data });
 }
 
