@@ -16,7 +16,7 @@ const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
   { value: "", label: "Doesn't repeat" },
   { value: "FREQ=DAILY", label: "Daily" },
   { value: "FREQ=DAILY;INTERVAL=2", label: "Every other day" },
-  { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays (Mon–Fri)" },
+  { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays (MonâFri)" },
   { value: "FREQ=WEEKLY;BYDAY=SA,SU", label: "Weekends" },
   { value: "FREQ=WEEKLY", label: "Weekly" },
   { value: "FREQ=WEEKLY;INTERVAL=2", label: "Every other week" },
@@ -103,7 +103,7 @@ export function TaskDetailPanel() {
           >
             <Trash2 className="size-4" />
           </button>
-          {/* Done button — labeled on mobile so it's an obvious tap
+          {/* Done button â labeled on mobile so it's an obvious tap
               target; compact X on desktop. */}
           <button
             className="btn-ghost h-9 px-2 md:px-0 md:size-9 grid place-items-center md:p-0 gap-1 text-sm"
@@ -132,7 +132,7 @@ export function TaskDetailPanel() {
           }}
         />
 
-        {/* Start + Due pair — Starts is optional. When set, the task
+        {/* Start + Due pair â Starts is optional. When set, the task
             is treated as a time block and renders that way on the
             timeline view. Empty Starts = "due-only" task. */}
         <div className="grid grid-cols-1 gap-3">
@@ -212,7 +212,7 @@ export function TaskDetailPanel() {
           </div>
           {task.rrule && !task.due_at && (
             <p className="text-[11px] text-muted-fg mt-1">
-              Set a due date — recurrence creates the next occurrence when you complete the task.
+              Set a due date â recurrence creates the next occurrence when you complete the task.
             </p>
           )}
         </Field>
@@ -276,6 +276,15 @@ export function TaskDetailPanel() {
           </select>
         </Field>
 
+        <Field label="Share with group">
+          <ShareGroupPicker
+            value={(task as any).share_group_id ?? null}
+            onChange={(v) =>
+              update.mutate({ id: task.id, share_group_id: v } as any)
+            }
+          />
+        </Field>
+
         <Field label="Tags">
           <TagEditor taskId={task.id} currentTags={task.tags} />
         </Field>
@@ -292,7 +301,7 @@ export function TaskDetailPanel() {
           <textarea
             rows={6}
             className="input min-h-[120px] py-2"
-            placeholder="Add notes…"
+            placeholder="Add notesâ¦"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => {
@@ -304,7 +313,7 @@ export function TaskDetailPanel() {
         </Field>
 
         <div className="text-xs text-muted-fg">
-          Created {format(new Date(task.created_at), "MMM d, yyyy")} · Updated{" "}
+          Created {format(new Date(task.created_at), "MMM d, yyyy")} Â· Updated{" "}
           {format(new Date(task.updated_at), "MMM d, yyyy")}
         </div>
       </div>
@@ -329,5 +338,46 @@ function Field({
       </div>
       {children}
     </div>
+  );
+}
+
+
+function ShareGroupPicker({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/share-groups")
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        const list = ((j.rows ?? []) as Array<{ group: { id: string; name: string } }>)
+          .map((r) => r.group)
+          .filter((g) => g);
+        setGroups(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return (
+    <select
+      className="input"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+    >
+      <option value="">Private &mdash; just me</option>
+      {groups.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.name}
+        </option>
+      ))}
+    </select>
   );
 }
