@@ -16,6 +16,7 @@ import { useTags } from "@/hooks/use-tags";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
+import { NotificationBell } from "./notification-bell";
 import { SidebarTagItem } from "./sidebar-tag-item";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/use-language";
@@ -265,6 +266,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
       </nav>
 
       <div className="border-t border-border p-2 flex items-center gap-2">
+        <NotificationBell collapsed={collapsed} />
         <button
           className={cn("btn-ghost size-9 p-0 grid place-items-center", collapsed && "mx-auto")}
           onClick={() =>
