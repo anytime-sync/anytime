@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
-  Sparkles, LayoutGrid, Search, Plus, ChevronLeft, ChevronRight, LogOut,
+  Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
   Moon, SunMedium, Newspaper, CheckCircle2, GripVertical, Settings,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui";
@@ -62,6 +62,7 @@ function topLinks(lang: Lang): LinkDef[] {
     { href: "/app/habits",    label: t(lang, "sidebar.habits"),       icon: Sparkles },
     { href: "/app/retro",     label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
     { href: "/app/completed", label: t(lang, "sidebar.completed"),    icon: CheckCircle2 },
+    { href: "/app/groups",    label: "Groups",                        icon: Users },
     { href: "/app/settings",  label: t(lang, "sidebar.settings"),     icon: Settings },
   ];
 }
