@@ -22,6 +22,8 @@ type QuadrantRow = {
   fg_color: string | null;
   bg_color: string | null;
   border_color: string | null;
+  bg_opacity: number;
+  bg_blur: number;
 };
 
 const PRIORITY_LABEL: Record<number, string> = {
@@ -353,6 +355,8 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
           fg_color: QUADRANT_DEFAULTS[q].fg,
           bg_color: QUADRANT_DEFAULTS[q].bg,
           border_color: QUADRANT_DEFAULTS[q].border,
+          bg_opacity: 100,
+          bg_blur: 0,
         };
     });
     return out;
@@ -371,6 +375,8 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
         fg_color: patch.fg_color ?? cur.fg_color,
         bg_color: patch.bg_color ?? cur.bg_color,
         border_color: patch.border_color ?? cur.border_color,
+        bg_opacity: patch.bg_opacity ?? cur.bg_opacity,
+        bg_blur: patch.bg_blur ?? cur.bg_blur,
       }),
     });
     setBusy(false);
@@ -455,6 +461,40 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
                 onCommit={(v) => save(q, { border_color: v })}
               />
             </div>
+            {/* Glassmorphism controls — opacity dials the bg toward
+                transparent, blur applies a backdrop-filter on the cell. */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <SliderField
+                label="Opacity"
+                value={r.bg_opacity}
+                min={0}
+                max={100}
+                step={5}
+                suffix="%"
+                onChange={(v) =>
+                  setRows((prev) => {
+                    const next = prev.filter((x) => x.quadrant !== q);
+                    return [...next, { ...r, bg_opacity: v }];
+                  })
+                }
+                onCommit={(v) => save(q, { bg_opacity: v })}
+              />
+              <SliderField
+                label="Blur"
+                value={r.bg_blur}
+                min={0}
+                max={30}
+                step={1}
+                suffix="px"
+                onChange={(v) =>
+                  setRows((prev) => {
+                    const next = prev.filter((x) => x.quadrant !== q);
+                    return [...next, { ...r, bg_blur: v }];
+                  })
+                }
+                onCommit={(v) => save(q, { bg_blur: v })}
+              />
+            </div>
             <button
               className="text-[11px] opacity-70 underline mt-3"
               disabled={busy}
@@ -465,6 +505,8 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
                   fg_color: def.fg,
                   bg_color: def.bg,
                   border_color: def.border,
+                  bg_opacity: 100,
+                  bg_blur: 0,
                 });
               }}
             >
@@ -497,6 +539,52 @@ function ColorField({
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onCommit(e.target.value)}
         className="block w-full h-8 rounded border border-black/10 bg-white"
+      />
+    </label>
+  );
+}
+
+function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix?: string;
+  onChange: (v: number) => void;
+  onCommit: (v: number) => void;
+}) {
+  return (
+    <label className="block text-[10px]">
+      <span className="flex items-baseline justify-between opacity-70">
+        <span>{label}</span>
+        <span className="tabular-nums">
+          {value}
+          {suffix ?? ""}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        onMouseUp={(e) => onCommit(Number((e.target as HTMLInputElement).value))}
+        onTouchEnd={(e) =>
+          onCommit(Number((e.target as HTMLInputElement).value))
+        }
+        onKeyUp={(e) => onCommit(Number((e.target as HTMLInputElement).value))}
+        className="block w-full h-8 accent-current"
       />
     </label>
   );

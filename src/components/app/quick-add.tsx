@@ -555,24 +555,51 @@ function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
   return q;
 }
 
+/**
+ * Re-color a CSS color (hex or rgb/rgba) with a given alpha (0-100 percent).
+ * `opacityPercent === 100` returns the input untouched so existing rgba()
+ * colors keep their baked-in alpha.
+ */
+function applyAlpha(color: string | null | undefined, opacityPercent: number): string | undefined {
+  if (!color) return undefined;
+  const pct = Math.max(0, Math.min(100, opacityPercent));
+  if (pct >= 100) return color;
+  const a = pct / 100;
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  const rgb = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(color);
+  if (rgb) {
+    return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${a})`;
+  }
+  return color;
+}
+
 function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase: string) => void }) {
   // Each cell injects a phrase that the parser will resolve into that
   // quadrant: priority + (where needed) urgency cue.
   type Cell = {
     key: Exclude<Quadrant, null>; label: string; phrase: string;
     fg: string; bg: string; border: string;
+    bgOpacity: number; bgBlur: number;
   };
   const DEFAULTS: Cell[] = [
-    { key: "q1", label: "Do first",  phrase: "urgent",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444" },
-    { key: "q2", label: "Schedule",  phrase: "important",    fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981" },
-    { key: "q3", label: "Delegate",  phrase: "low priority", fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B" },
-    { key: "q4", label: "Eliminate", phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8" },
+    { key: "q1", label: "Do first",  phrase: "urgent",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444", bgOpacity: 100, bgBlur: 0 },
+    { key: "q2", label: "Schedule",  phrase: "important",    fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981", bgOpacity: 100, bgBlur: 0 },
+    { key: "q3", label: "Delegate",  phrase: "low priority", fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B", bgOpacity: 100, bgBlur: 0 },
+    { key: "q4", label: "Eliminate", phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8", bgOpacity: 100, bgBlur: 0 },
   ];
-  // Admin-configured (`site_quadrant_config`) labels and colors. We
-  // overlay them on top of the defaults so any field the admin hasn't
-  // changed still gets a sensible fallback.
+  // Admin-configured (`site_quadrant_config`) labels, colors, and the
+  // glassmorphism dials. Overlaid on top of the defaults so any field
+  // the admin hasn't changed keeps its baseline.
   const [overrides, setOverrides] = useState<
-    Partial<Record<Exclude<Quadrant, null>, { label?: string; fg?: string; bg?: string; border?: string }>>
+    Partial<Record<Exclude<Quadrant, null>, { label?: string; fg?: string; bg?: string; border?: string; bgOpacity?: number; bgBlur?: number }>>
   >({});
   useEffect(() => {
     let cancelled = false;
@@ -593,6 +620,8 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
             fg_color: string | null;
             bg_color: string | null;
             border_color: string | null;
+            bg_opacity: number | null;
+            bg_blur: number | null;
           }>;
           if (rows.length) {
             if (!cancelled) {
@@ -605,6 +634,8 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
                   fg: r.fg_color ?? undefined,
                   bg: r.bg_color ?? undefined,
                   border: r.border_color ?? undefined,
+                  bgOpacity: r.bg_opacity ?? undefined,
+                  bgBlur: r.bg_blur ?? undefined,
                 };
               }
               setOverrides(map);
@@ -628,6 +659,8 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
       fg: o.fg || d.fg,
       bg: o.bg || d.bg,
       border: o.border || d.border,
+      bgOpacity: o.bgOpacity == null ? d.bgOpacity : o.bgOpacity,
+      bgBlur: o.bgBlur == null ? d.bgBlur : o.bgBlur,
     };
   });
   return (
@@ -635,16 +668,22 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
       <div className="grid grid-cols-2 gap-1 w-[176px]">
         {cells.map((c) => {
           const isActive = active === c.key;
+          // Active cell uses solid fg as bg (no opacity dial); idle cell
+          // honors the admin's opacity + blur settings.
+          const cellBg = isActive ? c.fg : applyAlpha(c.bg, c.bgOpacity);
+          const blur = !isActive && c.bgBlur > 0 ? `blur(${c.bgBlur}px)` : undefined;
           return (
             <button
               key={c.key}
               type="button"
               onClick={() => onPick(c.phrase)}
               style={{
-                backgroundColor: isActive ? c.fg : c.bg,
+                backgroundColor: cellBg,
                 color: isActive ? "white" : c.fg,
                 borderColor: c.border,
                 borderTopWidth: 3,
+                backdropFilter: blur,
+                WebkitBackdropFilter: blur,
               }}
               className={cn(
                 "h-12 rounded-md border text-[10px] grid place-items-center text-center px-1 transition-all",
@@ -855,55 +894,4 @@ function ChipOptions({
   );
 }
 
-function OptionPill({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center h-6 rounded-full border border-border px-2 text-[11px] text-fg hover:bg-muted hover:border-fg/40 transition-colors"
-    >
-      {label}
-    </button>
-  );
-}
-
-/** Date + Time picker. Two native inputs side by side; once the user
- *  has chosen at least a date, the combined phrase is injected into
- *  the parent input ("on 2026-04-30 14:00"). Time alone (without
- *  date) injects an "at HH:MM" phrase. The chrono-node parser then
- *  resolves both shapes correctly. */
-function DateTimePicker({ onPick }: { onPick: (phrase: string) => void }) {
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-
-  function commit(d: string, tm: string) {
-    if (d && tm) onPick(`on ${d} ${tm}`);
-    else if (d) onPick(`on ${d}`);
-    else if (tm) onPick(`at ${tm}`);
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1">
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => {
-          const v = e.target.value;
-          setDate(v);
-          commit(v, time);
-        }}
-        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
-      />
-      <input
-        type="time"
-        value={time}
-        onChange={(e) => {
-          const v = e.target.value;
-          setTime(v);
-          commit(date, v);
-        }}
-        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
-      />
-    </span>
-  );
-}
+func

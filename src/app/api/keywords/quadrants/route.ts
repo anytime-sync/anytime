@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  *
  * Returns the four (label, fg, bg, border) quadrant rows the admin
  * configured for this locale. Used by the Sift display in quick-add
- * and the full matrix page so the user&rsquo;s custom colors flow
+ * and the full matrix page so the user's custom colors flow
  * through to the consumer-side UI.
  */
 export async function GET(req: Request) {
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase
     .from("site_quadrant_config")
-    .select("quadrant, label, fg_color, bg_color, border_color")
+    .select("quadrant, label, fg_color, bg_color, border_color, bg_opacity, bg_blur")
     .eq("locale", locale);
 
   if (error) {

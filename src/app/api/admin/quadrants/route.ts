@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await auth.ctx.admin
     .from("site_quadrant_config")
-    .select("locale, quadrant, label, fg_color, bg_color, border_color")
+    .select("locale, quadrant, label, fg_color, bg_color, border_color, bg_opacity, bg_blur")
     .eq("locale", locale);
 
   if (error) {
@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     fg_color?: string | null;
     bg_color?: string | null;
     border_color?: string | null;
+    bg_opacity?: number | null;
+    bg_blur?: number | null;
   };
   try {
     body = await req.json();
@@ -58,6 +60,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_fields" }, { status: 400 });
   }
 
+  // Clamp opacity and blur to schema-allowed ranges so a stray slider
+  // tick or a forged payload can't blow past the CHECK constraint.
+  const clamp = (n: unknown, lo: number, hi: number, fallback: number) => {
+    const v = typeof n === "number" ? n : Number(n);
+    if (!Number.isFinite(v)) return fallback;
+    return Math.max(lo, Math.min(hi, Math.round(v)));
+  };
   const row = {
     locale,
     quadrant,
@@ -65,6 +74,8 @@ export async function POST(req: Request) {
     fg_color: body.fg_color ?? null,
     bg_color: body.bg_color ?? null,
     border_color: body.border_color ?? null,
+    bg_opacity: body.bg_opacity == null ? 100 : clamp(body.bg_opacity, 0, 100, 100),
+    bg_blur: body.bg_blur == null ? 0 : clamp(body.bg_blur, 0, 30, 0),
   };
 
   const { error } = await auth.ctx.admin

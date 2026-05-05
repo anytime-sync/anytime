@@ -29,14 +29,42 @@ type QuadMeta = {
   bg: string;
   border: string;
   pill: string;
+  bgOpacity: number; // 0-100, applied as alpha to bg + pill
+  bgBlur: number;    // 0-30 px, applied as backdrop-filter blur
 };
 
 const DEFAULT_QUADRANTS: Record<QuadrantKey, QuadMeta> = {
-  q1: { label: "Do first",  subtitle: "Urgent · Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)" },
-  q2: { label: "Schedule",  subtitle: "Not urgent · Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)" },
-  q3: { label: "Delegate",  subtitle: "Urgent · Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)" },
-  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)" },
+  q1: { label: "Do first",  subtitle: "Urgent · Important",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.08)",  border: "#EF4444", pill: "rgba(239, 68, 68, 0.15)",  bgOpacity: 100, bgBlur: 0 },
+  q2: { label: "Schedule",  subtitle: "Not urgent · Important",   fg: "#047857", bg: "rgba(16, 185, 129, 0.08)", border: "#10B981", pill: "rgba(16, 185, 129, 0.15)", bgOpacity: 100, bgBlur: 0 },
+  q3: { label: "Delegate",  subtitle: "Urgent · Not important",   fg: "#B45309", bg: "rgba(245, 158, 11, 0.10)", border: "#F59E0B", pill: "rgba(245, 158, 11, 0.18)", bgOpacity: 100, bgBlur: 0 },
+  q4: { label: "Eliminate", subtitle: "Not urgent · Not important", fg: "#475569", bg: "rgba(100, 116, 139, 0.08)", border: "#94A3B8", pill: "rgba(100, 116, 139, 0.15)", bgOpacity: 100, bgBlur: 0 },
 };
+
+/**
+ * Re-color a CSS color (hex or rgb/rgba) with a given alpha (0-100 percent).
+ * `opacityPercent === 100` returns the input untouched so existing rgba()
+ * colors keep their baked-in alpha.
+ */
+function applyAlpha(color: string | null | undefined, opacityPercent: number): string | undefined {
+  if (!color) return undefined;
+  const pct = Math.max(0, Math.min(100, opacityPercent));
+  if (pct >= 100) return color;
+  const a = pct / 100;
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  const rgb = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(color);
+  if (rgb) {
+    return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${a})`;
+  }
+  return color;
+}
 
 /**
  * Reads the admin's `site_quadrant_config` rows for the current locale
@@ -65,6 +93,8 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
             fg_color: string | null;
             bg_color: string | null;
             border_color: string | null;
+            bg_opacity: number | null;
+            bg_blur: number | null;
           }>;
           if (rows.length) {
             if (cancelled) return;
@@ -82,6 +112,8 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
                 // Pill follows the bg color if the admin set one, else
                 // falls back to the original pill.
                 pill: r.bg_color || base.pill,
+                bgOpacity: r.bg_opacity == null ? base.bgOpacity : r.bg_opacity,
+                bgBlur: r.bg_blur == null ? base.bgBlur : r.bg_blur,
               };
             }
             setMerged(next);
@@ -184,14 +216,18 @@ export default function MatrixPage() {
 
 function Quadrant({ qkey, meta, tasks, activeId }: { qkey: QuadrantKey; meta: QuadMeta; tasks: TaskWithTags[]; activeId: string | null }) {
   const { isOver, setNodeRef } = useDroppable({ id: qkey });
+  const cellBg = applyAlpha(meta.bg, meta.bgOpacity);
+  const blurFilter = meta.bgBlur > 0 ? `blur(${meta.bgBlur}px)` : undefined;
   return (
     <div
       ref={setNodeRef}
       style={{
-        backgroundColor: meta.bg,
+        backgroundColor: cellBg,
         borderColor: isOver ? meta.border : "hsl(var(--border))",
         borderTopWidth: 3,
         borderTopColor: meta.border,
+        backdropFilter: blurFilter,
+        WebkitBackdropFilter: blurFilter,
       }}
       className={cn("card flex flex-col min-h-0 transition-all", isOver && "ring-2 shadow-md")}
     >
@@ -202,7 +238,7 @@ function Quadrant({ qkey, meta, tasks, activeId }: { qkey: QuadrantKey; meta: Qu
         </div>
         <span
           className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-medium"
-          style={{ backgroundColor: meta.pill, color: meta.fg }}
+          style={{ backgroundColor: applyAlpha(meta.pill, meta.bgOpacity), color: meta.fg }}
         >
           {tasks.length}
         </span>
