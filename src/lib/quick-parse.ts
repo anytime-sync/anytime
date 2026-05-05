@@ -34,6 +34,14 @@ export type ParsedQuickInput = {
 export type QuickParseContext = {
   existingTags?: string[];
   existingProjects?: string[];
+  /**
+   * Extra priority phrases loaded from the admin keyword DB
+   * (`site_priority_keywords`). Each entry is a substring + the
+   * priority to apply when the input contains that substring (case
+   * insensitive). The HIGHER of (built-in match, extra match) wins,
+   * so admin phrases can only bump priority up, never down.
+   */
+  extraPhrases?: Array<{ phrase: string; priority: 0 | 1 | 3 | 5 }>;
 };
 
 /**
@@ -97,6 +105,25 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
       }
     }
   }
+  // Admin-curated phrases from `site_priority_keywords`. We scan the
+  // remaining title for each phrase substring and bump priority up if
+  // a higher one matches. Stripping is case-insensitive and only
+  // removes the first hit per phrase to keep the title legible.
+  if (ctx?.extraPhrases?.length) {
+    for (const ep of ctx.extraPhrases) {
+      const phrase = (ep.phrase ?? "").trim();
+      if (!phrase) continue;
+      const idx = s.toLowerCase().indexOf(phrase.toLowerCase());
+      if (idx === -1) continue;
+      if (priority === null || ep.priority > priority) {
+        priority = ep.priority;
+      }
+      s = (s.slice(0, idx) + s.slice(idx + phrase.length))
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+  }
+
   const finalPriority: 0 | 1 | 3 | 5 = priority ?? 0;
 
   // ---------- tags ----------
