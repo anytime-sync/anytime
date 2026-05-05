@@ -103,7 +103,7 @@ export function TaskDetailPanel() {
           >
             <Trash2 className="size-4" />
           </button>
-          {/* Done button â labeled on mobile so it's an obvious tap
+          {/* Done button — labeled on mobile so it's an obvious tap
               target; compact X on desktop. */}
           <button
             className="btn-ghost h-9 px-2 md:px-0 md:size-9 grid place-items-center md:p-0 gap-1 text-sm"
@@ -132,7 +132,7 @@ export function TaskDetailPanel() {
           }}
         />
 
-        {/* Start + Due pair â Starts is optional. When set, the task
+        {/* Start + Due pair — Starts is optional. When set, the task
             is treated as a time block and renders that way on the
             timeline view. Empty Starts = "due-only" task. */}
         <div className="grid grid-cols-1 gap-3">
@@ -212,7 +212,7 @@ export function TaskDetailPanel() {
           </div>
           {task.rrule && !task.due_at && (
             <p className="text-[11px] text-muted-fg mt-1">
-              Set a due date â recurrence creates the next occurrence when you complete the task.
+              Set a due date — recurrence creates the next occurrence when you complete the task.
             </p>
           )}
         </Field>
@@ -301,7 +301,7 @@ export function TaskDetailPanel() {
           <textarea
             rows={6}
             className="input min-h-[120px] py-2"
-            placeholder="Add notesâ¦"
+            placeholder="Add notes…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => {
@@ -313,7 +313,7 @@ export function TaskDetailPanel() {
         </Field>
 
         <div className="text-xs text-muted-fg">
-          Created {format(new Date(task.created_at), "MMM d, yyyy")} Â· Updated{" "}
+          Created {format(new Date(task.created_at), "MMM d, yyyy")} · Updated{" "}
           {format(new Date(task.updated_at), "MMM d, yyyy")}
         </div>
       </div>
