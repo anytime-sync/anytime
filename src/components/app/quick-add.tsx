@@ -27,9 +27,9 @@ const EXAMPLES = [
 
 /** For each attribute kind, regexes that recognise an existing phrase
  *  of that type in the input. injectPhrase() strips matching ranges
- *  before adding the new phrase, so clicking Today Ã¢ÂÂ Tomorrow swaps
+ *  before adding the new phrase, so clicking Today → Tomorrow swaps
  *  the date instead of stacking 'today tomorrow'. Tags are intentionally
- *  excluded Ã¢ÂÂ those are a multi-value list. */
+ *  excluded — those are a multi-value list. */
 const STRIP_PATTERNS: Record<
   "time" | "repeat" | "reminder" | "priority" | "inbox",
   RegExp[]
@@ -74,7 +74,7 @@ export function QuickAdd() {
   const [activeChip, setActiveChip] = useState<
     "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags" | null
   >(null);
-  // "Scan tasks" sheet Ã¢ÂÂ opens from the camera button next to the input.
+  // "Scan tasks" sheet — opens from the camera button next to the input.
   // The sheet handles the camera/upload, AI extraction, preview, and
   // bulk-create itself; we just need to know when it succeeds so we can
   // close QuickAdd as well (consistent with the single-task submit flow).
@@ -83,7 +83,7 @@ export function QuickAdd() {
   /** Inject (or replace) an attribute phrase into the input.
    *
    *  If `kind` is supplied, any existing phrase of that kind is removed
-   *  first Ã¢ÂÂ so picking Today then Tomorrow swaps the date instead of
+   *  first — so picking Today then Tomorrow swaps the date instead of
    *  stacking "today tomorrow". When kind is null/undefined the phrase
    *  is just appended (used for raw '#' tag insertion).
    *
@@ -221,7 +221,7 @@ export function QuickAdd() {
   if (!open) return null;
 
   /**
-   * Quick-add submit Ã¢ÂÂ instant feel, AI refinement in the background.
+   * Quick-add submit — instant feel, AI refinement in the background.
    *
    * Flow:
    *   1. Close the modal synchronously so the user is back to their list.
@@ -271,7 +271,7 @@ export function QuickAdd() {
     if (!createdTask?.id) return;
 
     // Skip the AI hop when local parse already captured everything
-    // obvious Ã¢ÂÂ saves an Anthropic call when the user typed plain English.
+    // obvious — saves an Anthropic call when the user typed plain English.
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
     if (localGotEnough) return;
@@ -308,7 +308,7 @@ export function QuickAdd() {
         updateTask.mutate(patch as any);
       }
     } catch {
-      // AI failure is silent Ã¢ÂÂ local-parsed task is already saved.
+      // AI failure is silent — local-parsed task is already saved.
     }
   }
 
@@ -331,7 +331,7 @@ export function QuickAdd() {
           <input
             ref={inputRef}
             className="flex-1 min-w-0 bg-transparent outline-none text-base md:text-lg placeholder:text-muted-fg"
-            placeholder='Add a task Ã¢ÂÂ type or speak'
+            placeholder='Add a task — type or speak'
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -461,7 +461,7 @@ export function QuickAdd() {
                 )}
                 onClick={() => setText(ex)}
               >
-                {ex.length > 56 ? ex.slice(0, 54) + "Ã¢ÂÂ¦" : ex}
+                {ex.length > 56 ? ex.slice(0, 54) + "…" : ex}
               </button>
             ))}
           </div>
@@ -474,8 +474,8 @@ export function QuickAdd() {
             <code>#tag</code>, <code>~ListName</code>
           </span>
           <span className="ml-auto shrink-0">
-            <span className="md:hidden">Enter Ã¢ÂÂµ ÃÂ· Esc</span>
-            <span className="hidden md:inline">Enter to add ÃÂ· Esc to close</span>
+            <span className="md:hidden">Enter Ã¢ÂÂµ · Esc</span>
+            <span className="hidden md:inline">Enter to add · Esc to close</span>
           </span>
         </div>
       </div>
@@ -483,7 +483,7 @@ export function QuickAdd() {
         open={scanOpen}
         onClose={() => setScanOpen(false)}
         onCreated={() => {
-          // After bulk-create, close QuickAdd too Ã¢ÂÂ same end state as
+          // After bulk-create, close QuickAdd too — same end state as
           // submitting a single task.
           setOpen(false);
         }}
@@ -530,17 +530,17 @@ function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
   // Priority alone gives a baseline mapping so typing just "urgent",
   // "important", "low priority", or "no priority" lights up the
   // matching cell even before a date is added:
-  //   p=5 Ã¢ÂÂ q1 Do first   (urgent + important)
-  //   p=3 Ã¢ÂÂ q2 Schedule   (important, not urgent)
-  //   p=1 Ã¢ÂÂ q3 Delegate   (not important Ã¢ÂÂ drop or hand off)
-  //   p=0 Ã¢ÂÂ q4 Eliminate
+  //   p=5 → q1 Do first   (urgent + important)
+  //   p=3 → q2 Schedule   (important, not urgent)
+  //   p=1 → q3 Delegate   (not important — drop or hand off)
+  //   p=0 → q4 Eliminate
   let q: Exclude<Quadrant, null>;
   if (p.priority >= 5) q = "q1";
   else if (p.priority >= 3) q = "q2";
   else if (p.priority >= 1) q = "q3";
   else q = "q4";
   // A near-term date (today / tomorrow / past) adds the urgency layer:
-  // Schedule (q2) Ã¢ÂÂ Do first (q1), Eliminate (q4) Ã¢ÂÂ Delegate (q3).
+  // Schedule (q2) → Do first (q1), Eliminate (q4) → Delegate (q3).
   const tomorrow = addDays(now, 1);
   const dateUrgent = p.due_at
     ? (() => {
@@ -595,7 +595,7 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
           );
         })}
       </div>
-      <div className="text-[10px] text-muted-fg text-center mt-1">The Sift ÃÂ· click to apply</div>
+      <div className="text-[10px] text-muted-fg text-center mt-1">The Sift · click to apply</div>
     </div>
   );
 }
@@ -746,7 +746,7 @@ function ChipOptions({
     // Tags: focus the input with a leading "#" so the user types the name.
     return (
       <div className="text-[11px] text-muted-fg pl-1">
-        Type <code className="text-fg">#tagname</code> in the input above Ã¢ÂÂ{" "}
+        Type <code className="text-fg">#tagname</code> in the input above —{" "}
         <button
           type="button"
           className="underline hover:text-fg"
