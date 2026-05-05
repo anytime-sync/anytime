@@ -142,14 +142,56 @@ export function QuickAdd() {
   const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
 
+  // Admin-curated priority phrases (\`site_priority_keywords\`) that
+  // extend the parser's built-in list. Loaded once when the panel
+  // opens; cached in React state so re-typing doesn't re-fetch.
+  const [extraPhrases, setExtraPhrases] = useState<
+    Array<{ phrase: string; priority: 0 | 1 | 3 | 5 }>
+  >([]);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const locale =
+          (typeof navigator !== "undefined" && navigator.language) || "en";
+        // Try the user's full BCP-47 first (e.g. zh-TW), fall back to
+        // the primary subtag (zh) if there's no rows for the locale.
+        const candidates = [locale, locale.split("-")[0] ?? "en", "en"];
+        for (const c of candidates) {
+          const res = await fetch(
+            \`/api/keywords/active?locale=\${encodeURIComponent(c)}\`
+          );
+          if (!res.ok) continue;
+          const j = await res.json().catch(() => ({}));
+          const phrases = (j.phrases ?? []) as Array<{
+            phrase: string;
+            priority: 0 | 1 | 3 | 5;
+          }>;
+          if (phrases.length) {
+            if (!cancelled) setExtraPhrases(phrases);
+            return;
+          }
+        }
+        if (!cancelled) setExtraPhrases([]);
+      } catch {
+        if (!cancelled) setExtraPhrases([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   // Auto-detect the user's existing tags + projects whenever they're
   // mentioned in plain prose. Same context the inline input uses.
   const parseCtx = useMemo(
     () => ({
       existingTags: existingTags.map((t: any) => t.name),
       existingProjects: projects.map((p: any) => p.name),
+      extraPhrases,
     }),
-    [existingTags, projects]
+    [existingTags, projects, extraPhrases]
   );
   const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
   const preview = useMemo(() => describeParsed(parsed, now), [parsed, now]);
