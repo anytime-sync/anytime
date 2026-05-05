@@ -841,4 +841,68 @@ function ChipOptions({
   return (
     <div className="flex flex-wrap items-center gap-1.5 pl-1">
       {options[kind]!.map((o) => (
-        <OptionPill key={o.labe
+        <OptionPill key={o.label} label={o.label} onClick={() => onPick(o.phrase)} />
+      ))}
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-[11px] text-muted-fg hover:text-fg ml-1"
+      >
+        cancel
+      </button>
+    </div>
+  );
+}
+
+function OptionPill({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center h-6 rounded-full border border-border px-2 text-[11px] text-fg hover:bg-muted hover:border-fg/40 transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Date + Time picker. Two native inputs side by side; once the user
+ *  has chosen at least a date, the combined phrase is injected into
+ *  the parent input ("on 2026-04-30 14:00"). Time alone (without
+ *  date) injects an "at HH:MM" phrase. The chrono-node parser then
+ *  resolves both shapes correctly. */
+function DateTimePicker({ onPick }: { onPick: (phrase: string) => void }) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+
+  function commit(d: string, tm: string) {
+    if (d && tm) onPick(`on ${d} ${tm}`);
+    else if (d) onPick(`on ${d}`);
+    else if (tm) onPick(`at ${tm}`);
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDate(v);
+          commit(v, time);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTime(v);
+          commit(date, v);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+    </span>
+  );
+}
