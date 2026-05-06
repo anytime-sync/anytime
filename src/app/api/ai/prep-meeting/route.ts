@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       { onConflict: "task_id" }
     );
 
-    await logAiCall(u.user.id, "prep_meeting", { model: res.model, status: 200, task_id });
+    await logAiCall(u.user.id, "prep_meeting", { model: res.model, status: 200 });
     return NextResponse.json({ ...out, cached: false });
   } catch (e: any) {
     console.error("[ai] prep-meeting", "\n", e?.stack || e?.message || e);

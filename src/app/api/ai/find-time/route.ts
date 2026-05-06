@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     const json = extractJson(content);
     const out = ResSchema.parse(json);
 
-    await logAiCall(u.user.id, "find_time", { model: res.model, status: 200, task_id });
+    await logAiCall(u.user.id, "find_time", { model: res.model, status: 200 });
     return NextResponse.json(out);
   } catch (e: any) {
     console.error("[ai] find-time", "\n", e?.stack || e?.message || e);
