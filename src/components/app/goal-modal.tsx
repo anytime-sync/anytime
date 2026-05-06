@@ -95,7 +95,7 @@ export function GoalModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-xl">A goal</h2>
+          <h2 className="font-display text-2xl">A goal</h2>
           {plan && (
             <span className="text-xs text-muted-fg">
               {plan.tasks.length} step{plan.tasks.length !== 1 && "s"}
@@ -105,14 +105,14 @@ export function GoalModal() {
 
         {!plan && (
           <>
-            <p className="text-sm text-muted-fg mb-3 italic font-display">
+            <p className="text-base text-muted-fg mb-3 italic font-display leading-relaxed">
               Write the outcome you want. AI breaks it into a project + tasks
               you can ship in order.
             </p>
             <textarea
               autoFocus
               rows={3}
-              className="input w-full"
+              className="input w-full text-base"
               placeholder="e.g. Ship the Q4 launch by Nov 30 with full email + social coverage"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
@@ -121,15 +121,15 @@ export function GoalModal() {
               }}
             />
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="text-[11px] text-muted-fg">
+              <p className="text-xs text-muted-fg">
                 <kbd>{typeof navigator !== "undefined" && /Mac/.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter</kbd> to plan
               </p>
               <div className="flex items-center gap-2">
-                <button className="btn-ghost h-9 px-3 text-xs" onClick={discard}>
+                <button className="btn-ghost h-9 px-3 text-sm" onClick={discard}>
                   Cancel
                 </button>
                 <button
-                  className="btn-primary h-9 px-3 text-xs gap-1.5 inline-flex items-center disabled:opacity-50"
+                  className="btn-primary h-9 px-3 text-sm gap-1.5 inline-flex items-center disabled:opacity-50"
                   onClick={generate}
                   disabled={running || !goal.trim()}
                 >
@@ -144,11 +144,11 @@ export function GoalModal() {
         {plan && (
           <>
             <div className="border border-border rounded-md p-3 mb-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-fg mb-1">
+              <div className="text-xs uppercase tracking-wider text-muted-fg mb-1">
                 Project
               </div>
-              <div className="font-medium text-sm">~{plan.project_name}</div>
-              <p className="text-xs text-muted-fg mt-1 italic">{plan.summary}</p>
+              <div className="font-medium text-base">~{plan.project_name}</div>
+              <p className="text-sm text-muted-fg mt-1 italic leading-relaxed">{plan.summary}</p>
             </div>
             <ul className="space-y-2">
               {plan.tasks.map((t, i) => (
@@ -158,7 +158,7 @@ export function GoalModal() {
                 >
                   <div className="flex-1 min-w-0">
                     <input
-                      className="input w-full text-sm py-1 mb-1 bg-transparent border-none px-0 focus:bg-bg focus:border focus:border-border focus:px-2 focus:py-1.5 rounded-md"
+                      className="input w-full text-base py-1 mb-1 bg-transparent border-none px-0 focus:bg-bg focus:border focus:border-border focus:px-2 focus:py-1.5 rounded-md"
                       value={t.title}
                       onChange={(e) =>
                         setPlan((p) =>
@@ -173,7 +173,7 @@ export function GoalModal() {
                         )
                       }
                     />
-                    <div className="text-[11px] text-muted-fg">
+                    <div className="text-xs text-muted-fg">
                       <span className="text-fg">Q{t.quadrant}</span> · p{t.priority} · in{" "}
                       {t.due_offset_days === 0 ? "today" : `${t.due_offset_days}d`} · {t.rationale}
                     </div>
@@ -194,14 +194,14 @@ export function GoalModal() {
             </ul>
             <div className="mt-4 flex items-center justify-between gap-2">
               <button
-                className="btn-ghost h-9 px-3 text-xs"
+                className="btn-ghost h-9 px-3 text-sm"
                 onClick={() => setPlan(null)}
                 disabled={creating}
               >
                 Back
               </button>
               <button
-                className="btn-primary h-9 px-3 text-xs gap-1.5 inline-flex items-center disabled:opacity-50"
+                className="btn-primary h-9 px-3 text-sm gap-1.5 inline-flex items-center disabled:opacity-50"
                 onClick={commit}
                 disabled={creating || plan.tasks.length === 0}
               >

@@ -101,7 +101,10 @@ export default function GroupsPage() {
     setBusy(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      toast.error(j.error ?? "Create failed");
+      // Surface the actual server message + status so we can debug
+      // future failures from the user-side toast itself.
+      toast.error(`${j.error ?? "Create failed"} (${res.status})`);
+      console.error("[groups] create failed", res.status, j);
       return;
     }
     setName("");
