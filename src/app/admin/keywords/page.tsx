@@ -151,13 +151,13 @@ function PhrasesPanel({ locale }: { locale: LanguageCode }) {
   const [priority, setPriority] = useState<0 | 1 | 3 | 5>(5);
   const [busy, setBusy] = useState(false);
 
-  async function reload() {
-    setLoading(true);
+  async function reload(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setLoading(true);
     const res = await fetch(`/api/admin/keywords?locale=${encodeURIComponent(locale)}`);
     const j = await res.json().catch(() => ({}));
     if (res.ok) setRows((j.rows ?? []) as KeywordRow[]);
     else toast.error(j.error ?? "Load failed");
-    setLoading(false);
+    if (!opts?.silent) setLoading(false);
   }
 
   useEffect(() => {
