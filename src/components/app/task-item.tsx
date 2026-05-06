@@ -7,6 +7,7 @@ import { useDeleteTask, useToggleTask, useSubtaskCounts } from "@/hooks/use-task
 import { useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
+import { TranslatedSubtitle } from "./translated-subtitle";
 import { cn, priorityColorClass } from "@/lib/utils";
 
 export function TaskItem({ task }: { task: TaskWithTags }) {
@@ -151,6 +152,11 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         >
           {task.title}
         </div>
+        <TranslatedSubtitle
+          taskId={task.id}
+          sourceTitle={task.title}
+          shareGroupId={(task as any).share_group_id ?? null}
+        />
         {/* Inline notes preview — first line, muted, truncated. */}
         {task.notes && !task.is_completed && (
           <p className="text-xs text-muted-fg mt-0.5 line-clamp-1 leading-snug">

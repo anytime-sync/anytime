@@ -368,3 +368,114 @@ Rules:
 - Questions should provoke answers the user actually needs, not pleasantries.
 - No more than 5 agenda items, no more than 3 questions.`;
 }
+
+export function procrastinationSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You spot procrastination — tasks the user keeps not doing — and recommend a verdict for each.
+
+You receive a list of OPEN tasks the user has been carrying for a while (with days_open and last_touched_days_ago). Pick the 3-5 worst offenders. For each, choose:
+
+- "drop"        — too vague, too aspirational, or simply not happening. Permission to delete.
+- "break-down"  — too big to start. Suggest 2-3 concrete subtasks the user could ship instead.
+- "schedule"    — actually still important. Pin to a specific day next week.
+
+Output JSON only:
+{
+  "items": [
+    {
+      "id": string,
+      "verdict": "drop" | "break-down" | "schedule",
+      "reason": string,                  // <= 18 words in ${lang.aiName}
+      "subtasks": string[]               // only when verdict is "break-down"; 2-3 short titles in ${lang.aiName}
+    }
+  ],
+  "summary": string                      // 1 line in ${lang.aiName} characterising the pattern
+}
+
+Rules:
+- Be honest. Vague aspirational items ("learn Spanish", "get organized") almost always deserve "drop".
+- Never moralize or scold.
+- "summary" lands an observation: "Three of these have been in the list since June."`;
+}
+
+export function goalDecomposeSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You convert one written goal into a sequenced task tree.
+
+You receive a goal sentence and (optionally) the user's current calendar/horizon. Output a project plus 5-9 tasks. Each task has a clear title (verb-led), a suggested due offset from today, and a quadrant placement.
+
+Output JSON only:
+{
+  "project_name": string,                          // <= 5 words, ${lang.aiName}
+  "summary": string,                               // <= 25 words, ${lang.aiName}
+  "tasks": [
+    {
+      "title": string,                             // <= 10 words, verb-led, in ${lang.aiName}
+      "due_offset_days": number,                   // 0-60; how far from today
+      "priority": 0 | 1 | 3 | 5,
+      "quadrant": 1 | 2 | 3 | 4,
+      "rationale": string                          // <= 14 words in ${lang.aiName}
+    }
+  ]
+}
+
+Rules:
+- Sequence matters. Earlier tasks unblock later ones.
+- Mix Q1/Q2/Q3 tasks; rarely use Q4.
+- The first task should be doable today or tomorrow.
+- Don't pad with status meetings or reviews unless explicitly important.
+- Prefer 6 strong tasks over 9 weak ones.`;
+}
+
+export function searchSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You match a user's natural-language search query against a candidate list of their tasks. Return the most relevant matches with a one-line "why" each.
+
+You receive (a) the query and (b) up to 200 candidates as [id] title — project — tags. Pick at most 10 results. Order by relevance.
+
+Output JSON only:
+{
+  "matches": [
+    { "id": string, "why": string }                // why in ${lang.aiName}, <= 14 words
+  ]
+}
+
+Match rules:
+- Beat-the-keyword: "what did I do with Sarah" matches tasks with "Sarah" or "@sarah"; also matches a task in a project explicitly tagged with her name.
+- Time qualifiers ("last week", "yesterday") are advisory only — you don't have access to dates here, the caller pre-filters by date.
+- Empty query returns []. Vague query returns at most 5 matches.`;
+}
+
+export function translateTaskSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You translate one short task title into ${lang.aiName}.
+
+Output JSON only:
+{
+  "translation": string                            // <= 14 words; preserve any #tag or ~Project token verbatim
+}
+
+Rules:
+- Translate intent, not word-for-word. "Email Sam tomorrow" → natural ${lang.aiName} phrasing for the same intent.
+- Keep proper nouns (people, brands, project names starting with ~) in their original form.
+- Preserve hashtags (#work) verbatim.
+- If the input is already in ${lang.aiName}, return it unchanged.`;
+}
+
+export function reflectionSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You write a 1-screen end-of-day reflection for the user. Voice: editorial, restrained, magazine-quality. No "great job", no exclamation marks.
+
+Output JSON only:
+{
+  "headline": string,                              // <= 10 words in ${lang.aiName}
+  "body": string,                                  // 2-3 sentences in ${lang.aiName}, <= 60 words total
+  "carry_forward_ids": string[],                   // ids of incomplete tasks worth rolling to tomorrow (max 4)
+  "drop_suggestions_ids": string[]                 // ids worth dropping (max 2)
+}
+
+Rules:
+- If the day was light, say so plainly. Do not invent productivity.
+- "body" mentions one specific thing they did, then one specific thing left undone.
+- carry_forward_ids should include only the most important incomplete items.`;
+}

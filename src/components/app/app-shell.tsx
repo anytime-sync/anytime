@@ -9,6 +9,8 @@ import { Reminders } from "./reminders";
 import { useUIStore } from "@/store/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import { ImpersonationBanner } from "./impersonation-banner";
+import { GoalModal } from "./goal-modal";
+import { ReflectionDialog } from "./reflection-dialog";
 
 export function AppShell({
   user,
@@ -54,6 +56,8 @@ export function AppShell({
       </div>
       <CommandPalette />
       <QuickAdd />
+      <GoalModal />
+      <ReflectionDialog />
       <Reminders />
     </div>
   );

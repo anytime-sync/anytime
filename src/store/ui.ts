@@ -15,6 +15,12 @@ type UIState = {
 
   quickAddOpen: boolean;
   setQuickAddOpen: (v: boolean) => void;
+
+  goalModalOpen: boolean;
+  setGoalModalOpen: (v: boolean) => void;
+
+  reflectionOpen: boolean;
+  setReflectionOpen: (v: boolean) => void;
 };
 
 export const useUIStore = create<UIState>()(
@@ -28,6 +34,10 @@ export const useUIStore = create<UIState>()(
       setCommandOpen: (v) => set({ commandOpen: v }),
       quickAddOpen: false,
       setQuickAddOpen: (v) => set({ quickAddOpen: v }),
+      goalModalOpen: false,
+      setGoalModalOpen: (v) => set({ goalModalOpen: v }),
+      reflectionOpen: false,
+      setReflectionOpen: (v) => set({ reflectionOpen: v }),
     }),
     { name: "tt-ui", partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }) }
   )

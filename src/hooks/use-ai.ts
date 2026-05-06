@@ -411,3 +411,120 @@ export function usePrepMeeting() {
     },
   });
 }
+
+/* ---------- deferred-bundle hooks ---------- */
+
+export type ProcrastinationItem = {
+  id: string;
+  verdict: "drop" | "break-down" | "schedule";
+  reason: string;
+  subtasks: string[];
+};
+
+export function useProcrastination() {
+  return useMutation({
+    mutationFn: async (): Promise<{ items: ProcrastinationItem[]; summary: string } | null> => {
+      const r = await fetch("/api/ai/procrastination", { method: "POST" });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`procrastination ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export type GoalTask = {
+  title: string;
+  due_offset_days: number;
+  priority: 0 | 1 | 3 | 5;
+  quadrant: 1 | 2 | 3 | 4;
+  rationale: string;
+};
+export type GoalDecomposed = {
+  project_name: string;
+  summary: string;
+  tasks: GoalTask[];
+};
+
+export function useGoalDecompose() {
+  return useMutation({
+    mutationFn: async (goal: string): Promise<GoalDecomposed | null> => {
+      const r = await fetch("/api/ai/goal-decompose", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ goal }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`goal-decompose ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export type SearchMatch = { id: string; why: string };
+
+export function useNlSearch() {
+  return useMutation({
+    mutationFn: async (query: string): Promise<{ matches: SearchMatch[] } | null> => {
+      const r = await fetch("/api/ai/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`search ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export function useTranslateTask() {
+  return useMutation({
+    mutationFn: async (input: {
+      task_id: string;
+      source_title: string;
+      target_locale: string;
+    }): Promise<{ translation: string; cached?: boolean } | null> => {
+      const r = await fetch("/api/ai/translate-task", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`translate ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export type Reflection = {
+  headline: string;
+  body: string;
+  carry_forward_ids: string[];
+  drop_suggestions_ids: string[];
+  user_journal?: string | null;
+  local_date?: string;
+};
+
+export function useReflection() {
+  return useMutation({
+    mutationFn: async (): Promise<Reflection | null> => {
+      const r = await fetch("/api/ai/reflection");
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`reflection ${r.status}`);
+      return await r.json();
+    },
+  });
+}
+
+export function useSaveReflectionJournal() {
+  return useMutation({
+    mutationFn: async (journal: string) => {
+      const r = await fetch("/api/ai/reflection", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ journal }),
+      });
+      if (!r.ok) throw new Error(`save-journal ${r.status}`);
+    },
+  });
+}

@@ -29,7 +29,12 @@ export type AiFeature =
   | "reschedule_task"
   | "find_time"
   | "auto_triage"
-  | "prep_meeting";
+  | "prep_meeting"
+  | "procrastination"
+  | "goal_decompose"
+  | "search"
+  | "translate_task"
+  | "reflection";
 
 export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   parse_task: 200,
@@ -50,6 +55,17 @@ export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   auto_triage: 100,
   // prep_meeting: opt-in agenda generation; cached after first call.
   prep_meeting: 25,
+  // procrastination: weekly cleanup pass; once a week is plenty.
+  procrastination: 5,
+  // goal_decompose: turning a written goal into a task tree; budget keeps it deliberate.
+  goal_decompose: 10,
+  // search: NL palette query; cheap re-rank — generous budget.
+  search: 100,
+  // translate_task: per-task per-locale; cached aggressively. Budget high
+  // because new shared tasks across many languages can fan out fast.
+  translate_task: 300,
+  // reflection: nightly per-user wrap-up summary; once a day max.
+  reflection: 5,
 };
 
 function admin() {

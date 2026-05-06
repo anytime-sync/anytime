@@ -17,6 +17,7 @@ import { CreateProjectDialog } from "./create-project-dialog";
 import { LanguagePicker } from "./language-picker";
 import { SidebarListItem } from "./sidebar-list-item";
 import { NotificationBell } from "./notification-bell";
+import { Target, Sunset } from "lucide-react";
 import { SidebarTagItem } from "./sidebar-tag-item";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/use-language";
@@ -98,6 +99,8 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const setCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const setCmdOpen = useUIStore((s) => s.setCommandOpen);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
+  const setGoalModal = useUIStore((s) => s.setGoalModalOpen);
+  const setReflection = useUIStore((s) => s.setReflectionOpen);
   const { data: projects = [] } = useProjects();
   const reorderProjects = useReorderProjects();
   const { data: tags = [] } = useTags();
@@ -166,6 +169,22 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           <Search className="size-4" />
           {!collapsed && <span>{t(lang, "sidebar.search")}</span>}
           {!collapsed && <span className="ml-auto text-xs text-muted-fg">⌘K</span>}
+        </button>
+        <button
+          className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
+          onClick={() => setGoalModal(true)}
+          title="Plan a goal as a project + tasks"
+        >
+          <Target className="size-4" />
+          {!collapsed && <span>Goal</span>}
+        </button>
+        <button
+          className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
+          onClick={() => setReflection(true)}
+          title="Today, in retrospect"
+        >
+          <Sunset className="size-4" />
+          {!collapsed && <span>Reflect</span>}
         </button>
       </div>
 

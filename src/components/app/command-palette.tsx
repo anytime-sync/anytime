@@ -6,7 +6,10 @@ import { useTasks } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { useRouter } from "next/navigation";
-import { Hash, Folder, ListTodo } from "lucide-react";
+import { Hash, Folder, ListTodo, Sparkles } from "lucide-react";
+import { useNlSearch, type SearchMatch } from "@/hooks/use-ai";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export function CommandPalette() {
   const open = useUIStore((s) => s.commandOpen);
@@ -15,9 +18,28 @@ export function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
+  const [aiMatches, setAiMatches] = useState<SearchMatch[] | null>(null);
+  const nlSearch = useNlSearch();
   const { data: tasks = [] } = useTasks({ includeCompleted: true });
   const { data: projects = [] } = useProjects();
   const { data: tags = [] } = useTags();
+
+  // Reset AI matches whenever the query changes — they're stale by then.
+  useEffect(() => { setAiMatches(null); }, [q]);
+
+  async function runAiSearch() {
+    if (q.trim().length < 3) return;
+    try {
+      const r = await nlSearch.mutateAsync(q.trim());
+      if (!r) {
+        toast.error("AI is currently disabled.");
+        return;
+      }
+      setAiMatches(r.matches);
+    } catch (e: any) {
+      toast.error(e?.message?.includes("429") ? "Search budget reached." : "Couldn't run AI search.");
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -58,14 +80,55 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-50 grid place-items-start pt-[12vh] bg-black/40 animate-fade-in" onClick={() => setOpen(false)}>
       <div className="card w-[90vw] max-w-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <input
-          ref={inputRef}
-          className="w-full bg-transparent outline-none text-base px-4 h-12 border-b border-border"
-          placeholder="Search tasks, lists, tags…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <div className="flex items-center border-b border-border">
+          <input
+            ref={inputRef}
+            className="flex-1 bg-transparent outline-none text-base px-4 h-12"
+            placeholder="Search tasks, lists, tags… or ask AI"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                runAiSearch();
+              }
+            }}
+          />
+          {q.trim().length >= 3 && (
+            <button
+              type="button"
+              className="mr-2 btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
+              onClick={runAiSearch}
+              disabled={nlSearch.isPending}
+              title="Re-rank with AI (Cmd/Ctrl+Enter)"
+            >
+              <Sparkles className={cn("size-3.5", nlSearch.isPending && "animate-spin")} />
+              {nlSearch.isPending ? "…" : "Ask AI"}
+            </button>
+          )}
+        </div>
         <div className="max-h-[60vh] overflow-y-auto p-2 text-sm">
+          {aiMatches && aiMatches.length > 0 && (
+            <Section title="AI matches">
+              {aiMatches.map((m) => {
+                const t = tasks.find((x) => x.id === m.id);
+                if (!t) return null;
+                return (
+                  <button
+                    key={m.id}
+                    className="w-full flex items-start gap-2 px-2 py-2 rounded-md hover:bg-muted text-left"
+                    onClick={() => { setSelected(m.id); setOpen(false); }}
+                  >
+                    <Sparkles className="size-3.5 mt-0.5 text-accent shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate">{t.title}</div>
+                      <div className="text-[11px] text-muted-fg italic mt-0.5">{m.why}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </Section>
+          )}
           {results.tasks.length > 0 && (
             <Section title="Tasks">
               {results.tasks.map((t) => (

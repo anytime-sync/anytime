@@ -14,6 +14,7 @@ import {
 import type { Locale } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Clock, Loader2 } from "lucide-react";
+import { ProcrastinationPanel } from "@/components/app/procrastination-panel";
 import { getLanguage } from "@/lib/i18n";
 import type { Task } from "@/lib/db.types";
 
@@ -194,6 +195,9 @@ export default function RetroPage() {
               )}
             </article>
           )}
+          <div className="mt-10">
+            <ProcrastinationPanel />
+          </div>
         </div>
       </div>
     </div>
