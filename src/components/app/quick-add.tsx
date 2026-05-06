@@ -596,8 +596,8 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
     { key: "q4", label: "Eliminate", phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8", bgOpacity: 100, bgBlur: 0 },
   ];
   // Admin-configured (`site_quadrant_config`) labels, colors, and the
-  // glassmorphism dials. Overlaid on top of the defaults so any field
-  // the admin hasn't changed keeps its baseline.
+  // glassmorphism dials. Overlaid on top of defaults so any field the
+  // admin hasn't changed keeps its baseline.
   const [overrides, setOverrides] = useState<
     Partial<Record<Exclude<Quadrant, null>, { label?: string; fg?: string; bg?: string; border?: string; bgOpacity?: number; bgBlur?: number }>>
   >({});
@@ -894,4 +894,55 @@ function ChipOptions({
   );
 }
 
-func
+function OptionPill({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center h-6 rounded-full border border-border px-2 text-[11px] text-fg hover:bg-muted hover:border-fg/40 transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Date + Time picker. Two native inputs side by side; once the user
+ *  has chosen at least a date, the combined phrase is injected into
+ *  the parent input ("on 2026-04-30 14:00"). Time alone (without
+ *  date) injects an "at HH:MM" phrase. The chrono-node parser then
+ *  resolves both shapes correctly. */
+function DateTimePicker({ onPick }: { onPick: (phrase: string) => void }) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+
+  function commit(d: string, tm: string) {
+    if (d && tm) onPick(`on ${d} ${tm}`);
+    else if (d) onPick(`on ${d}`);
+    else if (tm) onPick(`at ${tm}`);
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDate(v);
+          commit(v, time);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTime(v);
+          commit(date, v);
+        }}
+        className="h-6 rounded-full border border-border px-2 text-[11px] text-muted-fg bg-transparent hover:text-fg focus:text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+    </span>
+  );
+}
