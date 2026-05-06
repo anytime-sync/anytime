@@ -72,8 +72,44 @@ function applyAlpha(color: string | null | undefined, opacityPercent: number): s
  * didn't customise stays on its default value, so the Sift always
  * renders even if the table is empty.
  */
+const LS_KEY = "fl.quadrants.cache";
+
+function readQuadrantCache(): Record<QuadrantKey, QuadMeta> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<QuadrantKey, QuadMeta>;
+    // Cheap shape check — bail if any quadrant or required field is missing.
+    for (const k of ["q1", "q2", "q3", "q4"] as QuadrantKey[]) {
+      const m = parsed[k];
+      if (!m || typeof m.bg !== "string" || typeof m.bgOpacity !== "number") {
+        return null;
+      }
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeQuadrantCache(data: Record<QuadrantKey, QuadMeta>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch {
+    // Quota or disabled storage — silently ignore, FOUC will return on
+    // next visit but the page still works.
+  }
+}
+
 function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
-  const [merged, setMerged] = useState<Record<QuadrantKey, QuadMeta>>(DEFAULT_QUADRANTS);
+  // Lazy initial state hydrates synchronously from localStorage so the
+  // first paint matches the admin's saved values. Falls back to the
+  // built-in defaults on the very first visit (or after cache wipe).
+  const [merged, setMerged] = useState<Record<QuadrantKey, QuadMeta>>(
+    () => readQuadrantCache() ?? DEFAULT_QUADRANTS
+  );
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -117,6 +153,7 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
               };
             }
             setMerged(next);
+            writeQuadrantCache(next);
             return;
           }
         }

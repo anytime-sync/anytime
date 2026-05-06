@@ -581,6 +581,28 @@ function applyAlpha(color: string | null | undefined, opacityPercent: number): s
   return color;
 }
 
+const QA_LS_KEY = "fl.quadrants.qa.cache";
+
+type QaOverrideMap = Partial<Record<Exclude<Quadrant, null>, { label?: string; fg?: string; bg?: string; border?: string; bgOpacity?: number; bgBlur?: number }>>;
+
+function readQaCache(): QaOverrideMap | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(QA_LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as QaOverrideMap;
+  } catch {
+    return null;
+  }
+}
+
+function writeQaCache(data: QaOverrideMap) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(QA_LS_KEY, JSON.stringify(data));
+  } catch {}
+}
+
 function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase: string) => void }) {
   // Each cell injects a phrase that the parser will resolve into that
   // quadrant: priority + (where needed) urgency cue.
@@ -598,9 +620,9 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
   // Admin-configured (`site_quadrant_config`) labels, colors, and the
   // glassmorphism dials. Overlaid on top of defaults so any field the
   // admin hasn't changed keeps its baseline.
-  const [overrides, setOverrides] = useState<
-    Partial<Record<Exclude<Quadrant, null>, { label?: string; fg?: string; bg?: string; border?: string; bgOpacity?: number; bgBlur?: number }>>
-  >({});
+  // Lazy initial state hydrates synchronously from localStorage so the
+  // first paint matches the admin's saved values (no FOUC).
+  const [overrides, setOverrides] = useState<QaOverrideMap>(() => readQaCache() ?? {});
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -639,6 +661,7 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
                 };
               }
               setOverrides(map);
+              writeQaCache(map);
             }
             return;
           }

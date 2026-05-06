@@ -195,7 +195,10 @@ function PhrasesPanel({ locale }: { locale: LanguageCode }) {
       toast.error(j.error ?? "Save failed");
       return;
     }
-    reload();
+    // Silent refetch: optimistic state already reflects the new value;
+    // we just want to pick up server-side normalisation (e.g. clamped
+    // opacity/blur) without flashing the spinner.
+    reload({ silent: true });
   }
 
   async function remove(id: string) {
@@ -329,13 +332,13 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  async function reload() {
-    setLoading(true);
+  async function reload(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setLoading(true);
     const res = await fetch(`/api/admin/quadrants?locale=${encodeURIComponent(locale)}`);
     const j = await res.json().catch(() => ({}));
     if (res.ok) setRows((j.rows ?? []) as QuadrantRow[]);
     else toast.error(j.error ?? "Load failed");
-    setLoading(false);
+    if (!opts?.silent) setLoading(false);
   }
 
   useEffect(() => {
@@ -385,7 +388,10 @@ function QuadrantsPanel({ locale }: { locale: LanguageCode }) {
       toast.error(j.error ?? "Save failed");
       return;
     }
-    reload();
+    // Silent refetch: optimistic state already reflects the new value;
+    // we just want to pick up server-side normalisation (e.g. clamped
+    // opacity/blur) without flashing the spinner.
+    reload({ silent: true });
   }
 
   if (loading) {
