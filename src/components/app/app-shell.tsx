@@ -8,6 +8,7 @@ import { QuickAdd } from "./quick-add";
 import { Reminders } from "./reminders";
 import { useUIStore } from "@/store/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
+import { ImpersonationBanner } from "./impersonation-banner";
 
 export function AppShell({
   user,
@@ -35,19 +36,22 @@ export function AppShell({
   }, [setCmdOpen]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden grid"
-      style={{
-        gridTemplateColumns: sidebarCollapsed ? "64px 1fr" : "260px 1fr",
-        transition: "grid-template-columns 200ms ease",
-      }}
-    >
-      <Sidebar user={user} />
-      <main className="relative h-screen overflow-hidden flex">
-        <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
-          {mounted ? children : null}
-        </div>
-        <TaskDetailPanel />
-      </main>
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      <ImpersonationBanner />
+      <div className="flex-1 min-h-0 grid"
+        style={{
+          gridTemplateColumns: sidebarCollapsed ? "64px 1fr" : "260px 1fr",
+          transition: "grid-template-columns 200ms ease",
+        }}
+      >
+        <Sidebar user={user} />
+        <main className="relative h-full overflow-hidden flex">
+          <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
+            {mounted ? children : null}
+          </div>
+          <TaskDetailPanel />
+        </main>
+      </div>
       <CommandPalette />
       <QuickAdd />
       <Reminders />

@@ -228,6 +228,14 @@ function EditDialog({
       return;
     }
     const j = await res.json();
+    if (j.ok && j.target_email) {
+      // Cookie swap is done server-side — just navigate to the app and
+      // we'll be authenticated as the target user.
+      toast.success(`Signed in as ${j.target_email}. Opening their app…`);
+      window.location.href = j.redirect ?? "/app";
+      return;
+    }
+    // Legacy magic-link fallback (in case start route still returns a URL).
     if (j.url) {
       window.open(j.url, "_blank", "noopener,noreferrer");
       toast.success(`Signing in as ${j.target_email} in a new tab`);
