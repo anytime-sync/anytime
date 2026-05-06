@@ -296,3 +296,118 @@ export function usePlanDay() {
     },
   });
 }
+
+/* ---------- new AI helpers (estimate, reschedule, find-time, prep-meeting) ---------- */
+
+export type EstimateTaskInput = {
+  task_id: string;
+  title: string;
+  notes?: string | null;
+  project?: string | null;
+  tags?: string[];
+};
+export type EstimateTaskResult = {
+  minutes: number;
+  confidence: "low" | "med" | "high";
+  rationale: string;
+};
+
+export function useEstimateTask() {
+  return useMutation({
+    mutationFn: async (input: EstimateTaskInput): Promise<EstimateTaskResult | null> => {
+      const r = await fetch("/api/ai/estimate-task", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`estimate ${r.status}`);
+      return (await r.json()) as EstimateTaskResult;
+    },
+  });
+}
+
+export type RescheduleInput = {
+  tasks: Array<{
+    id: string;
+    title: string;
+    due_at: string | null;
+    priority: number;
+    days_overdue: number;
+  }>;
+};
+export type RescheduleSuggestion = {
+  id: string;
+  new_due_at: string | null;
+  verdict: "reschedule" | "defer-far" | "drop";
+  reason: string;
+};
+
+export function useRescheduleTasks() {
+  return useMutation({
+    mutationFn: async (input: RescheduleInput): Promise<{ suggestions: RescheduleSuggestion[] } | null> => {
+      const r = await fetch("/api/ai/reschedule-task", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`reschedule ${r.status}`);
+      return (await r.json()) as { suggestions: RescheduleSuggestion[] };
+    },
+  });
+}
+
+export type FindTimeInput = {
+  task_id: string;
+  title: string;
+  estimated_minutes?: number | null;
+};
+export type TimeSlot = {
+  start_at: string;
+  end_at: string;
+  label: string;
+  fit: "best" | "good" | "backup";
+};
+
+export function useFindTime() {
+  return useMutation({
+    mutationFn: async (input: FindTimeInput): Promise<{ slots: TimeSlot[] } | null> => {
+      const r = await fetch("/api/ai/find-time", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`find-time ${r.status}`);
+      return (await r.json()) as { slots: TimeSlot[] };
+    },
+  });
+}
+
+export type PrepMeetingInput = {
+  task_id: string;
+  title: string;
+  notes?: string | null;
+  refresh?: boolean;
+};
+export type MeetingPrep = {
+  agenda: string[];
+  questions: string[];
+  cached?: boolean;
+};
+
+export function usePrepMeeting() {
+  return useMutation({
+    mutationFn: async (input: PrepMeetingInput): Promise<MeetingPrep | null> => {
+      const r = await fetch("/api/ai/prep-meeting", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`prep-meeting ${r.status}`);
+      return (await r.json()) as MeetingPrep;
+    },
+  });
+}

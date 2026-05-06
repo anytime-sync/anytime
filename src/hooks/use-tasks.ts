@@ -239,11 +239,64 @@ export function useCreateTask() {
       ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
       toast.error(e.message);
     },
-    onSuccess: () => {
+    onSuccess: (createdTask) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
+
+      // Background AI: auto-triage (quadrant -> priority) + smart estimate.
+      // Both fire-and-forget. They only run when the new task looks
+      // meaningful enough to bother (>= 8 chars, no user-set priority,
+      // no due date) — micro-tasks like "Eat" stay alone.
+      try {
+        if (
+          createdTask &&
+          createdTask.id &&
+          createdTask.title &&
+          createdTask.title.length >= 8 &&
+          (createdTask.priority ?? 0) === 0 &&
+          !createdTask.due_at
+        ) {
+          const id = createdTask.id;
+          const title = createdTask.title;
+          // Auto-triage: classify quadrant, map to priority + due_at if Q1/Q3.
+          fetch("/api/ai/quadrant", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j: any) => {
+              if (!j || typeof j.quadrant !== "number") return;
+              // Quadrant -> priority (Q1=5,Q2=5,Q3=1,Q4=0); Q1+Q3 also get end-of-day.
+              const map: Record<number, { priority: 0 | 1 | 3 | 5; due_at: string | null }> = {
+                1: { priority: 5, due_at: new Date(new Date().setHours(23, 59, 0, 0)).toISOString() },
+                2: { priority: 5, due_at: null },
+                3: { priority: 1, due_at: new Date(new Date().setHours(23, 59, 0, 0)).toISOString() },
+                4: { priority: 0, due_at: null },
+              };
+              const target = map[j.quadrant];
+              if (!target) return;
+              createClient()
+                .from("tasks")
+                .update({ priority: target.priority, due_at: target.due_at })
+                .eq("id", id)
+                .then(() => qc.invalidateQueries({ queryKey: ["tasks"] }));
+            })
+            .catch(() => {});
+          // Smart estimate.
+          fetch("/api/ai/estimate-task", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ task_id: id, title }),
+          })
+            .then(() => qc.invalidateQueries({ queryKey: ["tasks"] }))
+            .catch(() => {});
+        }
+      } catch {
+        // never block the create flow
+      }
     },
   });
 }

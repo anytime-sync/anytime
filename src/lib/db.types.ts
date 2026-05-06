@@ -44,6 +44,8 @@ export type Task = {
   reminder_at: string | null;
   estimated_pomodoros: number;
   spent_pomodoros: number;
+  /** AI-predicted wall-clock minutes; populated by /api/ai/estimate-task. */
+  estimated_minutes?: number | null;
   created_at: string;
   updated_at: string;
   /** Optional: a member of the task's share_group who owns the work. */

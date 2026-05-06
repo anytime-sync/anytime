@@ -7,6 +7,7 @@ import { useUIStore } from "@/store/ui";
 import { t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 import { PlanMyDayButton } from "@/components/app/plan-my-day-button";
+import { TodayAiBar } from "@/components/app/today-ai-bar";
 
 /**
  * Today â toggleable between the editorial list (default) and the new
@@ -30,6 +31,7 @@ export default function TodayPage() {
         sortKey="today"
         headerExtra={
           <>
+            <TodayAiBar />
             <PlanMyDayButton />
             <DayViewToggle mode={mode} setMode={setMode} />
           </>
@@ -51,6 +53,7 @@ export default function TodayPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <TodayAiBar />
             <PlanMyDayButton />
             <DayViewToggle mode={mode} setMode={setMode} />
             {/* Icon-only on mobile so the title isn't squeezed to "T..." */}

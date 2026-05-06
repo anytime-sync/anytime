@@ -24,7 +24,12 @@ export type AiFeature =
   | "daily_edition"
   | "weekly_retro"
   | "plan_week"
-  | "plan_day";
+  | "plan_day"
+  | "estimate_task"
+  | "reschedule_task"
+  | "find_time"
+  | "auto_triage"
+  | "prep_meeting";
 
 export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   parse_task: 200,
@@ -35,6 +40,16 @@ export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   plan_week: 10,
   // plan_day is the morning ritual — once or twice a day max.
   plan_day: 12,
+  // estimate_task: small, quick, fires on every task add. Generous budget.
+  estimate_task: 200,
+  // reschedule_task: bulk handles many at once; per-task surface is rarer.
+  reschedule_task: 30,
+  // find_time: opt-in click action; small budget reflects intent.
+  find_time: 30,
+  // auto_triage: silent quadrant classification on every add. Same as quadrant.
+  auto_triage: 100,
+  // prep_meeting: opt-in agenda generation; cached after first call.
+  prep_meeting: 25,
 };
 
 function admin() {

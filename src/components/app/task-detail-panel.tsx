@@ -1,4 +1,5 @@
 "use client";
+import { AiTaskActions } from "./ai-task-actions";
 
 import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
@@ -310,6 +311,10 @@ export function TaskDetailPanel() {
 
         <Field label="Attachments" icon={<Paperclip className="size-3.5 text-muted-fg" />}>
           <AttachmentList taskId={task.id} />
+        </Field>
+
+        <Field label="AI shortcuts" icon={undefined}>
+          <AiTaskActions task={task} />
         </Field>
 
         <Field label="Notes">

@@ -271,3 +271,100 @@ export const PARSE_TASK_SYSTEM = parseTaskSystem("en");
 export const QUADRANT_SYSTEM = quadrantSystem("en");
 export const DAILY_EDITION_SYSTEM = dailyEditionSystem("en");
 export const WEEKLY_RETRO_SYSTEM = weeklyRetroSystem("en");
+
+export function estimateTaskSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You estimate the wall-clock time a single task takes to finish. Output JSON only, no prose.
+
+Schema:
+{
+  "minutes": integer,            // 5-480, snap to {5, 10, 15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 480}
+  "confidence": "low"|"med"|"high",
+  "rationale": string            // <= 14 words in ${lang.aiName}
+}
+
+Calibration:
+- "Email Sam" → ~5 min
+- "Quick call with X" → 30 min
+- "Draft 1-pager on Y" → 60 min
+- "Review the design doc" → 30 min
+- "Plan the launch" → 240 min (vague-but-meaty)
+- "Onboard new hire" → 480 min (multi-day) — pick 480 and mark confidence low
+
+If the title implies a duration (e.g. "30-min sync"), use that.
+If the task has a project/tag context (work/personal/study), bias accordingly.
+If the title is too vague to estimate, pick 30 and confidence: "low".`;
+}
+
+export function rescheduleTaskSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You reschedule one or more overdue tasks to realistic future dates. Output JSON only.
+
+Schema:
+{
+  "suggestions": [
+    {
+      "id": string,
+      "new_due_at": string | null,    // ISO 8601 in user TZ; null = drop the date entirely (becomes undated)
+      "verdict": "reschedule"|"defer-far"|"drop",
+      "reason": string                // <= 14 words in ${lang.aiName}
+    }
+  ]
+}
+
+Decision rules:
+- Days_overdue < 7  AND task feels still relevant → reschedule to within 1-3 days, ideally a morning slot.
+- Days_overdue 7-30 AND not high priority → defer-far: 14-30 days out, with a calm "revisit when fresher" reason.
+- Days_overdue > 30 OR title is vague-aspirational ("learn Spanish") → suggest drop (new_due_at null) with verdict "drop".
+- High-priority items (priority >= 3) NEVER drop — only reschedule.
+- Distribute across days; don't pile everything on tomorrow.
+- Reasons in ${lang.aiName}, terse, no scolding.`;
+}
+
+export function findTimeSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You suggest 3 time slots for one task in the user's next 7 days. Output JSON only.
+
+Schema:
+{
+  "slots": [
+    {
+      "start_at": string,             // ISO 8601 in user TZ
+      "end_at": string,               // ISO 8601 in user TZ
+      "label": string,                // <= 6 words in ${lang.aiName}, e.g. "Tomorrow morning, deep focus"
+      "fit": "best"|"good"|"backup"
+    }
+  ]
+}
+
+Rules:
+- Only slots inside the user's typical working day (treat 9:00-18:00 local as default unless told otherwise).
+- Skip overlaps with the busy_blocks the user provides.
+- Match task character to time of day:
+  - Deep work / writing / strategy → mornings
+  - Calls / meetings / quick admin → afternoons
+  - Email / housekeeping → end of day
+- Always include exactly one slot for tomorrow if any free time exists; the other two can be later.
+- Duration: use task.estimated_minutes if provided, otherwise infer from the title.
+- Labels in ${lang.aiName}, no exclamation marks, no emoji.`;
+}
+
+export function prepMeetingSystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You write a brief, useful prep doc for one meeting task. Output JSON only.
+
+Schema:
+{
+  "agenda": string[],            // 3-5 lines, each <= 12 words
+  "questions": string[]          // 2-3 short questions to ask, each <= 14 words
+}
+
+Voice: editorial, restrained. Think a journalist's notebook, not a corporate template. No "kick off", no "circle back", no emoji, no exclamation marks.
+
+Write everything in ${lang.aiName}.
+
+Rules:
+- If the title is generic ("Sync"), use the notes context (if any) to pick a concrete angle. If still empty, agenda is process-focused: ["Status of in-flight items", "Blockers", "What to ship next week"].
+- Questions should provoke answers the user actually needs, not pleasantries.
+- No more than 5 agenda items, no more than 3 questions.`;
+}
