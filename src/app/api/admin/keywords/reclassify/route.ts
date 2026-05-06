@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin-server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +39,10 @@ async function isCronCall(): Promise<boolean> {
 export async function POST() {
   // Allow either a logged-in admin OR a Vercel Cron invocation w/ the
   // shared secret. Cron path constructs its own service-role client.
-  let admin: ReturnType<typeof createSupabaseClient>;
+  // SupabaseClient<any> here because requireAdmin's typed client and a
+  // freshly-constructed cron client come from different generic
+  // parameterisations even though the underlying class is identical.
+  let admin: SupabaseClient<any, "public", "public", any, any>;
   if (await isCronCall()) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -54,7 +57,7 @@ export async function POST() {
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    admin = auth.ctx.admin;
+    admin = auth.ctx.admin as unknown as SupabaseClient<any, "public", "public", any, any>;
   }
 
   const { data: keywordRows, error: kErr } = await admin
