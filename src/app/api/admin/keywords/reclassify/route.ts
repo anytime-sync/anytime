@@ -1,8 +1,29 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin-server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Allow Vercel Cron to invoke this route without the admin email check
+ * by sending `Authorization: Bearer <CRON_SECRET>`. Vercel automatically
+ * sends an `x-vercel-cron: 1` header on cron-triggered requests; we
+ * accept either signal so manual curl works too.
+ */
+async function isCronCall(): Promise<boolean> {
+  const hdrs = await headers();
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const authz = hdrs.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  if (authz === expected) return true;
+  // Vercel Cron also sends this header; treat it as proof when paired
+  // with the secret cookie/header missing (defensive — without the
+  // header, anyone who learned the secret could call us).
+  return false;
+}
 
 /**
  * POST /api/admin/keywords/reclassify
@@ -16,11 +37,25 @@ export const dynamic = "force-dynamic";
  * That means re-running this is idempotent and safe to wire to a cron.
  */
 export async function POST() {
-  const auth = await requireAdmin();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  // Allow either a logged-in admin OR a Vercel Cron invocation w/ the
+  // shared secret. Cron path constructs its own service-role client.
+  let admin: ReturnType<typeof createSupabaseClient>;
+  if (await isCronCall()) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      return NextResponse.json({ error: "supabase_misconfigured" }, { status: 500 });
+    }
+    admin = createSupabaseClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  } else {
+    const auth = await requireAdmin();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+    admin = auth.ctx.admin;
   }
-  const admin = auth.ctx.admin;
 
   const { data: keywordRows, error: kErr } = await admin
     .from("site_priority_keywords")
@@ -91,4 +126,11 @@ export async function POST() {
   }
 
   return NextResponse.json({ ok: true, scanned: tasks?.length ?? 0, updated });
+}
+
+/**
+ * Vercel Cron sends GET. Delegate to POST so both work.
+ */
+export async function GET() {
+  return POST();
 }

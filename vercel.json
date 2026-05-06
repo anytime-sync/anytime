@@ -4,6 +4,10 @@
     {
       "path": "/api/reminders/dispatch",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/admin/keywords/reclassify",
+      "schedule": "0 8 * * *"
     }
   ]
 }

@@ -277,12 +277,15 @@ export function TaskDetailPanel() {
         </Field>
 
         <Field label="Share with group">
-          <ShareGroupPicker
-            value={(task as any).share_group_id ?? null}
-            onChange={(v) =>
-              update.mutate({ id: task.id, share_group_id: v } as any)
-            }
-          />
+          <div>
+            <ShareGroupPicker
+              value={(task as any).share_group_id ?? null}
+              onChange={(v) =>
+                update.mutate({ id: task.id, share_group_id: v } as any)
+              }
+            />
+            <ManageGroupsLink />
+          </div>
         </Field>
 
         <Field label="Tags">
@@ -379,5 +382,17 @@ function ShareGroupPicker({
         </option>
       ))}
     </select>
+  );
+}
+
+// Re-export so the picker can render the helper link from the parent.
+function ManageGroupsLink() {
+  return (
+    <a
+      href="/app/groups"
+      className="text-[11px] text-muted-fg hover:text-fg underline-offset-2 hover:underline mt-1 inline-block"
+    >
+      Manage groups &rarr;
+    </a>
   );
 }
