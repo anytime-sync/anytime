@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Sparkles, Clock, MessageSquare, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useFindTime, usePrepMeeting, type TimeSlot, type MeetingPrep } from "@/hooks/use-ai";
-import { useUpdateTask, type Task } from "@/hooks/use-tasks";
+import { useUpdateTask } from "@/hooks/use-tasks";
+import type { Task } from "@/lib/db.types";
 import { cn } from "@/lib/utils";
 
 const MEETING_HINTS = /\b(meeting|sync|standup|stand-up|1:1|one[- ]on[- ]one|catch[- ]up|call|kickoff|kick[- ]off|review|interview|會議|會面|面試|미팅|회의)\b/i;
