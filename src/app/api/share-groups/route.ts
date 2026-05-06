@@ -25,7 +25,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("share_group_members")
     .select(
-      "role, joined_at, group:share_group_id ( id, name, description, created_by, created_at )"
+      "role, joined_at, group:share_groups!group_id ( id, name, description, created_by, created_at )"
     )
     .eq("user_id", user.id);
   if (error) {

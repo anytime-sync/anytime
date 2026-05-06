@@ -28,7 +28,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("share_group_invites")
     .select(
-      "id, group_id, inviter_id, invitee_email, invitee_user_id, status, created_at, group:share_group_id ( id, name )"
+      "id, group_id, inviter_id, invitee_email, invitee_user_id, status, created_at, group:share_groups!group_id ( id, name )"
     )
     .in("status", ["pending_approval", "pending_acceptance"])
     .order("created_at", { ascending: false });
