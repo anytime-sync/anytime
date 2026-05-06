@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, UserPlus, Check, X, Settings, Trash2 } from "lucide-react";
+import { Plus, UserPlus, Check, X, Settings, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -38,6 +38,27 @@ export default function GroupsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [editOpen, setEditOpen] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [membersByGroup, setMembersByGroup] = useState<
+    Record<string, Array<{ user_id: string; role: "owner" | "member"; profile: { full_name: string | null; email: string } | null }>>
+  >({});
+
+  // Fetch the member list for every owned group whenever the groups list refreshes.
+  // Each call is cheap (RLS already restricts visibility to the same group).
+  async function loadMembers(groupIds: string[]) {
+    const results = await Promise.all(
+      groupIds.map(async (id) => {
+        try {
+          const r = await fetch(`/api/share-groups/${id}/members`);
+          if (!r.ok) return [id, []] as const;
+          const j = await r.json();
+          return [id, j.rows ?? []] as const;
+        } catch {
+          return [id, []] as const;
+        }
+      })
+    );
+    setMembersByGroup(Object.fromEntries(results));
+  }
 
   async function rename(id: string) {
     const trimmed = editName.trim();
@@ -82,6 +103,10 @@ export default function GroupsPage() {
     ]);
     setGroups((g.rows ?? []) as GroupRow[]);
     setInvites((i.rows ?? []) as Invite[]);
+    // Pre-fetch members for every visible group so the UI can render
+    // a roster line per group card without a per-card N+1 fetch later.
+    const groupIds = ((g.rows ?? []) as GroupRow[]).map((r) => r.group.id);
+    if (groupIds.length) loadMembers(groupIds);
     setLoading(false);
   }
 
@@ -259,6 +284,27 @@ export default function GroupsPage() {
               </div>
               {g.group.description && (
                 <p className="text-sm text-muted-fg mt-1">{g.group.description}</p>
+              )}
+              {membersByGroup[g.group.id] && membersByGroup[g.group.id].length > 0 && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-fg">
+                  <Users className="size-3.5 shrink-0" />
+                  <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                    {membersByGroup[g.group.id].map((m) => {
+                      const display = m.profile?.full_name ?? m.profile?.email ?? "(unknown)";
+                      return (
+                        <li key={m.user_id} className="inline-flex items-center gap-1.5">
+                          <span className="size-5 rounded-full bg-accent/20 text-accent text-[11px] font-medium grid place-items-center shrink-0">
+                            {(display.match(/[\p{L}\p{N}]/u)?.[0] ?? "?").toUpperCase()}
+                          </span>
+                          <span className="truncate text-fg">{display}</span>
+                          {m.role === "owner" && (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-fg">owner</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
               {g.role === "owner" && (
                 <div className="mt-3 space-y-2">
