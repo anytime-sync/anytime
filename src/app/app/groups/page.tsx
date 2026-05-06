@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, UserPlus, Check, X, Settings, Trash2, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -41,11 +42,15 @@ export default function GroupsPage() {
   const [membersByGroup, setMembersByGroup] = useState<
     Record<string, Array<{ user_id: string; role: "owner" | "member"; profile: { full_name: string | null; email: string } | null }>>
   >({});
+  const [invitesByGroup, setInvitesByGroup] = useState<
+    Record<string, Array<{ id: string; invitee_email: string; status: string; created_at: string }>>
+  >({});
 
-  // Fetch the member list for every owned group whenever the groups list refreshes.
-  // Each call is cheap (RLS already restricts visibility to the same group).
-  async function loadMembers(groupIds: string[]) {
-    const results = await Promise.all(
+  // Fetch member + invite lists for every owned group whenever the groups
+  // list refreshes. Both are cheap (RLS-gated) and rendering them inline
+  // makes the approve / accept loop visible without a notification round-trip.
+  async function loadGroupSidebars(groupIds: string[]) {
+    const memberResults = await Promise.all(
       groupIds.map(async (id) => {
         try {
           const r = await fetch(`/api/share-groups/${id}/members`);
@@ -57,7 +62,43 @@ export default function GroupsPage() {
         }
       })
     );
-    setMembersByGroup(Object.fromEntries(results));
+    setMembersByGroup(Object.fromEntries(memberResults));
+
+    const inviteResults = await Promise.all(
+      groupIds.map(async (id) => {
+        try {
+          const r = await fetch(`/api/share-groups/${id}/invites`);
+          if (!r.ok) return [id, []] as const;
+          const j = await r.json();
+          // Show only invites that still need action (approval or acceptance).
+          const open = ((j.rows ?? []) as Array<{ status: string }>).filter(
+            (i) => i.status === "pending_approval" || i.status === "pending_acceptance"
+          );
+          return [id, open] as const;
+        } catch {
+          return [id, []] as const;
+        }
+      })
+    );
+    setInvitesByGroup(Object.fromEntries(inviteResults));
+  }
+
+  async function respondToInvite(inviteId: string, action: "approve" | "revoke" | "decline" | "accept") {
+    const res = await fetch(`/api/share-groups/invites/${inviteId}/respond`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? `Couldn't ${action} invite`);
+      return;
+    }
+    if (action === "approve") toast.success("Invite approved — sent to invitee");
+    if (action === "revoke") toast.message("Invite revoked");
+    if (action === "decline") toast.message("Invite declined");
+    if (action === "accept") toast.success("Joined the group");
+    reload();
   }
 
   async function rename(id: string) {
@@ -106,7 +147,7 @@ export default function GroupsPage() {
     // Pre-fetch members for every visible group so the UI can render
     // a roster line per group card without a per-card N+1 fetch later.
     const groupIds = ((g.rows ?? []) as GroupRow[]).map((r) => r.group.id);
-    if (groupIds.length) loadMembers(groupIds);
+    if (groupIds.length) loadGroupSidebars(groupIds);
     setLoading(false);
   }
 
@@ -305,6 +346,46 @@ export default function GroupsPage() {
                     })}
                   </ul>
                 </div>
+              )}
+              {/* Inline pending invites — owner sees both their own
+                  unapproved invites (need their click) and already-
+                  approved ones still waiting on the invitee. */}
+              {invitesByGroup[g.group.id] && invitesByGroup[g.group.id].length > 0 && g.role === "owner" && (
+                <ul className="mt-3 space-y-1.5">
+                  {invitesByGroup[g.group.id].map((inv) => {
+                    const isPendingApproval = inv.status === "pending_approval";
+                    return (
+                      <li
+                        key={inv.id}
+                        className={cn(
+                          "border rounded-md px-3 py-2 flex items-center gap-2 text-sm",
+                          isPendingApproval
+                            ? "border-warning/60 bg-warning/5 text-warning"
+                            : "border-border text-muted-fg"
+                        )}
+                      >
+                        <span className="flex-1 min-w-0 truncate">
+                          {isPendingApproval ? "Needs your approval — " : "Awaiting acceptance — "}
+                          <span className="text-fg">{inv.invitee_email}</span>
+                        </span>
+                        {isPendingApproval && (
+                          <button
+                            onClick={() => respondToInvite(inv.id, "approve")}
+                            className="btn-primary h-7 px-2.5 text-xs"
+                          >
+                            Approve & send
+                          </button>
+                        )}
+                        <button
+                          onClick={() => respondToInvite(inv.id, "revoke")}
+                          className="btn-ghost h-7 px-2.5 text-xs text-muted-fg hover:text-warning"
+                        >
+                          Revoke
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
               {g.role === "owner" && (
                 <div className="mt-3 space-y-2">
