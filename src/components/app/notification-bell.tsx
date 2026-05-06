@@ -5,6 +5,7 @@ import { Bell, Check, X } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { createClient } from "@/lib/supabase/client";
 
 type Notification = {
   id: string;
@@ -40,10 +41,56 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
     } catch {}
   }
 
+  // Initial load + Supabase realtime subscription. We still keep a slow
+  // 5-minute sanity poll in case the WS connection drops or a missed
+  // event leaves us out of sync.
   useEffect(() => {
-    load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    (async () => {
+      await load();
+      if (cancelled) return;
+
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        const channel = supabase
+          .channel(`notifications:${user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "app_notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              // Any change (insert/update/delete) → refetch the inbox.
+              // Cheaper than reconciling rows by hand and avoids drift
+              // when the trigger writes multiple rows in one txn.
+              load();
+            }
+          )
+          .subscribe();
+
+        unsubscribe = () => {
+          supabase.removeChannel(channel);
+        };
+      } catch {
+        // Realtime is best-effort; the slow poll below keeps us correct
+        // even if the WebSocket never opens.
+      }
+    })();
+
+    const slowPoll = setInterval(load, 5 * 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(slowPoll);
+      unsubscribe?.();
+    };
   }, []);
 
   // Click-outside to close

@@ -70,7 +70,10 @@ export default function HabitsPage() {
     const out: Record<string, number> = {};
     for (const h of habits) {
       const logged = new Set(
-        logs.filter((l) => l.habit_id === h.id).map((l) => l.log_date)
+        logs
+          .filter((l) => l.habit_id === h.id)
+          .filter((l) => (l.count ?? 0) > 0 || l.status != null)
+          .map((l) => l.log_date)
       );
       let n = 0;
       // Allow today's empty cell to not break a streak: start from today

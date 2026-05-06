@@ -93,3 +93,41 @@ export function useToggleHabitLog() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["habit_logs"] }),
   });
 }
+
+/**
+ * Records a freeze/skip token for a date — preserves the streak without
+ * counting as a real completion. Idempotent: if a row already exists
+ * for that date, we update it to status='skipped' instead of inserting
+ * a duplicate (the unique index on (habit_id, log_date) would reject it).
+ */
+export function useFreezeHabitDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      habitId,
+      dateIso,
+    }: {
+      habitId: string;
+      dateIso: string;
+    }) => {
+      const supabase = createClient();
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("habit_logs")
+        .upsert(
+          {
+            user_id: u.user.id,
+            habit_id: habitId,
+            log_date: dateIso,
+            count: 0,
+            status: "skipped",
+          },
+          { onConflict: "habit_id,log_date" }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["habit_logs"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+}

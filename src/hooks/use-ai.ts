@@ -279,3 +279,20 @@ export function useUpdatePrefs() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["userPrefs"] }),
   });
 }
+
+export function usePlanDay() {
+  return useMutation({
+    mutationFn: async (
+      tasks: PlanWeekTaskInput[]
+    ): Promise<PlanWeekResult | null> => {
+      const r = await fetch("/api/ai/plan-day", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      });
+      if (r.status === 503) return null;
+      if (!r.ok) throw new Error(`plan-day ${r.status}`);
+      return (await r.json()) as PlanWeekResult;
+    },
+  });
+}

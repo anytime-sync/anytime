@@ -288,6 +288,18 @@ export function TaskDetailPanel() {
           </div>
         </Field>
 
+        {(task as any).share_group_id ? (
+          <Field label="Assigned to">
+            <AssigneePicker
+              groupId={(task as any).share_group_id as string}
+              value={(task as any).assignee_id ?? null}
+              onChange={(v) =>
+                update.mutate({ id: task.id, assignee_id: v } as any)
+              }
+            />
+          </Field>
+        ) : null}
+
         <Field label="Tags">
           <TagEditor taskId={task.id} currentTags={task.tags} />
         </Field>
@@ -394,5 +406,55 @@ function ManageGroupsLink() {
     >
       Manage groups &rarr;
     </a>
+  );
+}
+
+/**
+ * Picks a single member of the task's share_group as the assignee.
+ * Loads the member roster lazily on mount, then renders a simple
+ * select. "Unassigned" is the empty option.
+ */
+function AssigneePicker({
+  groupId,
+  value,
+  onChange,
+}: {
+  groupId: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const [members, setMembers] = useState<
+    Array<{ user_id: string; profile: { id: string; full_name: string | null; email: string } | null }>
+  >([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/share-groups/${groupId}/members`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        setMembers((j.rows ?? []) as typeof members);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
+  return (
+    <select
+      className="input"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+    >
+      <option value="">Unassigned</option>
+      {members.map((m) => {
+        const display =
+          m.profile?.full_name ?? m.profile?.email ?? "(unknown)";
+        return (
+          <option key={m.user_id} value={m.user_id}>
+            {display}
+          </option>
+        );
+      })}
+    </select>
   );
 }

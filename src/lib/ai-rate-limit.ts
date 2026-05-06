@@ -23,7 +23,8 @@ export type AiFeature =
   | "quadrant"
   | "daily_edition"
   | "weekly_retro"
-  | "plan_week";
+  | "plan_week"
+  | "plan_day";
 
 export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   parse_task: 200,
@@ -32,6 +33,8 @@ export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   weekly_retro: 8,
   // plan_week is batch (≤3d tasks per call), so a low daily count is plenty.
   plan_week: 10,
+  // plan_day is the morning ritual — once or twice a day max.
+  plan_day: 12,
 };
 
 function admin() {

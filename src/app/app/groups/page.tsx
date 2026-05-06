@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, UserPlus, Check, X } from "lucide-react";
+import { Plus, UserPlus, Check, X, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -36,6 +36,43 @@ export default function GroupsPage() {
   const [busy, setBusy] = useState(false);
   const [inviteOpen, setInviteOpen] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [editOpen, setEditOpen] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  async function rename(id: string) {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    const res = await fetch(`/api/share-groups/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "Rename failed");
+      return;
+    }
+    toast.success("Renamed");
+    setEditOpen(null);
+    setEditName("");
+    reload();
+  }
+
+  async function deleteGroup(id: string, name: string) {
+    if (!confirm(`Delete the group "${name}"? Tasks shared into it stay, but the share link is broken. This cannot be undone.`)) return;
+    setBusy(true);
+    const res = await fetch(`/api/share-groups/${id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "Delete failed");
+      return;
+    }
+    toast.success("Group deleted");
+    reload();
+  }
 
   async function reload() {
     setLoading(true);
@@ -221,7 +258,7 @@ export default function GroupsPage() {
                 <p className="text-sm text-muted-fg mt-1">{g.group.description}</p>
               )}
               {g.role === "owner" && (
-                <div className="mt-3">
+                <div className="mt-3 space-y-2">
                   {inviteOpen === g.group.id ? (
                     <div className="flex gap-2">
                       <input
@@ -249,13 +286,65 @@ export default function GroupsPage() {
                         Cancel
                       </button>
                     </div>
+                  ) : editOpen === g.group.id ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        className="input flex-1 h-8 text-sm"
+                        placeholder="Group name"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") rename(g.group.id);
+                          if (e.key === "Escape") {
+                            setEditOpen(null);
+                            setEditName("");
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => rename(g.group.id)}
+                        disabled={busy || !editName.trim()}
+                        className="btn-primary h-8 px-3 text-xs"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditOpen(null);
+                          setEditName("");
+                        }}
+                        className="btn-ghost h-8 px-2 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={() => setInviteOpen(g.group.id)}
-                      className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5"
-                    >
-                      <UserPlus className="size-3" /> Invite member
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setInviteOpen(g.group.id)}
+                        className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5"
+                      >
+                        <UserPlus className="size-3" /> Invite member
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditOpen(g.group.id);
+                          setEditName(g.group.name);
+                        }}
+                        className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5"
+                      >
+                        <Settings className="size-3" /> Rename
+                      </button>
+                      <button
+                        onClick={() => deleteGroup(g.group.id, g.group.name)}
+                        disabled={busy}
+                        className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="size-3" /> Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

@@ -46,6 +46,10 @@ export type Task = {
   spent_pomodoros: number;
   created_at: string;
   updated_at: string;
+  /** Optional: a member of the task's share_group who owns the work. */
+  assignee_id?: string | null;
+  /** Optional: the share group this task belongs to (set by share picker). */
+  share_group_id?: string | null;
 };
 
 export type TaskTag = {
@@ -75,6 +79,10 @@ export type HabitLog = {
   count: number;
   note: string | null;
   created_at: string;
+  /** When set, this row is a freeze/skip token rather than a real
+   *  completion. Counts toward streak but not toward goal_per_period.
+   *  Null on regular completion rows. */
+  status?: "done" | "skipped" | "frozen" | null;
 };
 
 export type PomodoroSession = {

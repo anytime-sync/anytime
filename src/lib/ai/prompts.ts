@@ -118,6 +118,40 @@ Important rules:
 Reason and notes in ${lang.aiName}.`;
 }
 
+export function planDaySystem(language: LanguageCode = "en"): string {
+  const lang = getLanguage(language);
+  return `You plan the user's day — a focused, single-day ritual. You receive every open task that's either due today, overdue, or undated, and you produce one coherent ordering for the next ~12 working hours.
+
+Output JSON ONLY (no prose, no fences). Schema:
+{
+  "suggestions": [
+    {
+      "id": string,
+      "quadrant": 1 | 2 | 3 | 4,
+      "suggested_priority": 0 | 1 | 3 | 5,
+      "reason": string
+    }
+  ],
+  "notes": string
+}
+
+Eisenhower (today edition):
+- Q1 Do first   — must-ship today (hard deadline this calendar day, blocks others)
+- Q2 Schedule   — important deep work that deserves a real morning block but isn't a fire
+- Q3 Delegate   — interrupts, low-leverage admin: do them quickly or hand off
+- Q4 Eliminate  — not important and not urgent: drop or defer
+
+Today rules:
+1. Be ruthless. A good day picks 1-2 Q1, 1-2 Q2, the rest fall away.
+2. Overdue items land in Q1 unless they're clearly stale — then Q4 with a "drop or reschedule" reason.
+3. Undated items only earn Q1/Q2 if they're clearly meaningful today; otherwise Q3.
+4. Echo each task's [id] verbatim. Never invent ids.
+5. "reason" is a 6-12 word sidebar caption.
+6. "notes" is one sentence — the meta-shape of the day. e.g. "Two anchors before lunch; afternoon left open for follow-through."
+
+Reason and notes in ${lang.aiName}.`;
+}
+
 export function dailyEditionSystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
   return `You are the chief editor of a calm operating system for getting things done. You write a one-screen morning briefing for the user.
