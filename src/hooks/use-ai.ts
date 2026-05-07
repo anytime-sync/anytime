@@ -262,6 +262,9 @@ export type UserPrefs = {
   language: "en" | "zh-TW" | "zh-CN" | "ja" | "ko";
   email_reminders: boolean;
   push_reminders: boolean;
+  email_daily_digest: boolean;
+  timezone: string;
+  digest_send_hour: number;
   // ICS calendar subscription — token is opaque, never displayed
   // verbatim outside Settings → Calendar sync.
   ics_feed_token: string | null;
