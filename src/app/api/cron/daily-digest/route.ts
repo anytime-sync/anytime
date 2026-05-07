@@ -235,7 +235,7 @@ async function computeStreak(
     .gte("logged_date", since.toISOString().slice(0, 10));
   if (!rows || rows.length === 0) return 0;
 
-  const days = new Set(rows.map((r) => r.logged_date as string));
+  const days = new Set(rows.map((r: { logged_date: string }) => r.logged_date));
   let streak = 0;
   // Start from yesterday — today's habit might not be done yet at 7am.
   const cursor = new Date(today + "T00:00:00.000Z");
