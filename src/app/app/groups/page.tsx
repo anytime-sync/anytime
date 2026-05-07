@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, UserPlus, Check, X, Settings, Trash2, Users } from "lucide-react";
+import Link from "next/link";
+import { Plus, UserPlus, Check, X, Settings, Trash2, Users, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -470,6 +471,12 @@ export default function GroupsPage() {
                       >
                         <UserPlus className="size-3" /> {tr(lang, "view.groups.inviteMember")}
                       </button>
+                      <Link
+                        href={`/app/groups/${g.group.id}/activity`}
+                        className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5"
+                      >
+                        <Activity className="size-3" /> {tr(lang, "activity.link")}
+                      </Link>
                       <button
                         onClick={() => {
                           setEditOpen(g.group.id);
@@ -488,6 +495,16 @@ export default function GroupsPage() {
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+              {g.role !== "owner" && (
+                <div className="mt-3">
+                  <Link
+                    href={`/app/groups/${g.group.id}/activity`}
+                    className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5"
+                  >
+                    <Activity className="size-3" /> {tr(lang, "activity.link")}
+                  </Link>
                 </div>
               )}
             </li>

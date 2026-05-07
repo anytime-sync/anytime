@@ -1,5 +1,6 @@
 "use client";
 import { AiTaskActions } from "./ai-task-actions";
+import { TaskComments } from "./task-comments";
 
 import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
@@ -336,6 +337,10 @@ export function TaskDetailPanel() {
               }
             }}
           />
+        </Field>
+
+        <Field label={t(lang, "comments.header")}>
+          <TaskComments taskId={task.id} />
         </Field>
 
         <div className="text-xs text-muted-fg">

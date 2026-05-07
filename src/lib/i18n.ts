@@ -674,7 +674,32 @@ type StringKey =
   /* ribbon */
   | "ribbon.streak"
   | "ribbon.habits"
-  | "ribbon.q1";
+  | "ribbon.q1"
+  /* comments */
+  | "comments.header"
+  | "comments.placeholder"
+  | "comments.send"
+  | "comments.edit"
+  | "comments.delete"
+  | "comments.cancel"
+  | "comments.save"
+  | "comments.empty"
+  | "comments.loading"
+  | "comments.deleteConfirm"
+  | "comments.editedSuffix"
+  /* group activity */
+  | "activity.title"
+  | "activity.subtitle"
+  | "activity.empty"
+  | "activity.loading"
+  | "activity.link"
+  | "activity.kind.taskCreated"
+  | "activity.kind.taskCompleted"
+  | "activity.kind.taskReopened"
+  | "activity.kind.taskAssigned"
+  | "activity.kind.taskShared"
+  | "activity.kind.taskDeleted"
+  | "activity.kind.taskCommented";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -1303,6 +1328,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "ribbon.streak": "day streak",
     "ribbon.habits": "habits today",
     "ribbon.q1": "urgent + important",
+    "comments.header": "Comments",
+    "comments.placeholder": "Write a comment… use @ to mention",
+    "comments.send": "Send",
+    "comments.edit": "Edit",
+    "comments.delete": "Delete",
+    "comments.cancel": "Cancel",
+    "comments.save": "Save",
+    "comments.empty": "No comments yet.",
+    "comments.loading": "Loading…",
+    "comments.deleteConfirm": "Delete this comment?",
+    "comments.editedSuffix": "edited",
+    "activity.title": "Activity",
+    "activity.subtitle": "Recent activity in this group.",
+    "activity.empty": "No activity yet.",
+    "activity.loading": "Loading…",
+    "activity.link": "Activity",
+    "activity.kind.taskCreated": "added a task",
+    "activity.kind.taskCompleted": "completed a task",
+    "activity.kind.taskReopened": "reopened a task",
+    "activity.kind.taskAssigned": "assigned a task",
+    "activity.kind.taskShared": "shared a task here",
+    "activity.kind.taskDeleted": "removed a task",
+    "activity.kind.taskCommented": "commented on a task",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -1930,6 +1978,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "ribbon.streak": "天連續",
     "ribbon.habits": "今日習慣",
     "ribbon.q1": "急且重要",
+    "comments.header": "留言",
+    "comments.placeholder": "寫下留言… 用 @ 來提及成員",
+    "comments.send": "送出",
+    "comments.edit": "編輯",
+    "comments.delete": "刪除",
+    "comments.cancel": "取消",
+    "comments.save": "儲存",
+    "comments.empty": "還沒有留言。",
+    "comments.loading": "載入中…",
+    "comments.deleteConfirm": "確定刪除這則留言？",
+    "comments.editedSuffix": "已編輯",
+    "activity.title": "動態",
+    "activity.subtitle": "這個群組最近的動態。",
+    "activity.empty": "還沒有任何動態。",
+    "activity.loading": "載入中…",
+    "activity.link": "動態",
+    "activity.kind.taskCreated": "新增了一個任務",
+    "activity.kind.taskCompleted": "完成了一個任務",
+    "activity.kind.taskReopened": "重新開啟了一個任務",
+    "activity.kind.taskAssigned": "指派了一個任務",
+    "activity.kind.taskShared": "把任務分享到這裡",
+    "activity.kind.taskDeleted": "移除了一個任務",
+    "activity.kind.taskCommented": "在任務中留言",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -2557,6 +2628,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "ribbon.streak": "天连续",
     "ribbon.habits": "今日习惯",
     "ribbon.q1": "紧急且重要",
+    "comments.header": "评论",
+    "comments.placeholder": "写下评论… 用 @ 来提及成员",
+    "comments.send": "发送",
+    "comments.edit": "编辑",
+    "comments.delete": "删除",
+    "comments.cancel": "取消",
+    "comments.save": "保存",
+    "comments.empty": "还没有评论。",
+    "comments.loading": "加载中…",
+    "comments.deleteConfirm": "确定删除这条评论?",
+    "comments.editedSuffix": "已编辑",
+    "activity.title": "动态",
+    "activity.subtitle": "这个群组最近的动态。",
+    "activity.empty": "还没有任何动态。",
+    "activity.loading": "加载中…",
+    "activity.link": "动态",
+    "activity.kind.taskCreated": "添加了一个任务",
+    "activity.kind.taskCompleted": "完成了一个任务",
+    "activity.kind.taskReopened": "重新打开了一个任务",
+    "activity.kind.taskAssigned": "指派了一个任务",
+    "activity.kind.taskShared": "把任务分享到这里",
+    "activity.kind.taskDeleted": "删除了一个任务",
+    "activity.kind.taskCommented": "在任务上发表了评论",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -3184,6 +3278,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "ribbon.streak": "日連続",
     "ribbon.habits": "今日の習慣",
     "ribbon.q1": "緊急かつ重要",
+    "comments.header": "コメント",
+    "comments.placeholder": "コメントを書く… @ でメンション",
+    "comments.send": "送信",
+    "comments.edit": "編集",
+    "comments.delete": "削除",
+    "comments.cancel": "キャンセル",
+    "comments.save": "保存",
+    "comments.empty": "まだコメントはありません。",
+    "comments.loading": "読み込み中…",
+    "comments.deleteConfirm": "このコメントを削除しますか？",
+    "comments.editedSuffix": "編集済み",
+    "activity.title": "アクティビティ",
+    "activity.subtitle": "このグループの最近の動き。",
+    "activity.empty": "まだアクティビティはありません。",
+    "activity.loading": "読み込み中…",
+    "activity.link": "アクティビティ",
+    "activity.kind.taskCreated": "タスクを追加しました",
+    "activity.kind.taskCompleted": "タスクを完了しました",
+    "activity.kind.taskReopened": "タスクを再開しました",
+    "activity.kind.taskAssigned": "タスクを割り当てました",
+    "activity.kind.taskShared": "タスクをここに共有しました",
+    "activity.kind.taskDeleted": "タスクを削除しました",
+    "activity.kind.taskCommented": "タスクにコメントしました",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -3811,6 +3928,29 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "ribbon.streak": "일 연속",
     "ribbon.habits": "오늘의 습관",
     "ribbon.q1": "긴급 + 중요",
+    "comments.header": "댓글",
+    "comments.placeholder": "댓글 작성… @ 로 멘션",
+    "comments.send": "보내기",
+    "comments.edit": "수정",
+    "comments.delete": "삭제",
+    "comments.cancel": "취소",
+    "comments.save": "저장",
+    "comments.empty": "아직 댓글이 없습니다.",
+    "comments.loading": "불러오는 중…",
+    "comments.deleteConfirm": "이 댓글을 삭제할까요?",
+    "comments.editedSuffix": "수정됨",
+    "activity.title": "활동",
+    "activity.subtitle": "이 그룹의 최근 활동.",
+    "activity.empty": "아직 활동이 없습니다.",
+    "activity.loading": "불러오는 중…",
+    "activity.link": "활동",
+    "activity.kind.taskCreated": "작업을 추가했습니다",
+    "activity.kind.taskCompleted": "작업을 완료했습니다",
+    "activity.kind.taskReopened": "작업을 다시 열었습니다",
+    "activity.kind.taskAssigned": "작업을 배정했습니다",
+    "activity.kind.taskShared": "작업을 여기에 공유했습니다",
+    "activity.kind.taskDeleted": "작업을 제거했습니다",
+    "activity.kind.taskCommented": "작업에 댓글을 남겼습니다",
   },
 };
 
