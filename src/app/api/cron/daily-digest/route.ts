@@ -215,8 +215,10 @@ function startOfLocalDay(now: Date, tz: string): Date {
   return new Date(`${ymd}T00:00:00.000Z`);
 }
 
+type SupabaseAdminClient = ReturnType<typeof createSupabaseClient<any, "public", "public", any, any>>;
+
 async function computeStreak(
-  supabase: ReturnType<typeof createSupabaseClient>,
+  supabase: SupabaseAdminClient,
   userId: string,
   tz: string
 ): Promise<number> {
@@ -248,7 +250,7 @@ async function computeStreak(
 }
 
 async function countHabitsLoggedToday(
-  supabase: ReturnType<typeof createSupabaseClient>,
+  supabase: SupabaseAdminClient,
   userId: string,
   localDate: string
 ): Promise<number> {
