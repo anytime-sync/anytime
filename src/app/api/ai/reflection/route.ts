@@ -36,18 +36,17 @@ export async function GET() {
     .from("user_preferences").select("language").eq("user_id", u.user.id).maybeSingle();
   const language = (prefs?.language ?? "en") as LanguageCode;
 
-  // Already generated today in this language?
+  // Already generated today in this language? Per-language unique index
+  // means each language has its own row, so a direct .eq("language", language)
+  // returns the right one without a JS-side check.
   const { data: existing } = await supabase
     .from("daily_reflections")
     .select("*")
     .eq("user_id", u.user.id)
     .eq("local_date", today)
+    .eq("language", language)
     .maybeSingle();
-  if (
-    existing &&
-    existing.headline &&
-    (existing as { language?: string }).language === language
-  ) {
+  if (existing && existing.headline) {
     return NextResponse.json(existing);
   }
 
@@ -106,7 +105,7 @@ export async function GET() {
         carry_forward_ids: out.carry_forward_ids,
         drop_suggestions_ids: out.drop_suggestions_ids,
       },
-      { onConflict: "user_id,local_date" }
+      { onConflict: "user_id,local_date,language" }
     );
 
     await logAiCall(u.user.id, "reflection", { model: res.model, status: 200 });

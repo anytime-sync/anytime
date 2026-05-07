@@ -47,13 +47,15 @@ export async function POST(req: Request) {
   // language. (We don't store language on daily_editions yet; treat
   // raw_json.language as the source of truth, fall back to English.)
   if (!force) {
+    // Per-language cache hit: same user + day + language returns instantly.
     const { data: cached } = await supabase
       .from("daily_editions")
       .select("*")
       .eq("user_id", u.user.id)
       .eq("edition_date", today)
+      .eq("language", language)
       .maybeSingle();
-    if (cached && (cached.raw_json as any)?.language === language) {
+    if (cached) {
       return NextResponse.json(cached);
     }
   }
@@ -118,6 +120,7 @@ export async function POST(req: Request) {
     const row = {
       user_id: u.user.id,
       edition_date: today,
+      language,
       kicker: parsed.kicker,
       headline: parsed.headline,
       front_page: parsed.front_page,
@@ -128,8 +131,10 @@ export async function POST(req: Request) {
       raw_json: { ...parsed, language } as any,
       model: MODELS.editorial,
     };
+    // Upsert keyed by (user_id, edition_date, language) — the new unique
+    // index — so each language gets its own cached row.
     await supabase.from("daily_editions").upsert(row, {
-      onConflict: "user_id,edition_date",
+      onConflict: "user_id,edition_date,language",
     });
     return NextResponse.json(row);
   } catch (e: any) {

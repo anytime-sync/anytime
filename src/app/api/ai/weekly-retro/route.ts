@@ -139,6 +139,7 @@ export async function POST(req: Request) {
       user_id: u.user.id,
       iso_year: year,
       iso_week: week,
+      language,
       week_start: startStr,
       shipped: parsed.shipped,
       slipped: parsed.slipped,
@@ -152,8 +153,9 @@ export async function POST(req: Request) {
       } as any,
       model: MODELS.fast,
     };
+    // Per-language cache: each language has its own cached retro row.
     await supabase.from("weekly_retros").upsert(row, {
-      onConflict: "user_id,iso_year,iso_week",
+      onConflict: "user_id,iso_year,iso_week,language",
     });
     return NextResponse.json(row);
   } catch (e: any) {
