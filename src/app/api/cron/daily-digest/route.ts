@@ -215,7 +215,8 @@ function startOfLocalDay(now: Date, tz: string): Date {
   return new Date(`${ymd}T00:00:00.000Z`);
 }
 
-type SupabaseAdminClient = ReturnType<typeof createSupabaseClient<any, "public", "public", any, any>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseAdminClient = any;
 
 async function computeStreak(
   supabase: SupabaseAdminClient,
