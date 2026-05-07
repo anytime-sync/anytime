@@ -507,6 +507,8 @@ type StringKey =
   | "view.settings.toggle.voiceCaptureHint"
   | "view.settings.toggle.emailReminders"
   | "view.settings.toggle.emailRemindersHint"
+  | "view.settings.toggle.dailyDigest"
+  | "view.settings.toggle.dailyDigestHint"
   | "view.settings.toggle.pushNotifications"
   | "view.settings.toggle.pushHint"
   | "view.settings.toggle.pushUnsupported"
@@ -668,7 +670,11 @@ type StringKey =
   | "taskList.revertSort"
   | "view.list.shareAria"
   | "view.list.kanbanHint"
-  | "view.tag.subtitle";
+  | "view.tag.subtitle"
+  /* ribbon */
+  | "ribbon.streak"
+  | "ribbon.habits"
+  | "ribbon.q1";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -1127,6 +1133,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.voiceCaptureHint": "Microphone button on every Add Task input.",
     "view.settings.toggle.emailReminders": "Email reminders",
     "view.settings.toggle.emailRemindersHint": "When a task's reminder time is reached, send an email to your inbox.",
+    "view.settings.toggle.dailyDigest": "Daily digest email",
+    "view.settings.toggle.dailyDigestHint": "A short editorial brief at 7am: today's priorities, overdue items, and your streak.",
     "view.settings.toggle.pushNotifications": "Push notifications",
     "view.settings.toggle.pushHint": "Browser-native notifications even when the tab is closed. (PWA recommended on iOS.)",
     "view.settings.toggle.pushUnsupported": "Not supported on this device or browser.",
@@ -1292,6 +1300,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.list.shareAria": "Share list",
     "view.list.kanbanHint": "Drag cards between columns to change priority.",
     "view.tag.subtitle": "All tasks with this tag.",
+    "ribbon.streak": "day streak",
+    "ribbon.habits": "habits today",
+    "ribbon.q1": "urgent + important",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -1749,6 +1760,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.voiceCaptureHint": "每個新增任務輸入框旁的麥克風按鈕。",
     "view.settings.toggle.emailReminders": "Email 提醒",
     "view.settings.toggle.emailRemindersHint": "任務提醒時間到時,寄一封 email 到你的信箱。",
+    "view.settings.toggle.dailyDigest": "每日簡報郵件",
+    "view.settings.toggle.dailyDigestHint": "每天早上 7 點寄出簡短編輯式版面：今日要事、順延任務與你的連續紀錄。",
     "view.settings.toggle.pushNotifications": "推播通知",
     "view.settings.toggle.pushHint": "即使分頁關閉,瀏覽器仍可推送通知。(iOS 建議使用 PWA。)",
     "view.settings.toggle.pushUnsupported": "此裝置或瀏覽器不支援。",
@@ -1914,6 +1927,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.list.shareAria": "分享清單",
     "view.list.kanbanHint": "在欄位之間拖曳卡片以調整優先順序。",
     "view.tag.subtitle": "帶有這個標籤的所有任務。",
+    "ribbon.streak": "天連續",
+    "ribbon.habits": "今日習慣",
+    "ribbon.q1": "急且重要",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -2371,6 +2387,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.voiceCaptureHint": "每个新增任务输入框旁的麦克风按钮。",
     "view.settings.toggle.emailReminders": "邮件提醒",
     "view.settings.toggle.emailRemindersHint": "任务提醒时间到时,发一封邮件到你的邮箱。",
+    "view.settings.toggle.dailyDigest": "每日简报邮件",
+    "view.settings.toggle.dailyDigestHint": "每天早上 7 点发送简短编辑式版面：今日要事、顺延任务与你的连续记录。",
     "view.settings.toggle.pushNotifications": "推送通知",
     "view.settings.toggle.pushHint": "即使标签关闭,浏览器仍可推送通知。(iOS 建议使用 PWA。)",
     "view.settings.toggle.pushUnsupported": "此设备或浏览器不支持。",
@@ -2536,6 +2554,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.list.shareAria": "分享清单",
     "view.list.kanbanHint": "在列之间拖动卡片以调整优先级。",
     "view.tag.subtitle": "带这个标签的所有任务。",
+    "ribbon.streak": "天连续",
+    "ribbon.habits": "今日习惯",
+    "ribbon.q1": "紧急且重要",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -2993,6 +3014,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.voiceCaptureHint": "タスク追加欄に表示されるマイクボタン。",
     "view.settings.toggle.emailReminders": "メール通知",
     "view.settings.toggle.emailRemindersHint": "タスクのリマインド時刻になったら、メールでお知らせします。",
+    "view.settings.toggle.dailyDigest": "デイリーブリーフメール",
+    "view.settings.toggle.dailyDigestHint": "毎朝 7 時に短い紙面を配信：本日の優先項目、持ち越し、連続記録。",
     "view.settings.toggle.pushNotifications": "プッシュ通知",
     "view.settings.toggle.pushHint": "タブを閉じていてもブラウザから届く通知。(iOS は PWA 推奨。)",
     "view.settings.toggle.pushUnsupported": "このデバイスまたはブラウザでは利用できません。",
@@ -3158,6 +3181,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.list.shareAria": "リストを共有",
     "view.list.kanbanHint": "カードを列の間でドラッグして優先度を変更。",
     "view.tag.subtitle": "このタグが付いたすべてのタスク。",
+    "ribbon.streak": "日連続",
+    "ribbon.habits": "今日の習慣",
+    "ribbon.q1": "緊急かつ重要",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -3615,6 +3641,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.voiceCaptureHint": "작업 추가 입력란에 표시되는 마이크 버튼.",
     "view.settings.toggle.emailReminders": "이메일 알림",
     "view.settings.toggle.emailRemindersHint": "작업 알림 시각이 되면 메일함으로 안내가 발송됩니다.",
+    "view.settings.toggle.dailyDigest": "데일리 다이제스트 이메일",
+    "view.settings.toggle.dailyDigestHint": "매일 오전 7시에 짧은 지면을 보내드려요: 오늘의 우선순위, 이월 작업, 연속 기록.",
     "view.settings.toggle.pushNotifications": "푸시 알림",
     "view.settings.toggle.pushHint": "탭을 닫아도 브라우저에서 알림이 도착합니다. (iOS는 PWA 권장.)",
     "view.settings.toggle.pushUnsupported": "이 기기나 브라우저에서 사용할 수 없습니다.",
@@ -3780,6 +3808,9 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.list.shareAria": "리스트 공유",
     "view.list.kanbanHint": "카드를 열 사이로 끌어 우선순위를 변경.",
     "view.tag.subtitle": "이 태그가 붙은 모든 작업.",
+    "ribbon.streak": "일 연속",
+    "ribbon.habits": "오늘의 습관",
+    "ribbon.q1": "긴급 + 중요",
   },
 };
 

@@ -8,6 +8,8 @@ import { t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 import { PlanMyDayButton } from "@/components/app/plan-my-day-button";
 import { TodayAiBar } from "@/components/app/today-ai-bar";
+import { StreakRibbon } from "@/components/app/streak-ribbon";
+import { Celebrations } from "@/components/app/celebrations";
 
 /**
  * Today â toggleable between the editorial list (default) and the new
@@ -22,13 +24,16 @@ export default function TodayPage() {
 
   if (mode === "list") {
     return (
-      <TaskListView
+      <>
+        <Celebrations />
+        <TaskListView
         title={t(lang, "sidebar.today")}
         subtitle={format(new Date(), "EEEE, MMMM d")}
         filter={{ view: "today" }}
         showDailyEdition
         sortBy="due_at"
         sortKey="today"
+        prelude={<StreakRibbon />}
         headerExtra={
           <>
             <TodayAiBar />
@@ -37,6 +42,7 @@ export default function TodayPage() {
           </>
         }
       />
+      </>
     );
   }
 

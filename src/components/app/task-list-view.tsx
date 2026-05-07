@@ -19,6 +19,10 @@ type Props = {
   defaults?: { project_id?: string | null };
   /** Show the AI Daily Edition card and anti-overload banner (Today view). */
   showDailyEdition?: boolean;
+  /** Optional content rendered above the inline-task-input — used by
+   *  Today to show the streak ribbon (current streak, habits today,
+   *  Q1 count). Renders right under any DailyEdition card. */
+  prelude?: React.ReactNode;
   /** Optional element rendered to the right of the Quick add button —
    *  used by Today to show its List/Timeline toggle. */
   headerExtra?: React.ReactNode;
@@ -65,6 +69,7 @@ export function TaskListView({
   filter,
   defaults,
   showDailyEdition,
+  prelude,
   headerExtra,
   sortBy = "manual",
   sortKey,
@@ -160,6 +165,7 @@ export function TaskListView({
             <AntiOverloadBanner />
           </div>
         )}
+        {prelude && <div className="px-3">{prelude}</div>}
         <InlineTaskInput defaultProjectId={defaults?.project_id ?? null} />
 
         {isLoading ? (
