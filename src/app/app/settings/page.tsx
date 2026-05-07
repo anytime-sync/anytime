@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
-import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
 import { useLanguage } from "@/lib/use-language";
-import { t as tr } from "@/lib/i18n";
+import { t as tr, getLanguage } from "@/lib/i18n";
+import { formatDistanceToNow } from "date-fns";
+import { useInboxAlias, useRotateInboxAlias } from "@/hooks/use-inbox-alias";
 
 export default function SettingsPage() {
   const lang = useLanguage();
@@ -300,6 +302,9 @@ export default function SettingsPage() {
               </div>
             )}
           </Section>
+
+          {/* ---------- Email to task ---------- */}
+          <InboxAliasSection lang={lang} />
 
           {/* ---------- Calendar sync ---------- */}
           <CalendarFeedSection lang={lang} />
@@ -605,6 +610,135 @@ function CalendarFeedSection({ lang }: { lang: string }) {
             </div>
           )}
         </div>
+      )}
+    </Section>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+// Email to task — per-user inbound-email alias.
+//
+// Each user gets a private address `<alias_local>@firstlight.to` that
+// turns forwarded emails into Inbox tasks. The local-part is opaque
+// and rotatable; rotating invalidates the previous address. Inbound
+// is wired via Cloudflare Email Routing → /api/inbox/inbound (see
+// scripts/email-to-task-setup.md for the alternative providers).
+// ---------------------------------------------------------------------
+function InboxAliasSection({ lang }: { lang: string }) {
+  const { data: alias, isLoading } = useInboxAlias();
+  const rotate = useRotateInboxAlias();
+  const [copied, setCopied] = useState(false);
+  const dfLocale = getLanguage(lang).dateFnsLocale;
+
+  const fullAddress = alias?.alias_local
+    ? `${alias.alias_local}@firstlight.to`
+    : "";
+
+  async function copyAddress() {
+    if (!fullAddress) return;
+    try {
+      await navigator.clipboard.writeText(fullAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error(tr(lang, "view.settings.inbox.toast.copyFailed"));
+    }
+  }
+
+  async function generate() {
+    try {
+      await rotate.mutateAsync();
+      toast.success(tr(lang, "view.settings.inbox.toast.generated"));
+    } catch {
+      /* mutation hook surfaces toast.error already */
+    }
+  }
+
+  async function doRotate() {
+    if (!confirm(tr(lang, "view.settings.inbox.rotateConfirm"))) return;
+    try {
+      await rotate.mutateAsync();
+      toast.success(tr(lang, "view.settings.inbox.toast.rotated"));
+    } catch {
+      /* mutation hook surfaces toast.error already */
+    }
+  }
+
+  return (
+    <Section kicker={tr(lang, "view.settings.section.inbox")}>
+      <p className="text-xs text-muted-fg leading-relaxed">
+        {tr(lang, "view.settings.inbox.description")}
+      </p>
+      <Row label={tr(lang, "view.settings.inbox.address")}>
+        <div className="flex-1 min-w-0">
+          {isLoading ? (
+            <div className="text-sm text-muted-fg">
+              {tr(lang, "view.settings.cal.loading")}
+            </div>
+          ) : alias ? (
+            <div className="space-y-2">
+              <div className="flex items-stretch gap-2">
+                <input
+                  readOnly
+                  value={fullAddress}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="input flex-1 font-mono text-[12px]"
+                />
+                <button
+                  onClick={copyAddress}
+                  className="btn-ghost h-9 px-3 text-sm gap-2 shrink-0"
+                  aria-label={tr(lang, "view.settings.inbox.copyAria")}
+                >
+                  {copied ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
+                  {copied
+                    ? tr(lang, "view.settings.inbox.copied")
+                    : tr(lang, "view.settings.inbox.copy")}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={doRotate}
+                  disabled={rotate.isPending}
+                  className="btn-ghost h-8 px-3 text-xs gap-1.5"
+                >
+                  <RefreshCw
+                    className={`size-3 ${rotate.isPending ? "animate-spin" : ""}`}
+                  />
+                  {tr(lang, "view.settings.inbox.rotate")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={generate}
+              disabled={rotate.isPending}
+              className="btn-primary gap-2"
+            >
+              <Mail className="size-4" />
+              {rotate.isPending
+                ? tr(lang, "view.settings.inbox.generating")
+                : tr(lang, "view.settings.inbox.generate")}
+            </button>
+          )}
+        </div>
+      </Row>
+      {alias && (
+        <p className="text-xs text-muted-fg leading-relaxed">
+          {alias.last_received_at
+            ? tr(lang, "view.settings.inbox.lastReceived").replace(
+                "{time}",
+                formatDistanceToNow(new Date(alias.last_received_at), {
+                  addSuffix: true,
+                  locale: dfLocale,
+                })
+              )
+            : tr(lang, "view.settings.inbox.noEmails")}
+        </p>
       )}
     </Section>
   );

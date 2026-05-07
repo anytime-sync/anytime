@@ -477,6 +477,21 @@ type StringKey =
   | "view.settings.section.aiFeatures"
   | "view.settings.section.notifications"
   | "view.settings.section.calendarSync"
+  | "view.settings.section.inbox"
+  | "view.settings.inbox.description"
+  | "view.settings.inbox.address"
+  | "view.settings.inbox.generate"
+  | "view.settings.inbox.generating"
+  | "view.settings.inbox.rotate"
+  | "view.settings.inbox.rotateConfirm"
+  | "view.settings.inbox.copy"
+  | "view.settings.inbox.copied"
+  | "view.settings.inbox.copyAria"
+  | "view.settings.inbox.lastReceived"
+  | "view.settings.inbox.noEmails"
+  | "view.settings.inbox.toast.generated"
+  | "view.settings.inbox.toast.rotated"
+  | "view.settings.inbox.toast.copyFailed"
   | "view.settings.section.import"
   | "view.settings.section.yourData"
   | "view.settings.section.danger"
@@ -1128,6 +1143,21 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.section.aiFeatures": "AI features",
     "view.settings.section.notifications": "Notifications",
     "view.settings.section.calendarSync": "Calendar sync",
+    "view.settings.section.inbox": "Email to task",
+    "view.settings.inbox.description": "Forward any email to this address — the subject becomes the task title and the body becomes the notes.",
+    "view.settings.inbox.address": "Address",
+    "view.settings.inbox.generate": "Generate address",
+    "view.settings.inbox.generating": "Generating…",
+    "view.settings.inbox.rotate": "Rotate",
+    "view.settings.inbox.rotateConfirm": "Rotate the address? The old one will stop working immediately.",
+    "view.settings.inbox.copy": "Copy",
+    "view.settings.inbox.copied": "Copied",
+    "view.settings.inbox.copyAria": "Copy address",
+    "view.settings.inbox.lastReceived": "Last received {time}",
+    "view.settings.inbox.noEmails": "No emails received yet.",
+    "view.settings.inbox.toast.generated": "Address generated",
+    "view.settings.inbox.toast.rotated": "Address rotated — the old one no longer works",
+    "view.settings.inbox.toast.copyFailed": "Couldn't copy — please copy manually",
     "view.settings.section.import": "Import",
     "view.settings.section.yourData": "Your data",
     "view.settings.section.danger": "Danger zone",
@@ -1778,6 +1808,21 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.section.aiFeatures": "AI 功能",
     "view.settings.section.notifications": "通知",
     "view.settings.section.calendarSync": "行事曆同步",
+    "view.settings.section.inbox": "電子郵件轉任務",
+    "view.settings.inbox.description": "將任何電子郵件轉寄到這個地址 — 主旨會成為任務標題,內文會成為備註。",
+    "view.settings.inbox.address": "地址",
+    "view.settings.inbox.generate": "產生地址",
+    "view.settings.inbox.generating": "產生中…",
+    "view.settings.inbox.rotate": "重設",
+    "view.settings.inbox.rotateConfirm": "要重設地址嗎?舊地址將立即停止運作。",
+    "view.settings.inbox.copy": "複製",
+    "view.settings.inbox.copied": "已複製",
+    "view.settings.inbox.copyAria": "複製地址",
+    "view.settings.inbox.lastReceived": "最近收到於 {time}",
+    "view.settings.inbox.noEmails": "尚未收到任何郵件。",
+    "view.settings.inbox.toast.generated": "地址已產生",
+    "view.settings.inbox.toast.rotated": "地址已重設 — 舊地址不再有效",
+    "view.settings.inbox.toast.copyFailed": "無法自動複製,請手動複製",
     "view.settings.section.import": "匯入",
     "view.settings.section.yourData": "你的資料",
     "view.settings.section.danger": "危險區",
@@ -2428,6 +2473,21 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.section.aiFeatures": "AI 功能",
     "view.settings.section.notifications": "通知",
     "view.settings.section.calendarSync": "日历同步",
+    "view.settings.section.inbox": "邮件转任务",
+    "view.settings.inbox.description": "将任何邮件转发到这个地址 — 主题会成为任务标题,正文会成为备注。",
+    "view.settings.inbox.address": "地址",
+    "view.settings.inbox.generate": "生成地址",
+    "view.settings.inbox.generating": "生成中…",
+    "view.settings.inbox.rotate": "重置",
+    "view.settings.inbox.rotateConfirm": "要重置地址吗?旧地址将立即停止工作。",
+    "view.settings.inbox.copy": "复制",
+    "view.settings.inbox.copied": "已复制",
+    "view.settings.inbox.copyAria": "复制地址",
+    "view.settings.inbox.lastReceived": "最近收到于 {time}",
+    "view.settings.inbox.noEmails": "尚未收到任何邮件。",
+    "view.settings.inbox.toast.generated": "地址已生成",
+    "view.settings.inbox.toast.rotated": "地址已重置 — 旧地址不再有效",
+    "view.settings.inbox.toast.copyFailed": "无法自动复制,请手动复制",
     "view.settings.section.import": "导入",
     "view.settings.section.yourData": "你的数据",
     "view.settings.section.danger": "危险区",
@@ -3078,6 +3138,21 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.section.aiFeatures": "AI 機能",
     "view.settings.section.notifications": "通知",
     "view.settings.section.calendarSync": "カレンダー同期",
+    "view.settings.section.inbox": "メールからタスク",
+    "view.settings.inbox.description": "このアドレスにメールを転送すると、件名がタスクのタイトルに、本文がメモになります。",
+    "view.settings.inbox.address": "アドレス",
+    "view.settings.inbox.generate": "アドレスを生成",
+    "view.settings.inbox.generating": "生成中…",
+    "view.settings.inbox.rotate": "再生成",
+    "view.settings.inbox.rotateConfirm": "アドレスを再生成しますか?古いアドレスは直ちに無効になります。",
+    "view.settings.inbox.copy": "コピー",
+    "view.settings.inbox.copied": "コピーしました",
+    "view.settings.inbox.copyAria": "アドレスをコピー",
+    "view.settings.inbox.lastReceived": "最終受信 {time}",
+    "view.settings.inbox.noEmails": "まだメールを受信していません。",
+    "view.settings.inbox.toast.generated": "アドレスを生成しました",
+    "view.settings.inbox.toast.rotated": "アドレスを再生成しました — 古いアドレスは無効になりました",
+    "view.settings.inbox.toast.copyFailed": "コピーできませんでした。手動でコピーしてください",
     "view.settings.section.import": "インポート",
     "view.settings.section.yourData": "あなたのデータ",
     "view.settings.section.danger": "危険ゾーン",
@@ -3728,6 +3803,21 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.section.aiFeatures": "AI 기능",
     "view.settings.section.notifications": "알림",
     "view.settings.section.calendarSync": "캘린더 동기화",
+    "view.settings.section.inbox": "이메일로 작업 만들기",
+    "view.settings.inbox.description": "이 주소로 이메일을 전달하면 — 제목이 작업 제목이 되고 본문이 메모가 됩니다.",
+    "view.settings.inbox.address": "주소",
+    "view.settings.inbox.generate": "주소 생성",
+    "view.settings.inbox.generating": "생성 중…",
+    "view.settings.inbox.rotate": "재발급",
+    "view.settings.inbox.rotateConfirm": "주소를 재발급할까요? 이전 주소는 즉시 동작을 멈춥니다.",
+    "view.settings.inbox.copy": "복사",
+    "view.settings.inbox.copied": "복사됨",
+    "view.settings.inbox.copyAria": "주소 복사",
+    "view.settings.inbox.lastReceived": "최근 수신 {time}",
+    "view.settings.inbox.noEmails": "아직 받은 이메일이 없습니다.",
+    "view.settings.inbox.toast.generated": "주소가 생성되었습니다",
+    "view.settings.inbox.toast.rotated": "주소가 재발급되었습니다 — 이전 주소는 더 이상 작동하지 않습니다",
+    "view.settings.inbox.toast.copyFailed": "복사하지 못했어요. 직접 복사해 주세요",
     "view.settings.section.import": "가져오기",
     "view.settings.section.yourData": "내 데이터",
     "view.settings.section.danger": "위험 영역",
