@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCreateProject } from "@/hooks/use-projects";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 // Brand-aligned palette: muted, warm where possible. Slightly desaturated
 // versions of the primary spectrum so list dots don't shout against the
@@ -21,6 +23,7 @@ const COLORS = [
 ];
 
 export function CreateProjectDialog({ onClose }: { onClose: () => void }) {
+  const lang = useLanguage();
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const [mounted, setMounted] = useState(false);
@@ -38,10 +41,10 @@ export function CreateProjectDialog({ onClose }: { onClose: () => void }) {
     if (!trimmed) return;
     try {
       await create.mutateAsync({ name: trimmed, color });
-      toast.success(`"${trimmed}" created`);
+      toast.success(t(lang, "createProject.toastCreated").replace("{name}", trimmed));
       onClose();
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't create list");
+      toast.error(e?.message ?? t(lang, "createProject.errCreate"));
     }
   }
 
@@ -60,21 +63,21 @@ export function CreateProjectDialog({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-1">
-          <h3 className="font-display text-2xl tracking-tight">New list</h3>
-          <p className="text-xs text-muted-fg">A space for tasks of a kind.</p>
+          <h3 className="font-display text-2xl tracking-tight">{t(lang, "createProject.title")}</h3>
+          <p className="text-xs text-muted-fg">{t(lang, "createProject.intro")}</p>
         </div>
 
         <input
           autoFocus
           className="input h-11 text-base"
-          placeholder="e.g. Work, Reading, Studio"
+          placeholder={t(lang, "createProject.namePlaceholder")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
         />
 
         <div>
-          <div className="editorial-number text-[10px] mb-2">Color</div>
+          <div className="editorial-number text-[10px] mb-2">{t(lang, "createProject.colorLabel")}</div>
           <div className="flex flex-wrap gap-2.5">
             {COLORS.map((c) => (
               <button
@@ -95,7 +98,7 @@ export function CreateProjectDialog({ onClose }: { onClose: () => void }) {
 
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost h-9 px-4" onClick={onClose}>
-            Cancel
+            {t(lang, "createProject.cancel")}
           </button>
           <button
             type="button"
@@ -103,7 +106,7 @@ export function CreateProjectDialog({ onClose }: { onClose: () => void }) {
             disabled={!name.trim() || create.isPending}
             onClick={submit}
           >
-            {create.isPending ? "Creating…" : "Create"}
+            {create.isPending ? t(lang, "createProject.creating") : t(lang, "createProject.create")}
           </button>
         </div>
       </div>

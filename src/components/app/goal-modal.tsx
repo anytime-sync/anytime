@@ -9,6 +9,8 @@ import { useGoalDecompose, type GoalDecomposed } from "@/hooks/use-ai";
 import { useCreateProject } from "@/hooks/use-projects";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * "+ Goal" modal. User types a goal sentence, AI returns a project +
@@ -16,6 +18,7 @@ import { cn } from "@/lib/utils";
  * project and bulk-creates the tasks under it.
  */
 export function GoalModal() {
+  const lang = useLanguage();
   const open = useUIStore((s) => s.goalModalOpen);
   const setOpen = useUIStore((s) => s.setGoalModalOpen);
   const decompose = useGoalDecompose();
@@ -35,15 +38,15 @@ export function GoalModal() {
     try {
       const r = await decompose.mutateAsync(goal.trim());
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         return;
       }
       setPlan(r);
     } catch (e: any) {
       toast.error(
         e?.message?.includes("429")
-          ? "Daily goal-decompose budget reached."
-          : "Couldn't plan that goal — try again."
+          ? tr(lang, "goal.errBudget")
+          : tr(lang, "goal.errPlan")
       );
     } finally {
       setRunning(false);
@@ -68,12 +71,12 @@ export function GoalModal() {
           project_id: projectId,
         } as any);
       }
-      toast.success(`Goal planned: ${plan.tasks.length} task${plan.tasks.length !== 1 ? "s" : ""} added`);
+      toast.success(tr(lang, "goal.successAdded").replace("{n}", String(plan.tasks.length)));
       setOpen(false);
       setGoal("");
       setPlan(null);
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't create the plan");
+      toast.error(e?.message ?? tr(lang, "goal.errCreate"));
     } finally {
       setCreating(false);
     }
@@ -95,25 +98,24 @@ export function GoalModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-2xl">A goal</h2>
+          <h2 className="font-display text-xl">{tr(lang, "goal.title")}</h2>
           {plan && (
             <span className="text-xs text-muted-fg">
-              {plan.tasks.length} step{plan.tasks.length !== 1 && "s"}
+              {plan.tasks.length} {tr(lang, "goal.steps")}
             </span>
           )}
         </div>
 
         {!plan && (
           <>
-            <p className="text-base text-muted-fg mb-3 italic font-display leading-relaxed">
-              Write the outcome you want. AI breaks it into a project + tasks
-              you can ship in order.
+            <p className="text-sm text-muted-fg mb-3 italic font-display">
+              {tr(lang, "goal.intro")}
             </p>
             <textarea
               autoFocus
               rows={3}
-              className="input w-full text-base"
-              placeholder="e.g. Ship the Q4 launch by Nov 30 with full email + social coverage"
+              className="input w-full"
+              placeholder={tr(lang, "goal.placeholder")}
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               onKeyDown={(e) => {
@@ -121,20 +123,20 @@ export function GoalModal() {
               }}
             />
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-fg">
-                <kbd>{typeof navigator !== "undefined" && /Mac/.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter</kbd> to plan
+              <p className="text-[11px] text-muted-fg">
+                <kbd>{typeof navigator !== "undefined" && /Mac/.test(navigator.platform) ? "⌘" : "Ctrl"}+Enter</kbd> {tr(lang, "goal.cmdEnterHint")}
               </p>
               <div className="flex items-center gap-2">
-                <button className="btn-ghost h-9 px-3 text-sm" onClick={discard}>
-                  Cancel
+                <button className="btn-ghost h-9 px-3 text-xs" onClick={discard}>
+                  {tr(lang, "goal.cancel")}
                 </button>
                 <button
-                  className="btn-primary h-9 px-3 text-sm gap-1.5 inline-flex items-center disabled:opacity-50"
+                  className="btn-primary h-9 px-3 text-xs gap-1.5 inline-flex items-center disabled:opacity-50"
                   onClick={generate}
                   disabled={running || !goal.trim()}
                 >
                   <Sparkles className={cn("size-3.5", running && "animate-spin")} />
-                  {running ? "Planning…" : "Plan it"}
+                  {running ? tr(lang, "goal.planning") : tr(lang, "goal.planIt")}
                 </button>
               </div>
             </div>
@@ -144,11 +146,11 @@ export function GoalModal() {
         {plan && (
           <>
             <div className="border border-border rounded-md p-3 mb-3">
-              <div className="text-xs uppercase tracking-wider text-muted-fg mb-1">
-                Project
+              <div className="text-[11px] uppercase tracking-wider text-muted-fg mb-1">
+                {tr(lang, "goal.projectLabel")}
               </div>
-              <div className="font-medium text-base">~{plan.project_name}</div>
-              <p className="text-sm text-muted-fg mt-1 italic leading-relaxed">{plan.summary}</p>
+              <div className="font-medium text-sm">~{plan.project_name}</div>
+              <p className="text-xs text-muted-fg mt-1 italic">{plan.summary}</p>
             </div>
             <ul className="space-y-2">
               {plan.tasks.map((t, i) => (
@@ -158,7 +160,7 @@ export function GoalModal() {
                 >
                   <div className="flex-1 min-w-0">
                     <input
-                      className="input w-full text-base py-1 mb-1 bg-transparent border-none px-0 focus:bg-bg focus:border focus:border-border focus:px-2 focus:py-1.5 rounded-md"
+                      className="input w-full text-sm py-1 mb-1 bg-transparent border-none px-0 focus:bg-bg focus:border focus:border-border focus:px-2 focus:py-1.5 rounded-md"
                       value={t.title}
                       onChange={(e) =>
                         setPlan((p) =>
@@ -173,14 +175,14 @@ export function GoalModal() {
                         )
                       }
                     />
-                    <div className="text-xs text-muted-fg">
+                    <div className="text-[11px] text-muted-fg">
                       <span className="text-fg">Q{t.quadrant}</span> · p{t.priority} · in{" "}
-                      {t.due_offset_days === 0 ? "today" : `${t.due_offset_days}d`} · {t.rationale}
+                      {t.due_offset_days === 0 ? tr(lang, "goal.todayLabel") : `${t.due_offset_days}d`} · {t.rationale}
                     </div>
                   </div>
                   <button
                     className="btn-ghost size-7 grid place-items-center text-muted-fg"
-                    title="Remove"
+                    title={tr(lang, "goal.remove")}
                     onClick={() =>
                       setPlan((p) =>
                         p ? { ...p, tasks: p.tasks.filter((_, j) => j !== i) } : p
@@ -194,19 +196,19 @@ export function GoalModal() {
             </ul>
             <div className="mt-4 flex items-center justify-between gap-2">
               <button
-                className="btn-ghost h-9 px-3 text-sm"
+                className="btn-ghost h-9 px-3 text-xs"
                 onClick={() => setPlan(null)}
                 disabled={creating}
               >
-                Back
+                {tr(lang, "goal.back")}
               </button>
               <button
-                className="btn-primary h-9 px-3 text-sm gap-1.5 inline-flex items-center disabled:opacity-50"
+                className="btn-primary h-9 px-3 text-xs gap-1.5 inline-flex items-center disabled:opacity-50"
                 onClick={commit}
                 disabled={creating || plan.tasks.length === 0}
               >
                 <Check className="size-3.5" />
-                {creating ? "Creating…" : `Create ${plan.tasks.length} task${plan.tasks.length !== 1 ? "s" : ""}`}
+                {creating ? tr(lang, "goal.creating") : `${tr(lang, "goal.create")} ${plan.tasks.length}`}
               </button>
             </div>
           </>

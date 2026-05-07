@@ -12,19 +12,23 @@ import { SubtaskList } from "./subtask-list";
 import { AttachmentList } from "./attachment-list";
 import { TagEditor } from "./tag-editor";
 import { DateTimePicker } from "./date-time-picker";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
-const RECURRENCE_PRESETS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Doesn't repeat" },
-  { value: "FREQ=DAILY", label: "Daily" },
-  { value: "FREQ=DAILY;INTERVAL=2", label: "Every other day" },
-  { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: "Weekdays (MonâFri)" },
-  { value: "FREQ=WEEKLY;BYDAY=SA,SU", label: "Weekends" },
-  { value: "FREQ=WEEKLY", label: "Weekly" },
-  { value: "FREQ=WEEKLY;INTERVAL=2", label: "Every other week" },
-  { value: "FREQ=MONTHLY", label: "Monthly" },
-  { value: "FREQ=MONTHLY;INTERVAL=3", label: "Every 3 months" },
-  { value: "FREQ=YEARLY", label: "Yearly" },
-];
+function recurrencePresets(lang: string): Array<{ value: string; label: string }> {
+  return [
+    { value: "", label: t(lang, "taskPanel.recurNone") },
+    { value: "FREQ=DAILY", label: t(lang, "taskPanel.recurDaily") },
+    { value: "FREQ=DAILY;INTERVAL=2", label: t(lang, "taskPanel.recurEveryOtherDay") },
+    { value: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", label: t(lang, "taskPanel.recurWeekdays") },
+    { value: "FREQ=WEEKLY;BYDAY=SA,SU", label: t(lang, "taskPanel.recurWeekends") },
+    { value: "FREQ=WEEKLY", label: t(lang, "taskPanel.recurWeekly") },
+    { value: "FREQ=WEEKLY;INTERVAL=2", label: t(lang, "taskPanel.recurEveryOtherWeek") },
+    { value: "FREQ=MONTHLY", label: t(lang, "taskPanel.recurMonthly") },
+    { value: "FREQ=MONTHLY;INTERVAL=3", label: t(lang, "taskPanel.recurEveryThreeMonths") },
+    { value: "FREQ=YEARLY", label: t(lang, "taskPanel.recurYearly") },
+  ];
+}
 
 function localInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -34,6 +38,7 @@ function localInputValue(iso: string | null): string {
 }
 
 export function TaskDetailPanel() {
+  const lang = useLanguage();
   const id = useUIStore((s) => s.selectedTaskId);
   const setId = useUIStore((s) => s.setSelectedTaskId);
   const { data: task } = useTask(id);
@@ -54,6 +59,7 @@ export function TaskDetailPanel() {
 
   if (!id || !task) return null;
 
+  const RECURRENCE_PRESETS = recurrencePresets(lang);
   const recurrenceMatch = RECURRENCE_PRESETS.find((p) => p.value === (task.rrule ?? ""));
   const recurrenceValue = recurrenceMatch ? recurrenceMatch.value : (task.rrule ?? "");
 
@@ -72,7 +78,7 @@ export function TaskDetailPanel() {
     >
       <div className="flex items-center justify-between px-3 h-12 border-b border-border">
         <button
-          aria-label={task.is_completed ? "Mark incomplete" : "Mark complete"}
+          aria-label={task.is_completed ? t(lang, "taskPanel.markIncomplete") : t(lang, "taskPanel.markComplete")}
           onClick={() => toggle(task)}
           className={cn(
             "size-5 rounded-full border-2 grid place-items-center",
@@ -100,7 +106,7 @@ export function TaskDetailPanel() {
               await del.mutateAsync(task.id);
               setId(null);
             }}
-            title="Delete"
+            title={t(lang, "taskPanel.delete")}
           >
             <Trash2 className="size-4" />
           </button>
@@ -109,11 +115,11 @@ export function TaskDetailPanel() {
           <button
             className="btn-ghost h-9 px-2 md:px-0 md:size-9 grid place-items-center md:p-0 gap-1 text-sm"
             onClick={() => setId(null)}
-            title="Close"
-            aria-label="Close task editor"
+            title={t(lang, "taskPanel.close")}
+            aria-label={t(lang, "taskPanel.close")}
           >
             <X className="size-4" />
-            <span className="md:hidden">Done</span>
+            <span className="md:hidden">{t(lang, "taskPanel.done")}</span>
           </button>
         </div>
       </div>
@@ -137,10 +143,10 @@ export function TaskDetailPanel() {
             is treated as a time block and renders that way on the
             timeline view. Empty Starts = "due-only" task. */}
         <div className="grid grid-cols-1 gap-3">
-          <Field label="Starts">
+          <Field label={t(lang, "taskPanel.starts")}>
             <DateTimePicker
               value={task.start_at}
-              placeholder="Pick a start time"
+              placeholder={t(lang, "taskPanel.startPlaceholder")}
               onChange={(iso) => {
                 // If the new start lands AFTER the current due, slide
                 // due forward by the same amount so the task keeps its
@@ -162,10 +168,10 @@ export function TaskDetailPanel() {
               }}
             />
           </Field>
-          <Field label={task.start_at ? "Ends" : "Due"}>
+          <Field label={task.start_at ? t(lang, "taskPanel.ends") : t(lang, "taskPanel.due")}>
             <DateTimePicker
               value={task.due_at}
-              placeholder="Pick a due time"
+              placeholder={t(lang, "taskPanel.duePlaceholder")}
               onChange={(iso) => {
                 // Mirror image: if the new due lands BEFORE the current
                 // start, slide start back by the same delta so the task
@@ -190,7 +196,7 @@ export function TaskDetailPanel() {
           </Field>
         </div>
 
-        <Field label="Repeat">
+        <Field label={t(lang, "taskPanel.repeat")}>
           <div className="flex items-center gap-2">
             <Repeat className="size-4 text-muted-fg" />
             <select
@@ -207,18 +213,18 @@ export function TaskDetailPanel() {
                 </option>
               ))}
               {!recurrenceMatch && task.rrule && (
-                <option value={task.rrule}>Custom: {task.rrule}</option>
+                <option value={task.rrule}>{t(lang, "taskPanel.recurCustom")}: {task.rrule}</option>
               )}
             </select>
           </div>
           {task.rrule && !task.due_at && (
             <p className="text-[11px] text-muted-fg mt-1">
-              Set a due date — recurrence creates the next occurrence when you complete the task.
+              {t(lang, "taskPanel.recurNeedsDue")}
             </p>
           )}
         </Field>
 
-        <Field label="Reminder">
+        <Field label={t(lang, "taskPanel.reminder")}>
           <div className="flex items-center gap-2">
             <Bell className="size-4 text-muted-fg" />
             <input
@@ -235,11 +241,11 @@ export function TaskDetailPanel() {
             />
           </div>
           <p className="text-[11px] text-muted-fg mt-1">
-            Browser notification fires at this time while the app is open. Allow notifications when prompted.
+            {t(lang, "taskPanel.reminderHelp")}
           </p>
         </Field>
 
-        <Field label="Priority">
+        <Field label={t(lang, "taskPanel.priority")}>
           <div className="flex gap-1">
             {[0, 1, 3, 5].map((p) => (
               <button
@@ -251,13 +257,13 @@ export function TaskDetailPanel() {
                 )}
               >
                 <Flag className={cn("size-3 mr-1", priorityColorClass(p))} />
-                {p === 5 ? "High" : p === 3 ? "Medium" : p === 1 ? "Low" : "None"}
+                {p === 5 ? t(lang, "quickAdd.priorityHigh") : p === 3 ? t(lang, "quickAdd.priorityMedium") : p === 1 ? t(lang, "quickAdd.priorityLow") : t(lang, "quickAdd.priorityNone")}
               </button>
             ))}
           </div>
         </Field>
 
-        <Field label="List">
+        <Field label={t(lang, "taskPanel.list")}>
           <select
             className="input"
             value={task.project_id ?? ""}
@@ -268,7 +274,7 @@ export function TaskDetailPanel() {
               })
             }
           >
-            <option value="">Inbox (no list)</option>
+            <option value="">{t(lang, "taskPanel.inboxNoList")}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -277,7 +283,7 @@ export function TaskDetailPanel() {
           </select>
         </Field>
 
-        <Field label="Share with group">
+        <Field label={t(lang, "taskPanel.shareGroup")}>
           <div>
             <ShareGroupPicker
               value={(task as any).share_group_id ?? null}
@@ -290,7 +296,7 @@ export function TaskDetailPanel() {
         </Field>
 
         {(task as any).share_group_id ? (
-          <Field label="Assigned to">
+          <Field label={t(lang, "taskPanel.assignedTo")}>
             <AssigneePicker
               groupId={(task as any).share_group_id as string}
               value={(task as any).assignee_id ?? null}
@@ -301,27 +307,27 @@ export function TaskDetailPanel() {
           </Field>
         ) : null}
 
-        <Field label="Tags">
+        <Field label={t(lang, "taskPanel.tags")}>
           <TagEditor taskId={task.id} currentTags={task.tags} />
         </Field>
 
-        <Field label="Subtasks">
+        <Field label={t(lang, "taskPanel.subtasks")}>
           <SubtaskList parentId={task.id} parentProjectId={task.project_id} />
         </Field>
 
-        <Field label="Attachments" icon={<Paperclip className="size-3.5 text-muted-fg" />}>
+        <Field label={t(lang, "taskPanel.attachments")} icon={<Paperclip className="size-3.5 text-muted-fg" />}>
           <AttachmentList taskId={task.id} />
         </Field>
 
-        <Field label="AI shortcuts" icon={undefined}>
+        <Field label={t(lang, "taskPanel.aiShortcuts")} icon={undefined}>
           <AiTaskActions task={task} />
         </Field>
 
-        <Field label="Notes">
+        <Field label={t(lang, "taskPanel.notes")}>
           <textarea
             rows={6}
             className="input min-h-[120px] py-2"
-            placeholder="Add notes…"
+            placeholder={t(lang, "taskPanel.notesPlaceholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => {
@@ -333,7 +339,7 @@ export function TaskDetailPanel() {
         </Field>
 
         <div className="text-xs text-muted-fg">
-          Created {format(new Date(task.created_at), "MMM d, yyyy")} · Updated{" "}
+          {t(lang, "taskPanel.created")} {format(new Date(task.created_at), "MMM d, yyyy")} · {t(lang, "taskPanel.updated")}{" "}
           {format(new Date(task.updated_at), "MMM d, yyyy")}
         </div>
       </div>
@@ -369,6 +375,7 @@ function ShareGroupPicker({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const lang = useLanguage();
   const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]);
   useEffect(() => {
     let cancelled = false;
@@ -392,7 +399,7 @@ function ShareGroupPicker({
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
     >
-      <option value="">Private &mdash; just me</option>
+      <option value="">{t(lang, "taskPanel.privateOnly")}</option>
       {groups.map((g) => (
         <option key={g.id} value={g.id}>
           {g.name}
@@ -404,12 +411,13 @@ function ShareGroupPicker({
 
 // Re-export so the picker can render the helper link from the parent.
 function ManageGroupsLink() {
+  const lang = useLanguage();
   return (
     <a
       href="/app/groups"
       className="text-[11px] text-muted-fg hover:text-fg underline-offset-2 hover:underline mt-1 inline-block"
     >
-      Manage groups &rarr;
+      {t(lang, "taskPanel.manageGroups")}
     </a>
   );
 }
@@ -428,6 +436,7 @@ function AssigneePicker({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const lang = useLanguage();
   const [members, setMembers] = useState<
     Array<{ user_id: string; profile: { id: string; full_name: string | null; email: string } | null }>
   >([]);
@@ -450,10 +459,10 @@ function AssigneePicker({
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
     >
-      <option value="">Unassigned</option>
+      <option value="">{t(lang, "taskPanel.unassigned")}</option>
       {members.map((m) => {
         const display =
-          m.profile?.full_name ?? m.profile?.email ?? "(unknown)";
+          m.profile?.full_name ?? m.profile?.email ?? t(lang, "common.unknown");
         return (
           <option key={m.user_id} value={m.user_id}>
             {display}

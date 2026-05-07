@@ -12,6 +12,8 @@ import {
 import { useTasks, useUpdateTask } from "@/hooks/use-tasks";
 import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * End-of-day reflection. Renders inside a modal triggered from the
@@ -19,6 +21,7 @@ import { cn } from "@/lib/utils";
  * each day, then caches in daily_reflections.
  */
 export function ReflectionDialog() {
+  const lang = useLanguage();
   const open = useUIStore((s) => s.reflectionOpen);
   const setOpen = useUIStore((s) => s.setReflectionOpen);
   const reflect = useReflection();
@@ -37,14 +40,14 @@ export function ReflectionDialog() {
       .mutateAsync()
       .then((r) => {
         if (!r) {
-          toast.error("AI is currently disabled.");
+          toast.error(tr(lang, "common.aiDisabled"));
           setOpen(false);
           return;
         }
         setData(r);
         setJournal(r.user_journal ?? "");
       })
-      .catch(() => toast.error("Couldn't load reflection"))
+      .catch(() => toast.error(tr(lang, "reflect.errLoad")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -55,11 +58,11 @@ export function ReflectionDialog() {
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(23, 59, 0, 0);
     update.mutate({ id, due_at: tomorrow.toISOString() } as any);
-    toast.message("Rolled to tomorrow");
+    toast.message(tr(lang, "reflect.toastRolled"));
   }
   function dropTask(id: string) {
     update.mutate({ id, due_at: null, priority: 0 } as any);
-    toast.message("Cleared from today");
+    toast.message(tr(lang, "reflect.toastCleared"));
   }
   function carryAll() {
     if (!data?.carry_forward_ids?.length) return;
@@ -68,14 +71,14 @@ export function ReflectionDialog() {
   async function saveJ() {
     try {
       await saveJournal.mutateAsync(journal);
-      toast.success("Saved");
+      toast.success(tr(lang, "reflect.toastSaved"));
     } catch {
-      toast.error("Couldn't save journal");
+      toast.error(tr(lang, "reflect.errSaveJournal"));
     }
   }
 
   const titleFor = (id: string) =>
-    allTasks.find((t) => t.id === id)?.title ?? "(unknown)";
+    allTasks.find((t) => t.id === id)?.title ?? tr(lang, "common.unknown");
 
   return (
     <div
@@ -87,8 +90,8 @@ export function ReflectionDialog() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-3xl">Today, in retrospect</h2>
-          <span className="editorial-number text-sm text-muted-fg">
+          <h2 className="font-display text-xl">{tr(lang, "reflect.title")}</h2>
+          <span className="editorial-number text-[10px] text-muted-fg">
             {new Date().toLocaleDateString(undefined, {
               weekday: "long",
               month: "short",
@@ -98,42 +101,42 @@ export function ReflectionDialog() {
         </div>
 
         {loading && (
-          <p className="text-lg text-muted-fg italic">Reading the day…</p>
+          <p className="text-sm text-muted-fg italic">{tr(lang, "reflect.reading")}</p>
         )}
 
         {data && (
           <>
-            <h3 className="font-display text-3xl leading-snug mb-3">
+            <h3 className="font-display text-lg leading-snug mb-2">
               {data.headline}
             </h3>
-            <p className="text-xl text-fg leading-relaxed italic font-display mb-5">
+            <p className="text-sm text-fg leading-relaxed italic font-display mb-4">
               {data.body}
             </p>
 
             {data.carry_forward_ids.length > 0 && (
               <section className="mb-4">
                 <div className="flex items-baseline justify-between mb-2">
-                  <h4 className="text-sm uppercase tracking-wider text-muted-fg">
-                    Carry to tomorrow
+                  <h4 className="text-[11px] uppercase tracking-wider text-muted-fg">
+                    {tr(lang, "reflect.carryHeading")}
                   </h4>
                   <button
                     onClick={carryAll}
-                    className="text-base text-muted-fg hover:text-fg underline"
+                    className="text-[11px] text-muted-fg hover:text-fg underline"
                   >
-                    Roll all →
+                    {tr(lang, "reflect.rollAll")}
                   </button>
                 </div>
                 <ul className="space-y-1.5">
                   {data.carry_forward_ids.map((id) => (
                     <li
                       key={id}
-                      className="border border-border rounded-md p-3 flex items-center gap-2 text-base leading-relaxed"
+                      className="border border-border rounded-md p-2 flex items-center gap-2 text-sm"
                     >
                       <span className="flex-1 min-w-0 truncate">{titleFor(id)}</span>
                       <button
                         onClick={() => carryForward(id)}
                         className="btn-ghost size-7 grid place-items-center text-success"
-                        title="Roll to tomorrow"
+                        title={tr(lang, "reflect.rollOne")}
                       >
                         <ArrowRight className="size-3.5" />
                       </button>
@@ -145,20 +148,20 @@ export function ReflectionDialog() {
 
             {data.drop_suggestions_ids.length > 0 && (
               <section className="mb-4">
-                <h4 className="text-sm uppercase tracking-wider text-muted-fg mb-2">
-                  Worth dropping
+                <h4 className="text-[11px] uppercase tracking-wider text-muted-fg mb-2">
+                  {tr(lang, "reflect.dropHeading")}
                 </h4>
                 <ul className="space-y-1.5">
                   {data.drop_suggestions_ids.map((id) => (
                     <li
                       key={id}
-                      className="border border-border rounded-md p-3 flex items-center gap-2 text-base leading-relaxed"
+                      className="border border-border rounded-md p-2 flex items-center gap-2 text-sm"
                     >
                       <span className="flex-1 min-w-0 truncate">{titleFor(id)}</span>
                       <button
                         onClick={() => dropTask(id)}
                         className="btn-ghost size-7 grid place-items-center text-warning"
-                        title="Clear"
+                        title={tr(lang, "reflect.clearOne")}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -169,13 +172,13 @@ export function ReflectionDialog() {
             )}
 
             <section className="mt-4">
-              <h4 className="text-sm uppercase tracking-wider text-muted-fg mb-2">
-                Notes to yourself
+              <h4 className="text-[11px] uppercase tracking-wider text-muted-fg mb-2">
+                {tr(lang, "reflect.notesHeading")}
               </h4>
               <textarea
                 rows={3}
-                className="input w-full text-lg leading-relaxed py-2.5"
-                placeholder="One sentence about today, if you'd like."
+                className="input w-full text-sm"
+                placeholder={tr(lang, "reflect.notesPlaceholder")}
                 value={journal}
                 onChange={(e) => setJournal(e.target.value)}
                 onBlur={saveJ}
@@ -184,10 +187,10 @@ export function ReflectionDialog() {
 
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
-                className="btn-ghost h-10 px-4 text-base"
+                className="btn-ghost h-9 px-3 text-xs"
                 onClick={() => setOpen(false)}
               >
-                Close
+                {tr(lang, "reflect.close")}
               </button>
             </div>
           </>

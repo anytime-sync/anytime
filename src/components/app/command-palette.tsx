@@ -10,8 +10,11 @@ import { Hash, Folder, ListTodo, Sparkles } from "lucide-react";
 import { useNlSearch, type SearchMatch } from "@/hooks/use-ai";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 export function CommandPalette() {
+  const lang = useLanguage();
   const open = useUIStore((s) => s.commandOpen);
   const setOpen = useUIStore((s) => s.setCommandOpen);
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
@@ -32,12 +35,12 @@ export function CommandPalette() {
     try {
       const r = await nlSearch.mutateAsync(q.trim());
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         return;
       }
       setAiMatches(r.matches);
     } catch (e: any) {
-      toast.error(e?.message?.includes("429") ? "Search budget reached." : "Couldn't run AI search.");
+      toast.error(e?.message?.includes("429") ? tr(lang, "commandPalette.errBudget") : tr(lang, "commandPalette.errSearch"));
     }
   }
 
@@ -84,7 +87,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             className="flex-1 bg-transparent outline-none text-base px-4 h-12"
-            placeholder="Search tasks, lists, tags… or ask AI"
+            placeholder={tr(lang, "commandPalette.placeholder")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -100,16 +103,16 @@ export function CommandPalette() {
               className="mr-2 btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
               onClick={runAiSearch}
               disabled={nlSearch.isPending}
-              title="Re-rank with AI (Cmd/Ctrl+Enter)"
+              title={tr(lang, "commandPalette.askAiHint")}
             >
               <Sparkles className={cn("size-3.5", nlSearch.isPending && "animate-spin")} />
-              {nlSearch.isPending ? "…" : "Ask AI"}
+              {nlSearch.isPending ? "…" : tr(lang, "commandPalette.askAi")}
             </button>
           )}
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2 text-sm">
           {aiMatches && aiMatches.length > 0 && (
-            <Section title="AI matches">
+            <Section title={tr(lang, "commandPalette.aiMatches")}>
               {aiMatches.map((m) => {
                 const t = tasks.find((x) => x.id === m.id);
                 if (!t) return null;
@@ -130,7 +133,7 @@ export function CommandPalette() {
             </Section>
           )}
           {results.tasks.length > 0 && (
-            <Section title="Tasks">
+            <Section title={tr(lang, "commandPalette.tasks")}>
               {results.tasks.map((t) => (
                 <button
                   key={t.id}
@@ -143,14 +146,14 @@ export function CommandPalette() {
                   <ListTodo className="size-4 text-muted-fg" />
                   <span className="truncate">{t.title}</span>
                   {t.is_completed && (
-                    <span className="ml-auto text-xs text-muted-fg">done</span>
+                    <span className="ml-auto text-xs text-muted-fg">{tr(lang, "commandPalette.done")}</span>
                   )}
                 </button>
               ))}
             </Section>
           )}
           {results.projects.length > 0 && (
-            <Section title="Lists">
+            <Section title={tr(lang, "commandPalette.lists")}>
               {results.projects.map((p) => (
                 <button
                   key={p.id}
@@ -167,7 +170,7 @@ export function CommandPalette() {
             </Section>
           )}
           {results.tags.length > 0 && (
-            <Section title="Tags">
+            <Section title={tr(lang, "commandPalette.tags")}>
               {results.tags.map((t) => (
                 <button
                   key={t.id}
@@ -184,7 +187,7 @@ export function CommandPalette() {
             </Section>
           )}
           {results.tasks.length + results.projects.length + results.tags.length === 0 && (
-            <div className="px-3 py-6 text-center text-muted-fg">No results.</div>
+            <div className="px-3 py-6 text-center text-muted-fg">{tr(lang, "commandPalette.noResults")}</div>
           )}
         </div>
       </div>

@@ -15,12 +15,14 @@ import type { Locale } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Clock, Loader2 } from "lucide-react";
 import { ProcrastinationPanel } from "@/components/app/procrastination-panel";
-import { getLanguage } from "@/lib/i18n";
+import { getLanguage, t as tr } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 import type { Task } from "@/lib/db.types";
 
 type RetroTarget = "last" | "current" | "next";
 
 export default function RetroPage() {
+  const lang = useLanguage();
   const [target, setTarget] = useState<RetroTarget>("current");
   const { data, isLoading, isFetching, isError } = useWeeklyRetro(
     // The AI retro hook only knows "last" and "current". For "next" we
@@ -90,18 +92,18 @@ export default function RetroPage() {
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="editorial-number text-xs mb-1">Weekly review</p>
+            <p className="editorial-number text-xs mb-1">{tr(lang, "retro.kicker")}</p>
             <h1 className="font-display text-2xl md:text-4xl tracking-tight leading-tight truncate">
               {target === "last"
-                ? "Last week's edition"
+                ? tr(lang, "retro.titleLastWeek")
                 : target === "next"
-                  ? "Next week, planned"
-                  : "This week, so far"}
+                  ? tr(lang, "retro.titleNextWeek")
+                  : tr(lang, "retro.titleThisWeek")}
             </h1>
             {isRevalidating && (
               <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-fg">
                 <Loader2 className="size-3 animate-spin" />
-                Updating…
+                {tr(lang, "retro.updating")}
               </div>
             )}
           </div>
@@ -116,10 +118,10 @@ export default function RetroPage() {
                 )}
               >
                 {t === "last"
-                  ? "Last week"
+                  ? tr(lang, "retro.lastWeek")
                   : t === "next"
-                    ? "Next week"
-                    : "This week"}
+                    ? tr(lang, "retro.nextWeek")
+                    : tr(lang, "retro.thisWeek")}
               </button>
             ))}
           </div>
@@ -141,14 +143,14 @@ export default function RetroPage() {
 
           {!isLoading && (isError || !data) && tasksByDay.total === 0 && (
             <p className="text-sm text-muted-fg">
-              AI features aren&apos;t enabled on this server, or no data yet for this week.
+              {tr(lang, "retro.empty")}
             </p>
           )}
 
           {(data || tasksByDay.total > 0) && (
             <article className="space-y-7">
               <p className="text-xs text-muted-fg">
-                Week of{" "}
+                {tr(lang, "retro.weekOf")}{" "}
                 {format(weekRange.start, "EEEE, MMMM d, yyyy", { locale })}
               </p>
 
@@ -164,31 +166,32 @@ export default function RetroPage() {
                   total={tasksByDay.total}
                   locale={locale}
                   target={target}
+                  lang={lang}
                 />
               )}
 
-              {data?.shipped && <Section kicker="Shipped" body={data.shipped} />}
-              {data?.slipped && <Section kicker="Slipped" body={data.slipped} />}
+              {data?.shipped && <Section kicker={tr(lang, "retro.shipped")} body={data.shipped} />}
+              {data?.slipped && <Section kicker={tr(lang, "retro.slipped")} body={data.slipped} />}
               {/* Themes + next-week plan are the smarter-retro additions.
                   Both live in raw_json so we don't need a schema migration;
                   older cached weeks won't have them, and that's fine — the
                   Section component just no-ops when the body is empty. */}
               {(data?.raw_json as any)?.themes && (
                 <Section
-                  kicker="Themes"
+                  kicker={tr(lang, "retro.themes")}
                   body={(data!.raw_json as any).themes}
                 />
               )}
               {data?.drop_list && (
                 <Section
-                  kicker="Worth dropping"
+                  kicker={tr(lang, "retro.dropList")}
                   body={data.drop_list}
                   variant="muted"
                 />
               )}
               {(data?.raw_json as any)?.next_week_plan && (
                 <Section
-                  kicker="For next week"
+                  kicker={tr(lang, "retro.nextWeekPlan")}
                   body={(data!.raw_json as any).next_week_plan}
                   variant="accent"
                 />
@@ -213,12 +216,14 @@ function ScheduledSection({
   total,
   locale,
   target,
+  lang,
 }: {
   tasksByDay: Record<string, Task[]>;
   weekStart: Date;
   total: number;
   locale: Locale;
   target: RetroTarget;
+  lang: string;
 }) {
   const today = new Date();
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -229,10 +234,9 @@ function ScheduledSection({
   );
   if (populated.length === 0) return null;
 
-  const kicker =
-    target === "current"
-      ? `On the calendar · ${total} item${total === 1 ? "" : "s"}`
-      : `Scheduled · ${total} item${total === 1 ? "" : "s"}`;
+  const kickerLabel = target === "current" ? tr(lang, "retro.onCalendar") : tr(lang, "retro.scheduled");
+  const itemsWord = total === 1 ? tr(lang, "retro.itemsOne") : tr(lang, "retro.itemsMany");
+  const kicker = `${kickerLabel} · ${total} ${itemsWord}`;
 
   return (
     <section>
@@ -267,7 +271,7 @@ function ScheduledSection({
               </div>
               <ul className="flex-1 space-y-1.5 min-w-0">
                 {items.map((t) => (
-                  <ScheduledRow key={t.id} task={t} locale={locale} />
+                  <ScheduledRow key={t.id} task={t} locale={locale} lang={lang} />
                 ))}
               </ul>
             </div>
@@ -278,11 +282,11 @@ function ScheduledSection({
   );
 }
 
-function ScheduledRow({ task, locale }: { task: Task; locale: Locale }) {
+function ScheduledRow({ task, locale, lang }: { task: Task; locale: Locale; lang: string }) {
   const anchor = task.start_at ?? task.due_at;
   const time = anchor && !task.is_all_day
     ? format(new Date(anchor), "h:mm a", { locale })
-    : "All day";
+    : tr(lang, "retro.allDay");
   return (
     <li className="flex items-start gap-2 text-[14px] leading-snug">
       <span

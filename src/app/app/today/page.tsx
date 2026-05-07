@@ -60,11 +60,11 @@ export default function TodayPage() {
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
               onClick={() => setQuickAdd(true)}
-              aria-label="Quick add"
-              title="Quick add"
+              aria-label={t(lang, "shared.quickAdd")}
+              title={t(lang, "shared.quickAdd")}
             >
               <Plus className="size-4" />
-              <span className="hidden md:inline">Quick add</span>
+              <span className="hidden md:inline">{t(lang, "shared.quickAdd")}</span>
             </button>
           </div>
         </div>

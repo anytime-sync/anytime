@@ -15,6 +15,8 @@ import {
 import { ScanTasksSheet } from "./scan-tasks-sheet";
 import { addDays, isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 const EXAMPLES = [
   "Email Sam tomorrow at 9am with a reminder 30 minutes before, urgent #work",
@@ -65,6 +67,7 @@ function stripExisting(text: string, kind: keyof typeof STRIP_PATTERNS): string 
 }
 
 export function QuickAdd() {
+  const lang = useLanguage();
   const open = useUIStore((s) => s.quickAddOpen);
   const setOpen = useUIStore((s) => s.setQuickAddOpen);
   const [text, setText] = useState("");
@@ -323,7 +326,7 @@ export function QuickAdd() {
       >
         {/* "Now" anchor */}
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-fg min-w-0">
-          <span className="editorial-number uppercase tracking-[0.18em] shrink-0">Quick add</span>
+          <span className="editorial-number uppercase tracking-[0.18em] shrink-0">{tr(lang, "quickAdd.kicker")}</span>
           <span className="truncate">{describeNow(now)}</span>
         </div>
 
@@ -331,7 +334,7 @@ export function QuickAdd() {
           <input
             ref={inputRef}
             className="flex-1 min-w-0 bg-transparent outline-none text-base md:text-lg placeholder:text-muted-fg"
-            placeholder='Add a task — type or speak'
+            placeholder={tr(lang, "quickAdd.placeholder")}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -343,8 +346,8 @@ export function QuickAdd() {
             type="button"
             onClick={() => setScanOpen(true)}
             className="btn-ghost h-9 w-9 inline-flex items-center justify-center rounded-full border border-border text-muted-fg hover:text-fg shrink-0"
-            title="Scan tasks from a photo or screenshot"
-            aria-label="Scan tasks from an image"
+            title={tr(lang, "quickAdd.scanTitle")}
+            aria-label={tr(lang, "quickAdd.scanAria")}
           >
             <ScanLine className="size-4" />
           </button>
@@ -366,7 +369,7 @@ export function QuickAdd() {
                 open={activeChip === "time"}
                 onClick={() => setActiveChip(activeChip === "time" ? null : "time")}
                 icon={<CalendarClock className="size-3.5" />}
-                label={parsed.due_at ? formatDueShort(parsed.due_at, parsed.is_all_day) : "Time"}
+                label={parsed.due_at ? formatDueShort(parsed.due_at, parsed.is_all_day) : tr(lang, "quickAdd.chipTime")}
               />
               <Chip
                 kind="repeat"
@@ -374,7 +377,7 @@ export function QuickAdd() {
                 open={activeChip === "repeat"}
                 onClick={() => setActiveChip(activeChip === "repeat" ? null : "repeat")}
                 icon={<Repeat className="size-3.5" />}
-                label={parsed.rrule ? rruleShort(parsed.rrule) : "Repeat"}
+                label={parsed.rrule ? rruleShortI18n(parsed.rrule, lang) : tr(lang, "quickAdd.chipRepeat")}
               />
               <Chip
                 kind="reminder"
@@ -382,7 +385,7 @@ export function QuickAdd() {
                 open={activeChip === "reminder"}
                 onClick={() => setActiveChip(activeChip === "reminder" ? null : "reminder")}
                 icon={<Bell className="size-3.5" />}
-                label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at) : "Reminder"}
+                label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at) : tr(lang, "quickAdd.chipReminder")}
               />
               <Chip
                 kind="priority"
@@ -390,7 +393,7 @@ export function QuickAdd() {
                 open={activeChip === "priority"}
                 onClick={() => setActiveChip(activeChip === "priority" ? null : "priority")}
                 icon={<Flag className="size-3.5" />}
-                label={parsed.priority > 0 ? priorityWord(parsed.priority) : "Priority"}
+                label={parsed.priority > 0 ? priorityWordI18n(parsed.priority, lang) : tr(lang, "quickAdd.chipPriority")}
                 tone={priorityTone(parsed.priority)}
               />
               <Chip
@@ -399,7 +402,7 @@ export function QuickAdd() {
                 open={activeChip === "inbox"}
                 onClick={() => setActiveChip(activeChip === "inbox" ? null : "inbox")}
                 icon={<Folder className="size-3.5" />}
-                label={parsed.projectName ?? "Inbox"}
+                label={parsed.projectName ?? tr(lang, "quickAdd.chipInbox")}
               />
               {parsed.tagNames.map((t) => {
                 // Same color-pill treatment as the sidebar / inline input so
@@ -424,7 +427,7 @@ export function QuickAdd() {
                 open={activeChip === "tags"}
                 onClick={() => setActiveChip(activeChip === "tags" ? null : "tags")}
                 icon={<Hash className="size-3.5" />}
-                label="Tag"
+                label={tr(lang, "quickAdd.chipTag")}
               />
             </div>
             {activeChip && (
@@ -438,12 +441,14 @@ export function QuickAdd() {
                   )
                 }
                 onClose={() => setActiveChip(null)}
+                lang={lang}
               />
             )}
           </div>
           <MiniEisenhower
             active={quadrant}
             onPick={(phrase) => injectPhrase(phrase, "priority")}
+            lang={lang}
           />
         </div>
 
@@ -475,7 +480,7 @@ export function QuickAdd() {
           </span>
           <span className="ml-auto shrink-0">
             <span className="md:hidden">Enter ↵ · Esc</span>
-            <span className="hidden md:inline">Enter to add · Esc to close</span>
+            <span className="hidden md:inline">{tr(lang, "quickAdd.enterToAdd")}</span>
           </span>
         </div>
       </div>
@@ -603,7 +608,7 @@ function writeQaCache(data: QaOverrideMap) {
   } catch {}
 }
 
-function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase: string) => void }) {
+function MiniEisenhower({ active, onPick, lang }: { active: Quadrant; onPick: (phrase: string) => void; lang: string }) {
   // Each cell injects a phrase that the parser will resolve into that
   // quadrant: priority + (where needed) urgency cue.
   type Cell = {
@@ -612,10 +617,10 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
     bgOpacity: number; bgBlur: number;
   };
   const DEFAULTS: Cell[] = [
-    { key: "q1", label: "Do first",  phrase: "urgent",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444", bgOpacity: 100, bgBlur: 0 },
-    { key: "q2", label: "Schedule",  phrase: "important",    fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981", bgOpacity: 100, bgBlur: 0 },
-    { key: "q3", label: "Delegate",  phrase: "low priority", fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B", bgOpacity: 100, bgBlur: 0 },
-    { key: "q4", label: "Eliminate", phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8", bgOpacity: 100, bgBlur: 0 },
+    { key: "q1", label: tr(lang, "quickAdd.q1"),  phrase: "urgent",       fg: "#B91C1C", bg: "rgba(239, 68, 68, 0.10)",  border: "#EF4444", bgOpacity: 100, bgBlur: 0 },
+    { key: "q2", label: tr(lang, "quickAdd.q2"),  phrase: "important",    fg: "#047857", bg: "rgba(16, 185, 129, 0.10)", border: "#10B981", bgOpacity: 100, bgBlur: 0 },
+    { key: "q3", label: tr(lang, "quickAdd.q3"),  phrase: "low priority", fg: "#B45309", bg: "rgba(245, 158, 11, 0.12)", border: "#F59E0B", bgOpacity: 100, bgBlur: 0 },
+    { key: "q4", label: tr(lang, "quickAdd.q4"),  phrase: "no priority",  fg: "#475569", bg: "rgba(100, 116, 139, 0.10)", border: "#94A3B8", bgOpacity: 100, bgBlur: 0 },
   ];
   // Admin-configured (`site_quadrant_config`) labels, colors, and the
   // glassmorphism dials. Overlaid on top of defaults so any field the
@@ -720,7 +725,7 @@ function MiniEisenhower({ active, onPick }: { active: Quadrant; onPick: (phrase:
           );
         })}
       </div>
-      <div className="text-[10px] text-muted-fg text-center mt-1">The Sift · click to apply</div>
+      <div className="text-[10px] text-muted-fg text-center mt-1">{tr(lang, "quickAdd.miniSiftCaption")}</div>
     </div>
   );
 }
@@ -732,6 +737,24 @@ function priorityWord(p: number) {
   if (p >= 3) return "Medium";
   if (p >= 1) return "Low";
   return "None";
+}
+function priorityWordI18n(p: number, lang: string) {
+  if (p >= 5) return tr(lang, "quickAdd.priorityHigh");
+  if (p >= 3) return tr(lang, "quickAdd.priorityMedium");
+  if (p >= 1) return tr(lang, "quickAdd.priorityLow");
+  return tr(lang, "quickAdd.priorityNone");
+}
+function rruleShortI18n(rule: string, lang: string) {
+  if (/FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR/i.test(rule)) return tr(lang, "quickAdd.repeatWeekdays");
+  const dom = rule.match(/FREQ=WEEKLY;BYDAY=([A-Z]{2})$/i);
+  if (dom) {
+    return rruleShort(rule);
+  }
+  if (/FREQ=DAILY/i.test(rule)) return tr(lang, "quickAdd.repeatDaily");
+  if (/FREQ=WEEKLY/i.test(rule)) return tr(lang, "quickAdd.repeatWeekly");
+  if (/FREQ=MONTHLY/i.test(rule)) return tr(lang, "quickAdd.repeatMonthly");
+  if (/FREQ=YEARLY/i.test(rule)) return tr(lang, "quickAdd.repeatYearly");
+  return tr(lang, "quickAdd.repeatRepeats");
 }
 function priorityTone(p: number): "high" | "med" | "low" | "none" {
   if (p >= 5) return "high";
@@ -826,28 +849,29 @@ function Chip({
 }
 
 function ChipOptions({
-  kind, projects, onPick, onClose,
+  kind, projects, onPick, onClose, lang,
 }: {
   kind: "time" | "repeat" | "reminder" | "priority" | "inbox" | "tags";
   projects: string[];
   onPick: (phrase: string) => void;
   onClose: () => void;
+  lang: string;
 }) {
   const options: Record<string, Array<{ label: string; phrase: string }>> = {
     time: [
-      { label: "Today",       phrase: "today" },
-      { label: "Tonight",     phrase: "tonight" },
-      { label: "Tomorrow",    phrase: "tomorrow 9am" },
-      { label: "This Friday", phrase: "this Friday" },
-      { label: "Next Monday", phrase: "next Monday 9am" },
-      { label: "Next week",   phrase: "next week" },
+      { label: tr(lang, "quickAdd.timeToday"),    phrase: "today" },
+      { label: "Tonight",                          phrase: "tonight" },
+      { label: tr(lang, "quickAdd.timeTomorrow"), phrase: "tomorrow 9am" },
+      { label: "This Friday",                      phrase: "this Friday" },
+      { label: "Next Monday",                      phrase: "next Monday 9am" },
+      { label: "Next week",                        phrase: "next week" },
     ],
     repeat: [
-      { label: "Daily",     phrase: "every day" },
-      { label: "Weekdays",  phrase: "every weekday" },
-      { label: "Weekly",    phrase: "every week" },
-      { label: "Monthly",   phrase: "every month" },
-      { label: "Yearly",    phrase: "every year" },
+      { label: tr(lang, "quickAdd.repeatDaily"),    phrase: "every day" },
+      { label: tr(lang, "quickAdd.repeatWeekdays"), phrase: "every weekday" },
+      { label: tr(lang, "quickAdd.repeatWeekly"),   phrase: "every week" },
+      { label: tr(lang, "quickAdd.repeatMonthly"),  phrase: "every month" },
+      { label: tr(lang, "quickAdd.repeatYearly"),   phrase: "every year" },
     ],
     reminder: [
       { label: "10m before", phrase: "remind me 10m before" },
@@ -858,12 +882,12 @@ function ChipOptions({
     priority: [
       { label: "Urgent",    phrase: "urgent" },
       { label: "Important", phrase: "important" },
-      { label: "Low",       phrase: "low priority" },
-      { label: "None",      phrase: "no priority" },
+      { label: tr(lang, "quickAdd.priorityLow"),  phrase: "low priority" },
+      { label: tr(lang, "quickAdd.priorityNone"), phrase: "no priority" },
     ],
     inbox: projects.length
       ? projects.slice(0, 8).map((name) => ({ label: name, phrase: "~" + name }))
-      : [{ label: "Inbox", phrase: "~Inbox" }],
+      : [{ label: tr(lang, "quickAdd.chipInbox"), phrase: "~Inbox" }],
     tags: [],
   };
 
@@ -895,7 +919,7 @@ function ChipOptions({
           onClick={onClose}
           className="text-[11px] text-muted-fg hover:text-fg ml-1"
         >
-          cancel
+          {tr(lang, "quickAdd.cancel")}
         </button>
       </div>
     );
@@ -911,7 +935,7 @@ function ChipOptions({
         onClick={onClose}
         className="text-[11px] text-muted-fg hover:text-fg ml-1"
       >
-        cancel
+        {tr(lang, "quickAdd.cancel")}
       </button>
     </div>
   );

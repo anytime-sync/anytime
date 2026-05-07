@@ -7,6 +7,8 @@ import { isPast, isToday, endOfDay, differenceInCalendarDays } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { useRescheduleTasks, type RescheduleSuggestion } from "@/hooks/use-ai";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * Two AI-flavoured affordances on /app/today:
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils";
  *      individually or all at once.
  */
 export function TodayAiBar() {
+  const lang = useLanguage();
   const { data: tasks = [] } = useTasks({});
   const update = useUpdateTask();
   const reschedule = useRescheduleTasks();
@@ -66,7 +69,7 @@ export function TodayAiBar() {
 
   async function runReschedule() {
     if (overdue.length === 0) {
-      toast.message("Nothing overdue — nice.");
+      toast.message(tr(lang, "todayAi.toastNothingOverdue"));
       return;
     }
     setOpen(true);
@@ -82,7 +85,7 @@ export function TodayAiBar() {
         })),
       });
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         setOpen(false);
         return;
       }
@@ -90,8 +93,8 @@ export function TodayAiBar() {
     } catch (e: any) {
       toast.error(
         e?.message?.includes("429")
-          ? "Daily reschedule budget reached."
-          : "Couldn't reschedule — try again."
+          ? tr(lang, "todayAi.errBudget")
+          : tr(lang, "todayAi.errReschedule")
       );
       setOpen(false);
     }
@@ -111,7 +114,7 @@ export function TodayAiBar() {
     if (!results) return;
     const n = results.length;
     for (const s of results) apply(s);
-    toast.success(`Applied ${n} suggestion${n !== 1 ? "s" : ""}.`);
+    toast.success(tr(lang, "planDay.toastApplied").replace("{n}", String(n)));
     setOpen(false);
     setResults(null);
   }
@@ -130,8 +133,8 @@ export function TodayAiBar() {
         >
           <Sparkles className="size-3.5" />
           {workload.delta > 30
-            ? `${minutes(workload.delta)} over`
-            : `${minutes(workload.planned)} planned`}
+            ? `${minutes(workload.delta)} ${tr(lang, "todayAi.over")}`
+            : `${minutes(workload.planned)} ${tr(lang, "todayAi.planned")}`}
         </span>
       )}
 
@@ -146,8 +149,8 @@ export function TodayAiBar() {
             className={cn("size-3.5", reschedule.isPending && "animate-spin")}
           />
           {reschedule.isPending
-            ? "Rescheduling…"
-            : `Clear ${overdue.length} overdue`}
+            ? tr(lang, "todayAi.rescheduling")
+            : tr(lang, "todayAi.clearOverdue").replace("{n}", String(overdue.length))}
         </button>
       )}
 
@@ -161,7 +164,7 @@ export function TodayAiBar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-display text-xl">Reschedule</h2>
+              <h2 className="font-display text-xl">{tr(lang, "todayAi.modalTitle")}</h2>
               {results && (
                 <span className="text-xs text-muted-fg">
                   {results.length} item{results.length !== 1 && "s"}
@@ -170,7 +173,7 @@ export function TodayAiBar() {
             </div>
 
             {!results && (
-              <p className="text-sm text-muted-fg">Reading the backlog…</p>
+              <p className="text-sm text-muted-fg">{tr(lang, "todayAi.reading")}</p>
             )}
 
             {results && results.length > 0 && (
@@ -190,7 +193,7 @@ export function TodayAiBar() {
                             "uppercase tracking-wider text-[10px] mr-1",
                             s.verdict === "drop" ? "text-warning" : "text-fg"
                           )}>
-                            {s.verdict}
+                            {s.verdict === "drop" ? tr(lang, "procrastination.verdictDrop") : s.verdict}
                           </span>
                           {s.new_due_at &&
                             `→ ${new Date(s.new_due_at).toLocaleString(undefined, {
@@ -203,14 +206,14 @@ export function TodayAiBar() {
                       </div>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-success"
-                        title="Apply"
+                        title={tr(lang, "common.apply")}
                         onClick={() => apply(s)}
                       >
                         <Check className="size-4" />
                       </button>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-muted-fg"
-                        title="Skip"
+                        title={tr(lang, "common.skip")}
                         onClick={() =>
                           setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null))
                         }
@@ -224,7 +227,7 @@ export function TodayAiBar() {
             )}
 
             {results && results.length === 0 && (
-              <p className="text-sm text-muted-fg">Backlog cleared.</p>
+              <p className="text-sm text-muted-fg">{tr(lang, "todayAi.cleared")}</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-2">
@@ -235,14 +238,14 @@ export function TodayAiBar() {
                   setResults(null);
                 }}
               >
-                Close
+                {tr(lang, "todayAi.close")}
               </button>
               {results && results.length > 0 && (
                 <button
                   className="btn-primary h-8 px-3 text-xs"
                   onClick={applyAll}
                 >
-                  Apply all
+                  {tr(lang, "todayAi.applyAll")}
                 </button>
               )}
             </div>

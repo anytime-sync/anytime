@@ -7,6 +7,8 @@ import { useScanTasksAI, type ScannedTask } from "@/hooks/use-ai";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * Scan-tasks sheet.
@@ -26,16 +28,13 @@ export function ScanTasksSheet({
   open,
   onClose,
   onCreated,
-  seedFile,
 }: {
   open: boolean;
   onClose: () => void;
   /** Fires after the user confirms the bulk create — lets QuickAdd close itself. */
   onCreated?: (count: number) => void;
-  /** Optional initial image (e.g. pasted from clipboard). When provided,
-   *  the sheet skips the file picker and runs the OCR immediately. */
-  seedFile?: File | null;
 }) {
+  const lang = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -46,13 +45,6 @@ export function ScanTasksSheet({
   const createTask = useCreateTask();
   const createProject = useCreateProject();
   const { data: projects = [] } = useProjects();
-
-  useEffect(() => {
-    if (open && seedFile) {
-      handleFile(seedFile);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, seedFile]);
 
   useEffect(() => {
     if (!open) {
@@ -76,11 +68,11 @@ export function ScanTasksSheet({
   async function handleFile(file: File) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("That's not an image");
+      toast.error(tr(lang, "scan.errNotImage"));
       return;
     }
     if (file.size > 6 * 1024 * 1024) {
-      toast.error("Image too large — keep it under 6MB");
+      toast.error(tr(lang, "scan.errTooLarge"));
       return;
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -89,11 +81,11 @@ export function ScanTasksSheet({
     try {
       const result = await scan.mutateAsync(file);
       if (!result) {
-        toast.error("AI is off — set ANTHROPIC_API_KEY to enable");
+        toast.error(tr(lang, "scan.errAiOff"));
         return;
       }
       if (!result.tasks.length) {
-        toast.message("Couldn't see any tasks in that one");
+        toast.message(tr(lang, "scan.errNoTasks"));
         return;
       }
       setTasks(
@@ -104,7 +96,7 @@ export function ScanTasksSheet({
         }))
       );
     } catch (e: any) {
-      toast.error(e?.message ?? "Scan failed");
+      toast.error(e?.message ?? tr(lang, "scan.errFailed"));
     }
   }
 
@@ -147,7 +139,7 @@ export function ScanTasksSheet({
     setSubmitting(false);
     if (created > 0) {
       toast.success(
-        created === 1 ? "Added 1 task" : `Added ${created} tasks`
+        created === 1 ? tr(lang, "scan.toastAddedOne") : tr(lang, "scan.toastAddedMany").replace("{n}", String(created))
       );
       onCreated?.(created);
     }
@@ -168,16 +160,16 @@ export function ScanTasksSheet({
         <div className="flex items-center justify-between">
           <div>
             <p className="editorial-number text-[10px] uppercase tracking-[0.18em]">
-              Scan tasks
+              {tr(lang, "scan.kicker")}
             </p>
             <h2 className="font-display text-lg md:text-xl">
-              <em>Read</em> a photo, lift the to-dos.
+              {tr(lang, "scan.title")}
             </h2>
           </div>
           <button
             onClick={onClose}
             className="btn-ghost h-8 w-8 inline-flex items-center justify-center rounded-full"
-            aria-label="Close"
+            aria-label={tr(lang, "common.close")}
           >
             <X className="size-4" />
           </button>
@@ -192,9 +184,9 @@ export function ScanTasksSheet({
               className="btn-ghost border border-border rounded-lg py-6 flex flex-col items-center gap-2 hover:bg-accent/10"
             >
               <Camera className="size-6 text-accent" />
-              <span className="text-sm">Take a photo</span>
+              <span className="text-sm">{tr(lang, "scan.takePhoto")}</span>
               <span className="text-[10px] text-muted-fg">
-                Sticky note, whiteboard, calendar page
+                {tr(lang, "scan.takePhotoHint")}
               </span>
             </button>
             <button
@@ -203,9 +195,9 @@ export function ScanTasksSheet({
               className="btn-ghost border border-border rounded-lg py-6 flex flex-col items-center gap-2 hover:bg-accent/10"
             >
               <ImageIcon className="size-6 text-accent" />
-              <span className="text-sm">Upload image</span>
+              <span className="text-sm">{tr(lang, "scan.uploadImage")}</span>
               <span className="text-[10px] text-muted-fg">
-                Screenshot, photo from your library
+                {tr(lang, "scan.uploadImageHint")}
               </span>
             </button>
             <input
@@ -250,7 +242,7 @@ export function ScanTasksSheet({
                   setTasks([]);
                 }}
                 className="absolute -top-1 -right-1 size-5 rounded-full bg-bg/90 border border-border inline-flex items-center justify-center"
-                aria-label="Remove image"
+                aria-label={tr(lang, "scan.removeImage")}
               >
                 <X className="size-3" />
               </button>
@@ -259,17 +251,15 @@ export function ScanTasksSheet({
               {scan.isPending ? (
                 <div className="flex items-center gap-2 text-sm text-muted-fg">
                   <Loader2 className="size-4 animate-spin" />
-                  Reading the image…
+                  {tr(lang, "scan.reading")}
                 </div>
               ) : tasks.length > 0 ? (
                 <p className="text-sm text-muted-fg">
-                  Found <span className="text-fg font-medium">{tasks.length}</span>{" "}
-                  task{tasks.length === 1 ? "" : "s"}. Edit, uncheck, or hit
-                  Add when ready.
+                  {(tasks.length === 1 ? tr(lang, "scan.foundOne") : tr(lang, "scan.foundMany")).replace("{n}", String(tasks.length))}
                 </p>
               ) : (
                 <p className="text-sm text-muted-fg italic">
-                  Nothing legible. Try a sharper photo, or upload a clearer image.
+                  {tr(lang, "scan.unreadable")}
                 </p>
               )}
             </div>
@@ -316,7 +306,7 @@ export function ScanTasksSheet({
                       setTasks((prev) => prev.filter((_, j) => j !== i))
                     }
                     className="btn-ghost h-6 w-6 inline-flex items-center justify-center rounded text-muted-fg hover:text-danger shrink-0"
-                    aria-label="Remove"
+                    aria-label={tr(lang, "common.remove")}
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -365,7 +355,7 @@ export function ScanTasksSheet({
             className="btn-ghost h-9 px-3 text-sm"
             disabled={submitting}
           >
-            Cancel
+            {tr(lang, "scan.cancel")}
           </button>
           {tasks.length > 0 && (
             <button
@@ -381,12 +371,12 @@ export function ScanTasksSheet({
               {submitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Adding…
+                  {tr(lang, "scan.adding")}
                 </>
               ) : (
                 <>
                   <Check className="size-4" />
-                  Add {checkedCount} task{checkedCount === 1 ? "" : "s"}
+                  {(checkedCount === 1 ? tr(lang, "scan.addOne") : tr(lang, "scan.addMany")).replace("{n}", String(checkedCount))}
                 </>
               )}
             </button>

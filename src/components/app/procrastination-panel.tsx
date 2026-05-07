@@ -10,6 +10,8 @@ import {
 } from "@/hooks/use-ai";
 import { useTasks, useUpdateTask, useCreateTask } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * Inline panel for the weekly review page. A button kicks off
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils";
  *   - break-down → create child tasks under the parent
  */
 export function ProcrastinationPanel() {
+  const lang = useLanguage();
   const { data: tasks = [] } = useTasks({});
   const update = useUpdateTask();
   const create = useCreateTask();
@@ -31,21 +34,21 @@ export function ProcrastinationPanel() {
     try {
       const r = await procrastinate.mutateAsync();
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         return;
       }
       setData(r);
     } catch (e: any) {
       toast.error(
         e?.message?.includes("429")
-          ? "Weekly procrastination budget reached."
-          : "Couldn't scan your backlog."
+          ? tr(lang, "procrastination.errBudget")
+          : tr(lang, "procrastination.errScan")
       );
     }
   }
 
   function titleFor(id: string) {
-    return tasks.find((t) => t.id === id)?.title ?? "(unknown)";
+    return tasks.find((t) => t.id === id)?.title ?? tr(lang, "common.unknown");
   }
   function projectFor(id: string) {
     return tasks.find((t) => t.id === id)?.project_id ?? null;
@@ -80,25 +83,25 @@ export function ProcrastinationPanel() {
     <section className="border border-border rounded-lg p-4 surface">
       <div className="flex items-baseline justify-between mb-3">
         <div>
-          <h3 className="font-display text-2xl">Stuck items</h3>
-          <p className="text-base text-muted-fg italic leading-relaxed">
-            What's been sitting in the list with no movement.
+          <h3 className="font-display text-base">{tr(lang, "procrastination.title")}</h3>
+          <p className="text-xs text-muted-fg italic">
+            {tr(lang, "procrastination.intro")}
           </p>
         </div>
         <button
           onClick={run}
           disabled={procrastinate.isPending}
-          className="btn-ghost h-10 px-4 text-base inline-flex items-center gap-1.5 disabled:opacity-50"
+          className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
         >
           <Sparkles
             className={cn("size-3.5", procrastinate.isPending && "animate-spin")}
           />
-          {procrastinate.isPending ? "Scanning…" : "Scan backlog"}
+          {procrastinate.isPending ? tr(lang, "procrastination.scanning") : tr(lang, "procrastination.scan")}
         </button>
       </div>
 
       {data && data.summary && (
-        <p className="text-lg text-fg italic font-display mb-4 leading-relaxed">{data.summary}</p>
+        <p className="text-sm text-fg italic font-display mb-3">{data.summary}</p>
       )}
 
       {data && data.items.length > 0 && (
@@ -110,22 +113,22 @@ export function ProcrastinationPanel() {
             >
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-lg truncate">{titleFor(it.id)}</div>
-                  <div className="text-base text-muted-fg mt-1 leading-relaxed">
+                  <div className="font-medium text-sm truncate">{titleFor(it.id)}</div>
+                  <div className="text-xs text-muted-fg mt-0.5">
                     <span className={cn(
-                      "uppercase tracking-wider text-sm mr-1",
+                      "uppercase tracking-wider text-[10px] mr-1",
                       it.verdict === "drop"
                         ? "text-warning"
                         : it.verdict === "break-down"
                         ? "text-accent"
                         : "text-fg"
                     )}>
-                      {it.verdict}
+                      {it.verdict === "drop" ? tr(lang, "procrastination.verdictDrop") : it.verdict === "break-down" ? tr(lang, "procrastination.verdictBreak") : tr(lang, "procrastination.verdictSchedule")}
                     </span>
                     {it.reason}
                   </div>
                   {it.verdict === "break-down" && it.subtasks.length > 0 && (
-                    <ul className="mt-2 ml-5 list-disc text-base text-muted-fg space-y-1.5 leading-relaxed">
+                    <ul className="mt-2 ml-4 list-disc text-xs text-muted-fg space-y-0.5">
                       {it.subtasks.map((s, i) => (
                         <li key={i}>{s}</li>
                       ))}
@@ -134,14 +137,14 @@ export function ProcrastinationPanel() {
                 </div>
                 <button
                   className="btn-ghost size-8 grid place-items-center text-success"
-                  title="Apply"
+                  title={tr(lang, "procrastination.apply")}
                   onClick={() => apply(it)}
                 >
                   <Check className="size-4" />
                 </button>
                 <button
                   className="btn-ghost size-8 grid place-items-center text-muted-fg"
-                  title="Skip"
+                  title={tr(lang, "procrastination.skip")}
                   onClick={() =>
                     setData((d) => (d ? { ...d, items: d.items.filter((x) => x.id !== it.id) } : d))
                   }
@@ -155,7 +158,7 @@ export function ProcrastinationPanel() {
       )}
 
       {data && data.items.length === 0 && !procrastinate.isPending && (
-        <p className="text-lg text-muted-fg italic">All clear.</p>
+        <p className="text-sm text-muted-fg italic">{tr(lang, "procrastination.allClear")}</p>
       )}
     </section>
   );

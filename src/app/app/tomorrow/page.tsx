@@ -4,19 +4,19 @@ import { Plus } from "lucide-react";
 import { TaskListView } from "@/components/app/task-list-view";
 import { DayTimeline, DayViewToggle, useDayViewMode } from "@/components/app/day-timeline";
 import { useUIStore } from "@/store/ui";
-import { t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
- * Tomorrow â same shape as Today: toggleable between the editorial list
+ * Tomorrow — same shape as Today: toggleable between the editorial list
  * (default) and the vertical timeline. The view-mode preference is
  * shared with Today via the `fl.dayMode` localStorage key, so flipping
- * one flips the other â a single mental setting for "how do I see a day".
+ * one flips the other — a single mental setting for "how do I see a day".
  */
 export default function TomorrowPage() {
+  const lang = useLanguage();
   const [mode, setMode] = useDayViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const lang = useLanguage();
   const tomorrow = addDays(new Date(), 1);
 
   if (mode === "list") {
@@ -49,11 +49,11 @@ export default function TomorrowPage() {
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
               onClick={() => setQuickAdd(true)}
-              aria-label="Quick add"
-              title="Quick add"
+              aria-label={t(lang, "shared.quickAdd")}
+              title={t(lang, "shared.quickAdd")}
             >
               <Plus className="size-4" />
-              <span className="hidden md:inline">Quick add</span>
+              <span className="hidden md:inline">{t(lang, "shared.quickAdd")}</span>
             </button>
           </div>
         </div>

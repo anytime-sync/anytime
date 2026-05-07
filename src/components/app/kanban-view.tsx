@@ -9,17 +9,23 @@ import {
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 type Priority = 0 | 1 | 3 | 5;
 
-const COLUMNS: { value: Priority; label: string; color: string }[] = [
-  { value: 5, label: "High",   color: "hsl(var(--p-high))" },
-  { value: 3, label: "Medium", color: "hsl(var(--p-med))" },
-  { value: 1, label: "Low",    color: "hsl(var(--p-low))" },
-  { value: 0, label: "None",   color: "hsl(var(--muted-fg))" },
-];
+function buildColumns(lang: string): { value: Priority; label: string; color: string }[] {
+  return [
+    { value: 5, label: tr(lang, "kanban.priorityHigh"),   color: "hsl(var(--p-high))" },
+    { value: 3, label: tr(lang, "kanban.priorityMedium"), color: "hsl(var(--p-med))" },
+    { value: 1, label: tr(lang, "kanban.priorityLow"),    color: "hsl(var(--p-low))" },
+    { value: 0, label: tr(lang, "kanban.priorityNone"),   color: "hsl(var(--muted-fg))" },
+  ];
+}
 
 export function KanbanView({ title, subtitle, filter }: { title: string; subtitle?: string; filter: TasksFilter }) {
+  const lang = useLanguage();
+  const COLUMNS = buildColumns(lang);
   const { data: tasks = [] } = useTasks(filter);
   const update = useUpdateTask();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
@@ -48,7 +54,7 @@ export function KanbanView({ title, subtitle, filter }: { title: string; subtitl
           {subtitle && <p className="text-xs text-muted-fg mt-0.5">{subtitle}</p>}
         </div>
         <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
-          <Plus className="size-4" /> Quick add
+          <Plus className="size-4" /> {tr(lang, "kanban.quickAdd")}
         </button>
       </div>
 
@@ -61,7 +67,7 @@ export function KanbanView({ title, subtitle, filter }: { title: string; subtitl
         >
           <div className="grid grid-cols-4 gap-4 min-h-full">
             {COLUMNS.map((c) => (
-              <Column key={c.value} col={c} tasks={byCol[c.value] ?? []} activeId={activeId} />
+              <Column key={c.value} col={c} tasks={byCol[c.value] ?? []} activeId={activeId} lang={lang} />
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
@@ -73,7 +79,7 @@ export function KanbanView({ title, subtitle, filter }: { title: string; subtitl
   );
 }
 
-function Column({ col, tasks, activeId }: { col: typeof COLUMNS[number]; tasks: TaskWithTags[]; activeId: string | null }) {
+function Column({ col, tasks, activeId, lang }: { col: ReturnType<typeof buildColumns>[number]; tasks: TaskWithTags[]; activeId: string | null; lang: string }) {
   const { isOver, setNodeRef } = useDroppable({ id: String(col.value) });
   return (
     <div ref={setNodeRef} className={cn("card p-3 flex flex-col min-h-[400px] transition-colors", isOver && "bg-muted")}>
@@ -85,7 +91,7 @@ function Column({ col, tasks, activeId }: { col: typeof COLUMNS[number]; tasks: 
         <span className="chip">{tasks.length}</span>
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto">
-        {tasks.length === 0 && <p className="text-xs text-muted-fg px-1 py-3">Drop tasks here.</p>}
+        {tasks.length === 0 && <p className="text-xs text-muted-fg px-1 py-3">{tr(lang, "kanban.dropHere")}</p>}
         {tasks.map((t) => <KanbanCard key={t.id} task={t} dimmed={activeId === t.id} />)}
       </div>
     </div>

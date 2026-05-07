@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { X, UserPlus, Crown, User2 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 export function MembersDialog({
   projectId,
@@ -16,6 +18,7 @@ export function MembersDialog({
   projectName: string;
   onClose: () => void;
 }) {
+  const lang = useLanguage();
   const { data: members = [] } = useProjectMembers(projectId);
   const add = useAddMember();
   const remove = useRemoveMember();
@@ -46,7 +49,7 @@ export function MembersDialog({
     if (!email.trim()) return;
     try {
       await add.mutateAsync({ projectId, email });
-      toast.success("Added");
+      toast.success(t(lang, "members.toastAdded"));
       setEmail("");
     } catch {
       // toast handled in hook
@@ -58,10 +61,10 @@ export function MembersDialog({
       <div className="card w-[90vw] max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold">Share &ldquo;{projectName}&rdquo;</h3>
-            <p className="text-xs text-muted-fg">Invite by email. They&apos;ll see the list and its tasks in real time.</p>
+            <h3 className="font-semibold">{t(lang, "members.shareTitle").replace("{name}", projectName)}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "members.shareIntro")}</p>
           </div>
-          <button className="btn-ghost size-8 p-0 grid place-items-center" onClick={onClose} aria-label="close">
+          <button className="btn-ghost size-8 p-0 grid place-items-center" onClick={onClose} aria-label={t(lang, "common.close")}>
             <X className="size-4" />
           </button>
         </div>
@@ -70,21 +73,21 @@ export function MembersDialog({
           <form onSubmit={invite} className="flex gap-2">
             <input
               type="email"
-              placeholder="someone@example.com"
+              placeholder={t(lang, "members.invitePlaceholder")}
               className="input flex-1"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <button className="btn-primary gap-1" disabled={!email.trim() || add.isPending}>
               <UserPlus className="size-4" />
-              {add.isPending ? "…" : "Invite"}
+              {add.isPending ? "…" : t(lang, "members.invite")}
             </button>
           </form>
         )}
 
         <div className="space-y-1">
-          <div className="text-xs uppercase tracking-wider text-muted-fg px-1">Members</div>
-          {members.length === 0 && <p className="text-sm text-muted-fg p-2">No members yet.</p>}
+          <div className="text-xs uppercase tracking-wider text-muted-fg px-1">{t(lang, "members.heading")}</div>
+          {members.length === 0 && <p className="text-sm text-muted-fg p-2">{t(lang, "members.empty")}</p>}
           {members.map((m) => (
             <div key={m.user_id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/60">
               <div className="size-7 rounded-full bg-muted grid place-items-center overflow-hidden shrink-0">
@@ -101,14 +104,14 @@ export function MembersDialog({
               </div>
               <span className="chip">
                 {m.role === "owner" && <Crown className="size-3" />}
-                {m.role}
+                {m.role === "owner" ? t(lang, "members.roleOwner") : t(lang, "members.roleMember")}
               </span>
               {canManage && m.role !== "owner" && (
                 <button
                   className="text-xs text-danger hover:underline"
                   onClick={() => remove.mutate({ projectId, userId: m.user_id })}
                 >
-                  Remove
+                  {t(lang, "members.remove")}
                 </button>
               )}
             </div>
@@ -116,7 +119,7 @@ export function MembersDialog({
         </div>
 
         {!canManage && (
-          <p className="text-xs text-muted-fg">Only the list owner can invite or remove members.</p>
+          <p className="text-xs text-muted-fg">{t(lang, "members.ownerOnly")}</p>
         )}
       </div>
     </div>

@@ -6,6 +6,8 @@ import { RefreshCw, Newspaper, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { getLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * The Daily Edition card — editorial AI briefing on the Today view.
@@ -19,6 +21,7 @@ import { cn } from "@/lib/utils";
  * Padding and headline size also scale down on mobile.
  */
 export function DailyEdition() {
+  const lang = useLanguage();
   const { data, isLoading, isError } = useDailyEdition();
   const regen = useRegenerateEdition();
   const { data: prefs } = useUserPrefs();
@@ -50,9 +53,9 @@ export function DailyEdition() {
     return (
       <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>
-          Daily Edition couldn&apos;t load.{" "}
+          {t(lang, "dailyEdition.errLoad")}{" "}
           <button className="underline hover:text-fg" onClick={() => regen.mutate()}>
-            Try again
+            {t(lang, "dailyEdition.tryAgain")}
           </button>
         </p>
       </article>
@@ -84,8 +87,8 @@ export function DailyEdition() {
               regen.isPending && "opacity-100 animate-spin"
             )}
             onClick={() => regen.mutate()}
-            title="Regenerate edition"
-            aria-label="Regenerate today's edition"
+            title={t(lang, "dailyEdition.regenerate")}
+            aria-label={t(lang, "dailyEdition.regenAria")}
           >
             <RefreshCw className="size-3" />
           </button>
@@ -116,7 +119,7 @@ export function DailyEdition() {
           onClick={() => setExpanded(true)}
           className="md:hidden inline-flex items-center gap-1 text-xs text-muted-fg hover:text-fg transition-colors"
         >
-          Read more
+          {t(lang, "dailyEdition.readMore")}
           <ChevronDown className="size-3.5" />
         </button>
       )}

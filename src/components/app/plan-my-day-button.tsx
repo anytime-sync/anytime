@@ -7,6 +7,8 @@ import { isToday, isPast, endOfDay } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 /**
  * Plan-my-day — the morning ritual companion to Plan-my-week.
@@ -17,6 +19,7 @@ import { cn } from "@/lib/utils";
  * to commit the new priorities + due_at changes.
  */
 export function PlanMyDayButton() {
+  const lang = useLanguage();
   const { data: allTasks = [] } = useTasks({});
   const update = useUpdateTask();
   const planMutation = usePlanDay();
@@ -58,7 +61,7 @@ export function PlanMyDayButton() {
   async function run() {
     const horizon = pickHorizon();
     if (horizon.length === 0) {
-      toast.message("Nothing on the plate today.");
+      toast.message(tr(lang, "planDay.empty"));
       return;
     }
     setRunning(true);
@@ -76,7 +79,7 @@ export function PlanMyDayButton() {
         }))
       );
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         setOpen(false);
         return;
       }
@@ -85,8 +88,8 @@ export function PlanMyDayButton() {
     } catch (e: any) {
       toast.error(
         e?.message?.includes("429")
-          ? "Daily plan-day budget reached. Try again tomorrow."
-          : "Couldn't plan your day — try again."
+          ? tr(lang, "planDay.errBudget")
+          : tr(lang, "planDay.errPlan")
       );
       setOpen(false);
     } finally {
@@ -106,9 +109,7 @@ export function PlanMyDayButton() {
   function applyAll() {
     if (!results) return;
     for (const s of results) apply(s);
-    toast.success(
-      `Applied ${results.length} suggestion${results.length !== 1 ? "s" : ""}.`
-    );
+    toast.success(tr(lang, "planDay.toastApplied").replace("{n}", String(results.length)));
     setOpen(false);
     setResults(null);
   }
@@ -119,10 +120,10 @@ export function PlanMyDayButton() {
         onClick={run}
         disabled={running}
         className="btn-primary gap-2 h-9 px-3 text-xs disabled:opacity-50"
-        title="AI plans today as a coherent whole"
+        title={tr(lang, "planDay.button")}
       >
         <Sparkles className={cn("size-3.5", running && "animate-spin")} />
-        {running ? "Planning…" : "Plan my day"}
+        {running ? tr(lang, "planDay.planning") : tr(lang, "planDay.button")}
       </button>
 
       {open && (
@@ -135,7 +136,7 @@ export function PlanMyDayButton() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-display text-xl">Today</h2>
+              <h2 className="font-display text-xl">{tr(lang, "planDay.title")}</h2>
               {results && (
                 <span className="text-xs text-muted-fg">
                   {results.length} item{results.length !== 1 && "s"}
@@ -144,7 +145,7 @@ export function PlanMyDayButton() {
             </div>
 
             {running && (
-              <p className="text-sm text-muted-fg">Reading the day…</p>
+              <p className="text-sm text-muted-fg">{tr(lang, "planDay.reading")}</p>
             )}
 
             {results && notes && (
@@ -174,7 +175,7 @@ export function PlanMyDayButton() {
                       </div>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-success"
-                        title="Apply"
+                        title={tr(lang, "common.apply")}
                         onClick={() => {
                           apply(s);
                           setResults((r) =>
@@ -186,7 +187,7 @@ export function PlanMyDayButton() {
                       </button>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-muted-fg"
-                        title="Skip"
+                        title={tr(lang, "common.skip")}
                         onClick={() =>
                           setResults((r) =>
                             r ? r.filter((x) => x.id !== s.id) : null
@@ -203,7 +204,7 @@ export function PlanMyDayButton() {
 
             {results && results.length === 0 && !running && (
               <p className="text-sm text-muted-fg">
-                Nothing left — your day is set.
+                {tr(lang, "planDay.allSet")}
               </p>
             )}
 
@@ -215,14 +216,14 @@ export function PlanMyDayButton() {
                   setResults(null);
                 }}
               >
-                Close
+                {tr(lang, "planDay.close")}
               </button>
               {results && results.length > 0 && (
                 <button
                   className="btn-primary h-8 px-3 text-xs"
                   onClick={applyAll}
                 >
-                  Apply all
+                  {tr(lang, "planDay.applyAll")}
                 </button>
               )}
             </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
 import { TaskListView } from "@/components/app/task-list-view";
 import {
@@ -10,26 +9,24 @@ import {
   useWeekViewMode,
 } from "@/components/app/week-timeline";
 import { useUIStore } from "@/store/ui";
-import { t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
-import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 /**
- * Next 7 Days Ã¢ÂÂ toggleable between the editorial list (default) and the
- * Mon-Sun week timeline. List shows date-sorted tasks; timeline shows a
+ * Next 7 Days — toggleable between the editorial list (default) and the
+ * Mon–Sun week timeline. List shows date-sorted tasks; timeline shows a
  * 7-column hour grid with drag-to-reschedule across days and times.
  */
 export default function Next7Page() {
+  const lang = useLanguage();
   const [mode, setMode] = useWeekViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const lang = useLanguage();
-  const [weekOffset, setWeekOffset] = useState(0);
 
   if (mode === "list") {
     return (
       <TaskListView
         title={t(lang, "sidebar.next7")}
-        subtitle="Tasks due within the next week."
+        subtitle={t(lang, "view.next7.subtitle")}
         filter={{ view: "next7" }}
         sortBy="due_at"
         sortKey="next7"
@@ -38,12 +35,11 @@ export default function Next7Page() {
     );
   }
 
-  // Timeline mode Ã¢ÂÂ reflect the offset in the subtitle so the header
-  // matches the underlying date range the timeline renders.
-  const baseStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekStart = addDays(baseStart, weekOffset * 7);
+  // Timeline mode — show the current ISO week (Mon–Sun) in the subtitle so
+  // the header matches the underlying date range the timeline renders.
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = addDays(weekStart, 6);
-  const subtitle = `${format(weekStart, "MMM d")} Ã¢ÂÂ ${format(weekEnd, "MMM d")}`;
+  const subtitle = `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -55,51 +51,21 @@ export default function Next7Page() {
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              className="btn-ghost size-7 p-0 grid place-items-center"
-              onClick={() => setWeekOffset((o) => o - 1)}
-              aria-label="Previous week"
-              title="Previous week"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              className={cn(
-                "h-7 w-3 grid place-items-center text-muted-fg/60 text-[14px] font-display leading-none select-none",
-                weekOffset === 0
-                  ? "cursor-default"
-                  : "hover:text-fg cursor-pointer"
-              )}
-              onClick={() => setWeekOffset(0)}
-              disabled={weekOffset === 0}
-              aria-label="This week"
-              title="This week"
-            >
-              |
-            </button>
-            <button
-              className="btn-ghost size-7 p-0 grid place-items-center"
-              onClick={() => setWeekOffset((o) => o + 1)}
-              aria-label="Next week"
-              title="Next week"
-            >
-              <ChevronRight className="size-4" />
-            </button>
+          <div className="flex items-center gap-2 shrink-0">
             <WeekViewToggle mode={mode} setMode={setMode} />
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
               onClick={() => setQuickAdd(true)}
-              aria-label="Quick add"
-              title="Quick add"
+              aria-label={t(lang, "shared.quickAdd")}
+              title={t(lang, "shared.quickAdd")}
             >
               <Plus className="size-4" />
-              <span className="hidden md:inline">Quick add</span>
+              <span className="hidden md:inline">{t(lang, "shared.quickAdd")}</span>
             </button>
           </div>
         </div>
       </div>
-      <WeekTimeline weekOffset={weekOffset} />
+      <WeekTimeline />
     </div>
   );
 }
