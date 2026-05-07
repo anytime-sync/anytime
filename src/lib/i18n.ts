@@ -114,6 +114,7 @@ type StringKey =
   | "sidebar.next90"
   | "sidebar.completed"
   | "view.next90.subtitle"
+  | "view.bucket.noDate"
   | "view.completed.subtitle"
   | "sidebar.settings"
   | "email.subject"
@@ -473,6 +474,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.next90": "Next 90 Days",
     "sidebar.completed": "Completed",
     "view.next90.subtitle": "Tasks due in the next 90 days.",
+    "view.bucket.noDate": "No date",
     "view.completed.subtitle": "Everything you have finished, most recent first.",
     "email.subject": "Reminder · {title}",
     "email.kicker": "FIRST LIGHT · REMINDER",
@@ -832,6 +834,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.next90": "未來 90 日",
     "sidebar.completed": "已完成",
     "view.next90.subtitle": "未來 90 天內到期的任務。",
+    "view.bucket.noDate": "未排定日期",
     "view.completed.subtitle": "你已完成的事,最新優先。",
     "email.subject": "提醒 · {title}",
     "email.kicker": "FIRST LIGHT · 提醒",
@@ -1191,6 +1194,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.next90": "未来 90 日",
     "sidebar.completed": "已完成",
     "view.next90.subtitle": "未来 90 天内到期的任务。",
+    "view.bucket.noDate": "未排日期",
     "view.completed.subtitle": "你已完成的事,最新优先。",
     "email.subject": "提醒 · {title}",
     "email.kicker": "FIRST LIGHT · 提醒",
@@ -1550,6 +1554,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.next90": "次の90日",
     "sidebar.completed": "完了",
     "view.next90.subtitle": "今後90日以内に期限のタスク。",
+    "view.bucket.noDate": "日付なし",
     "view.completed.subtitle": "完了した作業 — 新しい順。",
     "email.subject": "リマインダー · {title}",
     "email.kicker": "FIRST LIGHT · リマインダー",
@@ -1909,6 +1914,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.next90": "향후 90일",
     "sidebar.completed": "완료",
     "view.next90.subtitle": "앞으로 90일 이내 마감 작업.",
+    "view.bucket.noDate": "날짜 없음",
     "view.completed.subtitle": "완료한 작업 — 최신순.",
     "email.subject": "리마인더 · {title}",
     "email.kicker": "FIRST LIGHT · 리마인더",
