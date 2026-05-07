@@ -8,8 +8,10 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * Budgets (calls per UTC day):
  *   parse_task     — 200  (each inline-edit + every quick-add)
  *   quadrant       —  50
- *   daily_edition  —   8  (cached so usually 1; force-regen ~7 retries)
- *   weekly_retro   —   8  (cached per week; ~few language switches)
+ *   daily_edition  —  50  (cached per day; budget gives plenty of
+ *                          headroom for language switches + manual
+ *                          regen during testing)
+ *   weekly_retro   —  30  (cached per week)
  *
  * Returns {ok:true} when within budget. Otherwise {ok:false, retryAfter}
  * with seconds-til-tomorrow-UTC.
@@ -39,33 +41,33 @@ export type AiFeature =
 export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   parse_task: 200,
   quadrant: 50,
-  daily_edition: 8,
-  weekly_retro: 8,
+  daily_edition: 50,
+  weekly_retro: 30,
   // plan_week is batch (≤3d tasks per call), so a low daily count is plenty.
-  plan_week: 10,
+  plan_week: 30,
   // plan_day is the morning ritual — once or twice a day max.
-  plan_day: 12,
+  plan_day: 30,
   // estimate_task: small, quick, fires on every task add. Generous budget.
   estimate_task: 200,
   // reschedule_task: bulk handles many at once; per-task surface is rarer.
-  reschedule_task: 30,
+  reschedule_task: 60,
   // find_time: opt-in click action; small budget reflects intent.
-  find_time: 30,
+  find_time: 60,
   // auto_triage: silent quadrant classification on every add. Same as quadrant.
   auto_triage: 100,
   // prep_meeting: opt-in agenda generation; cached after first call.
-  prep_meeting: 25,
+  prep_meeting: 60,
   // procrastination: weekly cleanup pass; once a week is plenty.
-  procrastination: 5,
+  procrastination: 20,
   // goal_decompose: turning a written goal into a task tree; budget keeps it deliberate.
-  goal_decompose: 10,
+  goal_decompose: 30,
   // search: NL palette query; cheap re-rank — generous budget.
   search: 100,
   // translate_task: per-task per-locale; cached aggressively. Budget high
   // because new shared tasks across many languages can fan out fast.
   translate_task: 300,
   // reflection: nightly per-user wrap-up summary; once a day max.
-  reflection: 5,
+  reflection: 30,
 };
 
 function admin() {

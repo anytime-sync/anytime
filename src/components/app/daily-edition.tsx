@@ -22,7 +22,7 @@ import { t } from "@/lib/i18n";
  */
 export function DailyEdition() {
   const lang = useLanguage();
-  const { data, isLoading, isError } = useDailyEdition();
+  const { data, isLoading, isError, error } = useDailyEdition();
   const regen = useRegenerateEdition();
   const { data: prefs } = useUserPrefs();
   const locale = getLanguage(prefs?.language).dateFnsLocale;
@@ -50,6 +50,14 @@ export function DailyEdition() {
   }
 
   if (isError) {
+    const code = (error as Error & { code?: string } | null)?.code;
+    if (code === "rate_limited") {
+      return (
+        <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
+          <p>{t(lang, "dailyEdition.rateLimited")}</p>
+        </article>
+      );
+    }
     return (
       <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>

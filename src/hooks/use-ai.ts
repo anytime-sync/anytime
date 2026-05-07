@@ -163,12 +163,26 @@ export function useDailyEdition() {
         body: JSON.stringify({ tz: tz() }),
       });
       if (r.status === 503) return null;       // AI off
+      if (r.status === 429) {
+        // Rate limited — don't throw (TanStack would retry), and don't
+        // wipe cached data. Return null with a sentinel so the card
+        // can show "daily AI cap reached" instead of a generic error.
+        const j = await r.json().catch(() => ({} as { used?: number; limit?: number }));
+        const err = new Error("rate_limited");
+        (err as Error & { code?: string; used?: number; limit?: number }).code = "rate_limited";
+        (err as Error & { code?: string; used?: number; limit?: number }).used = j.used;
+        (err as Error & { code?: string; used?: number; limit?: number }).limit = j.limit;
+        throw err;
+      }
       if (!r.ok) throw new Error(`edition_failed ${r.status}`);
       const row = (await r.json()) as DailyEditionRow;
       qc.setQueryData(["dailyEdition"], row);
       return row;
     },
     staleTime: 60 * 60_000,
+    // Don't churn the AI by retrying — the route itself is idempotent
+    // but each retry would burn another budget slot.
+    retry: false,
   });
 }
 
@@ -182,6 +196,11 @@ export function useRegenerateEdition() {
         body: JSON.stringify({ tz: tz(), force: true }),
       });
       if (r.status === 503) return null;
+      if (r.status === 429) {
+        const err = new Error("rate_limited");
+        (err as Error & { code?: string }).code = "rate_limited";
+        throw err;
+      }
       if (!r.ok) throw new Error(`edition_failed ${r.status}`);
       return await r.json();
     },

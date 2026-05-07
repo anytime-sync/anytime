@@ -394,6 +394,7 @@ type StringKey =
   | "createProject.errCreate"
   /* dailyEdition */
   | "dailyEdition.errLoad"
+  | "dailyEdition.rateLimited"
   | "dailyEdition.tryAgain"
   | "dailyEdition.regenerate"
   | "dailyEdition.regenAria"
@@ -973,6 +974,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "createProject.errCreate": "Couldn't create list",
     /* dailyEdition */
     "dailyEdition.errLoad": "Daily Edition couldn't load.",
+    "dailyEdition.rateLimited": "You've hit today's AI cap. The Daily Edition will be back tomorrow.",
     "dailyEdition.tryAgain": "Try again",
     "dailyEdition.regenerate": "Regenerate edition",
     "dailyEdition.regenAria": "Regenerate today's edition",
@@ -1552,6 +1554,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "createProject.errCreate": "無法建立清單",
     /* dailyEdition */
     "dailyEdition.errLoad": "每日版面無法載入。",
+    "dailyEdition.rateLimited": "今日 AI 使用量已達上限，明日再試。",
     "dailyEdition.tryAgain": "重試",
     "dailyEdition.regenerate": "重新產生版面",
     "dailyEdition.regenAria": "重新產生今天的版面",
@@ -2131,6 +2134,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "createProject.errCreate": "无法创建清单",
     /* dailyEdition */
     "dailyEdition.errLoad": "每日版面无法加载。",
+    "dailyEdition.rateLimited": "今日 AI 使用量已达上限，明日再试。",
     "dailyEdition.tryAgain": "重试",
     "dailyEdition.regenerate": "重新生成版面",
     "dailyEdition.regenAria": "重新生成今天的版面",
@@ -2710,6 +2714,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "createProject.errCreate": "リストを作成できませんでした",
     /* dailyEdition */
     "dailyEdition.errLoad": "Daily Editionを読み込めませんでした。",
+    "dailyEdition.rateLimited": "今日の AI 利用上限に達しました。明日また読めます。",
     "dailyEdition.tryAgain": "もう一度",
     "dailyEdition.regenerate": "今日のエディションを再生成",
     "dailyEdition.regenAria": "今日のエディションを再生成",
@@ -3289,6 +3294,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "createProject.errCreate": "목록을 만들지 못했습니다",
     /* dailyEdition */
     "dailyEdition.errLoad": "Daily Edition을 불러오지 못했습니다.",
+    "dailyEdition.rateLimited": "오늘의 AI 사용 한도에 도달했어요. 내일 다시 손길을 주세요.",
     "dailyEdition.tryAgain": "다시 시도",
     "dailyEdition.regenerate": "오늘의 에디션 재생성",
     "dailyEdition.regenAria": "오늘의 에디션 재생성",
