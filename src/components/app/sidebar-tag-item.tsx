@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import type { Tag } from "@/lib/db.types";
 import { useRenameTag, useDeleteTag, useRecolorTag } from "@/hooks/use-tags";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * Inline tag pill in the sidebar — same visual language as the
@@ -40,6 +42,7 @@ export function SidebarTagItem({
   tag: Tag;
   active: boolean;
 }) {
+  const lang = useLanguage();
   const rename = useRenameTag();
   const recolor = useRecolorTag();
   const del = useDeleteTag();
@@ -165,7 +168,7 @@ export function SidebarTagItem({
             else openColorPicker();
           }}
           aria-label={`Change color of ${tag.name}`}
-          title="Change color"
+          title={t(lang, "tagItem.changeColor")}
           className="inline-flex items-center justify-center w-5 transition-colors"
           style={{ backgroundColor: tag.color, color: "rgba(255,255,255,0.78)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
@@ -181,7 +184,7 @@ export function SidebarTagItem({
             setConfirming(true);
           }}
           aria-label={`Delete ${tag.name}`}
-          title="Delete tag"
+          title={t(lang, "tagItem.deleteTag")}
           className="inline-flex items-center justify-center w-5 transition-colors"
           style={{ backgroundColor: tag.color, color: "rgba(255,255,255,0.78)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
@@ -198,7 +201,7 @@ export function SidebarTagItem({
           className="fixed z-[200] rounded-md border border-border surface-strong shadow-lg p-2 animate-fade-in"
           style={{ top: colorPos.top, left: colorPos.left }}
         >
-          <div className="editorial-number text-[9px] mb-1.5">Color</div>
+          <div className="editorial-number text-[9px] mb-1.5">{t(lang, "tagItem.color")}</div>
           <div className="flex flex-wrap gap-1.5 max-w-[180px]">
             {TAG_COLORS.map((c) => (
               <button

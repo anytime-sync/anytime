@@ -9,8 +9,11 @@ import { useProjects, useUpdateProject } from "@/hooks/use-projects";
 import { useProjectMembers } from "@/hooks/use-members";
 import { LayoutList, Columns3, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 export default function ListPage() {
+  const lang = useLanguage();
   const { id } = useParams<{ id: string }>();
   const { data: projects = [] } = useProjects();
   const project = projects.find((p) => p.id === id);
@@ -33,7 +36,7 @@ export default function ListPage() {
       <button
         className="inline-flex items-center gap-1.5 h-8 px-2 rounded-md border border-border text-xs hover:bg-muted"
         onClick={() => setShowMembers(true)}
-        aria-label="Share list"
+        aria-label={t(lang, "view.list.shareAria")}
       >
         <Users className="size-3.5" />
         Share
@@ -73,7 +76,7 @@ export default function ListPage() {
         {mode === "kanban" ? (
           <KanbanView
             title={project?.name ?? "List"}
-            subtitle="Drag cards between columns to change priority."
+            subtitle={t(lang, "view.list.kanbanHint")}
             filter={{ projectId: id }}
           />
         ) : (

@@ -13,6 +13,8 @@ import { useTags } from "@/hooks/use-tags";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * Reusable inline "Add task" row that runs the conversational parser on
@@ -34,6 +36,7 @@ export function InlineTaskInput({
   defaultDueAt?: string | null;
   placeholder?: string;
 }) {
+  const lang = useLanguage();
   const [text, setText] = useState("");
   const create = useCreateTask();
   const update = useUpdateTask();
@@ -170,7 +173,7 @@ export function InlineTaskInput({
           className="size-7 shrink-0"
         />
         {showPreview && (
-          <span className="text-[11px] text-muted-fg shrink-0">Enter to add</span>
+          <span className="text-[11px] text-muted-fg shrink-0">{t(lang, "inlineTaskInput.enterHint")}</span>
         )}
       </form>
 

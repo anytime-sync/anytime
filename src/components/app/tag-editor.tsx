@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tag } from "@/lib/db.types";
 import { useTags, useAddTaskTag, useRemoveTaskTag } from "@/hooks/use-tags";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * Tag editor for the task detail panel.
@@ -49,6 +51,7 @@ export function TagEditor({
   taskId: string;
   currentTags: Tag[];
 }) {
+  const lang = useLanguage();
   const { data: allTags = [] } = useTags();
   const addTag = useAddTaskTag();
   const removeTag = useRemoveTaskTag();
@@ -164,7 +167,7 @@ export function TagEditor({
                   />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-fg mt-1.5">Pick a color, or just press Enter for a random one.</p>
+              <p className="text-[10px] text-muted-fg mt-1.5">{t(lang, "tagEditor.colorHint")}</p>
             </div>
           )}
         </div>

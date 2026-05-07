@@ -16,6 +16,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 export function SubtaskList({
   parentId,
@@ -24,6 +26,7 @@ export function SubtaskList({
   parentId: string;
   parentProjectId: string | null;
 }) {
+  const lang = useLanguage();
   const { data: subtasks = [], isLoading } = useSubtasks(parentId);
   const create = useCreateTask();
   const reorder = useReorderTasks();
@@ -57,7 +60,7 @@ export function SubtaskList({
 
   return (
     <div className="space-y-1">
-      {isLoading && <p className="text-xs text-muted-fg">Loading subtasks…</p>}
+      {isLoading && <p className="text-xs text-muted-fg">{t(lang, "subtasks.loading")}</p>}
 
       <DndContext
         sensors={sensors}
@@ -78,7 +81,7 @@ export function SubtaskList({
           <input
             autoFocus
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-fg"
-            placeholder="New subtask…"
+            placeholder={t(lang, "subtasks.newPlaceholder")}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => {
@@ -101,6 +104,7 @@ export function SubtaskList({
 }
 
 function SortableSubtask({ subtask }: { subtask: any }) {
+  const lang = useLanguage();
   const toggle = useToggleTask();
   const update = useUpdateTask();
   const del = useDeleteTask();
@@ -161,7 +165,7 @@ function SortableSubtask({ subtask }: { subtask: any }) {
           del.mutate(subtask.id);
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        aria-label="delete subtask"
+        aria-label={t(lang, "subtasks.deleteAria")}
       >
         <Trash2 className="size-3.5" />
       </button>

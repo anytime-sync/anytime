@@ -147,7 +147,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
         )}
         <button
           className="btn-ghost h-8 px-2 absolute right-2 top-1/2 -translate-y-1/2"
-          aria-label="Toggle sidebar"
+          aria-label={t(lang, "sidebar.toggle")}
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
@@ -173,7 +173,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
         <button
           className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
           onClick={() => setGoalModal(true)}
-          title="Plan a goal as a project + tasks"
+          title={t(lang, "sidebar.planGoal")}
         >
           <Target className="size-4" />
           {!collapsed && <span>Goal</span>}
@@ -181,10 +181,10 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
         <button
           className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
           onClick={() => setReflection(true)}
-          title="Today, in retrospect"
+          title={t(lang, "sidebar.reflectAria")}
         >
           <Sunset className="size-4" />
-          {!collapsed && <span>Reflect</span>}
+          {!collapsed && <span>{t(lang, "sidebar.reflect")}</span>}
         </button>
       </div>
 
@@ -292,7 +292,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           onClick={() =>
             setTheme((resolvedTheme ?? theme) === "dark" ? "light" : "dark")
           }
-          title="Toggle theme"
+          title={t(lang, "sidebar.toggleTheme")}
         >
           {(resolvedTheme ?? theme) === "dark" ? <SunMedium className="size-4" /> : <Moon className="size-4" />}
         </button>

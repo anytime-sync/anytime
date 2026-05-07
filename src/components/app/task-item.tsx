@@ -9,8 +9,11 @@ import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
 import { TranslatedSubtitle } from "./translated-subtitle";
 import { cn, priorityColorClass } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 export function TaskItem({ task }: { task: TaskWithTags }) {
+  const lang = useLanguage();
   const toggle = useToggleTask();
   const selectedId = useUIStore((s) => s.selectedTaskId);
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
@@ -206,12 +209,12 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
             </span>
           ))}
           {task.rrule && (
-            <span className="inline-flex items-center gap-1" title="Repeats">
+            <span className="inline-flex items-center gap-1" title={t(lang, "taskItem.repeats")}>
               <Repeat className="size-3" />
             </span>
           )}
           {subCount && subCount.total > 0 && (
-            <span className="inline-flex items-center gap-1" title="Subtasks">
+            <span className="inline-flex items-center gap-1" title={t(lang, "taskItem.subtasks")}>
               <ListTree className="size-3" /> {subCount.done}/{subCount.total}
             </span>
           )}
@@ -228,6 +231,7 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
  * derived from estimated pomodoros (each = 25 min).
  */
 function DurationChip({ task }: { task: TaskWithTags }) {
+  const lang = useLanguage();
   if (task.start_at && task.due_at && !task.is_all_day) {
     const s = new Date(task.start_at);
     const e = new Date(task.due_at);
@@ -245,7 +249,7 @@ function DurationChip({ task }: { task: TaskWithTags }) {
   if (est > 0) {
     const label = est >= 60 ? `${Math.round(est / 60)}h ${est % 60 || ""}m`.trim() : `${est}m`;
     return (
-      <span className="inline-flex items-center gap-1" title="Estimated">
+      <span className="inline-flex items-center gap-1" title={t(lang, "taskItem.estimated")}>
         <Clock className="size-3" />
         {label}
       </span>

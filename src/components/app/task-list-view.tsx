@@ -130,10 +130,10 @@ export function TaskListView({
               <button
                 onClick={revertToDateSort}
                 className="inline-flex items-center gap-1.5 text-[11px] md:text-xs px-2 h-7 rounded-md border border-border text-muted-fg hover:text-fg hover:border-fg/40 whitespace-nowrap"
-                title="Revert to sort by due date"
+                title={tr(lang, "taskList.revertSort")}
               >
                 <ArrowDownUp className="size-3" />
-                <span className="hidden sm:inline">Sort by date</span>
+                <span className="hidden sm:inline">{tr(lang, "taskList.sortByDate")}</span>
                 <span className="sm:hidden">Date</span>
               </button>
             )}
@@ -163,11 +163,11 @@ export function TaskListView({
         <InlineTaskInput defaultProjectId={defaults?.project_id ?? null} />
 
         {isLoading ? (
-          <div className="text-sm text-muted-fg px-3">Loading…</div>
+          <div className="text-sm text-muted-fg px-3">{tr(lang, "taskList.loading")}</div>
         ) : incomplete.length === 0 && completed.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
             <div className="text-3xl mb-2 font-display"><em>—</em></div>
-            <p className="text-sm">Nothing here yet. Add your first task above.</p>
+            <p className="text-sm">{tr(lang, "taskList.emptyHint")}</p>
           </div>
         ) : null}
 

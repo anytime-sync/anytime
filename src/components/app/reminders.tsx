@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { Task } from "@/lib/db.types";
 import { useUIStore } from "@/store/ui";
 import { Bell, BellOff } from "lucide-react";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * Mounted once in the AppShell.
@@ -15,6 +17,7 @@ import { Bell, BellOff } from "lucide-react";
  *   and opens the task in the detail panel.
  */
 export function Reminders() {
+  const lang = useLanguage();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const [perm, setPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
@@ -94,7 +97,7 @@ export function Reminders() {
 
   return (
     <button
-      title="Enable browser reminders"
+      title={t(lang, "reminders.enable")}
       className="fixed bottom-4 right-4 z-30 size-10 rounded-full surface border border-border shadow-md grid place-items-center text-muted-fg hover:text-accent"
       onClick={async () => {
         const result = await Notification.requestPermission();

@@ -128,7 +128,7 @@ export function LanguagePicker({
         onClick={openMenu}
         className="btn-ghost size-9 p-0 grid place-items-center"
         title={`Language — ${current.displayName}`}
-        aria-label="Choose language"
+        aria-label={t(currentCode, "languagePicker.choose")}
       >
         <Languages className="size-4" />
       </button>

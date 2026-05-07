@@ -7,6 +7,8 @@ import { useFindTime, usePrepMeeting, type TimeSlot, type MeetingPrep } from "@/
 import { useUpdateTask } from "@/hooks/use-tasks";
 import type { Task } from "@/lib/db.types";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 const MEETING_HINTS = /\b(meeting|sync|standup|stand-up|1:1|one[- ]on[- ]one|catch[- ]up|call|kickoff|kick[- ]off|review|interview|會議|會面|面試|미팅|회의)\b/i;
 
@@ -18,6 +20,7 @@ const MEETING_HINTS = /\b(meeting|sync|standup|stand-up|1:1|one[- ]on[- ]one|cat
  *      shown when the title looks meeting-shaped.
  */
 export function AiTaskActions({ task }: { task: Task }) {
+  const lang = useLanguage();
   const findTime = useFindTime();
   const prepMeeting = usePrepMeeting();
   const update = useUpdateTask();
@@ -89,7 +92,7 @@ export function AiTaskActions({ task }: { task: Task }) {
           onClick={runFindTime}
           disabled={findTime.isPending}
           className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
-          title="AI suggests 3 time slots in the next 7 days"
+          title={t(lang, "aiActions.findTimeTooltip")}
         >
           <Clock className={cn("size-3.5", findTime.isPending && "animate-spin")} />
           {findTime.isPending ? "Searching…" : "Find me time"}
@@ -101,7 +104,7 @@ export function AiTaskActions({ task }: { task: Task }) {
             onClick={runPrepMeeting}
             disabled={prepMeeting.isPending}
             className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
-            title="AI drafts a brief agenda + questions"
+            title={t(lang, "aiActions.prepMeetingTooltip")}
           >
             <MessageSquare
               className={cn("size-3.5", prepMeeting.isPending && "animate-pulse")}
@@ -113,7 +116,7 @@ export function AiTaskActions({ task }: { task: Task }) {
         {(task as any).estimated_minutes != null && (
           <span
             className="inline-flex items-center gap-1 text-[11px] text-muted-fg"
-            title="AI-estimated wall-clock time"
+            title={t(lang, "aiActions.estimatedTooltip")}
           >
             <Sparkles className="size-3" /> ~{(task as any).estimated_minutes}m
           </span>
@@ -150,7 +153,7 @@ export function AiTaskActions({ task }: { task: Task }) {
                 type="button"
                 onClick={() => applySlot(s)}
                 className="btn-ghost size-7 grid place-items-center text-success"
-                title="Schedule"
+                title={t(lang, "aiActions.scheduleTooltip")}
               >
                 <Check className="size-3.5" />
               </button>

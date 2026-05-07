@@ -474,12 +474,12 @@ export function QuickAdd() {
 
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-fg pt-1 min-w-0">
           <span className="hidden md:inline truncate">
-            Hints: <code>tomorrow 9am</code>, <code>every Monday</code>,{" "}
-            <code>remind me 30m before</code>, <code>urgent</code>,{" "}
+            Hints: <code>{tr(lang, "quickAdd.exampleTomorrow9am")}</code>, <code>{tr(lang, "quickAdd.exampleEveryMonday")}</code>,{" "}
+            <code>{tr(lang, "quickAdd.exampleRemind30m")}</code>, <code>urgent</code>,{" "}
             <code>#tag</code>, <code>~ListName</code>
           </span>
           <span className="ml-auto shrink-0">
-            <span className="md:hidden">Enter ↵ · Esc</span>
+            <span className="md:hidden">{tr(lang, "quickAdd.kbHint")}</span>
             <span className="hidden md:inline">{tr(lang, "quickAdd.enterToAdd")}</span>
           </span>
         </div>

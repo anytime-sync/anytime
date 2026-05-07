@@ -10,10 +10,13 @@ import {
   type TaskAttachment,
 } from "@/hooks/use-attachments";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB - matches the bucket limit.
 
 export function AttachmentList({ taskId }: { taskId: string }) {
+  const lang = useLanguage();
   const { data: attachments = [], isLoading } = useTaskAttachments(taskId);
   const upload = useUploadAttachment();
   const del = useDeleteAttachment();
@@ -53,7 +56,7 @@ export function AttachmentList({ taskId }: { taskId: string }) {
       >
         <div className="flex items-center gap-2">
           <Upload className="size-3.5" />
-          <span>Drop files here or</span>
+          <span>{t(lang, "attachments.dropHere")}</span>
           <button
             type="button"
             className="text-accent hover:underline"
@@ -76,7 +79,7 @@ export function AttachmentList({ taskId }: { taskId: string }) {
         />
       </div>
 
-      {isLoading && <p className="text-xs text-muted-fg">Loading attachments…</p>}
+      {isLoading && <p className="text-xs text-muted-fg">{t(lang, "attachments.loading")}</p>}
 
       {attachments.length > 0 && (
         <div className="space-y-1">
@@ -96,6 +99,7 @@ export function AttachmentList({ taskId }: { taskId: string }) {
 }
 
 function AttachmentRow({ a, onDelete }: { a: TaskAttachment; onDelete: () => void }) {
+  const lang = useLanguage();
   const isImage = (a.mime_type ?? "").startsWith("image/");
   return (
     <div className="group flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/60">
@@ -128,8 +132,8 @@ function AttachmentRow({ a, onDelete }: { a: TaskAttachment; onDelete: () => voi
       <button
         className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
         onClick={onDelete}
-        aria-label="delete attachment"
-        title="Delete"
+        aria-label={t(lang, "attachments.deleteAria")}
+        title={t(lang, "attachments.delete")}
       >
         <Trash2 className="size-3.5" />
       </button>

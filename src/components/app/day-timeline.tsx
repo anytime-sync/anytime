@@ -17,6 +17,8 @@ import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { useUserPrefs } from "@/hooks/use-ai";
 import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 const SNAP_MINUTES = 15;
 
@@ -84,6 +86,7 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
 }
 
 export function DayTimeline({ date }: { date: Date }) {
+  const lang = useLanguage();
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
   const { data: prefs } = useUserPrefs();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
@@ -211,7 +214,7 @@ export function DayTimeline({ date }: { date: Date }) {
     <div ref={containerRef} className="flex-1 overflow-y-auto">
       {allDayTasks.length > 0 && (
         <div className="border-b border-border px-4 md:px-6 py-2 space-y-1">
-          <p className="editorial-number text-[10px]">All day</p>
+          <p className="editorial-number text-[10px]">{t(lang, "dayTimeline.allDay")}</p>
           <div className="flex flex-wrap gap-1.5">
             {allDayTasks.map((t) => (
               <button

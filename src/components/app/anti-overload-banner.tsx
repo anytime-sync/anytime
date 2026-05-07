@@ -4,6 +4,8 @@ import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { useUserPrefs } from "@/hooks/use-ai";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { addDays } from "date-fns";
+import { useLanguage } from "@/lib/use-language";
+import { t } from "@/lib/i18n";
 
 /**
  * Anti-overload banner — the calm-OS counterweight to AI auto-schedulers
@@ -16,6 +18,7 @@ import { addDays } from "date-fns";
  *   defaulting any unestimated task to default_task_minutes (30).
  */
 export function AntiOverloadBanner() {
+  const lang = useLanguage();
   const { data: tasks = [] } = useTasks({ view: "today" });
   const { data: prefs } = useUserPrefs();
   const update = useUpdateTask();
@@ -50,7 +53,7 @@ export function AntiOverloadBanner() {
     <aside className="rounded-xl border border-border bg-warning/10 p-4 mb-6 flex items-start gap-3">
       <AlertTriangle className="size-5 mt-0.5 shrink-0 text-warning" />
       <div className="flex-1">
-        <div className="text-sm font-medium">Today is full.</div>
+        <div className="text-sm font-medium">{t(lang, "antiOverload.full")}</div>
         <div className="text-xs text-muted-fg mt-0.5">
           About {Math.round(total / 60)}h on the desk against your {Math.round(cap / 60)}h
           deep-work budget — over by ~{Math.round(overBy / 60)}h. What comes off?

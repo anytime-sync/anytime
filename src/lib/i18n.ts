@@ -626,7 +626,49 @@ type StringKey =
   | "sidebar.notifications.markAllRead"
   | "sidebar.notifications.markRead"
   | "sidebar.notifications.dismiss"
-  | "sidebar.notifications.allCaught";
+  | "sidebar.notifications.allCaught"
+  | "aiActions.findTimeTooltip"
+  | "aiActions.prepMeetingTooltip"
+  | "aiActions.estimatedTooltip"
+  | "aiActions.scheduleTooltip"
+  | "antiOverload.full"
+  | "attachments.dropHere"
+  | "attachments.loading"
+  | "attachments.deleteAria"
+  | "attachments.delete"
+  | "dateTimePicker.pick"
+  | "dateTimePicker.prevMonth"
+  | "dateTimePicker.nextMonth"
+  | "dayTimeline.allDay"
+  | "inlineTaskInput.enterHint"
+  | "languagePicker.choose"
+  | "quickAdd.exampleTomorrow9am"
+  | "quickAdd.exampleEveryMonday"
+  | "quickAdd.exampleRemind30m"
+  | "quickAdd.kbHint"
+  | "reminders.enable"
+  | "tagItem.color"
+  | "tagItem.changeColor"
+  | "tagItem.deleteTag"
+  | "sidebar.reflect"
+  | "sidebar.toggle"
+  | "sidebar.planGoal"
+  | "sidebar.reflectAria"
+  | "sidebar.toggleTheme"
+  | "subtasks.loading"
+  | "subtasks.newPlaceholder"
+  | "subtasks.deleteAria"
+  | "tagEditor.colorHint"
+  | "taskItem.repeats"
+  | "taskItem.subtasks"
+  | "taskItem.estimated"
+  | "taskList.sortByDate"
+  | "taskList.loading"
+  | "taskList.emptyHint"
+  | "taskList.revertSort"
+  | "view.list.shareAria"
+  | "view.list.kanbanHint"
+  | "view.tag.subtitle";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -1208,6 +1250,48 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.notifications.allCaught": "You're all caught up.",
     "shared.quickAdd": "Quick add",
     "shared.untitled": "(untitled)",
+    "aiActions.findTimeTooltip": "AI suggests 3 time slots in the next 7 days",
+    "aiActions.prepMeetingTooltip": "AI drafts a brief agenda + questions",
+    "aiActions.estimatedTooltip": "AI-estimated wall-clock time",
+    "aiActions.scheduleTooltip": "Schedule",
+    "antiOverload.full": "Today is full.",
+    "attachments.dropHere": "Drop files here or",
+    "attachments.loading": "Loading attachments…",
+    "attachments.deleteAria": "delete attachment",
+    "attachments.delete": "Delete",
+    "dateTimePicker.pick": "Pick date & time",
+    "dateTimePicker.prevMonth": "Previous month",
+    "dateTimePicker.nextMonth": "Next month",
+    "dayTimeline.allDay": "All day",
+    "inlineTaskInput.enterHint": "Enter to add",
+    "languagePicker.choose": "Choose language",
+    "quickAdd.exampleTomorrow9am": "tomorrow 9am",
+    "quickAdd.exampleEveryMonday": "every Monday",
+    "quickAdd.exampleRemind30m": "remind me 30m before",
+    "quickAdd.kbHint": "Enter ↵ · Esc",
+    "reminders.enable": "Enable browser reminders",
+    "tagItem.color": "Color",
+    "tagItem.changeColor": "Change color",
+    "tagItem.deleteTag": "Delete tag",
+    "sidebar.reflect": "Reflect",
+    "sidebar.toggle": "Toggle sidebar",
+    "sidebar.planGoal": "Plan a goal as a project + tasks",
+    "sidebar.reflectAria": "Today, in retrospect",
+    "sidebar.toggleTheme": "Toggle theme",
+    "subtasks.loading": "Loading subtasks…",
+    "subtasks.newPlaceholder": "New subtask…",
+    "subtasks.deleteAria": "delete subtask",
+    "tagEditor.colorHint": "Pick a color, or just press Enter for a random one.",
+    "taskItem.repeats": "Repeats",
+    "taskItem.subtasks": "Subtasks",
+    "taskItem.estimated": "Estimated",
+    "taskList.sortByDate": "Sort by date",
+    "taskList.loading": "Loading…",
+    "taskList.emptyHint": "Nothing here yet. Add your first task above.",
+    "taskList.revertSort": "Revert to sort by due date",
+    "view.list.shareAria": "Share list",
+    "view.list.kanbanHint": "Drag cards between columns to change priority.",
+    "view.tag.subtitle": "All tasks with this tag.",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -1788,6 +1872,48 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.notifications.allCaught": "你已全部跟上。",
     "shared.quickAdd": "快速新增",
     "shared.untitled": "(無標題)",
+    "aiActions.findTimeTooltip": "AI 從未來 7 天找出 3 個可用時段",
+    "aiActions.prepMeetingTooltip": "AI 幫你擬一份簡短議程與提問",
+    "aiActions.estimatedTooltip": "AI 預估的實際所需時間",
+    "aiActions.scheduleTooltip": "排入此時段",
+    "antiOverload.full": "今天滿了。",
+    "attachments.dropHere": "拖放檔案到這裡，或",
+    "attachments.loading": "載入附件中…",
+    "attachments.deleteAria": "刪除附件",
+    "attachments.delete": "刪除",
+    "dateTimePicker.pick": "選擇日期與時間",
+    "dateTimePicker.prevMonth": "上個月",
+    "dateTimePicker.nextMonth": "下個月",
+    "dayTimeline.allDay": "整天",
+    "inlineTaskInput.enterHint": "按 Enter 新增",
+    "languagePicker.choose": "選擇語言",
+    "quickAdd.exampleTomorrow9am": "明天 9 點",
+    "quickAdd.exampleEveryMonday": "每週一",
+    "quickAdd.exampleRemind30m": "30 分鐘前提醒",
+    "quickAdd.kbHint": "Enter ↵ · Esc",
+    "reminders.enable": "啟用瀏覽器提醒",
+    "tagItem.color": "顏色",
+    "tagItem.changeColor": "更改顏色",
+    "tagItem.deleteTag": "刪除標籤",
+    "sidebar.reflect": "回顧",
+    "sidebar.toggle": "切換側邊欄",
+    "sidebar.planGoal": "把目標拆成清單 + 任務",
+    "sidebar.reflectAria": "回顧今天",
+    "sidebar.toggleTheme": "切換主題",
+    "subtasks.loading": "載入子任務中…",
+    "subtasks.newPlaceholder": "新增子任務…",
+    "subtasks.deleteAria": "刪除子任務",
+    "tagEditor.colorHint": "選一個顏色，或直接按 Enter 隨機挑一個。",
+    "taskItem.repeats": "重複",
+    "taskItem.subtasks": "子任務",
+    "taskItem.estimated": "預估時間",
+    "taskList.sortByDate": "依日期排序",
+    "taskList.loading": "載入中…",
+    "taskList.emptyHint": "還沒有任務。在上方輸入第一個吧。",
+    "taskList.revertSort": "回到日期排序",
+    "view.list.shareAria": "分享清單",
+    "view.list.kanbanHint": "在欄位之間拖曳卡片以調整優先順序。",
+    "view.tag.subtitle": "帶有這個標籤的所有任務。",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -2368,6 +2494,48 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.notifications.allCaught": "你已全部跟上。",
     "shared.quickAdd": "快速添加",
     "shared.untitled": "(无标题)",
+    "aiActions.findTimeTooltip": "AI 从未来 7 天里挑出 3 个可用时段",
+    "aiActions.prepMeetingTooltip": "AI 帮你拟一份简短议程和提问",
+    "aiActions.estimatedTooltip": "AI 预估的实际所需时间",
+    "aiActions.scheduleTooltip": "排到这个时段",
+    "antiOverload.full": "今天满了。",
+    "attachments.dropHere": "拖放文件到这里，或",
+    "attachments.loading": "正在加载附件…",
+    "attachments.deleteAria": "删除附件",
+    "attachments.delete": "删除",
+    "dateTimePicker.pick": "选择日期和时间",
+    "dateTimePicker.prevMonth": "上个月",
+    "dateTimePicker.nextMonth": "下个月",
+    "dayTimeline.allDay": "全天",
+    "inlineTaskInput.enterHint": "按 Enter 添加",
+    "languagePicker.choose": "选择语言",
+    "quickAdd.exampleTomorrow9am": "明天 9 点",
+    "quickAdd.exampleEveryMonday": "每周一",
+    "quickAdd.exampleRemind30m": "30 分钟前提醒",
+    "quickAdd.kbHint": "Enter ↵ · Esc",
+    "reminders.enable": "启用浏览器提醒",
+    "tagItem.color": "颜色",
+    "tagItem.changeColor": "更改颜色",
+    "tagItem.deleteTag": "删除标签",
+    "sidebar.reflect": "回顾",
+    "sidebar.toggle": "切换侧边栏",
+    "sidebar.planGoal": "把目标拆成清单和任务",
+    "sidebar.reflectAria": "回顾今天",
+    "sidebar.toggleTheme": "切换主题",
+    "subtasks.loading": "正在加载子任务…",
+    "subtasks.newPlaceholder": "新建子任务…",
+    "subtasks.deleteAria": "删除子任务",
+    "tagEditor.colorHint": "挑一个颜色，或直接按 Enter 随机选一个。",
+    "taskItem.repeats": "重复",
+    "taskItem.subtasks": "子任务",
+    "taskItem.estimated": "预估时间",
+    "taskList.sortByDate": "按日期排序",
+    "taskList.loading": "加载中…",
+    "taskList.emptyHint": "还没有任务。在上方输入第一个吧。",
+    "taskList.revertSort": "改回按日期排序",
+    "view.list.shareAria": "分享清单",
+    "view.list.kanbanHint": "在列之间拖动卡片以调整优先级。",
+    "view.tag.subtitle": "带这个标签的所有任务。",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -2948,6 +3116,48 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.notifications.allCaught": "未読はもうありません。",
     "shared.quickAdd": "クイック追加",
     "shared.untitled": "(無題)",
+    "aiActions.findTimeTooltip": "今後7日間からAIが3つの候補時間を提案",
+    "aiActions.prepMeetingTooltip": "AIがアジェンダと質問の下書きを作成",
+    "aiActions.estimatedTooltip": "AIが見積もった所要時間",
+    "aiActions.scheduleTooltip": "この時間に入れる",
+    "antiOverload.full": "今日はいっぱいです。",
+    "attachments.dropHere": "ここにファイルをドロップ、または",
+    "attachments.loading": "添付ファイルを読み込み中…",
+    "attachments.deleteAria": "添付ファイルを削除",
+    "attachments.delete": "削除",
+    "dateTimePicker.pick": "日時を選択",
+    "dateTimePicker.prevMonth": "前の月",
+    "dateTimePicker.nextMonth": "次の月",
+    "dayTimeline.allDay": "終日",
+    "inlineTaskInput.enterHint": "Enterで追加",
+    "languagePicker.choose": "言語を選択",
+    "quickAdd.exampleTomorrow9am": "明日 9時",
+    "quickAdd.exampleEveryMonday": "毎週月曜",
+    "quickAdd.exampleRemind30m": "30分前にリマインド",
+    "quickAdd.kbHint": "Enter ↵ · Esc",
+    "reminders.enable": "ブラウザ通知を有効にする",
+    "tagItem.color": "色",
+    "tagItem.changeColor": "色を変更",
+    "tagItem.deleteTag": "タグを削除",
+    "sidebar.reflect": "振り返り",
+    "sidebar.toggle": "サイドバーを切り替え",
+    "sidebar.planGoal": "目標をリストとタスクに分解",
+    "sidebar.reflectAria": "今日を振り返る",
+    "sidebar.toggleTheme": "テーマを切り替え",
+    "subtasks.loading": "サブタスクを読み込み中…",
+    "subtasks.newPlaceholder": "新しいサブタスク…",
+    "subtasks.deleteAria": "サブタスクを削除",
+    "tagEditor.colorHint": "色を選ぶか、Enterでランダムに決まります。",
+    "taskItem.repeats": "繰り返し",
+    "taskItem.subtasks": "サブタスク",
+    "taskItem.estimated": "見積もり時間",
+    "taskList.sortByDate": "日付順",
+    "taskList.loading": "読み込み中…",
+    "taskList.emptyHint": "まだ何もありません。上から最初のタスクを追加してください。",
+    "taskList.revertSort": "日付順に戻す",
+    "view.list.shareAria": "リストを共有",
+    "view.list.kanbanHint": "カードを列の間でドラッグして優先度を変更。",
+    "view.tag.subtitle": "このタグが付いたすべてのタスク。",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -3528,6 +3738,48 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.notifications.allCaught": "모두 확인했어요.",
     "shared.quickAdd": "빠른 추가",
     "shared.untitled": "(제목 없음)",
+    "aiActions.findTimeTooltip": "AI가 앞으로 7일 안에서 시간 후보 3개를 제안",
+    "aiActions.prepMeetingTooltip": "AI가 간단한 안건과 질문을 작성",
+    "aiActions.estimatedTooltip": "AI가 추정한 실제 소요 시간",
+    "aiActions.scheduleTooltip": "이 시간으로 잡기",
+    "antiOverload.full": "오늘은 가득 찼어요.",
+    "attachments.dropHere": "여기에 파일을 끌어다 놓거나",
+    "attachments.loading": "첨부 파일 불러오는 중…",
+    "attachments.deleteAria": "첨부 파일 삭제",
+    "attachments.delete": "삭제",
+    "dateTimePicker.pick": "날짜와 시간 선택",
+    "dateTimePicker.prevMonth": "이전 달",
+    "dateTimePicker.nextMonth": "다음 달",
+    "dayTimeline.allDay": "종일",
+    "inlineTaskInput.enterHint": "Enter로 추가",
+    "languagePicker.choose": "언어 선택",
+    "quickAdd.exampleTomorrow9am": "내일 9시",
+    "quickAdd.exampleEveryMonday": "매주 월요일",
+    "quickAdd.exampleRemind30m": "30분 전에 알림",
+    "quickAdd.kbHint": "Enter ↵ · Esc",
+    "reminders.enable": "브라우저 알림 켜기",
+    "tagItem.color": "색상",
+    "tagItem.changeColor": "색상 변경",
+    "tagItem.deleteTag": "태그 삭제",
+    "sidebar.reflect": "회고",
+    "sidebar.toggle": "사이드바 전환",
+    "sidebar.planGoal": "목표를 리스트와 작업으로 분해",
+    "sidebar.reflectAria": "오늘을 돌아보기",
+    "sidebar.toggleTheme": "테마 전환",
+    "subtasks.loading": "하위 작업 불러오는 중…",
+    "subtasks.newPlaceholder": "새 하위 작업…",
+    "subtasks.deleteAria": "하위 작업 삭제",
+    "tagEditor.colorHint": "색을 고르거나 Enter를 눌러 무작위로 정하세요.",
+    "taskItem.repeats": "반복",
+    "taskItem.subtasks": "하위 작업",
+    "taskItem.estimated": "예상 시간",
+    "taskList.sortByDate": "날짜순",
+    "taskList.loading": "불러오는 중…",
+    "taskList.emptyHint": "아직 아무것도 없어요. 위에서 첫 작업을 추가하세요.",
+    "taskList.revertSort": "다시 날짜순으로",
+    "view.list.shareAria": "리스트 공유",
+    "view.list.kanbanHint": "카드를 열 사이로 끌어 우선순위를 변경.",
+    "view.tag.subtitle": "이 태그가 붙은 모든 작업.",
   },
 };
 

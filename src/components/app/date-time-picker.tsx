@@ -15,7 +15,8 @@ import {
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserPrefs } from "@/hooks/use-ai";
-import { getLanguage } from "@/lib/i18n";
+import { getLanguage, t } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 
 /**
  * DateTimePicker — calm, editorial replacement for the native
@@ -57,11 +58,13 @@ function from12h(h12: number, meridiem: "AM" | "PM"): number {
 export function DateTimePicker({
   value,
   onChange,
-  placeholder = "Pick date & time",
+  placeholder,
   className,
 }: Props) {
+  const lang = useLanguage();
   const { data: prefs } = useUserPrefs();
   const locale = getLanguage(prefs?.language).dateFnsLocale;
+  const resolvedPlaceholder = placeholder ?? t(lang, "dateTimePicker.pick");
   const meridiemLabels = useMemo(() => {
     // Render the meridiem labels in the active locale so a zh-TW user sees
     // 上午/下午, an English user sees AM/PM, etc.
@@ -155,7 +158,7 @@ export function DateTimePicker({
   // Trigger label — locale-formatted full date + time, or placeholder.
   const triggerLabel = current
     ? format(current, "PPP p", { locale })
-    : placeholder;
+    : resolvedPlaceholder;
 
   return (
     <div className={cn("relative", className)}>
@@ -188,7 +191,7 @@ export function DateTimePicker({
               type="button"
               onClick={() => setViewMonth(addMonths(viewMonth, -1))}
               className="btn-ghost size-7 grid place-items-center rounded-md"
-              aria-label="Previous month"
+              aria-label={t(lang, "dateTimePicker.prevMonth")}
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -199,7 +202,7 @@ export function DateTimePicker({
               type="button"
               onClick={() => setViewMonth(addMonths(viewMonth, 1))}
               className="btn-ghost size-7 grid place-items-center rounded-md"
-              aria-label="Next month"
+              aria-label={t(lang, "dateTimePicker.nextMonth")}
             >
               <ChevronRight className="size-4" />
             </button>
