@@ -9,8 +9,8 @@ export default function InboxPage() {
     <TaskListView
       title={t(lang, "sidebar.inbox")}
       subtitle={t(lang, "view.inbox.subtitle")}
-      filter={{ view: "inbox" }}
-      defaults={{ project_id: null }}
+      filter={{ view: "all" }}
+      groupByDate
     />
   );
 }

@@ -12,6 +12,8 @@ import {
 } from "@dnd-kit/core";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 type QuadrantKey = "q1" | "q2" | "q3" | "q4";
 
@@ -192,6 +194,7 @@ function classify(t: TaskWithTags): QuadrantKey {
 }
 
 export default function MatrixPage() {
+  const lang = useLanguage();
   const { data: tasks = [] } = useTasks({});
   const update = useUpdateTask();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -223,11 +226,11 @@ export default function MatrixPage() {
     <div className="flex flex-col h-full">
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">The Sift</h1>
-          <p className="hidden md:block text-sm text-muted-fg mt-1">Drag tasks between quadrants to change urgency × importance.</p>
+          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{tr(lang, "view.matrix.title")}</h1>
+          <p className="hidden md:block text-sm text-muted-fg mt-1">{tr(lang, "view.matrix.dragHint")}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <PlanMyWeekButton tasks={tasks} onApply={(id, q, p) => {
+          <PlanMyWeekButton lang={lang} tasks={tasks} onApply={(id, q, p) => {
             const target = targetForQuadrant(q);
             update.mutate({ id, priority: p, due_at: target.due_at });
           }} />
@@ -236,7 +239,7 @@ export default function MatrixPage() {
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex-1 overflow-y-auto p-3 md:p-6 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-3 md:gap-4">
           {(Object.keys(quadrants) as QuadrantKey[]).map((k) => (
-            <Quadrant key={k} qkey={k} meta={quadrants[k]} tasks={buckets[k]} activeId={activeId} />
+            <Quadrant key={k} qkey={k} lang={lang} meta={quadrants[k]} tasks={buckets[k]} activeId={activeId} />
           ))}
         </div>
         <DragOverlay dropAnimation={{ duration: 150 }}>
@@ -251,7 +254,7 @@ export default function MatrixPage() {
   );
 }
 
-function Quadrant({ qkey, meta, tasks, activeId }: { qkey: QuadrantKey; meta: QuadMeta; tasks: TaskWithTags[]; activeId: string | null }) {
+function Quadrant({ qkey, lang, meta, tasks, activeId }: { qkey: QuadrantKey; lang: string; meta: QuadMeta; tasks: TaskWithTags[]; activeId: string | null }) {
   const { isOver, setNodeRef } = useDroppable({ id: qkey });
   const cellBg = applyAlpha(meta.bg, meta.bgOpacity);
   const blurFilter = meta.bgBlur > 0 ? `blur(${meta.bgBlur}px)` : undefined;
@@ -270,8 +273,16 @@ function Quadrant({ qkey, meta, tasks, activeId }: { qkey: QuadrantKey; meta: Qu
     >
       <div className="px-3 md:px-4 py-2 md:py-3 border-b border-border flex items-center justify-between gap-2 min-w-0">
         <div className="min-w-0">
-          <h3 className="font-display text-base md:text-lg leading-tight truncate" style={{ color: meta.fg }}>{meta.label}</h3>
-          <p className="text-[10px] md:text-[11px] text-muted-fg uppercase tracking-[0.16em] md:tracking-[0.18em] truncate">{meta.subtitle}</p>
+          <h3 className="font-display text-base md:text-lg leading-tight truncate" style={{ color: meta.fg }}>
+            {meta.label === DEFAULT_QUADRANTS[qkey].label
+              ? tr(lang, (`view.matrix.${qkey}Label`) as any)
+              : meta.label}
+          </h3>
+          <p className="text-[10px] md:text-[11px] text-muted-fg uppercase tracking-[0.16em] md:tracking-[0.18em] truncate">
+            {meta.subtitle === DEFAULT_QUADRANTS[qkey].subtitle
+              ? tr(lang, (`view.matrix.${qkey}Subtitle`) as any)
+              : meta.subtitle}
+          </p>
         </div>
         <span
           className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-medium"
@@ -282,7 +293,7 @@ function Quadrant({ qkey, meta, tasks, activeId }: { qkey: QuadrantKey; meta: Qu
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {tasks.length === 0 ? (
-          <p className="text-xs text-muted-fg p-3">Drop tasks here.</p>
+          <p className="text-xs text-muted-fg p-3">{tr(lang, "view.matrix.dropHere")}</p>
         ) : (
           tasks.map((t) => <DraggableMatrixCard key={t.id} task={t} dimmed={activeId === t.id} />)
         )}
@@ -313,9 +324,11 @@ function DraggableMatrixCard({ task, dimmed }: { task: TaskWithTags; dimmed?: bo
 function PlanMyWeekButton({
   tasks,
   onApply,
+  lang,
 }: {
   tasks: TaskWithTags[];
   onApply: (id: string, q: QuadrantKey, suggestedPriority: 0 | 1 | 3 | 5) => void;
+  lang: string;
 }) {
   const planMutation = usePlanWeek();
   const [open, setOpen] = useState(false);
@@ -339,7 +352,7 @@ function PlanMyWeekButton({
   async function run() {
     const horizon = pickHorizonTasks();
     if (horizon.length === 0) {
-      toast.message("No open tasks to plan in the next 7 days.");
+      toast.message(tr(lang, "view.matrix.toastNoTasks"));
       return;
     }
     setRunning(true);
@@ -357,7 +370,7 @@ function PlanMyWeekButton({
         }))
       );
       if (!r) {
-        toast.error("AI is currently disabled.");
+        toast.error(tr(lang, "common.aiDisabled"));
         setOpen(false);
         return;
       }
@@ -365,8 +378,8 @@ function PlanMyWeekButton({
       setNotes(r.notes);
     } catch (e: any) {
       toast.error(e?.message?.includes("429")
-        ? "Daily plan-week budget reached. Try again tomorrow."
-        : "Couldn't plan your week — try again.");
+        ? tr(lang, "view.matrix.errBudget")
+        : tr(lang, "view.matrix.errPlan"));
       setOpen(false);
     } finally {
       setRunning(false);
@@ -381,7 +394,10 @@ function PlanMyWeekButton({
       onApply(s.id, k, s.suggested_priority);
       n++;
     }
-    toast.success(`Applied ${n} suggestion${n !== 1 ? "s" : ""}.`);
+    toast.success(
+      (n === 1 ? tr(lang, "view.matrix.appliedOne") : tr(lang, "view.matrix.appliedMany"))
+        .replace("{n}", String(n))
+    );
     setOpen(false);
     setResults(null);
   }
@@ -392,10 +408,10 @@ function PlanMyWeekButton({
         onClick={run}
         disabled={running}
         className="btn-primary gap-2 h-9 px-3 text-xs disabled:opacity-50"
-        title="AI plans the next 7 days as a coherent whole"
+        title={tr(lang, "view.matrix.planAria")}
       >
         <Sparkles className={cn("size-3.5", running && "animate-spin")} />
-        {running ? "Planning…" : "Plan my week"}
+        {running ? tr(lang, "view.matrix.planning") : tr(lang, "view.matrix.planWeek")}
       </button>
 
       {open && (
@@ -408,16 +424,16 @@ function PlanMyWeekButton({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-display text-xl">Your week</h2>
+              <h2 className="font-display text-xl">{tr(lang, "view.matrix.yourWeek")}</h2>
               {results && (
                 <span className="text-xs text-muted-fg">
-                  {results.length} item{results.length !== 1 && "s"}
+                  {results.length} {results.length === 1 ? tr(lang, "view.matrix.itemsOne") : tr(lang, "view.matrix.itemsMany")}
                 </span>
               )}
             </div>
 
             {running && (
-              <p className="text-sm text-muted-fg">Reading the whole list…</p>
+              <p className="text-sm text-muted-fg">{tr(lang, "view.matrix.readingList")}</p>
             )}
 
             {results && notes && (
@@ -442,7 +458,7 @@ function PlanMyWeekButton({
                       </div>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-success"
-                        title="Apply"
+                        title={tr(lang, "view.matrix.applyTitle")}
                         onClick={() => {
                           const k = (`q${s.quadrant}`) as QuadrantKey;
                           onApply(s.id, k, s.suggested_priority);
@@ -453,7 +469,7 @@ function PlanMyWeekButton({
                       </button>
                       <button
                         className="btn-ghost size-8 grid place-items-center text-muted-fg"
-                        title="Skip"
+                        title={tr(lang, "view.matrix.skipTitle")}
                         onClick={() =>
                           setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null))
                         }
@@ -467,7 +483,7 @@ function PlanMyWeekButton({
             )}
 
             {results && results.length === 0 && !running && (
-              <p className="text-sm text-muted-fg">All clear — your week is already on track.</p>
+              <p className="text-sm text-muted-fg">{tr(lang, "view.matrix.allClear")}</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-2">
@@ -475,14 +491,14 @@ function PlanMyWeekButton({
                 className="btn-ghost h-8 px-3 text-xs"
                 onClick={() => { setOpen(false); setResults(null); }}
               >
-                Close
+                {tr(lang, "common.close")}
               </button>
               {results && results.length > 0 && (
                 <button
                   className="btn-primary h-8 px-3 text-xs"
                   onClick={applyAll}
                 >
-                  Apply all
+                  {tr(lang, "common.applyAll")}
                 </button>
               )}
             </div>

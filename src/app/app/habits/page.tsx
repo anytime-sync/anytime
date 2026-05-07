@@ -20,6 +20,8 @@ import {
 } from "@/hooks/use-habits";
 import { Plus, Check, ChevronLeft, ChevronRight, Flame, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr, getLanguage } from "@/lib/i18n";
 
 /**
  * Habits â weekly grid where each row is a habit and each column is a
@@ -28,6 +30,8 @@ import { cn } from "@/lib/utils";
  * so it's always meaningful even when reviewing past weeks.
  */
 export default function HabitsPage() {
+  const lang = useLanguage();
+  const dfLocale = getLanguage(lang).dateFnsLocale;
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("\ud83c\udfaf");
@@ -57,13 +61,13 @@ export default function HabitsPage() {
 
   const { data: habits = [] } = useHabits();
   // Pull a wider range so streak math has enough history. We grab the
-  // last 60 days from the visible weekEnd \u2014 streaks > 60 days are
+  // last 60 days from the visible weekEnd — streaks > 60 days are
   // capped at "60+" which is fine for UI.
   const streakRangeStart = format(addDays(weekEnd, -60), "yyyy-MM-dd");
   const { data: logs = [] } = useHabitLogs(streakRangeStart, rangeEnd);
   const toggle = useToggleHabitLog();
 
-  // Compute current streak per habit \u2014 number of consecutive days
+  // Compute current streak per habit — number of consecutive days
   // ending at today (or the most recent logged day if today isn't logged
   // yet) where the habit was logged.
   const streakById = useMemo(() => {
@@ -92,13 +96,18 @@ export default function HabitsPage() {
   }, [habits, logs, today]);
 
   const subtitle =
-    weekOffset === 0
-      ? `This week \u00b7 ${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`
-      : weekOffset === -1
-      ? `Last week \u00b7 ${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`
-      : weekOffset === 1
-      ? `Next week \u00b7 ${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`
-      : `${format(weekStart, "MMM d")} \u2013 ${format(weekEnd, "MMM d")}`;
+    (() => {
+      const range = `${format(weekStart, "MMM d", { locale: dfLocale })} \u2013 ${format(weekEnd, "MMM d", { locale: dfLocale })}`;
+      const key =
+        weekOffset === 0
+          ? "view.habits.thisWeek"
+          : weekOffset === -1
+          ? "view.habits.lastWeek"
+          : weekOffset === 1
+          ? "view.habits.nextWeekRange"
+          : "view.habits.weekRange";
+      return tr(lang, key as any).replace("{range}", range);
+    })();
 
   const colTemplate = "minmax(160px,1fr) repeat(7, 48px) 56px 28px";
 
@@ -107,7 +116,7 @@ export default function HabitsPage() {
       <div className="px-6 pt-6 pb-3 border-b border-border flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">
-            Habits
+            {tr(lang, "sidebar.habits")}
           </h1>
           <p className="text-xs text-muted-fg mt-1 truncate">{subtitle}</p>
         </div>
@@ -115,8 +124,8 @@ export default function HabitsPage() {
           <button
             className="btn-ghost size-7 p-0 grid place-items-center"
             onClick={() => setWeekOffset((o) => o - 1)}
-            aria-label="Previous week"
-            title="Previous week"
+            aria-label={tr(lang, "view.habits.aria.prevWeek")}
+            title={tr(lang, "view.habits.aria.prevWeek")}
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -129,21 +138,21 @@ export default function HabitsPage() {
             )}
             onClick={() => setWeekOffset(0)}
             disabled={weekOffset === 0}
-            aria-label="This week"
-            title="This week"
+            aria-label={tr(lang, "view.habits.aria.thisWeek")}
+            title={tr(lang, "view.habits.aria.thisWeek")}
           >
             |
           </button>
           <button
             className="btn-ghost size-7 p-0 grid place-items-center"
             onClick={() => setWeekOffset((o) => o + 1)}
-            aria-label="Next week"
-            title="Next week"
+            aria-label={tr(lang, "view.habits.aria.nextWeek")}
+            title={tr(lang, "view.habits.aria.nextWeek")}
           >
             <ChevronRight className="size-4" />
           </button>
           <button className="btn-primary gap-2" onClick={() => setCreating(true)}>
-            <Plus className="size-4" /> New habit
+            <Plus className="size-4" /> {tr(lang, "view.habits.newHabit")}
           </button>
         </div>
       </div>
@@ -165,7 +174,7 @@ export default function HabitsPage() {
                     isToday ? "text-accent" : "text-muted-fg"
                   )}
                 >
-                  <div>{format(d, "EEE")}</div>
+                  <div>{format(d, "EEE", { locale: dfLocale })}</div>
                   <div
                     className={cn(
                       "font-medium",
@@ -180,7 +189,7 @@ export default function HabitsPage() {
               );
             })}
             <div className="text-center text-xs text-muted-fg uppercase tracking-wider">
-              Streak
+              {tr(lang, "view.habits.streakHeader")}
             </div>
             <div />
           </div>
@@ -188,15 +197,8 @@ export default function HabitsPage() {
           <div className="mt-3 space-y-1">
             {habits.length === 0 && (
               <div className="text-sm text-muted-fg space-y-1 px-2 py-3">
-                <p>
-                  No habits yet. Tap <em>New habit</em> to add one \u2014 try
-                  \u201cRead 20 min\u201d, \u201cMeditate\u201d, or \u201cDrink 8
-                  cups water\u201d.
-                </p>
-                <p className="text-xs">
-                  Click any day cell to log a completion. Future days stay
-                  locked.
-                </p>
+                <p>{tr(lang, "view.habits.emptyText")}</p>
+                <p className="text-xs">{tr(lang, "view.habits.emptyHint")}</p>
               </div>
             )}
             {habits.map((h) => {
@@ -248,10 +250,10 @@ export default function HabitsPage() {
                         }
                         title={
                           isFuture
-                            ? format(d, "MMM d")
+                            ? format(d, "MMM d", { locale: dfLocale })
                             : log
-                            ? `Logged ${format(d, "MMM d")} \u2014 click to remove`
-                            : `Click to log ${format(d, "MMM d")}`
+                            ? tr(lang, "view.habits.tooltipLogged").replace("{date}", format(d, "MMM d", { locale: dfLocale }))
+                            : tr(lang, "view.habits.tooltipLog").replace("{date}", format(d, "MMM d", { locale: dfLocale }))
                         }
                       >
                         {log ? <Check className="size-4" /> : null}
@@ -265,8 +267,8 @@ export default function HabitsPage() {
                     )}
                     title={
                       streak > 0
-                        ? `${streak} day streak`
-                        : "No active streak"
+                        ? tr(lang, "view.habits.streakDays").replace("{n}", String(streak))
+                        : tr(lang, "view.habits.noStreak")
                     }
                   >
                     {streak > 0 && <Flame className="size-3.5" />}
@@ -274,12 +276,12 @@ export default function HabitsPage() {
                   </div>
                   <button
                     type="button"
-                    aria-label={`Delete habit ${h.name}`}
-                    title={`Delete habit "${h.name}"`}
+                    aria-label={tr(lang, "view.habits.deleteAria").replace("{name}", h.name)}
+                    title={tr(lang, "view.habits.deleteTitle").replace("{name}", h.name)}
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Delete habit "${h.name}"? This hides it from the list. Past logs are preserved.`
+                          tr(lang, "view.habits.deleteConfirm").replace("{name}", h.name)
                         )
                       ) {
                         remove.mutate(h.id);
@@ -297,11 +299,7 @@ export default function HabitsPage() {
 
         {/* Tiny intro card explaining what "habits" means here */}
         <div className="text-xs text-muted-fg leading-relaxed px-2 py-1">
-          A habit is a tiny daily action you want to keep showing up for. Log
-          each day you complete it; the streak resets only when you skip a
-          day. Click <ChevronLeft className="inline size-3 align-text-bottom" /> /
-          <ChevronRight className="inline size-3 align-text-bottom" /> above
-          to review past or upcoming weeks.
+          {tr(lang, "view.habits.intro")}
         </div>
       </div>
 
@@ -314,7 +312,7 @@ export default function HabitsPage() {
             className="card w-[90vw] max-w-sm p-5 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold">New habit</h3>
+            <h3 className="font-semibold">{tr(lang, "view.habits.newHabit")}</h3>
             <div className="flex gap-2">
               <input
                 className="input w-16 text-center"
@@ -324,7 +322,7 @@ export default function HabitsPage() {
               />
               <input
                 className="input flex-1"
-                placeholder="e.g. Read 20 minutes"
+                placeholder={tr(lang, "view.habits.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
@@ -332,7 +330,7 @@ export default function HabitsPage() {
             </div>
             <div className="flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => setCreating(false)}>
-                Cancel
+                {tr(lang, "common.cancel")}
               </button>
               <button
                 className="btn-primary"
@@ -343,7 +341,7 @@ export default function HabitsPage() {
                   setCreating(false);
                 }}
               >
-                Create
+                {tr(lang, "view.habits.create")}
               </button>
             </div>
           </div>

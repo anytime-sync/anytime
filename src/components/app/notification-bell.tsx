@@ -6,6 +6,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr, getLanguage } from "@/lib/i18n";
 
 type Notification = {
   id: string;
@@ -25,6 +27,8 @@ type Notification = {
  * the app is mounted so the badge stays fresh without realtime.
  */
 export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
+  const lang = useLanguage();
+  const dfLocale = getLanguage(lang).dateFnsLocale;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -147,11 +151,11 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
           "relative inline-flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors",
           collapsed ? "w-10 h-10" : "w-full h-9 gap-2 px-2 text-sm text-muted-fg hover:text-fg"
         )}
-        title="Notifications"
-        aria-label={`Notifications (${unread} unread)`}
+        title={tr(lang, "sidebar.notifications")}
+        aria-label={tr(lang, "sidebar.notifications.aria").replace("{n}", String(unread))}
       >
         <Bell className="size-4" />
-        {!collapsed && <span>Notifications</span>}
+        {!collapsed && <span>{tr(lang, "sidebar.notifications")}</span>}
         {unread > 0 && (
           <span
             className={cn(
@@ -173,14 +177,14 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
           style={{ maxHeight: "70vh" }}
         >
           <div className="px-3 h-10 border-b border-border flex items-center justify-between">
-            <span className="text-sm font-semibold">Notifications</span>
+            <span className="text-sm font-semibold">{tr(lang, "sidebar.notifications")}</span>
             <div className="flex items-center gap-2">
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
                   className="text-[11px] text-muted-fg hover:text-fg underline"
                 >
-                  Mark all read
+                  {tr(lang, "sidebar.notifications.markAllRead")}
                 </button>
               )}
               <button
@@ -195,7 +199,7 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
           <div className="overflow-y-auto" style={{ maxHeight: "calc(70vh - 40px)" }}>
             {notifications.length === 0 && (
               <p className="text-center text-muted-fg italic py-8 text-sm">
-                You&rsquo;re all caught up.
+                {tr(lang, "sidebar.notifications.allCaught")}
               </p>
             )}
             {notifications.map((n) => {
@@ -221,7 +225,7 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
                         </div>
                       )}
                       <div className="text-[10px] text-muted-fg mt-1">
-                        {format(new Date(n.created_at), "MMM d, h:mm a")}
+                        {format(new Date(n.created_at), "MMM d, h:mm a", { locale: dfLocale })}
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0">
@@ -233,7 +237,7 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
                             markRead(n.id);
                           }}
                           className="size-6 grid place-items-center rounded hover:bg-muted text-muted-fg"
-                          title="Mark read"
+                          title={tr(lang, "sidebar.notifications.markRead")}
                         >
                           <Check className="size-3" />
                         </button>
@@ -245,7 +249,7 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
                           dismiss(n.id);
                         }}
                         className="size-6 grid place-items-center rounded hover:bg-muted text-muted-fg"
-                        title="Dismiss"
+                        title={tr(lang, "sidebar.notifications.dismiss")}
                       >
                         <X className="size-3" />
                       </button>

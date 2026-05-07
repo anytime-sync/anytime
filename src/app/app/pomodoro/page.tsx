@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 type Phase = "focus" | "short_break" | "long_break";
 
@@ -16,6 +18,7 @@ const DEFAULTS: Record<Phase, number> = {
 };
 
 export default function PomodoroPage() {
+  const lang = useLanguage();
   const [phase, setPhase] = useState<Phase>("focus");
   const [seconds, setSeconds] = useState(DEFAULTS.focus);
   const [running, setRunning] = useState(false);
@@ -118,7 +121,7 @@ export default function PomodoroPage() {
         }
       }
     }
-    toast.success(phase === "focus" ? "Focus complete — take a break!" : "Break done — back to focus.");
+    toast.success(phase === "focus" ? tr(lang, "view.pomodoro.toastFocusComplete") : tr(lang, "view.pomodoro.toastBreakDone"));
     // auto-advance
     const next: Phase = phase === "focus"
       ? (completedToday + 1) % 4 === 0 ? "long_break" : "short_break"
@@ -137,8 +140,8 @@ export default function PomodoroPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border">
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Focus</h1>
-        <p className="text-xs text-muted-fg">{completedToday} focus sessions today.</p>
+        <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{tr(lang, "sidebar.pomodoro")}</h1>
+        <p className="text-xs text-muted-fg">{tr(lang, "view.pomodoro.sessionsToday").replace("{n}", String(completedToday))}</p>
       </div>
       <div className="flex-1 overflow-y-auto grid place-items-center p-6">
         <div className="card w-full max-w-md p-8 space-y-6 text-center">
@@ -149,7 +152,7 @@ export default function PomodoroPage() {
                 onClick={() => switchPhase(p)}
                 className={cn("btn h-8 px-3 text-xs", phase === p ? "bg-accent text-accent-fg" : "btn-ghost")}
               >
-                {p === "focus" ? "Focus" : p === "short_break" ? "Short break" : "Long break"}
+                {p === "focus" ? tr(lang, "view.pomodoro.modeFocus") : p === "short_break" ? tr(lang, "view.pomodoro.modeShortBreak") : tr(lang, "view.pomodoro.modeLongBreak")}
               </button>
             ))}
           </div>
@@ -168,7 +171,7 @@ export default function PomodoroPage() {
               <div>
                 <div className="text-5xl font-mono">{mm}:{ss}</div>
                 <div className="text-xs text-muted-fg uppercase tracking-wider mt-1">
-                  {phase === "focus" ? "Focus" : phase === "short_break" ? "Short break" : "Long break"}
+                  {phase === "focus" ? tr(lang, "view.pomodoro.modeFocus") : phase === "short_break" ? tr(lang, "view.pomodoro.modeShortBreak") : tr(lang, "view.pomodoro.modeLongBreak")}
                 </div>
               </div>
             </div>
@@ -176,28 +179,28 @@ export default function PomodoroPage() {
           <div className="flex justify-center gap-2">
             {!running ? (
               <button className="btn-primary gap-2" onClick={start}>
-                <Play className="size-4" /> Start
+                <Play className="size-4" /> {tr(lang, "view.pomodoro.start")}
               </button>
             ) : (
               <button className="btn-outline gap-2" onClick={pause}>
-                <Pause className="size-4" /> Pause
+                <Pause className="size-4" /> {tr(lang, "view.pomodoro.pause")}
               </button>
             )}
             <button className="btn-ghost gap-2" onClick={reset}>
-              <RotateCcw className="size-4" /> Reset
+              <RotateCcw className="size-4" /> {tr(lang, "view.pomodoro.reset")}
             </button>
             <button className="btn-ghost gap-2" onClick={stop}>
-              <Square className="size-4" /> Stop
+              <Square className="size-4" /> {tr(lang, "view.pomodoro.stop")}
             </button>
           </div>
           <div className="text-left">
-            <div className="text-xs text-muted-fg mb-1">Working on</div>
+            <div className="text-xs text-muted-fg mb-1">{tr(lang, "view.pomodoro.workingOn")}</div>
             <select
               className="input"
               value={taskId ?? ""}
               onChange={(e) => setTaskId(e.target.value || null)}
             >
-              <option value="">— None —</option>
+              <option value="">{tr(lang, "view.pomodoro.noneOption")}</option>
               {sortedTasks.map((t) => (
                 <option key={t.id} value={t.id}>{t.title}</option>
               ))}

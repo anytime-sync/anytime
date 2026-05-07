@@ -9,8 +9,11 @@ import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Ref
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr } from "@/lib/i18n";
 
 export default function SettingsPage() {
+  const lang = useLanguage();
   const { data: prefs } = useUserPrefs();
   const update = useUpdatePrefs();
   const router = useRouter();
@@ -40,23 +43,23 @@ export default function SettingsPage() {
       if (!r.ok) {
         if (r.reason === "denied") {
           setPushDenied(true);
-          toast.error("Browser blocked notifications. See the hint below.");
+          toast.error(tr(lang, "view.settings.toast.pushBlocked"));
         } else if (r.reason === "unsupported") {
-          toast.error("Push isn't supported on this device");
+          toast.error(tr(lang, "view.settings.toast.pushUnsupported"));
         } else {
-          toast.error("Couldn't subscribe to push");
+          toast.error(tr(lang, "view.settings.toast.pushFailed"));
         }
         return;
       }
       setPushDenied(false);
       setPushSubscribed(true);
       setPref("push_reminders", true);
-      toast.success("Push notifications on");
+      toast.success(tr(lang, "view.settings.toast.pushOn"));
     } else {
       await unsubscribePush();
       setPushSubscribed(false);
       setPref("push_reminders", false);
-      toast.success("Push notifications off");
+      toast.success(tr(lang, "view.settings.toast.pushOff"));
     }
   }
 
@@ -74,7 +77,7 @@ export default function SettingsPage() {
   function setPref<K extends keyof UserPrefs>(key: K, value: UserPrefs[K]) {
     update.mutate(
       { [key]: value } as Partial<UserPrefs>,
-      { onError: (e: any) => toast.error(e?.message ?? "Couldn't save") }
+      { onError: (e: any) => toast.error(e?.message ?? tr(lang, "view.settings.toast.couldntSave")) }
     );
   }
 
@@ -84,7 +87,7 @@ export default function SettingsPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ data: { full_name: trimmed } });
     if (error) toast.error(error.message);
-    else toast.success("Name updated");
+    else toast.success(tr(lang, "view.settings.toast.nameUpdated"));
   }
 
   async function signOut() {
@@ -108,12 +111,12 @@ export default function SettingsPage() {
       });
       const j = await r.json();
       if (!r.ok) {
-        toast.error(j.detail ?? j.error ?? "Import failed");
+        toast.error(j.detail ?? j.error ?? tr(lang, "view.settings.toast.importFailed"));
       } else {
-        toast.success(`Imported ${j.imported} task${j.imported === 1 ? "" : "s"}`);
+        toast.success((j.imported === 1 ? tr(lang, "view.settings.toast.importedOne") : tr(lang, "view.settings.toast.importedMany")).replace("{n}", String(j.imported)));
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Import failed");
+      toast.error(e?.message ?? tr(lang, "view.settings.toast.importFailed"));
     } finally {
       setImporting(false);
     }
@@ -132,16 +135,16 @@ export default function SettingsPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Export downloaded");
+      toast.success(tr(lang, "view.settings.toast.exportDownloaded"));
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't export");
+      toast.error(e?.message ?? tr(lang, "view.settings.toast.couldntExport"));
     }
   }
 
   async function deleteAccount() {
     if (!user) return;
     if (confirmEmail.trim().toLowerCase() !== user.email.toLowerCase()) {
-      toast.error("Type your email to confirm");
+      toast.error(tr(lang, "view.settings.toast.typeEmail"));
       return;
     }
     const r = await fetch("/api/account/delete", {
@@ -151,59 +154,59 @@ export default function SettingsPage() {
     });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
-      toast.error(j.detail ?? j.error ?? "Couldn't delete");
+      toast.error(j.detail ?? j.error ?? tr(lang, "view.settings.toast.couldntDelete"));
       return;
     }
-    toast.success("Account deleted");
+    toast.success(tr(lang, "view.settings.toast.accountDeleted"));
     router.replace("/");
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">Settings</h1>
-        <p className="text-sm text-muted-fg mt-1">Account, preferences, and data.</p>
+        <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{tr(lang, "view.settings.heading")}</h1>
+        <p className="text-sm text-muted-fg mt-1">{tr(lang, "view.settings.subheader")}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl space-y-10">
 
           {/* ---------- Account ---------- */}
-          <Section kicker="Account">
-            <Row label="Name">
+          <Section kicker={tr(lang, "view.settings.section.account")}>
+            <Row label={tr(lang, "view.settings.row.name")}>
               <input
                 className="input flex-1"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={saveName}
                 onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                placeholder="Your name"
+                placeholder={tr(lang, "view.settings.placeholder.yourName")}
               />
             </Row>
-            <Row label="Email">
+            <Row label={tr(lang, "view.settings.row.email")}>
               <span className="text-sm text-muted-fg">{user?.email ?? "—"}</span>
             </Row>
-            <Row label="Session">
+            <Row label={tr(lang, "view.settings.row.session")}>
               <button onClick={signOut} className="btn-ghost h-9 px-3 text-sm gap-2">
                 <LogOut className="size-3.5" />
-                Sign out
+                {tr(lang, "view.settings.row.signOut")}
               </button>
             </Row>
           </Section>
 
           {/* ---------- Language ---------- */}
-          <Section kicker="Language">
-            <Row label="Display language">
+          <Section kicker={tr(lang, "view.settings.section.language")}>
+            <Row label={tr(lang, "view.settings.row.displayLanguage")}>
               <LanguagePicker />
             </Row>
             <p className="text-xs text-muted-fg pt-1">
-              UI labels, AI-generated briefings, and date formats follow this language.
+              {tr(lang, "view.settings.langHelp")}
             </p>
           </Section>
 
           {/* ---------- Capacity & energy ---------- */}
-          <Section kicker="Day capacity">
-            <Row label="Daily capacity">
+          <Section kicker={tr(lang, "view.settings.section.dayCapacity")}>
+            <Row label={tr(lang, "view.settings.row.dailyCapacity")}>
               <div className="flex items-center gap-2 flex-1">
                 <input
                   type="number"
@@ -214,10 +217,10 @@ export default function SettingsPage() {
                   onChange={(e) => setPref("daily_capacity_minutes", parseInt(e.target.value, 10) || 240)}
                   className="input w-28"
                 />
-                <span className="text-sm text-muted-fg">minutes / day</span>
+                <span className="text-sm text-muted-fg">{tr(lang, "view.settings.row.minutesPerDay")}</span>
               </div>
             </Row>
-            <Row label="Energy peak">
+            <Row label={tr(lang, "view.settings.row.energyPeak")}>
               <div className="flex items-center gap-2 flex-1">
                 <input
                   type="time"
@@ -225,7 +228,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPref("energy_peak_start", e.target.value as any)}
                   className="input w-28"
                 />
-                <span className="text-sm text-muted-fg">to</span>
+                <span className="text-sm text-muted-fg">{tr(lang, "view.settings.row.to")}</span>
                 <input
                   type="time"
                   value={(prefs?.energy_peak_end ?? "12:00").slice(0, 5)}
@@ -237,30 +240,30 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- AI ---------- */}
-          <Section kicker="AI features">
+          <Section kicker={tr(lang, "view.settings.section.aiFeatures")}>
             <Toggle
-              label="AI enabled"
-              hint="Master switch — turn off to disable everything below."
+              label={tr(lang, "view.settings.toggle.aiEnabled")}
+              hint={tr(lang, "view.settings.toggle.aiEnabledHint")}
               checked={prefs?.ai_enabled ?? true}
               onChange={(v) => setPref("ai_enabled", v)}
             />
             <Toggle
-              label="Daily Edition briefing"
-              hint="Editorial morning brief on the Today page."
+              label={tr(lang, "view.settings.toggle.dailyEdition")}
+              hint={tr(lang, "view.settings.toggle.dailyEditionHint")}
               checked={prefs?.ai_daily_edition ?? true}
               onChange={(v) => setPref("ai_daily_edition", v)}
               disabled={!(prefs?.ai_enabled ?? true)}
             />
             <Toggle
-              label="Smart Eisenhower auto-suggest"
-              hint="AI · suggest button on the matrix proposes moves."
+              label={tr(lang, "view.settings.toggle.smartEisenhower")}
+              hint={tr(lang, "view.settings.toggle.smartEisenhowerHint")}
               checked={prefs?.ai_auto_quadrant ?? false}
               onChange={(v) => setPref("ai_auto_quadrant", v)}
               disabled={!(prefs?.ai_enabled ?? true)}
             />
             <Toggle
-              label="Voice capture"
-              hint="Microphone button on every Add Task input."
+              label={tr(lang, "view.settings.toggle.voiceCapture")}
+              hint={tr(lang, "view.settings.toggle.voiceCaptureHint")}
               checked={prefs?.ai_voice_enabled ?? true}
               onChange={(v) => setPref("ai_voice_enabled", v)}
               disabled={!(prefs?.ai_enabled ?? true)}
@@ -268,53 +271,48 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Notifications ---------- */}
-          <Section kicker="Notifications">
+          <Section kicker={tr(lang, "view.settings.section.notifications")}>
             <Toggle
-              label="Email reminders"
-              hint="When a task's reminder time is reached, send an email to your inbox."
+              label={tr(lang, "view.settings.toggle.emailReminders")}
+              hint={tr(lang, "view.settings.toggle.emailRemindersHint")}
               checked={prefs?.email_reminders ?? true}
               onChange={(v) => setPref("email_reminders", v)}
             />
             <Toggle
-              label="Push notifications"
+              label={tr(lang, "view.settings.toggle.pushNotifications")}
               hint={pushReady
-                ? "Browser-native notifications even when the tab is closed. (PWA recommended on iOS.)"
-                : "Not supported on this device or browser."}
+                ? tr(lang, "view.settings.toggle.pushHint")
+                : tr(lang, "view.settings.toggle.pushUnsupported")}
               checked={pushSubscribed && (prefs?.push_reminders ?? true)}
               onChange={(v) => togglePush(v)}
               disabled={!pushReady}
             />
             {pushDenied && (
               <div className="text-xs text-muted-fg leading-relaxed border-l-2 border-warning pl-3 py-1">
-                <p className="text-fg mb-1">Notifications are blocked for this site.</p>
-                <p>
-                  Click the{" "}
-                  <span className="inline-block px-1.5 py-0.5 border border-border rounded text-[10px]">🔒</span>
-                  {" "}icon left of the URL → <strong>Site settings</strong> → set
-                  <strong> Notifications</strong> to <strong>Allow</strong>, then reload the page and toggle this on again.
-                </p>
+                <p className="text-fg mb-1">{tr(lang, "view.settings.cal.notifBlocked.title")}</p>
+                <p>{tr(lang, "view.settings.cal.notifBlocked.body")}</p>
               </div>
             )}
           </Section>
 
           {/* ---------- Calendar sync ---------- */}
-          <CalendarFeedSection />
+          <CalendarFeedSection lang={lang} />
 
           {/* ---------- Import ---------- */}
-          <Section kicker="Import">
-            <Row label="From">
+          <Section kicker={tr(lang, "view.settings.section.import")}>
+            <Row label={tr(lang, "view.settings.row.from")}>
               <select
                 className="input flex-1"
                 value={importFormat}
                 onChange={(e) => setImportFormat(e.target.value as any)}
               >
-                <option value="ticktick">TickTick CSV</option>
-                <option value="todoist">Todoist CSV</option>
-                <option value="ics">Apple Reminders / Calendar (.ics)</option>
-                <option value="generic">Generic CSV (title, due, list, completed)</option>
+                <option value="ticktick">{tr(lang, "view.settings.import.format.ticktick")}</option>
+                <option value="todoist">{tr(lang, "view.settings.import.format.todoist")}</option>
+                <option value="ics">{tr(lang, "view.settings.import.format.ics")}</option>
+                <option value="generic">{tr(lang, "view.settings.import.format.generic")}</option>
               </select>
             </Row>
-            <Row label="File">
+            <Row label={tr(lang, "view.settings.row.file")}>
               <input
                 type="file"
                 accept=".csv,.ics,.txt"
@@ -328,41 +326,38 @@ export default function SettingsPage() {
               />
             </Row>
             <p className="text-xs text-muted-fg">
-              {importing ? "Importing…" : "Up to 1,000 rows per upload. Existing tasks aren't touched; imports are added on top."}
+              {importing ? tr(lang, "view.settings.import.importing") : tr(lang, "view.settings.import.help")}
             </p>
           </Section>
 
           {/* ---------- Data ---------- */}
-          <Section kicker="Your data">
-            <Row label="Export">
+          <Section kicker={tr(lang, "view.settings.section.yourData")}>
+            <Row label={tr(lang, "view.settings.row.export")}>
               <button onClick={exportData} className="btn-ghost h-9 px-3 text-sm gap-2">
                 <Download className="size-3.5" />
-                Download as JSON
+                {tr(lang, "view.settings.exportButton")}
               </button>
             </Row>
             <p className="text-xs text-muted-fg">
-              A complete copy of your tasks, lists, tags, habits, Pomodoro sessions, attachments,
-              and AI editions/retros. Used for portability and GDPR access requests.
+              {tr(lang, "view.settings.exportHelp")}
             </p>
           </Section>
 
           {/* ---------- Danger ---------- */}
-          <Section kicker="Danger zone" tone="danger">
-            <Row label="Delete account">
+          <Section kicker={tr(lang, "view.settings.section.danger")} tone="danger">
+            <Row label={tr(lang, "view.settings.row.deleteAccount")}>
               {!confirmDelete ? (
                 <button
                   onClick={() => setConfirmDelete(true)}
                   className="btn h-9 px-3 text-sm gap-2 bg-danger/10 text-danger hover:bg-danger/20 border border-danger/30"
                 >
                   <Trash2 className="size-3.5" />
-                  Delete my account
+                  {tr(lang, "view.settings.delete.button")}
                 </button>
               ) : (
                 <div className="flex-1 space-y-2">
                   <p className="text-xs text-danger leading-relaxed">
-                    This permanently removes your account, every task, every list,
-                    every attachment, every AI edition. It can&apos;t be undone.
-                    Type your email to confirm.
+                    {tr(lang, "view.settings.delete.warning")}
                   </p>
                   <input
                     className="input"
@@ -375,13 +370,13 @@ export default function SettingsPage() {
                       onClick={() => { setConfirmDelete(false); setConfirmEmail(""); }}
                       className="btn-ghost h-9 px-3 text-sm"
                     >
-                      Cancel
+                      {tr(lang, "view.settings.delete.confirmCancel")}
                     </button>
                     <button
                       onClick={deleteAccount}
                       className="btn h-9 px-3 text-sm bg-danger text-white hover:opacity-90"
                     >
-                      Delete forever
+                      {tr(lang, "view.settings.delete.confirmAction")}
                     </button>
                   </div>
                 </div>
@@ -390,11 +385,11 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Legal ---------- */}
-          <Section kicker="Legal">
-            <Row label="Documents">
+          <Section kicker={tr(lang, "view.settings.section.legal")}>
+            <Row label={tr(lang, "view.settings.row.documents")}>
               <div className="flex gap-3 text-sm">
-                <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
-                <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>
+                <Link href="/privacy" className="text-accent hover:underline">{tr(lang, "view.settings.privacyPolicy")}</Link>
+                <Link href="/terms" className="text-accent hover:underline">{tr(lang, "view.settings.termsOfService")}</Link>
               </div>
             </Row>
           </Section>
@@ -413,7 +408,7 @@ export default function SettingsPage() {
 // clearing the token invalidates every existing subscription on the
 // next refresh, so it doubles as the kill switch.
 // ---------------------------------------------------------------------
-function CalendarFeedSection() {
+function CalendarFeedSection({ lang }: { lang: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"enable" | "rotate" | "disable" | null>(null);
   const [feedUrl, setFeedUrl] = useState<string | null>(null);
@@ -442,9 +437,9 @@ function CalendarFeedSection() {
       if (!r.ok) throw new Error("enable_failed");
       const j = (await r.json()) as { url: string };
       setFeedUrl(j.url);
-      toast.success("Calendar subscription enabled");
+      toast.success(tr(lang, "view.settings.toast.calEnabled"));
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't enable subscription");
+      toast.error(e?.message ?? tr(lang, "view.settings.toast.calEnableErr"));
     } finally {
       setBusy(null);
     }
@@ -460,9 +455,9 @@ function CalendarFeedSection() {
       if (!r.ok) throw new Error("rotate_failed");
       const j = (await r.json()) as { url: string };
       setFeedUrl(j.url);
-      toast.success("New URL minted");
+      toast.success(tr(lang, "view.settings.toast.calRotated"));
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't rotate URL");
+      toast.error(e?.message ?? tr(lang, "view.settings.toast.calRotateErr"));
     } finally {
       setBusy(null);
     }
@@ -477,9 +472,9 @@ function CalendarFeedSection() {
       const r = await fetch("/api/account/calendar-feed", { method: "DELETE" });
       if (!r.ok) throw new Error("disable_failed");
       setFeedUrl(null);
-      toast.success("Subscription disabled");
+      toast.success(tr(lang, "view.settings.toast.calDisabled"));
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't disable subscription");
+      toast.error(e?.message ?? tr(lang, "view.settings.toast.calDisableErr"));
     } finally {
       setBusy(null);
     }
@@ -492,16 +487,16 @@ function CalendarFeedSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Couldn't copy — please copy manually");
+      toast.error(tr(lang, "view.settings.toast.calCopied"));
     }
   }
 
   return (
-    <Section kicker="Calendar sync">
-      <Row label="Subscribe">
+    <Section kicker={tr(lang, "view.settings.section.calendarSync")}>
+      <Row label={tr(lang, "view.settings.row.subscribe")}>
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="text-sm text-muted-fg">Loading…</div>
+            <div className="text-sm text-muted-fg">{tr(lang, "view.settings.cal.loading")}</div>
           ) : feedUrl ? (
             <div className="space-y-2">
               <div className="flex items-stretch gap-2">
@@ -514,10 +509,10 @@ function CalendarFeedSection() {
                 <button
                   onClick={copy}
                   className="btn-ghost h-9 px-3 text-sm gap-2 shrink-0"
-                  aria-label="Copy URL"
+                  aria-label={tr(lang, "view.settings.cal.copyAria")}
                 >
                   {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? tr(lang, "view.settings.cal.copied") : tr(lang, "view.settings.cal.copy")}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -527,7 +522,7 @@ function CalendarFeedSection() {
                   className="btn-ghost h-8 px-3 text-xs gap-1.5"
                 >
                   <RefreshCw className={`size-3 ${busy === "rotate" ? "animate-spin" : ""}`} />
-                  Rotate URL
+                  {tr(lang, "view.settings.cal.rotate")}
                 </button>
                 <button
                   onClick={disable}
@@ -535,7 +530,7 @@ function CalendarFeedSection() {
                   className="btn-ghost h-8 px-3 text-xs gap-1.5 text-danger"
                 >
                   <Trash2 className="size-3" />
-                  Disable
+                  {tr(lang, "view.settings.cal.disable")}
                 </button>
               </div>
             </div>
@@ -546,19 +541,14 @@ function CalendarFeedSection() {
               className="btn-primary gap-2"
             >
               <Calendar className="size-4" />
-              {busy === "enable" ? "Generating…" : "Enable calendar subscription"}
+              {busy === "enable" ? tr(lang, "view.settings.cal.generating") : tr(lang, "view.settings.cal.enable")}
             </button>
           )}
         </div>
       </Row>
 
       <p className="text-xs text-muted-fg leading-relaxed">
-        Read-only feed. Apple Calendar, Google Calendar, Outlook, and any other
-        ICS-compatible app can subscribe — your tasks and meetings will appear
-        alongside your other calendars and refresh automatically (typically
-        every 15 minutes to a few hours, depending on the app). Edits made in
-        those calendars don&apos;t flow back to First Light. Two-way Google
-        Calendar sync is on the roadmap.
+        {tr(lang, "view.settings.cal.body")}
       </p>
 
       {feedUrl && (
@@ -568,7 +558,7 @@ function CalendarFeedSection() {
             className="inline-flex items-center gap-1 text-xs text-fg hover:text-accent"
           >
             {showHow ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-            How to subscribe
+            {tr(lang, "view.settings.cal.howSubscribe")}
           </button>
           {showHow && (
             <div className="mt-3 space-y-3 text-xs leading-relaxed text-muted-fg border-l-2 border-border pl-4">
@@ -604,8 +594,7 @@ function CalendarFeedSection() {
                 ]}
               />
               <p className="pt-1 text-[11px]">
-                On Android, subscribe in Google Calendar (web) — your phone&apos;s
-                calendar will pick it up automatically through your Google account.
+                {tr(lang, "view.settings.cal.androidNote")}
               </p>
             </div>
           )}

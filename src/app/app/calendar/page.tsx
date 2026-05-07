@@ -15,6 +15,8 @@ import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
 import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
+import { useLanguage } from "@/lib/use-language";
+import { t as tr, getLanguage } from "@/lib/i18n";
 
 /**
  * Calendar — month grid with click-through to single-day view.
@@ -62,6 +64,8 @@ function MonthView({
   setCursor: (d: Date) => void;
   onPickDay: (d: Date) => void;
 }) {
+  const lang = useLanguage();
+  const dfLocale = getLanguage(lang).dateFnsLocale;
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
 
   const monthStart = startOfMonth(cursor);
@@ -287,26 +291,26 @@ function MonthView({
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy")}</h1>
+          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy", { locale: dfLocale })}</h1>
           <div className="flex">
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(subMonths(cursor, 1))}>
               <ChevronLeft className="size-4" />
             </button>
-            <button className="btn-ghost h-9 px-2 text-xs" onClick={() => setCursor(new Date())}>Today</button>
+            <button className="btn-ghost h-9 px-2 text-xs" onClick={() => setCursor(new Date())}>{tr(lang, "view.calendar.today")}</button>
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(addMonths(cursor, 1))}>
               <ChevronRight className="size-4" />
             </button>
           </div>
         </div>
         <button className="btn-ghost gap-2" onClick={() => setQuickAdd(true)}>
-          <Plus className="size-4" /> Quick add
+          <Plus className="size-4" /> {tr(lang, "shared.quickAdd")}
         </button>
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="grid grid-cols-7 text-xs text-muted-fg uppercase tracking-wider px-1">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-            <div key={d} className="px-2 py-2">{d}</div>
+          {(["mon","tue","wed","thu","fri","sat","sun"] as const).map((d) => (
+            <div key={d} className="px-2 py-2">{tr(lang, (`view.calendar.weekday.${d}`) as any)}</div>
           ))}
         </div>
         <DndContext
@@ -389,6 +393,8 @@ function DayCell({
   // every cell in that bar's range gets the same highlight.
   barHoverHighlight: boolean;
 }) {
+  const lang = useLanguage();
+  const dfLocale = getLanguage(lang).dateFnsLocale;
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
   const today = isSameDay(date, new Date());
   return (
@@ -417,7 +423,7 @@ function DayCell({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
-          aria-label={`Open ${format(date, "EEEE, MMMM d")}`}
+          aria-label={tr(lang, "view.calendar.openDay").replace("{date}", format(date, "EEEE, MMMM d", { locale: dfLocale }))}
           className={cn(
             "size-6 grid place-items-center rounded-full transition-colors",
             today
@@ -636,6 +642,8 @@ function DayView({
   onChangeDate: (d: Date) => void;
   onBack: () => void;
 }) {
+  const lang = useLanguage();
+  const dfLocale = getLanguage(lang).dateFnsLocale;
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
 
   const dayStart = startOfDay(date);
@@ -673,21 +681,21 @@ function DayView({
               className="text-xs text-muted-fg hover:text-fg inline-flex items-center gap-1 mb-1"
             >
               <ArrowLeft className="size-3" />
-              {format(date, "MMMM yyyy")}
+              {format(date, "MMMM yyyy", { locale: dfLocale })}
             </button>
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              {isToday ? "Today" : format(date, "EEEE")}
+              {isToday ? tr(lang, "view.calendar.today") : format(date, "EEEE", { locale: dfLocale })}
             </h1>
             <p className="text-sm text-muted-fg mt-1">
-              {format(date, "MMMM d, yyyy")}
+              {format(date, "MMMM d, yyyy", { locale: dfLocale })}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
               className="btn-ghost size-9 p-0 grid place-items-center"
               onClick={() => onChangeDate(addDays(date, -1))}
-              aria-label="Previous day"
-              title="Previous day"
+              aria-label={tr(lang, "view.calendar.aria.prevDay")}
+              title={tr(lang, "view.calendar.aria.prevDay")}
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -695,13 +703,13 @@ function DayView({
               className="btn-ghost h-9 px-2 text-xs"
               onClick={() => onChangeDate(new Date())}
             >
-              Today
+              {tr(lang, "view.calendar.today")}
             </button>
             <button
               className="btn-ghost size-9 p-0 grid place-items-center"
               onClick={() => onChangeDate(addDays(date, 1))}
-              aria-label="Next day"
-              title="Next day"
+              aria-label={tr(lang, "view.calendar.aria.nextDay")}
+              title={tr(lang, "view.calendar.aria.nextDay")}
             >
               <ChevronRight className="size-4" />
             </button>
@@ -718,7 +726,7 @@ function DayView({
         {dayTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
             <div className="text-3xl mb-2 font-display"><em>{"—"}</em></div>
-            <p className="text-sm">Nothing scheduled for this day.</p>
+            <p className="text-sm">{tr(lang, "view.calendar.nothingScheduled")}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -731,7 +739,7 @@ function DayView({
         {completed.length > 0 && (
           <div className="pt-4">
             <p className="px-3 text-xs text-muted-fg mb-1">
-              Completed &middot; {completed.length}
+              {tr(lang, "view.calendar.completedCount").replace("{n}", String(completed.length))}
             </p>
             {completed.map((t) => (
               <TaskItem key={t.id} task={t} />
