@@ -63,7 +63,7 @@ function topLinks(lang: Lang): LinkDef[] {
     { href: "/app/habits",    label: t(lang, "sidebar.habits"),       icon: Sparkles },
     { href: "/app/retro",     label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
     { href: "/app/completed", label: t(lang, "sidebar.completed"),    icon: CheckCircle2 },
-    { href: "/app/groups",    label: "Groups",                        icon: Users },
+    { href: "/app/groups",    label: t(lang, "sidebar.groups"),                        icon: Users },
     { href: "/app/settings",  label: t(lang, "sidebar.settings"),     icon: Settings },
   ];
 }

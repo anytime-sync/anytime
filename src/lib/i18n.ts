@@ -117,6 +117,7 @@ type StringKey =
   | "view.bucket.noDate"
   | "view.completed.subtitle"
   | "sidebar.settings"
+  | "sidebar.groups"
   | "email.subject"
   | "email.kicker"
   | "email.dueLabel"
@@ -1136,6 +1137,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.termsOfService": "Terms of Service",
     "view.settings.placeholder.yourName": "Your name",
     "view.groups.heading": "Groups",
+    "sidebar.groups": "Groups",
     "view.groups.subtitle": "Share tasks with people you trust. Owners approve every invite before it goes out.",
     "view.groups.namePlaceholder": "New group name",
     "view.groups.create": "Create",
@@ -1714,6 +1716,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.termsOfService": "服務條款",
     "view.settings.placeholder.yourName": "你的名字",
     "view.groups.heading": "群組",
+    "sidebar.groups": "群組",
     "view.groups.subtitle": "與你信任的人共享任務。每一則邀請都需由群組擁有者批准後才會寄出。",
     "view.groups.namePlaceholder": "新群組名稱",
     "view.groups.create": "建立",
@@ -2292,6 +2295,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.termsOfService": "服务条款",
     "view.settings.placeholder.yourName": "你的名字",
     "view.groups.heading": "群组",
+    "sidebar.groups": "群组",
     "view.groups.subtitle": "和你信任的人共享任务。每条邀请都需由群组所有者批准后才会发出。",
     "view.groups.namePlaceholder": "新群组名称",
     "view.groups.create": "创建",
@@ -2870,6 +2874,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.termsOfService": "利用規約",
     "view.settings.placeholder.yourName": "名前",
     "view.groups.heading": "グループ",
+    "sidebar.groups": "グループ",
     "view.groups.subtitle": "信頼できる人とタスクを共有します。招待はオーナーの承認後に送られます。",
     "view.groups.namePlaceholder": "新しいグループ名",
     "view.groups.create": "作成",
@@ -3448,6 +3453,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.termsOfService": "이용 약관",
     "view.settings.placeholder.yourName": "이름",
     "view.groups.heading": "그룹",
+    "sidebar.groups": "그룹",
     "view.groups.subtitle": "신뢰하는 사람과 작업을 공유합니다. 초대는 그룹 소유자가 승인한 뒤에 발송됩니다.",
     "view.groups.namePlaceholder": "새 그룹 이름",
     "view.groups.create": "만들기",

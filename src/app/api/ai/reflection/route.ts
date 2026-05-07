@@ -30,14 +30,24 @@ export async function GET() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Already generated today?
+  // Read user language first so the cache hit can be gated on it —
+  // otherwise switching language never refreshes today's reflection.
+  const { data: prefs } = await supabase
+    .from("user_preferences").select("language").eq("user_id", u.user.id).maybeSingle();
+  const language = (prefs?.language ?? "en") as LanguageCode;
+
+  // Already generated today in this language?
   const { data: existing } = await supabase
     .from("daily_reflections")
     .select("*")
     .eq("user_id", u.user.id)
     .eq("local_date", today)
     .maybeSingle();
-  if (existing && existing.headline) {
+  if (
+    existing &&
+    existing.headline &&
+    (existing as { language?: string }).language === language
+  ) {
     return NextResponse.json(existing);
   }
 
@@ -67,10 +77,6 @@ export async function GET() {
     .order("due_at", { ascending: true })
     .limit(20);
 
-  const { data: prefs } = await supabase
-    .from("user_preferences").select("language").eq("user_id", u.user.id).maybeSingle();
-  const language = (prefs?.language ?? "en") as LanguageCode;
-
   const userMsg = [
     `NOW: ${new Date().toISOString()}`,
     `DONE TODAY (${(doneToday ?? []).length}):`,
@@ -94,6 +100,7 @@ export async function GET() {
       {
         user_id: u.user.id,
         local_date: today,
+        language,
         headline: out.headline,
         body: out.body,
         carry_forward_ids: out.carry_forward_ids,
