@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { parseQuickInput, type ParsedQuickInput } from "@/lib/quick-parse";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +107,75 @@ function htmlToText(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+
+/**
+ * Strip common reply / forward prefixes so the natural-language
+ * parser sees the actual subject. Handles English ("Re:", "Fwd:",
+ * "FW:") and a few common locale variants ("AW:", "WG:", "回覆:",
+ * "轉寄:"). Repeats — "Re: Re: Fwd: foo" collapses to "foo".
+ */
+function stripReplyPrefixes(subject: string): string {
+  let out = subject.trim();
+  // Iteratively peel one prefix at a time so chains collapse fully.
+  for (let i = 0; i < 6; i++) {
+    const next = out.replace(
+      /^(re|fw|fwd|aw|wg|回覆|回复|轉寄|转寄|轉發|转发)\s*[:：]\s*/i,
+      ""
+    );
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
+/**
+ * Resolve `tagNames` (and optionally `projectName`) from a parsed
+ * subject into actual `tags.id` / `projects.id` for the user, creating
+ * tag rows on the fly when needed. Mirrors what the in-app quick-add
+ * flow does so emailing produces the same result as typing.
+ */
+async function resolveTagsAndProject(
+  supabase: ReturnType<typeof createSupabaseClient>,
+  userId: string,
+  parsed: ParsedQuickInput
+): Promise<{ tagIds: string[]; projectId: string | null }> {
+  let projectId: string | null = null;
+  if (parsed.projectName) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", userId)
+      .ilike("name", parsed.projectName)
+      .maybeSingle();
+    if (proj?.id) projectId = proj.id as string;
+  }
+
+  const tagIds: string[] = [];
+  for (const name of parsed.tagNames) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    // Try existing first.
+    const { data: existing } = await supabase
+      .from("tags")
+      .select("id")
+      .eq("user_id", userId)
+      .ilike("name", trimmed)
+      .maybeSingle();
+    if (existing?.id) {
+      tagIds.push(existing.id as string);
+      continue;
+    }
+    // Otherwise create.
+    const { data: created } = await supabase
+      .from("tags")
+      .insert({ user_id: userId, name: trimmed })
+      .select("id")
+      .single();
+    if (created?.id) tagIds.push(created.id as string);
+  }
+  return { tagIds, projectId };
 }
 
 function buildNotes(
@@ -239,26 +309,79 @@ export async function POST(req: Request) {
     }
   }
 
-  const subject = (payload.Subject ?? "").trim();
-  const title = subject.length > 0 ? subject : "(no subject)";
-  const notes = buildNotes(
+  const rawSubject = (payload.Subject ?? "").trim();
+  const fromAddr = extractAddress(payload.From) ?? null;
+
+  // Pull the user's existing tags + projects so the parser can match
+  // plain mentions ("biz review meeting" → existing tag "biz review")
+  // the same way the in-app Quick Add does.
+  const [{ data: existingTagRows }, { data: existingProjectRows }] = await Promise.all([
+    supabase.from("tags").select("name").eq("user_id", alias.user_id),
+    supabase.from("projects").select("name").eq("user_id", alias.user_id),
+  ]);
+  const existingTags = (existingTagRows ?? []).map((r) => r.name as string).filter(Boolean);
+  const existingProjects = (existingProjectRows ?? []).map((r) => r.name as string).filter(Boolean);
+
+  // Strip reply/forward prefixes BEFORE parsing so chrono and the
+  // priority/tag heuristics see the real subject.
+  const cleanedSubject = stripReplyPrefixes(rawSubject);
+
+  // Run the same NL parser used by /app's Quick Add input. Empty
+  // subject → empty parsed.title; we fall back to "(no subject)".
+  const parsed: ParsedQuickInput = cleanedSubject.length > 0
+    ? parseQuickInput(cleanedSubject, { existingTags, existingProjects })
+    : {
+        title: "",
+        start_at: null,
+        due_at: null,
+        is_all_day: false,
+        priority: 0,
+        tagNames: [],
+        rrule: null,
+        reminder_at: null,
+      };
+
+  const title = (parsed.title || cleanedSubject || rawSubject || "(no subject)").slice(0, 500);
+
+  let notes = buildNotes(
     payload.TextBody,
     payload.HtmlBody,
     payload.From,
     payload.Date
   );
-  const fromAddr = extractAddress(payload.From) ?? null;
+  // If parsing reshaped the title (extracted a date / tag / priority),
+  // keep the original subject in the notes so the user can see what
+  // the parser collapsed. Otherwise the original IS the title and the
+  // line would be redundant.
+  if (rawSubject && rawSubject !== title) {
+    notes = notes + `\n— original subject: ${rawSubject}`;
+  }
 
-  // Insert the task. project_id = default_list_id (Inbox if null).
+  // Resolve tag IDs + a project_id from the parsed names, creating
+  // missing tag rows on the fly.
+  const { tagIds, projectId: parsedProjectId } = await resolveTagsAndProject(
+    supabase,
+    alias.user_id,
+    parsed
+  );
+  const projectId = parsedProjectId ?? alias.default_list_id ?? null;
+
+  // Insert the task. The parsed values become the task's date / time /
+  // priority / repeat / reminder.
   const { data: insertedTask, error: taskErr } = await supabase
     .from("tasks")
     .insert({
       user_id: alias.user_id,
-      project_id: alias.default_list_id ?? null,
-      title: title.slice(0, 500),
+      project_id: projectId,
+      title,
       notes,
       is_completed: false,
-      priority: 0,
+      priority: parsed.priority,
+      start_at: parsed.start_at,
+      due_at: parsed.due_at,
+      is_all_day: parsed.is_all_day,
+      rrule: parsed.rrule,
+      reminder_at: parsed.reminder_at,
     })
     .select("id")
     .single();
@@ -291,6 +414,17 @@ export async function POST(req: Request) {
   });
   if (logErr) {
     console.warn("[inbox/inbound] log insert failed:", logErr.message);
+  }
+
+
+  // Attach parsed tags to the new task. Best-effort — failure here
+  // shouldn't fail the request since the task already exists.
+  if (tagIds.length > 0) {
+    const rows = tagIds.map((tag_id) => ({ task_id: insertedTask.id, tag_id }));
+    const { error: tagErr } = await supabase.from("task_tags").insert(rows);
+    if (tagErr) {
+      console.warn("[inbox/inbound] tag attach failed:", tagErr.message);
+    }
   }
 
   // Bump alias counters. RPC would be nicer but a read-then-write keeps
