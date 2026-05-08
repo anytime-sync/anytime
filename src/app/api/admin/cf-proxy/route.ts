@@ -28,10 +28,22 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const supabase = await createClient();
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user || !isAdminEmail(u.user.email)) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // Two acceptable auth modes:
+  //  1. Logged-in admin session (browser tab already logged in)
+  //  2. Bearer header equal to INBOUND_EMAIL_SECRET (operator script
+  //     calling from a fresh tab; same secret already used by the
+  //     email-to-task webhook so we don't add another env var).
+  const auth = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${process.env.INBOUND_EMAIL_SECRET ?? ""}`;
+  const headerOk =
+    !!process.env.INBOUND_EMAIL_SECRET && auth === expected;
+
+  if (!headerOk) {
+    const supabase = await createClient();
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user || !isAdminEmail(u.user.email)) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
   }
 
   let payload: Body;
