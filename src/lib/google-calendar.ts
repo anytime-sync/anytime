@@ -25,6 +25,12 @@ const CAL_BASE = "https://www.googleapis.com/calendar/v3";
  * v1 read-only sync; `calendar.events` is staged for v2 task→event push.
  */
 export const SCOPES: string[] = [
+  // openid + email + profile so we can call /oauth2/v2/userinfo and
+  // store the connected account_email. Without these the userinfo
+  // request 401s with 'insufficient_scope' and the callback aborts.
+  "openid",
+  "email",
+  "profile",
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/calendar.events",
 ];
