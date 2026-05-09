@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/use-language";
 import { PlanMyDayButton } from "@/components/app/plan-my-day-button";
 import { TodayAiBar } from "@/components/app/today-ai-bar";
 import { StreakRibbon } from "@/components/app/streak-ribbon";
+import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
 import { Celebrations } from "@/components/app/celebrations";
 
 /**
@@ -74,6 +75,9 @@ export default function TodayPage() {
             </button>
           </div>
         </div>
+      </div>
+      <div className="px-4 md:px-6 pt-3">
+        <MorningCopilotCard />
       </div>
       <DayTimeline date={new Date()} />
     </div>

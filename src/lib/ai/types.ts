@@ -74,6 +74,43 @@ export const WeeklyRetroSchema = z.object({
 export type WeeklyRetro = z.infer<typeof WeeklyRetroSchema>;
 
 /**
+ * Morning Co-pilot (Round E v1) — proactive once-a-day brief.
+ *
+ * The model returns a single JSON object with a kicker, headline, intro
+ * paragraph, an optional clarifying question, ≤3 suggested actions
+ * (each carrying a kind + concrete task_id + short reason), and a
+ * one-line closing intent. We validate the suggested_actions list is
+ * capped on the server before persisting; the route also filters
+ * hallucinated task_ids out before storage.
+ */
+export const MorningCopilotActionKindSchema = z.enum([
+  "defer",
+  "drop",
+  "batch",
+  "reschedule",
+]);
+export type MorningCopilotActionKind = z.infer<
+  typeof MorningCopilotActionKindSchema
+>;
+
+export const MorningCopilotActionSchema = z.object({
+  kind: MorningCopilotActionKindSchema,
+  task_id: z.string(),
+  reason: z.string(),
+});
+export type MorningCopilotAction = z.infer<typeof MorningCopilotActionSchema>;
+
+export const MorningCopilotSchema = z.object({
+  kicker: z.string(),
+  headline: z.string(),
+  intro: z.string(),
+  clarifying_question: z.string().nullable(),
+  suggested_actions: z.array(MorningCopilotActionSchema).max(3),
+  closing_intent: z.string(),
+});
+export type MorningCopilotBrief = z.infer<typeof MorningCopilotSchema>;
+
+/**
  * Strip a Claude response down to the JSON it produced, regardless of
  * whether the model wrapped it in ```json fences or chatter.
  */

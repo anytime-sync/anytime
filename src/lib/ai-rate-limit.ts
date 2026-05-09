@@ -34,6 +34,7 @@ export type AiFeature =
   | "prep_meeting"
   | "procrastination"
   | "goal_decompose"
+  | "morning_copilot"
   | "search"
   | "translate_task"
   | "reflection";
@@ -61,6 +62,8 @@ export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
   procrastination: 20,
   // goal_decompose: turning a written goal into a task tree; budget keeps it deliberate.
   goal_decompose: 30,
+  // morning_copilot: Round E proactive brief; once a day per user.
+  morning_copilot: 30,
   // search: NL palette query; cheap re-rank — generous budget.
   search: 100,
   // translate_task: per-task per-locale; cached aggressively. Budget high

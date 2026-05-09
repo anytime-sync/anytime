@@ -49,7 +49,7 @@ export function getLanguage(code: string | null | undefined): LanguageDef {
 /* back gracefully.                                                  */
 /* ----------------------------------------------------------------- */
 
-type StringKey =
+export type StringKey =
   | "auth.login.title"
   | "auth.login.subtitle"
   | "auth.login.orEmail"
@@ -714,7 +714,25 @@ type StringKey =
   | "activity.kind.taskAssigned"
   | "activity.kind.taskShared"
   | "activity.kind.taskDeleted"
-  | "activity.kind.taskCommented";
+  | "activity.kind.taskCommented"
+  /* morning copilot — round E */
+  | "copilot.kickerSuffix"
+  | "copilot.askLabel"
+  | "copilot.askApply"
+  | "copilot.askSkip"
+  | "copilot.actionsLabel"
+  | "copilot.actionDefer"
+  | "copilot.actionDrop"
+  | "copilot.actionBatch"
+  | "copilot.actionReschedule"
+  | "copilot.snooze"
+  | "copilot.dismiss"
+  | "copilot.apply"
+  | "copilot.applying"
+  | "copilot.empty"
+  | "copilot.errLoad"
+  | "copilot.tryAgain"
+  | "copilot.appliedToast";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -1381,6 +1399,24 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskShared": "shared a task here",
     "activity.kind.taskDeleted": "removed a task",
     "activity.kind.taskCommented": "commented on a task",
+    /* morning copilot — round E */
+    "copilot.kickerSuffix": "",
+    "copilot.askLabel": "A question for you",
+    "copilot.askApply": "Apply suggestions",
+    "copilot.askSkip": "Skip for now",
+    "copilot.actionsLabel": "Suggested moves",
+    "copilot.actionDefer": "Defer to tomorrow",
+    "copilot.actionDrop": "Lower priority",
+    "copilot.actionBatch": "Group together",
+    "copilot.actionReschedule": "Move out",
+    "copilot.snooze": "Snooze for tomorrow",
+    "copilot.dismiss": "Dismiss",
+    "copilot.apply": "Apply",
+    "copilot.applying": "Applying…",
+    "copilot.empty": "Quiet morning. The day is open.",
+    "copilot.errLoad": "Couldn't load this morning's brief.",
+    "copilot.tryAgain": "Try again",
+    "copilot.appliedToast": "Plan applied · {n} tasks adjusted",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -2046,6 +2082,24 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskShared": "把任務分享到這裡",
     "activity.kind.taskDeleted": "移除了一個任務",
     "activity.kind.taskCommented": "在任務中留言",
+    /* morning copilot — round E */
+    "copilot.kickerSuffix": "",
+    "copilot.askLabel": "給你的一個提問",
+    "copilot.askApply": "採納建議",
+    "copilot.askSkip": "先略過",
+    "copilot.actionsLabel": "建議的調整",
+    "copilot.actionDefer": "延到明天",
+    "copilot.actionDrop": "降低優先",
+    "copilot.actionBatch": "合併處理",
+    "copilot.actionReschedule": "順延",
+    "copilot.snooze": "明天再看",
+    "copilot.dismiss": "關閉",
+    "copilot.apply": "採納",
+    "copilot.applying": "執行中…",
+    "copilot.empty": "平靜的早晨。今日尚為一張白紙。",
+    "copilot.errLoad": "無法載入今日簡報。",
+    "copilot.tryAgain": "重試",
+    "copilot.appliedToast": "已套用 · 調整 {n} 件任務",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -2711,6 +2765,24 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskShared": "把任务分享到这里",
     "activity.kind.taskDeleted": "删除了一个任务",
     "activity.kind.taskCommented": "在任务上发表了评论",
+    /* morning copilot — round E */
+    "copilot.kickerSuffix": "",
+    "copilot.askLabel": "给你的一个提问",
+    "copilot.askApply": "采纳建议",
+    "copilot.askSkip": "先略过",
+    "copilot.actionsLabel": "建议的调整",
+    "copilot.actionDefer": "延到明天",
+    "copilot.actionDrop": "降低优先",
+    "copilot.actionBatch": "合并处理",
+    "copilot.actionReschedule": "顺延",
+    "copilot.snooze": "明天再看",
+    "copilot.dismiss": "关闭",
+    "copilot.apply": "采纳",
+    "copilot.applying": "执行中…",
+    "copilot.empty": "平静的早晨。今天还是一张白纸。",
+    "copilot.errLoad": "无法加载今日简报。",
+    "copilot.tryAgain": "重试",
+    "copilot.appliedToast": "已应用 · 调整 {n} 件任务",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -3376,6 +3448,24 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskShared": "タスクをここに共有しました",
     "activity.kind.taskDeleted": "タスクを削除しました",
     "activity.kind.taskCommented": "タスクにコメントしました",
+    /* morning copilot — round E */
+    "copilot.kickerSuffix": "",
+    "copilot.askLabel": "ひとつ問いかけ",
+    "copilot.askApply": "提案を採用",
+    "copilot.askSkip": "あとで",
+    "copilot.actionsLabel": "おすすめの調整",
+    "copilot.actionDefer": "明日に延期",
+    "copilot.actionDrop": "優先度を下げる",
+    "copilot.actionBatch": "まとめる",
+    "copilot.actionReschedule": "先送り",
+    "copilot.snooze": "明日にもう一度",
+    "copilot.dismiss": "閉じる",
+    "copilot.apply": "採用",
+    "copilot.applying": "実行中…",
+    "copilot.empty": "静かな朝。今日はまだ白紙です。",
+    "copilot.errLoad": "今日のブリーフを読み込めませんでした。",
+    "copilot.tryAgain": "再試行",
+    "copilot.appliedToast": "適用しました · {n} 件のタスクを調整",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -4041,6 +4131,24 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskShared": "작업을 여기에 공유했습니다",
     "activity.kind.taskDeleted": "작업을 제거했습니다",
     "activity.kind.taskCommented": "작업에 댓글을 남겼습니다",
+    /* morning copilot — round E */
+    "copilot.kickerSuffix": "",
+    "copilot.askLabel": "한 가지 질문",
+    "copilot.askApply": "제안 적용",
+    "copilot.askSkip": "나중에",
+    "copilot.actionsLabel": "제안된 조정",
+    "copilot.actionDefer": "내일로 미루기",
+    "copilot.actionDrop": "우선순위 낮추기",
+    "copilot.actionBatch": "묶어서 처리",
+    "copilot.actionReschedule": "뒤로 미루기",
+    "copilot.snooze": "내일 다시 보기",
+    "copilot.dismiss": "닫기",
+    "copilot.apply": "적용",
+    "copilot.applying": "적용 중…",
+    "copilot.empty": "조용한 아침. 오늘은 아직 백지입니다.",
+    "copilot.errLoad": "오늘의 브리프를 불러오지 못했습니다.",
+    "copilot.tryAgain": "다시 시도",
+    "copilot.appliedToast": "적용됨 · {n}개 작업 조정",
   },
 };
 

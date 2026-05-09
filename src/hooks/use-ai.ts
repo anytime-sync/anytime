@@ -550,3 +550,109 @@ export function useSaveReflectionJournal() {
     },
   });
 }
+
+/* ---------- Morning Co-pilot (Round E v1) ---------- */
+
+export type MorningCopilotActionKind =
+  | "defer"
+  | "drop"
+  | "batch"
+  | "reschedule";
+
+export type MorningCopilotAction = {
+  kind: MorningCopilotActionKind;
+  task_id: string;
+  reason: string;
+};
+
+export type MorningCopilotBrief = {
+  kicker: string;
+  headline: string;
+  intro: string;
+  clarifying_question: string | null;
+  suggested_actions: MorningCopilotAction[];
+  closing_intent: string;
+  applied_action_indexes?: number[];
+};
+
+export type MorningCopilotRow = {
+  user_id: string;
+  local_date: string;
+  language: string;
+  brief: MorningCopilotBrief;
+  status: "open" | "snoozed" | "dismissed" | "applied";
+  surfaced_at: string | null;
+  responded_at: string | null;
+};
+
+/**
+ * Fetch (or generate) today's Morning Co-pilot brief. Cached server-side
+ * by (user, local_date, language) — calling this hook on Today mount is
+ * cheap on the budget when the row already exists.
+ *
+ * Resolves to:
+ *   - the row when it exists / was just generated
+ *   - null when AI is disabled (503)
+ *   - throws Error with code='rate_limited' on 429 (caller hides quietly)
+ */
+export function useMorningCopilot() {
+  return useQuery({
+    queryKey: ["morningCopilot"],
+    queryFn: async (): Promise<MorningCopilotRow | null> => {
+      const r = await fetch("/api/ai/morning-copilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tz: tz() }),
+      });
+      if (r.status === 503) return null;
+      if (r.status === 429) {
+        const j = (await r.json().catch(() => ({}))) as {
+          used?: number;
+          limit?: number;
+        };
+        const err = new Error("rate_limited") as Error & {
+          code?: string;
+          used?: number;
+          limit?: number;
+        };
+        err.code = "rate_limited";
+        err.used = j.used;
+        err.limit = j.limit;
+        throw err;
+      }
+      if (!r.ok) throw new Error(`copilot_failed ${r.status}`);
+      return (await r.json()) as MorningCopilotRow;
+    },
+    retry: false,
+    staleTime: 60 * 60_000,
+  });
+}
+
+/**
+ * Apply / Snooze / Dismiss the current Morning Co-pilot brief. Mutating
+ * task rows is the card's job (RLS-gated client mutations); this only
+ * flips the brief row's status + stashes the picked indexes.
+ */
+export function useRespondToCopilot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      action: "apply" | "snooze" | "dismiss";
+      applied_action_indexes?: number[];
+    }) => {
+      const r = await fetch("/api/ai/morning-copilot/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...input, tz: tz() }),
+      });
+      if (!r.ok) {
+        const j = (await r.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? `respond_failed ${r.status}`);
+      }
+      return (await r.json()) as MorningCopilotRow;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["morningCopilot"] });
+    },
+  });
+}

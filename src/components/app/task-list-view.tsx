@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { InlineTaskInput } from "./inline-task-input";
 import { SortableTaskList } from "./sortable-task-list";
 import { DailyEdition } from "./daily-edition";
+import { MorningCopilotCard } from "./morning-copilot-card";
 import { AntiOverloadBanner } from "./anti-overload-banner";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
@@ -161,6 +162,7 @@ export function TaskListView({
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
         {showDailyEdition && (
           <div className="px-3">
+            <MorningCopilotCard />
             <DailyEdition />
             <AntiOverloadBanner />
           </div>
