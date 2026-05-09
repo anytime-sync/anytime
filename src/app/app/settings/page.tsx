@@ -13,6 +13,11 @@ import { useLanguage } from "@/lib/use-language";
 import { t as tr, getLanguage } from "@/lib/i18n";
 import { formatDistanceToNow } from "date-fns";
 import { useInboxAlias, useRotateInboxAlias } from "@/hooks/use-inbox-alias";
+import {
+  useCalendarConnection,
+  useDisconnectCalendar,
+  useSyncCalendarNow,
+} from "@/hooks/use-calendar";
 
 export default function SettingsPage() {
   const lang = useLanguage();
@@ -308,6 +313,9 @@ export default function SettingsPage() {
 
           {/* ---------- Calendar sync ---------- */}
           <CalendarFeedSection lang={lang} />
+
+          {/* ---------- Google Calendar (Round F) ---------- */}
+          <GoogleCalendarSection lang={lang} />
 
           {/* ---------- Import ---------- */}
           <Section kicker={tr(lang, "view.settings.section.import")}>
@@ -754,6 +762,134 @@ function HowTo({ platform, steps }: { platform: string; steps: string[] }) {
         ))}
       </ol>
     </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+// Google Calendar — read-only sync (Round F).
+//
+// On first connect we kick a sync-now so the user sees their events
+// immediately rather than having to wait for the next 5-min cron tick.
+// The CalendarConnection query is the source of truth for the
+// connected/disconnected switch; the URL ?cal_connected=1 query param
+// is just used to fire a toast on return from the OAuth flow.
+// ---------------------------------------------------------------------
+function GoogleCalendarSection({ lang }: { lang: string }) {
+  const { data: conn, refetch } = useCalendarConnection();
+  const sync = useSyncCalendarNow();
+  const disconnect = useDisconnectCalendar();
+  const [busyDisconnect, setBusyDisconnect] = useState(false);
+
+  // On return from OAuth we get ?cal_connected=1 / ?cal_err=... — fire
+  // a toast and clear the param so a refresh doesn't re-fire it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const u = new URL(window.location.href);
+    const ok = u.searchParams.get("cal_connected");
+    const err = u.searchParams.get("cal_err");
+    if (ok) {
+      toast.success(tr(lang, "view.settings.gcal.toast.connected"));
+      u.searchParams.delete("cal_connected");
+      window.history.replaceState({}, "", u.toString());
+      // Pull fresh status, then kick an immediate sync so chips render
+      // on Today/Calendar without waiting for the cron.
+      refetch().then(() => sync.mutate());
+    } else if (err) {
+      toast.error(`${tr(lang, "view.settings.gcal.connectErrPrefix")} ${err}`);
+      u.searchParams.delete("cal_err");
+      window.history.replaceState({}, "", u.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function onConnect() {
+    window.location.href = "/api/calendar/google/connect";
+  }
+
+  function onSyncNow() {
+    sync.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(tr(lang, "view.settings.gcal.toast.synced"));
+      },
+      onError: (e: Error) => {
+        toast.error(`${tr(lang, "view.settings.gcal.toast.syncErr")}: ${e.message}`);
+      },
+    });
+  }
+
+  function onDisconnect() {
+    if (!confirm(tr(lang, "view.settings.gcal.disconnectConfirm"))) return;
+    setBusyDisconnect(true);
+    disconnect.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(tr(lang, "view.settings.gcal.toast.disconnected"));
+        setBusyDisconnect(false);
+      },
+      onError: (e: Error) => {
+        toast.error(`${tr(lang, "view.settings.gcal.toast.disconnectErr")}: ${e.message}`);
+        setBusyDisconnect(false);
+      },
+    });
+  }
+
+  const lastSyncLabel = conn?.last_sync_at
+    ? formatDistanceToNow(new Date(conn.last_sync_at), { addSuffix: true })
+    : tr(lang, "view.settings.gcal.never");
+
+  return (
+    <Section kicker={tr(lang, "view.settings.section.gcal")}>
+      <p className="text-sm text-muted-fg leading-relaxed max-w-prose">
+        {tr(lang, "view.settings.gcal.description")}
+      </p>
+      {!conn?.connected ? (
+        <div>
+          <button
+            type="button"
+            onClick={onConnect}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Calendar className="size-4" />
+            {tr(lang, "view.settings.gcal.connect")}
+          </button>
+        </div>
+      ) : (
+        <>
+          <Row label={tr(lang, "view.settings.gcal.connectedAs")}>
+            <span className="text-sm text-fg truncate">
+              {conn.account_email ?? ""}
+            </span>
+          </Row>
+          <Row label={tr(lang, "view.settings.gcal.lastSync")}>
+            <span className="text-sm text-muted-fg">{lastSyncLabel}</span>
+          </Row>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onSyncNow}
+              disabled={sync.isPending}
+              className="btn-ghost inline-flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`size-4 ${sync.isPending ? "animate-spin" : ""}`}
+              />
+              {sync.isPending
+                ? tr(lang, "view.settings.gcal.syncing")
+                : tr(lang, "view.settings.gcal.syncNow")}
+            </button>
+            <button
+              type="button"
+              onClick={onDisconnect}
+              disabled={busyDisconnect}
+              className="btn-ghost inline-flex items-center gap-2 text-danger disabled:opacity-50"
+            >
+              <Trash2 className="size-4" />
+              {tr(lang, "view.settings.gcal.disconnect")}
+            </button>
+          </div>
+        </>
+      )}
+    </Section>
   );
 }
 

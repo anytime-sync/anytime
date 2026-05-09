@@ -11,6 +11,7 @@ import { TodayAiBar } from "@/components/app/today-ai-bar";
 import { StreakRibbon } from "@/components/app/streak-ribbon";
 import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
 import { Celebrations } from "@/components/app/celebrations";
+import { TodayCalendarEvents } from "@/components/app/today-calendar-events";
 
 /**
  * Today â toggleable between the editorial list (default) and the new
@@ -34,7 +35,7 @@ export default function TodayPage() {
         showDailyEdition
         sortBy="due_at"
         sortKey="today"
-        prelude={<StreakRibbon />}
+        prelude={<><StreakRibbon /><TodayCalendarEvents /></>}
         headerExtra={
           <>
             <TodayAiBar />

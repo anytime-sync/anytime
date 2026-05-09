@@ -113,3 +113,31 @@ export type Profile = {
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * Round F — Google Calendar read-only sync.
+ *
+ * `calendar_events` is the local cache of events fetched from the
+ * connected provider. Cancellations stay as rows with cancelled=true
+ * so the UI can hide them without us losing audit history.
+ */
+export type CalendarEvent = {
+  id: string;
+  user_id: string;
+  provider: "google";
+  external_id: string;
+  calendar_id: string;
+  title: string | null;
+  description: string | null;
+  location: string | null;
+  start_at: string | null;
+  end_at: string | null;
+  is_all_day: boolean;
+  status: "confirmed" | "tentative" | "cancelled";
+  html_link: string | null;
+  organizer_email: string | null;
+  attendees_count: number;
+  raw: Record<string, unknown>;
+  fetched_at: string;
+  cancelled: boolean;
+};

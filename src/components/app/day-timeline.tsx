@@ -14,6 +14,9 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
+import { useCalendarEvents } from "@/hooks/use-calendar";
+import { CalendarEventChip } from "@/components/app/calendar-event-chip";
+import type { CalendarEvent } from "@/lib/db.types";
 import { useUserPrefs } from "@/hooks/use-ai";
 import { useUIStore } from "@/store/ui";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -91,6 +94,9 @@ export function DayTimeline({ date }: { date: Date }) {
   const { data: prefs } = useUserPrefs();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const update = useUpdateTask();
+  const dayStartForFetch = useMemo(() => startOfDay(date), [date.getTime()]);
+  const dayEndForFetch = useMemo(() => endOfDay(date), [date.getTime()]);
+  const { data: events = [] } = useCalendarEvents({ from: dayStartForFetch, to: dayEndForFetch });
   const containerRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
   const isToday = isSameDay(date, now);
@@ -184,6 +190,32 @@ export function DayTimeline({ date }: { date: Date }) {
     .filter((t) => t.visEnd > t.visStart)
     .sort((a, b) => a.startMin - b.startMin);
 
+  const dayStartForLayout = startOfDay(date);
+  const dayEndForLayout = endOfDay(date);
+
+  // Calendar events: lay them out in a thin left-edge lane so they
+  // don't fight with task chips for horizontal space. We compute the
+  // same startMin/endMin values as task layout, clamp to the visible
+  // hour rail, and skip all-day events (those render in the all-day
+  // header section above).
+  const calEvents = events
+    .filter((e: CalendarEvent) => !e.is_all_day && e.start_at && e.end_at)
+    .map((e: CalendarEvent) => {
+      const start = new Date(e.start_at!);
+      const end = new Date(e.end_at!);
+      // Clip to today's window — multi-day events get visually cropped
+      // rather than spanning past the visible rail.
+      const sClipped = start < dayStartForLayout ? dayStartForLayout : start;
+      const eClipped = end > dayEndForLayout ? dayEndForLayout : end;
+      const startMin = minutesFromRailStart(sClipped);
+      const endMin = minutesFromRailStart(eClipped);
+      const visStart = Math.max(0, startMin);
+      const visEnd = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, endMin);
+      return { event: e, visStart, visEnd };
+    })
+    .filter((e) => e.visEnd > e.visStart);
+  const allDayEvents = events.filter((e: CalendarEvent) => e.is_all_day);
+
   const buffers: Array<{ key: string; top: number; minutes: number }> = [];
   for (let i = 0; i < timed.length - 1; i++) {
     const a = timed[i]!;
@@ -212,7 +244,7 @@ export function DayTimeline({ date }: { date: Date }) {
   return (
     <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
     <div ref={containerRef} className="flex-1 overflow-y-auto">
-      {allDayTasks.length > 0 && (
+      {(allDayTasks.length > 0 || allDayEvents.length > 0) && (
         <div className="border-b border-border px-4 md:px-6 py-2 space-y-1">
           <p className="editorial-number text-[10px]">{t(lang, "dayTimeline.allDay")}</p>
           <div className="flex flex-wrap gap-1.5">
@@ -235,10 +267,12 @@ export function DayTimeline({ date }: { date: Date }) {
                 {t.title}
               </button>
             ))}
+            {allDayEvents.map((ev) => (
+              <CalendarEventChip key={`evad-${ev.id}`} event={ev} lang={lang} size="compact" className="h-6 px-2 text-[11px] w-auto" />
+            ))}
           </div>
         </div>
       )}
-
       <div className="relative" style={{ height: RAIL_HEIGHT }}>
         {peak && (
           <div
@@ -276,7 +310,23 @@ export function DayTimeline({ date }: { date: Date }) {
           </div>
         ))}
 
-        <DayDropZone>
+        {/* Google Calendar events — gray left-edge lane that lives
+            alongside task cards. Click opens the event in Google
+            Calendar (new tab). */}
+        {calEvents.map((c) => {
+          const top = c.visStart * PX_PER_MIN;
+          const height = Math.max(20, (c.visEnd - c.visStart) * PX_PER_MIN - 2);
+          return (
+            <CalendarEventChip
+              key={`evt-${c.event.id}`}
+              event={c.event}
+              lang={lang}
+              size="timeline"
+              style={{ top, height, left: 56, width: 68 }}
+            />
+          );
+        })}
+        <DayDropZone leftPx={calEvents.length > 0 ? 132 : 56}>
           {timed.map((t) => {
             const top = t.visStart * PX_PER_MIN;
             const height = Math.max(24, (t.visEnd - t.visStart) * PX_PER_MIN - 2);
@@ -323,12 +373,13 @@ export function DayTimeline({ date }: { date: Date }) {
   );
 }
 
-function DayDropZone({ children }: { children: React.ReactNode }) {
+function DayDropZone({ children, leftPx }: { children: React.ReactNode; leftPx?: number }) {
   const { setNodeRef } = useDroppable({ id: "day-drop" });
   return (
     <div
       ref={setNodeRef}
-      className="absolute inset-y-0 left-14 right-4 pointer-events-none"
+      className="absolute inset-y-0 right-4 pointer-events-none"
+      style={{ left: leftPx ?? 56 }}
     >
       {children}
     </div>

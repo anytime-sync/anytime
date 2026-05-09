@@ -732,7 +732,27 @@ export type StringKey =
   | "copilot.empty"
   | "copilot.errLoad"
   | "copilot.tryAgain"
-  | "copilot.appliedToast";
+  | "copilot.appliedToast"
+  | "view.settings.section.gcal"
+  | "view.settings.gcal.description"
+  | "view.settings.gcal.connect"
+  | "view.settings.gcal.connectedAs"
+  | "view.settings.gcal.lastSync"
+  | "view.settings.gcal.lastSyncRelative"
+  | "view.settings.gcal.never"
+  | "view.settings.gcal.syncNow"
+  | "view.settings.gcal.syncing"
+  | "view.settings.gcal.disconnect"
+  | "view.settings.gcal.disconnectConfirm"
+  | "view.settings.gcal.connectErrPrefix"
+  | "view.settings.gcal.toast.connected"
+  | "view.settings.gcal.toast.synced"
+  | "view.settings.gcal.toast.syncErr"
+  | "view.settings.gcal.toast.disconnected"
+  | "view.settings.gcal.toast.disconnectErr"
+  | "view.gcal.chip.allDay"
+  | "view.gcal.chip.untitled"
+  | "view.today.events.heading";
 
 const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
   en: {
@@ -1417,6 +1437,26 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "copilot.errLoad": "Couldn't load this morning's brief.",
     "copilot.tryAgain": "Try again",
     "copilot.appliedToast": "Plan applied · {n} tasks adjusted",
+    "view.settings.section.gcal": "Google Calendar",
+    "view.settings.gcal.description": "Read your Google Calendar events into First Light. We render them on Today and Calendar so you can plan around what's already booked. Read-only — we never modify events on Google's side.",
+    "view.settings.gcal.connect": "Connect Google Calendar",
+    "view.settings.gcal.connectedAs": "Connected as",
+    "view.settings.gcal.lastSync": "Last synced",
+    "view.settings.gcal.lastSyncRelative": "{when}",
+    "view.settings.gcal.never": "Never",
+    "view.settings.gcal.syncNow": "Sync now",
+    "view.settings.gcal.syncing": "Syncing…",
+    "view.settings.gcal.disconnect": "Disconnect",
+    "view.settings.gcal.disconnectConfirm": "Disconnect Google Calendar? Your synced events will be removed from First Light. The calendar itself stays untouched.",
+    "view.settings.gcal.connectErrPrefix": "Couldn't connect:",
+    "view.settings.gcal.toast.connected": "Google Calendar connected",
+    "view.settings.gcal.toast.synced": "Calendar synced",
+    "view.settings.gcal.toast.syncErr": "Couldn't sync calendar",
+    "view.settings.gcal.toast.disconnected": "Google Calendar disconnected",
+    "view.settings.gcal.toast.disconnectErr": "Couldn't disconnect",
+    "view.gcal.chip.allDay": "All day",
+    "view.gcal.chip.untitled": "Untitled event",
+    "view.today.events.heading": "On your calendar today",
   },
   "zh-TW": {
     "auth.login.title": "歡迎回來",
@@ -2100,6 +2140,26 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "copilot.errLoad": "無法載入今日簡報。",
     "copilot.tryAgain": "重試",
     "copilot.appliedToast": "已套用 · 調整 {n} 件任務",
+    "view.settings.section.gcal": "Google 日曆",
+    "view.settings.gcal.description": "把 Google 日曆上的活動讀進 First Light。我們會把它顯示在「今天」與「日曆」頁面，方便你避開已經排好的時段。唯讀模式 — 我們不會在 Google 端修改任何活動。",
+    "view.settings.gcal.connect": "連結 Google 日曆",
+    "view.settings.gcal.connectedAs": "已連結帳號",
+    "view.settings.gcal.lastSync": "上次同步",
+    "view.settings.gcal.lastSyncRelative": "{when}",
+    "view.settings.gcal.never": "從未",
+    "view.settings.gcal.syncNow": "立即同步",
+    "view.settings.gcal.syncing": "同步中…",
+    "view.settings.gcal.disconnect": "解除連結",
+    "view.settings.gcal.disconnectConfirm": "要解除 Google 日曆的連結嗎？同步過來的活動會從 First Light 移除，原始日曆不會受到影響。",
+    "view.settings.gcal.connectErrPrefix": "無法連結：",
+    "view.settings.gcal.toast.connected": "已連結 Google 日曆",
+    "view.settings.gcal.toast.synced": "日曆已同步",
+    "view.settings.gcal.toast.syncErr": "無法同步日曆",
+    "view.settings.gcal.toast.disconnected": "已解除 Google 日曆連結",
+    "view.settings.gcal.toast.disconnectErr": "無法解除連結",
+    "view.gcal.chip.allDay": "整天",
+    "view.gcal.chip.untitled": "未命名活動",
+    "view.today.events.heading": "今天的行事曆活動",
   },
   "zh-CN": {
     "auth.login.title": "欢迎回来",
@@ -2783,6 +2843,26 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "copilot.errLoad": "无法加载今日简报。",
     "copilot.tryAgain": "重试",
     "copilot.appliedToast": "已应用 · 调整 {n} 件任务",
+    "view.settings.section.gcal": "Google 日历",
+    "view.settings.gcal.description": "把 Google 日历的事件同步到 First Light。我们会显示在「今天」和「日历」页面，方便你避开已排好的时间。只读模式 — 我们不会在 Google 端修改任何事件。",
+    "view.settings.gcal.connect": "连接 Google 日历",
+    "view.settings.gcal.connectedAs": "已连接账号",
+    "view.settings.gcal.lastSync": "上次同步",
+    "view.settings.gcal.lastSyncRelative": "{when}",
+    "view.settings.gcal.never": "从未",
+    "view.settings.gcal.syncNow": "立即同步",
+    "view.settings.gcal.syncing": "同步中…",
+    "view.settings.gcal.disconnect": "解除连接",
+    "view.settings.gcal.disconnectConfirm": "要解除 Google 日历的连接吗？已同步的事件会从 First Light 删除，原始日历不会受到影响。",
+    "view.settings.gcal.connectErrPrefix": "无法连接：",
+    "view.settings.gcal.toast.connected": "已连接 Google 日历",
+    "view.settings.gcal.toast.synced": "日历已同步",
+    "view.settings.gcal.toast.syncErr": "无法同步日历",
+    "view.settings.gcal.toast.disconnected": "已解除 Google 日历连接",
+    "view.settings.gcal.toast.disconnectErr": "无法解除连接",
+    "view.gcal.chip.allDay": "全天",
+    "view.gcal.chip.untitled": "未命名事件",
+    "view.today.events.heading": "今天的日历事件",
   },
   ja: {
     "auth.login.title": "おかえりなさい",
@@ -3466,6 +3546,26 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "copilot.errLoad": "今日のブリーフを読み込めませんでした。",
     "copilot.tryAgain": "再試行",
     "copilot.appliedToast": "適用しました · {n} 件のタスクを調整",
+    "view.settings.section.gcal": "Google カレンダー",
+    "view.settings.gcal.description": "Google カレンダーの予定を First Light に読み込みます。「今日」と「カレンダー」のページに表示されるので、すでに入っている予定を避けて計画できます。読み取り専用 — Google 側の予定は変更しません。",
+    "view.settings.gcal.connect": "Google カレンダーを接続",
+    "view.settings.gcal.connectedAs": "接続中のアカウント",
+    "view.settings.gcal.lastSync": "最終同期",
+    "view.settings.gcal.lastSyncRelative": "{when}",
+    "view.settings.gcal.never": "まだ同期していません",
+    "view.settings.gcal.syncNow": "今すぐ同期",
+    "view.settings.gcal.syncing": "同期中…",
+    "view.settings.gcal.disconnect": "切断",
+    "view.settings.gcal.disconnectConfirm": "Google カレンダーとの接続を解除しますか？同期した予定は First Light から削除されます。元のカレンダーには影響しません。",
+    "view.settings.gcal.connectErrPrefix": "接続できませんでした：",
+    "view.settings.gcal.toast.connected": "Google カレンダーを接続しました",
+    "view.settings.gcal.toast.synced": "カレンダーを同期しました",
+    "view.settings.gcal.toast.syncErr": "カレンダーを同期できませんでした",
+    "view.settings.gcal.toast.disconnected": "Google カレンダーを切断しました",
+    "view.settings.gcal.toast.disconnectErr": "切断できませんでした",
+    "view.gcal.chip.allDay": "終日",
+    "view.gcal.chip.untitled": "無題の予定",
+    "view.today.events.heading": "今日のカレンダーの予定",
   },
   ko: {
     "auth.login.title": "다시 오신 것을 환영합니다",
@@ -4149,6 +4249,26 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "copilot.errLoad": "오늘의 브리프를 불러오지 못했습니다.",
     "copilot.tryAgain": "다시 시도",
     "copilot.appliedToast": "적용됨 · {n}개 작업 조정",
+    "view.settings.section.gcal": "Google 캘린더",
+    "view.settings.gcal.description": "Google 캘린더의 일정을 First Light로 가져옵니다. ‘오늘’과 ‘캘린더’ 페이지에 표시되어 이미 잡힌 일정을 피해 계획할 수 있어요. 읽기 전용 — Google 쪽 일정은 변경하지 않습니다.",
+    "view.settings.gcal.connect": "Google 캘린더 연결",
+    "view.settings.gcal.connectedAs": "연결된 계정",
+    "view.settings.gcal.lastSync": "마지막 동기화",
+    "view.settings.gcal.lastSyncRelative": "{when}",
+    "view.settings.gcal.never": "동기화한 적 없음",
+    "view.settings.gcal.syncNow": "지금 동기화",
+    "view.settings.gcal.syncing": "동기화 중…",
+    "view.settings.gcal.disconnect": "연결 해제",
+    "view.settings.gcal.disconnectConfirm": "Google 캘린더 연결을 해제할까요? 동기화된 일정은 First Light에서 삭제되지만 원본 캘린더는 그대로 유지됩니다.",
+    "view.settings.gcal.connectErrPrefix": "연결할 수 없습니다:",
+    "view.settings.gcal.toast.connected": "Google 캘린더가 연결되었습니다",
+    "view.settings.gcal.toast.synced": "캘린더를 동기화했습니다",
+    "view.settings.gcal.toast.syncErr": "캘린더를 동기화할 수 없습니다",
+    "view.settings.gcal.toast.disconnected": "Google 캘린더 연결을 해제했습니다",
+    "view.settings.gcal.toast.disconnectErr": "연결을 해제할 수 없습니다",
+    "view.gcal.chip.allDay": "종일",
+    "view.gcal.chip.untitled": "제목 없는 일정",
+    "view.today.events.heading": "오늘 캘린더 일정",
   },
 };
 

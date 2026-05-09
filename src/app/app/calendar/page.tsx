@@ -11,6 +11,9 @@ import {
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
+import { useCalendarEvents } from "@/hooks/use-calendar";
+import { CalendarEventChip } from "@/components/app/calendar-event-chip";
+import type { CalendarEvent } from "@/lib/db.types";
 import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
 import { TaskItem } from "@/components/app/task-item";
@@ -78,6 +81,25 @@ function MonthView({
   );
 
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
+  // Fetch every event that overlaps the visible grid (typ. 6 weeks).
+  // RLS-gated query — supabase reads only this user's rows.
+  const { data: calEventsAll = [] } = useCalendarEvents({
+    from: startOfDay(gridStart),
+    to: endOfDay(gridEnd),
+  });
+  // Group by day for O(1) cell lookup; key by yyyy-MM-dd in local TZ.
+  const eventsByDay = useMemo(() => {
+    const m = new Map<string, CalendarEvent[]>();
+    for (const ev of calEventsAll) {
+      if (!ev.start_at) continue;
+      const k = format(new Date(ev.start_at), "yyyy-MM-dd");
+      const arr = m.get(k) ?? [];
+      arr.push(ev);
+      m.set(k, arr);
+    }
+    return m;
+  }, [calEventsAll]);
+
   const update = useUpdateTask();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -344,6 +366,7 @@ function MonthView({
                   date={d}
                   inMonth={isSameMonth(d, monthStart)}
                   tasks={dayTasks}
+                  events={eventsByDay.get(key) ?? []}
                   activeId={activeId}
                   onPickDay={onPickDay}
                   barLanesAbove={cellBarLanes.get(key) ?? 0}
@@ -376,13 +399,14 @@ function MonthView({
 }
 
 function DayCell({
-  dateKey, date, inMonth, tasks, activeId, onPickDay,
+  dateKey, date, inMonth, tasks, events, activeId, onPickDay,
   barLanesAbove, barHoverHighlight,
 }: {
   dateKey: string;
   date: Date;
   inMonth: boolean;
   tasks: TaskWithTags[];
+  events: CalendarEvent[];
   activeId: string | null;
   onPickDay: (d: Date) => void;
   // Number of multi-day bar lanes overlaying this cell. The chip area
@@ -439,6 +463,23 @@ function DayCell({
         style={barLanesAbove > 0 ? { marginTop: `${barLanesAbove * 22}px` } : undefined}
         data-day-cell-hit="1"
       >
+        {events.slice(0, 2).map((ev) => (
+          <CalendarEventChip
+            key={`ev-${ev.id}`}
+            event={ev}
+            lang={lang}
+            size="compact"
+          />
+        ))}
+        {events.length > 2 && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
+            className="text-[10px] text-muted-fg pl-1 hover:text-fg text-left"
+          >
+            + {events.length - 2}
+          </button>
+        )}
         {tasks.slice(0, 4).map((t) => (
           <DraggableTask
             key={t.id}
@@ -648,6 +689,7 @@ function DayView({
 
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
+  const { data: dayEvents = [] } = useCalendarEvents({ from: dayStart, to: dayEnd });
   const dayTasks = tasks
     .filter((t) => {
       if (!t.due_at) return false;
@@ -722,6 +764,19 @@ function DayView({
           defaultProjectId={null}
           defaultDueAt={dayStart.toISOString()}
         />
+
+        {dayEvents.length > 0 && (
+          <div className="space-y-1.5 px-3">
+            <p className="editorial-number text-[10px]">
+              {tr(lang, "view.today.events.heading")}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {dayEvents.map((ev) => (
+                <CalendarEventChip key={ev.id} event={ev} lang={lang} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {dayTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
