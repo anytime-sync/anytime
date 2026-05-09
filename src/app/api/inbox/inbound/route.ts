@@ -137,7 +137,8 @@ function stripReplyPrefixes(subject: string): string {
  * flow does so emailing produces the same result as typing.
  */
 async function resolveTagsAndProject(
-  supabase: ReturnType<typeof createSupabaseClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   parsed: ParsedQuickInput
 ): Promise<{ tagIds: string[]; projectId: string | null }> {
