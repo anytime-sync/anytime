@@ -395,7 +395,7 @@ export async function POST(req: Request) {
       user_id: alias.user_id,
       message_id: messageId,
       from_address: fromAddr,
-      subject: subject || null,
+      subject: rawSubject || null,
       task_id: null,
       status: "error",
       error_message: errMsg.slice(0, 500),
@@ -409,7 +409,7 @@ export async function POST(req: Request) {
     user_id: alias.user_id,
     message_id: messageId,
     from_address: fromAddr,
-    subject: subject || null,
+    subject: rawSubject || null,
     task_id: insertedTask.id,
     status: "created",
   });
