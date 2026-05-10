@@ -98,7 +98,7 @@ export function GoalModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-2xl">{tr(lang, "goal.title")}</h2>
+          <h2 className="font-display text-3xl">{tr(lang, "goal.title")}</h2>
           {plan && (
             <span className="text-xs text-muted-fg">
               {plan.tasks.length} {tr(lang, "goal.steps")}
@@ -108,7 +108,7 @@ export function GoalModal() {
 
         {!plan && (
           <>
-            <p className="text-base text-muted-fg mb-3 italic font-display leading-relaxed">
+            <p className="text-lg text-muted-fg mb-3 font-display leading-relaxed">
               {tr(lang, "goal.intro")}
             </p>
             <textarea
