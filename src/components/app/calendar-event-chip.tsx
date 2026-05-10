@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, X } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -11,22 +11,14 @@ import type { LanguageCode } from "@/lib/i18n";
 /**
  * Editorial chip for a Google Calendar event.
  *
- * Visually distinct from task cards on purpose — these aren't TDL
- * tasks, they're external commitments. Muted background, no checkbox,
- * calendar-glyph leading icon.
- *
- * Round F v3: clicking the chip now opens an inline edit dialog with
- * rename / reschedule / delete actions (powered by
- * /api/calendar/google/event/[id]). "Open in Google Calendar" is still
- * available as a dialog action — for richer edits like attendees or
- * recurrence rules, Google's UI is still the right place.
+ * Round F v3: clicking opens an inline edit dialog (rename / reschedule / delete).
+ * Round F v4: dialog now also handles attendees (add/remove emails) and offers
+ * "this event only / entire series" scope when the event is a recurring instance.
  *
  * Three sizing variants:
  *   - "default": full chip used in horizontal rows / day cells
- *   - "compact": tighter version for the month grid where vertical
- *                space is at a premium (no location, smaller type)
- *   - "timeline": absolute-positioned variant for the day timeline,
- *                 spans the event's full height and shows time + title.
+ *   - "compact": tighter version for the month grid
+ *   - "timeline": absolute-positioned variant for the day timeline
  */
 export function CalendarEventChip({
   event,
@@ -163,25 +155,20 @@ export function CalendarEventChip({
 }
 
 /* ------------------------------------------------------------------ */
-/* Edit dialog — Round F v3                                           */
-/* ------------------------------------------------------------------ */
+/* Edit dialog — Round F v3 + v4                                      */
+/* ------------------------------------------------------------------- */
 
-/**
- * Modal that lets you rename / reschedule / delete a Google Calendar
- * event from inside First Light. Renders as an overlay portal-like
- * fixed-position div (no portal lib needed for v0.1).
- *
- * Inputs:
- *   - title (text)
- *   - start_at + end_at (datetime-local for timed events, date for all-day)
- *
- * On Save: PATCH /api/calendar/google/event/[id] then reload page.
- * On Delete: DELETE same endpoint then reload page.
- *
- * Reload (vs in-place state update) keeps this self-contained — the
- * parent calendar page doesn't need to know about edits and refetches
- * via its existing data-loading path.
- */
+type RawEvent = {
+  recurringEventId?: string;
+  attendees?: Array<{
+    email?: string;
+    displayName?: string;
+    responseStatus?: "needsAction" | "declined" | "tentative" | "accepted";
+    organizer?: boolean;
+    self?: boolean;
+  }>;
+};
+
 function CalendarEventEditDialog({
   event,
   lang,
@@ -196,22 +183,51 @@ function CalendarEventEditDialog({
   const initialStart = toInputValue(event.start_at, allDay);
   const initialEnd = toInputValue(event.end_at, allDay);
 
+  const raw = (event.raw ?? {}) as RawEvent;
+  const isRecurringInstance = !!raw.recurringEventId;
+  const initialAttendees = (raw.attendees ?? [])
+    .map((a) => (a.email ?? "").trim())
+    .filter((e) => e.length > 0);
+
   const [title, setTitle] = useState(initialTitle);
   const [startVal, setStartVal] = useState(initialStart);
   const [endVal, setEndVal] = useState(initialEnd);
+  const [attendees, setAttendees] = useState<string[]>(initialAttendees);
+  const [newAttendee, setNewAttendee] = useState("");
+  const [scope, setScope] = useState<"instance" | "series">("instance");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const attendeesSame =
+    attendees.length === initialAttendees.length &&
+    attendees.every((a, i) => a === initialAttendees[i]);
 
   const dirty =
     title !== initialTitle ||
     startVal !== initialStart ||
-    endVal !== initialEnd;
+    endVal !== initialEnd ||
+    !attendeesSame;
+
+  function addAttendee() {
+    const e = newAttendee.trim();
+    if (!e || !e.includes("@")) return;
+    if (attendees.includes(e)) {
+      setNewAttendee("");
+      return;
+    }
+    setAttendees([...attendees, e]);
+    setNewAttendee("");
+  }
+
+  function removeAttendee(email: string) {
+    setAttendees(attendees.filter((a) => a !== email));
+  }
 
   async function handleSave() {
     setBusy(true);
     setError(null);
     try {
-      const patch: Record<string, string> = {};
+      const patch: Record<string, unknown> = {};
       if (title !== initialTitle) patch.title = title;
       if (startVal !== initialStart) {
         patch.start_at = fromInputValue(startVal, allDay);
@@ -219,12 +235,15 @@ function CalendarEventEditDialog({
       if (endVal !== initialEnd) {
         patch.end_at = fromInputValue(endVal, allDay);
       }
+      if (!attendeesSame) patch.attendees = attendees;
       if (Object.keys(patch).length === 0) {
         onClose();
         return;
       }
+      const params = new URLSearchParams();
+      if (isRecurringInstance) params.set("scope", scope);
       const res = await fetch(
-        `/api/calendar/google/event/${encodeURIComponent(event.id)}`,
+        `/api/calendar/google/event/${encodeURIComponent(event.id)}?${params.toString()}`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -235,7 +254,6 @@ function CalendarEventEditDialog({
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error ?? `http_${res.status}`);
       }
-      // Hard reload to pick up the mirror update everywhere.
       if (typeof window !== "undefined") window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "save_failed");
@@ -244,20 +262,19 @@ function CalendarEventEditDialog({
   }
 
   async function handleDelete() {
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(
-        tr(lang, "view.gcal.chip.deleteConfirm") ||
-          "Delete this event from Google Calendar? It will be removed from both First Light and Google."
-      )
-    ) {
-      return;
-    }
+    const msg =
+      tr(lang, "view.gcal.chip.deleteConfirm") ||
+      (isRecurringInstance && scope === "series"
+        ? "Delete the entire recurring series from Google Calendar?"
+        : "Delete this event from Google Calendar?");
+    if (typeof window !== "undefined" && !window.confirm(msg)) return;
     setBusy(true);
     setError(null);
     try {
+      const params = new URLSearchParams();
+      if (isRecurringInstance) params.set("scope", scope);
       const res = await fetch(
-        `/api/calendar/google/event/${encodeURIComponent(event.id)}`,
+        `/api/calendar/google/event/${encodeURIComponent(event.id)}?${params.toString()}`,
         { method: "DELETE" }
       );
       if (!res.ok) {
@@ -286,7 +303,7 @@ function CalendarEventEditDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-5"
+        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">
@@ -301,6 +318,37 @@ function CalendarEventEditDialog({
             ✕
           </button>
         </div>
+
+        {/* Scope radio for recurring events */}
+        {isRecurringInstance && (
+          <div className="mb-4 p-3 rounded border border-amber-200 bg-amber-50/40 text-amber-900">
+            <div className="text-xs font-medium uppercase tracking-wider mb-2">
+              {tr(lang, "view.gcal.chip.scopeLabel") || "Apply changes to"}
+            </div>
+            <label className="flex items-center gap-2 text-sm mb-1 cursor-pointer">
+              <input
+                type="radio"
+                name="scope"
+                value="instance"
+                checked={scope === "instance"}
+                onChange={() => setScope("instance")}
+              />
+              {tr(lang, "view.gcal.chip.scopeInstance") ||
+                "This event only"}
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="scope"
+                value="series"
+                checked={scope === "series"}
+                onChange={() => setScope("series")}
+              />
+              {tr(lang, "view.gcal.chip.scopeSeries") ||
+                "All events in the series"}
+            </label>
+          </div>
+        )}
 
         <label className="block mb-3">
           <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
@@ -347,10 +395,83 @@ function CalendarEventEditDialog({
           </div>
         )}
 
-        {error && (
-          <div className="text-xs text-red-600 mb-3">
-            Error: {error}
+        {/* Attendees */}
+        <div className="mb-4">
+          <div className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
+            {tr(lang, "view.gcal.chip.attendeesLabel") || "Attendees"}
           </div>
+          {attendees.length > 0 ? (
+            <ul className="mb-2 flex flex-wrap gap-1.5">
+              {attendees.map((a) => {
+                const status = (raw.attendees ?? []).find(
+                  (x) => x.email === a
+                )?.responseStatus;
+                return (
+                  <li
+                    key={a}
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2 py-1 rounded text-xs",
+                      "bg-muted/60 border border-border/60"
+                    )}
+                    title={status ? `${a} — ${status}` : a}
+                  >
+                    <span>{a}</span>
+                    {status === "accepted" && (
+                      <span className="text-green-600 text-[10px]">✓</span>
+                    )}
+                    {status === "declined" && (
+                      <span className="text-red-500 text-[10px]">✗</span>
+                    )}
+                    {status === "tentative" && (
+                      <span className="text-amber-600 text-[10px]">?</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeAttendee(a)}
+                      className="ml-0.5 text-muted-fg hover:text-fg"
+                      aria-label={`Remove ${a}`}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="text-xs text-muted-fg mb-2 italic">
+              {tr(lang, "view.gcal.chip.noAttendees") || "No attendees yet."}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder={
+                tr(lang, "view.gcal.chip.attendeePlaceholder") ||
+                "name@example.com"
+              }
+              value={newAttendee}
+              onChange={(e) => setNewAttendee(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addAttendee();
+                }
+              }}
+              className="flex-1 border border-border rounded px-2 py-1 text-sm bg-bg outline-none focus:border-fg/40"
+            />
+            <button
+              type="button"
+              onClick={addAttendee}
+              disabled={!newAttendee.includes("@")}
+              className="text-xs px-3 py-1 rounded border border-border hover:bg-muted disabled:opacity-40"
+            >
+              {tr(lang, "view.gcal.chip.addAttendee") || "Add"}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="text-xs text-red-600 mb-3">Error: {error}</div>
         )}
 
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
@@ -401,12 +522,8 @@ function CalendarEventEditDialog({
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------- */
 
-/**
- * Convert a DB ISO string into the value format that <input type="datetime-local">
- * expects: "YYYY-MM-DDTHH:mm" in local time. For all-day events we want just the date.
- */
 function toInputValue(iso: string | null, allDay: boolean): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -421,14 +538,7 @@ function toInputValue(iso: string | null, allDay: boolean): string {
   );
 }
 
-/**
- * Reverse of toInputValue — back to ISO. The PATCH endpoint accepts:
- *   - timed events: full ISO with timezone (we send local time + offset
- *     reconstructed by Date)
- *   - all-day events: 'YYYY-MM-DD' (sliced server-side)
- */
 function fromInputValue(value: string, allDay: boolean): string {
-  if (allDay) return value; // 'YYYY-MM-DD' is what Google wants for all-day
-  // datetime-local lacks timezone; new Date() interprets it in local time.
+  if (allDay) return value;
   return new Date(value).toISOString();
 }
