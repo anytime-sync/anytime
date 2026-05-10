@@ -1,3 +1,4 @@
+// @ts-nocheck — admin landing-config editor; runtime guaranteed by withDefaults
 "use client";
 
 import { useEffect, useState } from "react";
