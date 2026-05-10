@@ -5,13 +5,8 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/db.types";
-import { getLanguage, t as trStrict } from "@/lib/i18n";
+import { getLanguage } from "@/lib/i18n";
 import type { LanguageCode } from "@/lib/i18n";
-
-// Loose-typed wrapper so we can use ad-hoc keys for v3/v4 without having to
-// extend the StringKey union for every new copy string. All call sites still
-// supply an English fallback via `tr(...) || "fallback"`.
-const tr = trStrict as (l: LanguageCode | string, k: string) => string;
 
 /**
  * Editorial chip for a Google Calendar event.
@@ -19,6 +14,17 @@ const tr = trStrict as (l: LanguageCode | string, k: string) => string;
  * Round F v3: clicking opens an inline edit dialog (rename / reschedule / delete).
  * Round F v4: dialog now also handles attendees (add/remove emails) and offers
  * "this event only / entire series" scope when the event is a recurring instance.
+ *
+ * Round F v4.1 polish:
+ *   - English copy hardcoded (the i18n `t()` helper returns the key string when
+ *     no translation exists, so the `tr(...) || "fallback"` pattern never fell
+ *     back — keys leaked into the UI). Plain strings are clearer.
+ *   - Dialog title shows "Google Calendar event" subtitle so the source is
+ *     obvious at a glance.
+ *   - Footer buttons restructured with flex-wrap + smaller padding so they
+ *     don't clip on narrow viewports.
+ *   - Body type bumped to text-sm for mobile legibility.
+ *   - Compact chip + default chip both show a small calendar-source label.
  *
  * Three sizing variants:
  *   - "default": full chip used in horizontal rows / day cells
@@ -46,7 +52,7 @@ export function CalendarEventChip({
   const [editing, setEditing] = useState(false);
 
   const timeLabel = (() => {
-    if (allDay) return tr(lang, "view.gcal.chip.allDay");
+    if (allDay) return "All day";
     if (!start) return "";
     const s = format(start, "h:mm", { locale: dfLocale });
     if (!end) return s;
@@ -58,7 +64,7 @@ export function CalendarEventChip({
     setEditing(true);
   };
 
-  const title = event.title?.trim() || tr(lang, "view.gcal.chip.untitled");
+  const title = event.title?.trim() || "Untitled event";
 
   const chip = (() => {
     if (size === "timeline") {
@@ -73,7 +79,7 @@ export function CalendarEventChip({
               onClick(e as unknown as React.MouseEvent);
             }
           }}
-          title={`${title}${event.location ? " — " + event.location : ""}`}
+          title={`${title}${event.location ? " — " + event.location : ""} (Google Calendar)`}
           style={style}
           className={cn(
             "absolute rounded-md text-left px-2 py-1 pointer-events-auto",
@@ -83,15 +89,15 @@ export function CalendarEventChip({
             className
           )}
         >
-          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider tabular-nums text-muted-fg">
+          <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider tabular-nums text-muted-fg">
             <CalendarDays className="size-3" />
             {timeLabel}
           </span>
-          <span className="text-xs font-medium leading-snug truncate">
+          <span className="text-sm font-medium leading-snug truncate">
             {title}
           </span>
           {event.location && (
-            <span className="text-[10px] text-muted-fg leading-snug truncate">
+            <span className="text-[11px] text-muted-fg leading-snug truncate">
               {event.location}
             </span>
           )}
@@ -104,15 +110,15 @@ export function CalendarEventChip({
         <button
           type="button"
           onClick={onClick}
-          title={`${title}${event.location ? " — " + event.location : ""}`}
+          title={`${title}${event.location ? " — " + event.location : ""} (Google Calendar)`}
           className={cn(
-            "w-full inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px]",
+            "w-full inline-flex items-center gap-1 px-1.5 h-6 rounded text-[11px]",
             "bg-muted/60 hover:bg-muted text-fg/85",
             "min-w-0 text-left",
             className
           )}
         >
-          <CalendarDays className="size-2.5 shrink-0 text-muted-fg" />
+          <CalendarDays className="size-3 shrink-0 text-muted-fg" />
           <span className="tabular-nums text-muted-fg shrink-0">{timeLabel}</span>
           <span className="truncate">{title}</span>
         </button>
@@ -123,21 +129,24 @@ export function CalendarEventChip({
       <button
         type="button"
         onClick={onClick}
-        title={`${title}${event.location ? " — " + event.location : ""}`}
+        title={`${title}${event.location ? " — " + event.location : ""} (Google Calendar)`}
         className={cn(
-          "inline-flex items-center gap-1.5 px-2 h-7 rounded-md text-xs",
+          "inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-sm",
           "bg-muted/60 hover:bg-muted text-fg/90 transition-colors",
           "border border-border/60 hover:border-border",
           "min-w-0 max-w-full",
           className
         )}
       >
-        <CalendarDays className="size-3 shrink-0 text-muted-fg" />
-        <span className="tabular-nums text-muted-fg shrink-0">{timeLabel}</span>
+        <CalendarDays className="size-3.5 shrink-0 text-muted-fg" />
+        <span className="tabular-nums text-muted-fg shrink-0 text-xs">{timeLabel}</span>
         <span className="truncate font-medium">{title}</span>
+        <span className="hidden md:inline text-[11px] text-muted-fg shrink-0 ml-1 italic">
+          · Google Calendar
+        </span>
         {event.location && (
-          <span className="hidden sm:inline-flex items-center gap-0.5 text-muted-fg shrink-0 max-w-[120px]">
-            <MapPin className="size-2.5" />
+          <span className="hidden sm:inline-flex items-center gap-0.5 text-xs text-muted-fg shrink-0 max-w-[140px]">
+            <MapPin className="size-3" />
             <span className="truncate">{event.location}</span>
           </span>
         )}
@@ -183,6 +192,11 @@ function CalendarEventEditDialog({
   lang: LanguageCode | string;
   onClose: () => void;
 }) {
+  // lang is unused in v4.1 — copy is hardcoded for clarity. Kept in the
+  // signature so callers don't break and so future i18n work has a place to
+  // hook in (when proper StringKeys are added).
+  void lang;
+
   const allDay = !!event.is_all_day;
   const initialTitle = event.title ?? "";
   const initialStart = toInputValue(event.start_at, allDay);
@@ -268,10 +282,9 @@ function CalendarEventEditDialog({
 
   async function handleDelete() {
     const msg =
-      tr(lang, "view.gcal.chip.deleteConfirm") ||
-      (isRecurringInstance && scope === "series"
+      isRecurringInstance && scope === "series"
         ? "Delete the entire recurring series from Google Calendar?"
-        : "Delete this event from Google Calendar?");
+        : "Delete this event from Google Calendar?";
     if (typeof window !== "undefined" && !window.confirm(msg)) return;
     setBusy(true);
     setError(null);
@@ -304,20 +317,26 @@ function CalendarEventEditDialog({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto"
+        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-4 sm:p-5 max-h-[92vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">
-            {tr(lang, "view.gcal.chip.editTitle") || "Edit calendar event"}
-          </h2>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 text-xs text-muted-fg mb-1 uppercase tracking-wider">
+              <CalendarDays className="size-3" />
+              Google Calendar event
+            </p>
+            <h2 className="text-lg font-semibold leading-tight">
+              Edit calendar event
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-muted-fg hover:text-fg text-sm"
+            className="text-muted-fg hover:text-fg text-base shrink-0 size-7 grid place-items-center rounded hover:bg-muted"
             aria-label="Close"
           >
             ✕
@@ -328,7 +347,7 @@ function CalendarEventEditDialog({
         {isRecurringInstance && (
           <div className="mb-4 p-3 rounded border border-amber-200 bg-amber-50/40 text-amber-900">
             <div className="text-xs font-medium uppercase tracking-wider mb-2">
-              {tr(lang, "view.gcal.chip.scopeLabel") || "Apply changes to"}
+              Apply changes to
             </div>
             <label className="flex items-center gap-2 text-sm mb-1 cursor-pointer">
               <input
@@ -338,8 +357,7 @@ function CalendarEventEditDialog({
                 checked={scope === "instance"}
                 onChange={() => setScope("instance")}
               />
-              {tr(lang, "view.gcal.chip.scopeInstance") ||
-                "This event only"}
+              This event only
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -349,21 +367,20 @@ function CalendarEventEditDialog({
                 checked={scope === "series"}
                 onChange={() => setScope("series")}
               />
-              {tr(lang, "view.gcal.chip.scopeSeries") ||
-                "All events in the series"}
+              All events in the series
             </label>
           </div>
         )}
 
         <label className="block mb-3">
           <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
-            {tr(lang, "view.gcal.chip.titleLabel") || "Title"}
+            Title
           </span>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full border border-border rounded px-3 py-2 bg-bg outline-none focus:border-fg/40"
+            className="w-full border border-border rounded px-3 py-2 text-sm bg-bg outline-none focus:border-fg/40"
             autoFocus
           />
         </label>
@@ -371,31 +388,31 @@ function CalendarEventEditDialog({
         <div className="grid grid-cols-2 gap-3 mb-3">
           <label className="block">
             <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
-              {tr(lang, "view.gcal.chip.startLabel") || "Start"}
+              Start
             </span>
             <input
               type={allDay ? "date" : "datetime-local"}
               value={startVal}
               onChange={(e) => setStartVal(e.target.value)}
-              className="w-full border border-border rounded px-3 py-2 bg-bg outline-none focus:border-fg/40"
+              className="w-full border border-border rounded px-2 py-2 text-sm bg-bg outline-none focus:border-fg/40"
             />
           </label>
           <label className="block">
             <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
-              {tr(lang, "view.gcal.chip.endLabel") || "End"}
+              End
             </span>
             <input
               type={allDay ? "date" : "datetime-local"}
               value={endVal}
               onChange={(e) => setEndVal(e.target.value)}
-              className="w-full border border-border rounded px-3 py-2 bg-bg outline-none focus:border-fg/40"
+              className="w-full border border-border rounded px-2 py-2 text-sm bg-bg outline-none focus:border-fg/40"
             />
           </label>
         </div>
 
         {event.location && (
-          <div className="text-xs text-muted-fg mb-3 flex items-center gap-1">
-            <MapPin className="size-3" />
+          <div className="text-sm text-muted-fg mb-3 flex items-center gap-1">
+            <MapPin className="size-3.5" />
             <span>{event.location}</span>
           </div>
         )}
@@ -403,7 +420,7 @@ function CalendarEventEditDialog({
         {/* Attendees */}
         <div className="mb-4">
           <div className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
-            {tr(lang, "view.gcal.chip.attendeesLabel") || "Attendees"}
+            Attendees
           </div>
           {attendees.length > 0 ? (
             <ul className="mb-2 flex flex-wrap gap-1.5">
@@ -415,20 +432,20 @@ function CalendarEventEditDialog({
                   <li
                     key={a}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2 py-1 rounded text-xs",
+                      "inline-flex items-center gap-1 px-2 py-1 rounded text-sm",
                       "bg-muted/60 border border-border/60"
                     )}
                     title={status ? `${a} — ${status}` : a}
                   >
                     <span>{a}</span>
                     {status === "accepted" && (
-                      <span className="text-green-600 text-[10px]">✓</span>
+                      <span className="text-green-600 text-[11px]">✓</span>
                     )}
                     {status === "declined" && (
-                      <span className="text-red-500 text-[10px]">✗</span>
+                      <span className="text-red-500 text-[11px]">✗</span>
                     )}
                     {status === "tentative" && (
-                      <span className="text-amber-600 text-[10px]">?</span>
+                      <span className="text-amber-600 text-[11px]">?</span>
                     )}
                     <button
                       type="button"
@@ -443,17 +460,14 @@ function CalendarEventEditDialog({
               })}
             </ul>
           ) : (
-            <div className="text-xs text-muted-fg mb-2 italic">
-              {tr(lang, "view.gcal.chip.noAttendees") || "No attendees yet."}
+            <div className="text-sm text-muted-fg mb-2 italic">
+              No attendees yet.
             </div>
           )}
           <div className="flex gap-2">
             <input
               type="email"
-              placeholder={
-                tr(lang, "view.gcal.chip.attendeePlaceholder") ||
-                "name@example.com"
-              }
+              placeholder="name@example.com"
               value={newAttendee}
               onChange={(e) => setNewAttendee(e.target.value)}
               onKeyDown={(e) => {
@@ -462,61 +476,57 @@ function CalendarEventEditDialog({
                   addAttendee();
                 }
               }}
-              className="flex-1 border border-border rounded px-2 py-1 text-sm bg-bg outline-none focus:border-fg/40"
+              className="flex-1 min-w-0 border border-border rounded px-2 py-1.5 text-sm bg-bg outline-none focus:border-fg/40"
             />
             <button
               type="button"
               onClick={addAttendee}
               disabled={!newAttendee.includes("@")}
-              className="text-xs px-3 py-1 rounded border border-border hover:bg-muted disabled:opacity-40"
+              className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted disabled:opacity-40 shrink-0"
             >
-              {tr(lang, "view.gcal.chip.addAttendee") || "Add"}
+              Add
             </button>
           </div>
         </div>
 
         {error && (
-          <div className="text-xs text-red-600 mb-3">Error: {error}</div>
+          <div className="text-sm text-red-600 mb-3">Error: {error}</div>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
-          <div className="flex gap-2">
-            {event.html_link && (
-              <button
-                type="button"
-                onClick={openInGoogle}
-                className="text-xs text-muted-fg hover:text-fg underline underline-offset-2"
-              >
-                {tr(lang, "view.gcal.chip.openInGoogle") ||
-                  "Open in Google Calendar"}
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2">
+        {/* Footer — flex-wrap so on narrow screens buttons stack instead of clipping */}
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
+          {event.html_link && (
+            <button
+              type="button"
+              onClick={openInGoogle}
+              className="text-xs text-muted-fg hover:text-fg underline underline-offset-2 mr-auto"
+            >
+              Open in Google Calendar
+            </button>
+          )}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
             <button
               type="button"
               onClick={handleDelete}
               disabled={busy}
-              className="text-xs px-3 py-1.5 rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
             >
-              {tr(lang, "view.gcal.chip.delete") || "Delete"}
+              Delete
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="text-xs px-3 py-1.5 rounded hover:bg-muted"
+              className="text-sm px-3 py-1.5 rounded hover:bg-muted"
             >
-              {tr(lang, "common.cancel") || "Cancel"}
+              Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
               disabled={busy || !dirty}
-              className="text-xs px-3 py-1.5 rounded bg-fg text-bg hover:opacity-90 disabled:opacity-40"
+              className="text-sm px-3 py-1.5 rounded bg-fg text-bg hover:opacity-90 disabled:opacity-40"
             >
-              {busy
-                ? tr(lang, "common.saving") || "Saving…"
-                : tr(lang, "common.save") || "Save"}
+              {busy ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
