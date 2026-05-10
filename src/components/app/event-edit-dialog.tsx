@@ -195,11 +195,11 @@ export function EventEditDialog({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-3 sm:p-4 overflow-y-auto"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-4 sm:p-5 max-h-[92vh] overflow-y-auto"
+        className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-md p-4 sm:p-5 max-h-[92vh] overflow-visible"
       >
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
