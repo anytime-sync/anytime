@@ -90,7 +90,7 @@ export function ReflectionDialog() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-2xl">{tr(lang, "reflect.title")}</h2>
+          <h2 className="font-display text-3xl">{tr(lang, "reflect.title")}</h2>
           <span className="editorial-number text-xs text-muted-fg">
             {new Date().toLocaleDateString(undefined, {
               weekday: "long",
@@ -106,10 +106,10 @@ export function ReflectionDialog() {
 
         {data && (
           <>
-            <h3 className="font-display text-xl leading-snug mb-2">
+            <h3 className="font-display text-2xl leading-snug mb-2">
               {data.headline}
             </h3>
-            <p className="text-base text-fg leading-relaxed italic font-display mb-4">
+            <p className="text-lg text-fg leading-relaxed mb-4">
               {data.body}
             </p>
 
