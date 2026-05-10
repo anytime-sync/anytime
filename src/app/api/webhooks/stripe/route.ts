@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         // Find the user_id. Prefer subscription metadata.user_id (set at
         // Checkout time); fall back to looking up the customer's existing
         // row in our subscriptions table.
-        let userId = sub.metadata?.user_id ?? null;
+        let userId: string | null = sub.metadata?.user_id ?? null;
         if (!userId) {
           const customerId =
             typeof sub.customer === "string" ? sub.customer : sub.customer.id;
