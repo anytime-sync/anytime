@@ -106,10 +106,10 @@ export function ReflectionDialog() {
 
         {data && (
           <>
-            <h3 className="font-display text-2xl leading-snug mb-2">
+            <h3 className="font-display text-xl leading-snug mb-2">
               {data.headline}
             </h3>
-            <p className="text-lg text-fg leading-relaxed mb-4">
+            <p className="text-lg text-muted-fg leading-relaxed font-display mb-4">
               {data.body}
             </p>
 
