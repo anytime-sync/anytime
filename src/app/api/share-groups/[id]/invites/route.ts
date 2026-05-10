@@ -1,21 +1,34 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function service() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("supabase_misconfigured");
+  return createServiceClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 /**
  * POST /api/share-groups/[id]/invites
  * Body: { invitee_email: string }
  *
- * Owner-only. Creates an invite that the originator can later approve
- * (status starts as `pending_approval`). After owner approval the
- * invite moves to `pending_acceptance` so the invitee can accept.
+ * Owner-only. Creates an invite that goes straight to the invitee's
+ * inbox at status `pending_acceptance` — no separate self-approval
+ * step. (The earlier two-step flow caused duplicate UX and a
+ * confusing "approve your own invite" prompt for the owner.)
  *
- * The invitee may already be a registered user â we look them up by
- * email and store their id in `invitee_user_id` so the invite shows
- * up in their inbox immediately. If they're not registered, just the
- * email is stored and resolves on signup.
+ * If the invitee already has an account we resolve their user id
+ * via a service-role lookup against `profiles`. The user-scoped
+ * client can't do that lookup because RLS on profiles hides rows
+ * for users who aren't co-members yet — exactly the case we have
+ * here. Without service role, invitee_user_id was being saved as
+ * null and the invite never reached the invitee's inbox.
  */
 export async function POST(
   req: Request,
@@ -41,23 +54,32 @@ export async function POST(
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
 
-  // Resolve invitee_user_id when possible (no service role here, so we
-  // query the profiles view instead â emails are stored in profiles
-  // for already-registered users).
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
+  // Service-role lookup so we can resolve the invitee's id even when
+  // RLS would otherwise hide them.
+  let inviteeUserId: string | null = null;
+  try {
+    const sb = service();
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    inviteeUserId = prof?.id ?? null;
+  } catch (e) {
+    console.warn("[invites POST] profile lookup failed:", e);
+  }
 
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("share_group_invites")
     .insert({
       group_id: groupId,
       inviter_id: user.id,
       invitee_email: email,
-      invitee_user_id: prof?.id ?? null,
-      status: "pending_approval",
+      invitee_user_id: inviteeUserId,
+      status: "pending_acceptance",
+      approved_by: user.id,
+      approved_at: now,
     })
     .select("id, group_id, invitee_email, status, created_at")
     .single();
@@ -66,17 +88,26 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Notify the inviter that their invite is queued and needs their
-  // approval before it goes out. (Owner-approval workflow: the same
-  // person creating the invite has to approve it.)
-  await supabase.from("app_notifications").insert({
-    user_id: user.id,
-    kind: "invite_pending_your_approval",
-    title: "Approve your invite",
-    body: `You created an invite for ${email}. Open Groups to approve it.`,
-    payload: { invite_id: data.id, group_id: groupId, invitee_email: email },
-    action_url: "/app/groups",
-  });
+  // Look up group name for the invitee notification body.
+  const { data: groupRow } = await supabase
+    .from("share_groups")
+    .select("name")
+    .eq("id", groupId)
+    .maybeSingle();
+  const groupName = groupRow?.name ?? "a group";
+
+  // Notify the invitee directly (only possible if they're a
+  // registered user — otherwise the email goes out via signup).
+  if (inviteeUserId) {
+    await supabase.from("app_notifications").insert({
+      user_id: inviteeUserId,
+      kind: "invite_received",
+      title: "You have an invite to " + groupName,
+      body: "Open Groups to accept or decline.",
+      payload: { invite_id: data.id, group_id: groupId, invitee_email: email },
+      action_url: "/app/groups",
+    });
+  }
 
   return NextResponse.json({ row: data });
 }
