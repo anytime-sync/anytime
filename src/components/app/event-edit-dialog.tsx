@@ -5,6 +5,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/db.types";
 import type { LanguageCode } from "@/lib/i18n";
+import { DateTimePicker } from "./date-time-picker";
 
 /**
  * Shared edit dialog for a Google Calendar event.
@@ -46,8 +47,8 @@ export function EventEditDialog({
 }) {
   const allDay = !!event.is_all_day;
   const initialTitle = event.title ?? "";
-  const initialStart = toInputValue(event.start_at, allDay);
-  const initialEnd = toInputValue(event.end_at, allDay);
+  const initialStart = event.start_at ?? "";
+  const initialEnd = event.end_at ?? "";
 
   const raw = (event.raw ?? {}) as RawEvent;
   const isRecurringInstance = !!raw.recurringEventId;
@@ -68,33 +69,33 @@ export function EventEditDialog({
   // end, push end forward by the same amount the start moved so the event
   // duration stays constant. Mirrors how First Light's native task editor
   // shifts the partner date when one crosses the other.
-  function changeStart(next: string) {
-    const prevStart = parseInputDate(startVal, allDay);
-    const newStart = parseInputDate(next, allDay);
+  function changeStart(nextIso: string | null) {
+    const next = nextIso ?? "";
+    const prev = startVal ? new Date(startVal) : null;
     setStartVal(next);
-    if (!prevStart || !newStart) return;
-    const curEnd = parseInputDate(endVal, allDay);
-    if (!curEnd) return;
+    if (!next || !prev) return;
+    const newStart = new Date(next);
+    const curEnd = endVal ? new Date(endVal) : null;
+    if (!curEnd || Number.isNaN(curEnd.getTime())) return;
     if (newStart.getTime() > curEnd.getTime()) {
-      // start crossed end → push end forward by the same delta.
-      const delta = newStart.getTime() - prevStart.getTime();
+      const delta = newStart.getTime() - prev.getTime();
       const adjustedEnd = new Date(curEnd.getTime() + delta);
-      setEndVal(toInputValue(adjustedEnd.toISOString(), allDay));
+      setEndVal(adjustedEnd.toISOString());
     }
   }
 
-  function changeEnd(next: string) {
-    const prevEnd = parseInputDate(endVal, allDay);
-    const newEnd = parseInputDate(next, allDay);
+  function changeEnd(nextIso: string | null) {
+    const next = nextIso ?? "";
+    const prev = endVal ? new Date(endVal) : null;
     setEndVal(next);
-    if (!prevEnd || !newEnd) return;
-    const curStart = parseInputDate(startVal, allDay);
-    if (!curStart) return;
+    if (!next || !prev) return;
+    const newEnd = new Date(next);
+    const curStart = startVal ? new Date(startVal) : null;
+    if (!curStart || Number.isNaN(curStart.getTime())) return;
     if (newEnd.getTime() < curStart.getTime()) {
-      // end crossed start backwards → pull start back by the same delta.
-      const delta = newEnd.getTime() - prevEnd.getTime();
+      const delta = newEnd.getTime() - prev.getTime();
       const adjustedStart = new Date(curStart.getTime() + delta);
-      setStartVal(toInputValue(adjustedStart.toISOString(), allDay));
+      setStartVal(adjustedStart.toISOString());
     }
   }
 
@@ -129,8 +130,8 @@ export function EventEditDialog({
     try {
       const patch: Record<string, unknown> = {};
       if (title !== initialTitle) patch.title = title;
-      if (startVal !== initialStart) patch.start_at = fromInputValue(startVal, allDay);
-      if (endVal !== initialEnd) patch.end_at = fromInputValue(endVal, allDay);
+      if (startVal !== initialStart) patch.start_at = startVal || null;
+      if (endVal !== initialEnd) patch.end_at = endVal || null;
       if (!attendeesSame) patch.attendees = attendees;
       if (Object.keys(patch).length === 0) {
         onClose();
@@ -265,22 +266,22 @@ export function EventEditDialog({
             <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
               Starts
             </span>
-            <input
-              type={allDay ? "date" : "datetime-local"}
-              value={startVal}
-              onChange={(e) => changeStart(e.target.value)}
-              className="w-full border border-border rounded-md px-2 py-2 text-sm bg-bg outline-none focus:border-fg/40"
+            <DateTimePicker
+              value={startVal || null}
+              onChange={(iso) => changeStart(iso)}
+              className="w-full"
+              placeholder="Pick a start"
             />
           </label>
           <label className="block">
             <span className="block text-xs uppercase tracking-wider text-muted-fg mb-1">
               Ends
             </span>
-            <input
-              type={allDay ? "date" : "datetime-local"}
-              value={endVal}
-              onChange={(e) => changeEnd(e.target.value)}
-              className="w-full border border-border rounded-md px-2 py-2 text-sm bg-bg outline-none focus:border-fg/40"
+            <DateTimePicker
+              value={endVal || null}
+              onChange={(iso) => changeEnd(iso)}
+              className="w-full"
+              placeholder="Pick an end"
             />
           </label>
         </div>
