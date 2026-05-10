@@ -83,8 +83,8 @@ export function ProcrastinationPanel() {
     <section className="border border-border rounded-lg p-4 surface">
       <div className="flex items-baseline justify-between mb-3">
         <div>
-          <h3 className="font-display text-base">{tr(lang, "procrastination.title")}</h3>
-          <p className="text-xs text-muted-fg italic">
+          <h3 className="font-display text-xl">{tr(lang, "procrastination.title")}</h3>
+          <p className="text-sm text-muted-fg italic leading-relaxed mt-0.5">
             {tr(lang, "procrastination.intro")}
           </p>
         </div>
@@ -101,7 +101,7 @@ export function ProcrastinationPanel() {
       </div>
 
       {data && data.summary && (
-        <p className="text-sm text-fg italic font-display mb-3">{data.summary}</p>
+        <p className="text-base text-fg italic font-display mb-3 leading-relaxed">{data.summary}</p>
       )}
 
       {data && data.items.length > 0 && (
@@ -113,10 +113,10 @@ export function ProcrastinationPanel() {
             >
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{titleFor(it.id)}</div>
-                  <div className="text-xs text-muted-fg mt-0.5">
+                  <div className="font-medium text-base truncate">{titleFor(it.id)}</div>
+                  <div className="text-sm text-muted-fg mt-0.5 leading-relaxed">
                     <span className={cn(
-                      "uppercase tracking-wider text-[10px] mr-1",
+                      "uppercase tracking-wider text-xs mr-1",
                       it.verdict === "drop"
                         ? "text-warning"
                         : it.verdict === "break-down"
@@ -128,7 +128,7 @@ export function ProcrastinationPanel() {
                     {it.reason}
                   </div>
                   {it.verdict === "break-down" && it.subtasks.length > 0 && (
-                    <ul className="mt-2 ml-4 list-disc text-xs text-muted-fg space-y-0.5">
+                    <ul className="mt-2 ml-4 list-disc text-sm text-muted-fg space-y-0.5">
                       {it.subtasks.map((s, i) => (
                         <li key={i}>{s}</li>
                       ))}
@@ -158,7 +158,7 @@ export function ProcrastinationPanel() {
       )}
 
       {data && data.items.length === 0 && !procrastinate.isPending && (
-        <p className="text-sm text-muted-fg italic">{tr(lang, "procrastination.allClear")}</p>
+        <p className="text-base text-muted-fg italic leading-relaxed">{tr(lang, "procrastination.allClear")}</p>
       )}
     </section>
   );
