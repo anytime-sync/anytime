@@ -109,7 +109,8 @@ export default function AdminDesignPage() {
   // Working values: merged config from server (with defaults applied) overlaid
   // with the local draft. Saves push the local draft (raw, not merged) so we
   // don't accidentally store a copy of the defaults.
-  const m = cfgQ.data?.merged ?? withDefaults(draft);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const m: any = cfgQ.data?.merged ?? withDefaults(draft);
   const dPricing = draft.pricing ?? {};
 
   return (
