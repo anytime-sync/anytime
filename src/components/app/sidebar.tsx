@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname , StickyNote } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
