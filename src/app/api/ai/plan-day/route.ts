@@ -88,9 +88,45 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
+  // Round F v4.5: fetch today's Google Calendar events so the AI's day
+  // plan accounts for real meetings, not just tasks. Past meetings are
+  // skipped so we only show what's still ahead today.
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const { data: events } = await supabase
+    .from("calendar_events")
+    .select("title,start_at,end_at,is_all_day,location,attendees_count")
+    .eq("cancelled", false)
+    .gte("start_at", startOfToday.toISOString())
+    .lt("start_at", endOfToday.toISOString())
+    .order("start_at", { ascending: true })
+    .limit(20);
+
+  const eventBlock = (events ?? [])
+    .map((e) => {
+      const time = e.is_all_day
+        ? "all-day"
+        : e.start_at && e.end_at
+        ? `${new Date(e.start_at).toISOString().slice(11, 16)}-${new Date(e.end_at).toISOString().slice(11, 16)}`
+        : "";
+      const parts = [
+        e.title || "(untitled)",
+        time && `· ${time}`,
+        e.location && `· @${e.location}`,
+        e.attendees_count ? `· ${e.attendees_count} attendees` : "",
+      ];
+      return parts.filter(Boolean).join(" ");
+    })
+    .join("\n");
+
   const userMsg = [
     `NOW: ${new Date().toISOString()}`,
     `WORKING_HORIZON: today (~12 hours)`,
+    eventBlock
+      ? `CALENDAR EVENTS TODAY (${(events ?? []).length}):\n${eventBlock}`
+      : `CALENDAR EVENTS TODAY: (none)`,
     `TASKS (${tasks.length}):`,
     taskBlock,
   ].join("\n");
