@@ -110,11 +110,26 @@ function MonthView({
   // The active drag's source day — encoded in the draggable id so
   // multi-day chips know which of their covered days the user grabbed
   // from. Format: "<taskId>::<yyyy-mm-dd>".
-  const activeTask = useMemo(() => {
+  // Round F v4.6: when the user drags a GCal event chip, the active id
+  // starts with "event::". Resolve to the event so DragOverlay can preview
+  // it the same way it previews tasks.
+  const activeItem = useMemo<
+    | { kind: "task"; task: TaskWithTags }
+    | { kind: "event"; event: CalendarEvent }
+    | null
+  >(() => {
     if (!activeId) return null;
-    const taskId = activeId.split("::")[0];
-    return tasks.find((t) => t.id === taskId) ?? null;
-  }, [activeId, tasks]);
+    const idStr = String(activeId);
+    if (idStr.startsWith("event::")) {
+      const eventId = idStr.split("::")[1];
+      const ev = calEventsAll.find((e) => e.id === eventId);
+      return ev ? { kind: "event", event: ev } : null;
+    }
+    const taskId = idStr.split("::")[0];
+    const t = tasks.find((x) => x.id === taskId);
+    return t ? { kind: "task", task: t } : null;
+  }, [activeId, tasks, calEventsAll]);
+  const activeTask = activeItem && activeItem.kind === "task" ? activeItem.task : null;
 
   // Multi-day bars: one segment per visible week-row, positioned via
   // CSS grid-column so the bar overlays exactly the covered cells.
@@ -445,7 +460,11 @@ function MonthView({
             ))}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
-            {activeTask ? <DragPreview task={activeTask} cellWidth={cellWidth} /> : null}
+            {activeItem && activeItem.kind === "task" ? (
+              <DragPreview task={activeItem.task} cellWidth={cellWidth} />
+            ) : activeItem && activeItem.kind === "event" ? (
+              <EventDragPreview event={activeItem.event} />
+            ) : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -715,6 +734,27 @@ function DragPreview({ task, cellWidth }: { task: TaskWithTags; cellWidth: numbe
       )}
     >
       {task.title}
+    </div>
+  );
+}
+
+/**
+ * Round F v4.6: drag preview for GCal event chips on the month grid.
+ * Mirrors DragPreview's chip shape (single-day style — events on the
+ * grid render as single-day chips even when they span multiple days,
+ * since multi-day bar rendering for events isn't implemented yet).
+ */
+function EventDragPreview({ event }: { event: CalendarEvent }) {
+  const title = event.title?.trim() || "Untitled event";
+  return (
+    <div
+      style={{ width: "180px" }}
+      className={cn(
+        "px-2 py-1 rounded text-xs truncate shadow-2xl ring-2 ring-accent",
+        "bg-sky-500/55 text-fg"
+      )}
+    >
+      {title}
     </div>
   );
 }
