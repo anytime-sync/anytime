@@ -11,8 +11,11 @@ import {
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import { CalendarEventChip } from "@/components/app/calendar-event-chip";
+import { DraggableEventChip } from "@/components/app/draggable-event-chip";
 import type { CalendarEvent } from "@/lib/db.types";
 import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
@@ -101,6 +104,7 @@ function MonthView({
   }, [calEventsAll]);
 
   const update = useUpdateTask();
+  const qc = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
   // The active drag's source day — encoded in the draggable id so
@@ -264,6 +268,57 @@ function MonthView({
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     if (!e.over) return;
+
+    // Round F v4.4: GCal event drag — drag id starts with "event::".
+    // Shift start_at + end_at by the same day offset (gap-preserving)
+    // and PATCH the Google event via /api/calendar/google/event/[id].
+    const idStr = String(e.active.id);
+    if (idStr.startsWith("event::")) {
+      const [, eventId, fromKey] = idStr.split("::");
+      const date = String(e.over.id);
+      const ev = calEventsAll.find((x) => x.id === eventId);
+      if (!ev || !ev.start_at) return;
+      const [y, m, d] = date.split("-").map(Number);
+      const dropDay = new Date(y, m - 1, d);
+      let offsetDays: number;
+      if (fromKey) {
+        const [fy, fm, fd] = fromKey.split("-").map(Number);
+        const fromDay = new Date(fy, fm - 1, fd);
+        offsetDays = Math.round(
+          (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
+        );
+      } else {
+        offsetDays = Math.round(
+          (startOfDay(dropDay).getTime() - startOfDay(new Date(ev.start_at)).getTime()) / 86400000
+        );
+      }
+      if (offsetDays === 0) return;
+      const newStart = new Date(ev.start_at);
+      newStart.setDate(newStart.getDate() + offsetDays);
+      const patch: { start_at: string; end_at?: string } = {
+        start_at: newStart.toISOString(),
+      };
+      if (ev.end_at) {
+        const newEnd = new Date(ev.end_at);
+        newEnd.setDate(newEnd.getDate() + offsetDays);
+        patch.end_at = newEnd.toISOString();
+      }
+      fetch(`/api/calendar/google/event/${encodeURIComponent(eventId)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`http_${r.status}`);
+          qc.invalidateQueries({ queryKey: ["calendarEvents"] });
+        })
+        .catch((err) => {
+          toast.error("Couldn't reschedule event: " + (err?.message ?? "unknown"));
+          qc.invalidateQueries({ queryKey: ["calendarEvents"] });
+        });
+      return;
+    }
+
     // Drag id is "<taskId>::<from-day-yyyy-mm-dd>" — the second part
     // is the cell the chip was grabbed from. We always shift BOTH
     // start_at and due_at by the same offset so the relative span is
@@ -464,11 +519,12 @@ function DayCell({
         data-day-cell-hit="1"
       >
         {events.slice(0, 2).map((ev) => (
-          <CalendarEventChip
+          <DraggableEventChip
             key={`ev-${ev.id}`}
             event={ev}
             lang={lang}
             size="compact"
+            fromKey={dateKey}
           />
         ))}
         {events.length > 2 && (
