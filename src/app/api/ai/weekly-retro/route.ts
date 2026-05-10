@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   lastWeekDate.setDate(lastWeekDate.getDate() - 7);
   const lastWeekIso = isoWeek(lastWeekDate, tz);
 
-  const [shipped, slipped, openTasks, lastWeekRetro] = await Promise.all([
+  const [shipped, slipped, openTasks, lastWeekRetro, weekEvents] = await Promise.all([
     supabase.from("tasks").select("title,priority,project_id,completed_at")
       .eq("is_completed", true)
       .gte("completed_at", weekStart.toISOString())
@@ -100,6 +100,17 @@ export async function POST(req: Request) {
       .eq("iso_year", lastWeekIso.year)
       .eq("iso_week", lastWeekIso.week)
       .maybeSingle(),
+    // Round F v4.5: include the week's Google Calendar events so the
+    // retro can speak about meetings that consumed time, not only
+    // tasks shipped/slipped.
+    supabase.from("calendar_events")
+      .select("title,start_at,end_at,is_all_day,location,attendees_count")
+      .eq("user_id", u.user.id)
+      .eq("cancelled", false)
+      .gte("start_at", weekStart.toISOString())
+      .lt("start_at", weekEnd.toISOString())
+      .order("start_at", { ascending: true })
+      .limit(60),
   ]);
 
   const lw = lastWeekRetro.data;
@@ -121,6 +132,8 @@ export async function POST(req: Request) {
     slipped: slipped.data ?? [],
     older_open: openTasks.data ?? [],
     last_week: lastWeekSnippet,
+    // Round F v4.5: meetings that took place during this ISO week.
+    calendar_events: weekEvents.data ?? [],
   };
 
   try {
