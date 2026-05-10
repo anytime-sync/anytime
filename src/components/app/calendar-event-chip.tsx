@@ -535,4 +535,15 @@ function toInputValue(iso: string | null, allDay: boolean): string {
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   if (allDay) {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.get
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
+function fromInputValue(value: string, allDay: boolean): string {
+  if (allDay) return value;
+  return new Date(value).toISOString();
+}
