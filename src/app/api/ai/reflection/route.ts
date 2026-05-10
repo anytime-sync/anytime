@@ -76,12 +76,39 @@ export async function GET() {
     .order("due_at", { ascending: true })
     .limit(20);
 
+  // Round F v4.5: include today's Google Calendar events so the
+  // reflection can speak honestly about meetings that happened, not
+  // just task throughput.
+  const endOfDayIso = new Date(startOfDay.getTime() + 86400000).toISOString();
+  const { data: meetingsToday } = await supabase
+    .from("calendar_events")
+    .select("title,start_at,end_at,is_all_day,location,attendees_count")
+    .eq("user_id", u.user.id)
+    .eq("cancelled", false)
+    .gte("start_at", isoStart)
+    .lt("start_at", endOfDayIso)
+    .order("start_at", { ascending: true })
+    .limit(20);
+
+  const meetingBlock = (meetingsToday ?? [])
+    .map((e) => {
+      const t = e.is_all_day
+        ? "all-day"
+        : e.start_at && e.end_at
+        ? `${new Date(e.start_at).toISOString().slice(11, 16)}-${new Date(e.end_at).toISOString().slice(11, 16)}`
+        : "";
+      return `${e.title || "(untitled)"} ${t} ${e.attendees_count ? "(" + e.attendees_count + " ppl)" : ""}`.trim();
+    })
+    .join("\n");
+
   const userMsg = [
     `NOW: ${new Date().toISOString()}`,
     `DONE TODAY (${(doneToday ?? []).length}):`,
     (doneToday ?? []).map((t) => `[${t.id}] ${t.title}`).join("\n") || "(none)",
     `OPEN / DUE OR OVERDUE (${(openTasks ?? []).length}):`,
     (openTasks ?? []).map((t) => `[${t.id}] ${t.title} · p${t.priority}`).join("\n") || "(none)",
+    `MEETINGS TODAY (${(meetingsToday ?? []).length}):`,
+    meetingBlock || "(none)",
   ].join("\n");
 
   try {
