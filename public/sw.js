@@ -10,7 +10,7 @@
  *
  * Increment SW_VERSION when shipping changes so old caches get evicted.
  */
-const SW_VERSION = "fl-v50-2026-05-10-event-dedupe";
+const SW_VERSION = "fl-v51-2026-05-10-event-uses-native-picker";
 const SHELL_CACHE = `shell-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
