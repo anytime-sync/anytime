@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ExternalLink, RotateCcw } from "lucide-react";
-import type { LandingConfig } from "@/lib/landing-config";
+import { withDefaults, type LandingConfig } from "@/lib/landing-config";
 
 type ApiResponse = {
   raw: LandingConfig | null;
@@ -109,7 +109,7 @@ export default function AdminDesignPage() {
   // Working values: merged config from server (with defaults applied) overlaid
   // with the local draft. Saves push the local draft (raw, not merged) so we
   // don't accidentally store a copy of the defaults.
-  const m = (cfgQ.data?.merged ?? merged) as Required<LandingConfig>;
+  const m = cfgQ.data?.merged ?? withDefaults(draft);
   const dPricing = draft.pricing ?? {};
 
   return (
