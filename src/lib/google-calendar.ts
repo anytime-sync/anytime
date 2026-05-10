@@ -10,8 +10,13 @@
  *                                       createCalendarEvent / patchCalendarEvent /
  *                                       deleteCalendarEvent (write pass — Round F v2)
  *   - /api/calendar/google/sync-now   → listCalendarEvents (incremental)
+ *   - /api/calendar/google/event/[id] → patch / delete / get (Round F v3 + v4)
  *   - lib/calendar-token.ts           → refreshAccessToken
  *   - lib/calendar-write.ts           → create/patch/delete (Round F v2)
+ *
+ * Round F v4 additions:
+ *   - getCalendarEvent — fetch a single event (used to look up master of recurring series)
+ *   - GoogleCalendarEventInput.attendees / recurrence
  *
  * Keep this file pure transport — no DB, no Supabase. Callers handle
  * persistence so we can unit-test the wire layer in isolation.
@@ -23,8 +28,6 @@ const USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo";
 const CAL_BASE = "https://www.googleapis.com/calendar/v3";
 
 export const SCOPES: string[] = [
-  // openid + email + profile so we can call /oauth2/v2/userinfo and
-  // store the connected account_email.
   "openid",
   "email",
   "profile",
@@ -52,6 +55,15 @@ export type GoogleCalendarEventDateTime = {
   timeZone?: string;
 };
 
+export type GoogleAttendee = {
+  email: string;
+  displayName?: string;
+  responseStatus?: "needsAction" | "declined" | "tentative" | "accepted";
+  optional?: boolean;
+  organizer?: boolean;
+  self?: boolean;
+};
+
 export type GoogleCalendarEvent = {
   id: string;
   status?: "confirmed" | "tentative" | "cancelled";
@@ -62,8 +74,11 @@ export type GoogleCalendarEvent = {
   start?: GoogleCalendarEventDateTime;
   end?: GoogleCalendarEventDateTime;
   organizer?: { email?: string; displayName?: string; self?: boolean };
-  attendees?: { email?: string; responseStatus?: string }[];
+  attendees?: GoogleAttendee[];
+  /** Set on instances of a recurring event. Points to the master event id. */
   recurringEventId?: string;
+  /** Set on the master event itself — array of RRULE / EXDATE strings. */
+  recurrence?: string[];
   /**
    * Round F v2: events we created carry our task id under
    * extendedProperties.private.firstlightTaskId so the read-side cron
@@ -77,11 +92,15 @@ export type GoogleCalendarEvent = {
 };
 
 export type GoogleCalendarEventInput = {
-  summary: string;
+  summary?: string;
   description?: string;
   location?: string;
-  start: GoogleCalendarEventDateTime;
-  end: GoogleCalendarEventDateTime;
+  start?: GoogleCalendarEventDateTime;
+  end?: GoogleCalendarEventDateTime;
+  /** Pass an empty array to clear all attendees. Each item needs at minimum an email. */
+  attendees?: Pick<GoogleAttendee, "email" | "displayName" | "optional">[];
+  /** Master-event RRULEs. Don't set on instance edits. */
+  recurrence?: string[];
   extendedProperties?: {
     private?: Record<string, string>;
     shared?: Record<string, string>;
@@ -202,8 +221,7 @@ export async function fetchPrimaryCalendarId(
   if (!j.id) throw new Error("google_primary_calendar_no_id");
   return j.id;
 }
-
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------- */
 /* Read (Round F v1)                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -257,24 +275,56 @@ export async function listCalendarEvents({
   };
 }
 
+/**
+ * Round F v4: fetch a single event by id. Used to look up the master
+ * event when the user picks "edit entire series" on a recurring instance.
+ */
+export async function getCalendarEvent({
+  accessToken,
+  calendarId,
+  eventId,
+}: {
+  accessToken: string;
+  calendarId: string;
+  eventId: string;
+}): Promise<GoogleCalendarEvent> {
+  const url = `${CAL_BASE}/calendars/${encodeURIComponent(
+    calendarId
+  )}/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`google_get_event_failed: ${res.status} ${text}`);
+  }
+  return (await res.json()) as GoogleCalendarEvent;
+}
+
 /* ------------------------------------------------------------------ */
-/* Write (Round F v2)                                                 */
+/* Write (Round F v2 / v3 / v4)                                       */
 /* ------------------------------------------------------------------ */
 
-/**
- * Create a new event on the user's calendar. Returns the created
- * event (with `id` populated by Google).
- */
 export async function createCalendarEvent({
   accessToken,
   calendarId,
   event,
+  sendUpdates,
 }: {
   accessToken: string;
   calendarId: string;
   event: GoogleCalendarEventInput;
+  /**
+   * "all" emails attendees about the new event, "none" creates silently.
+   * Default: "none" so we never spam attendees from cron-created events.
+   */
+  sendUpdates?: "all" | "externalOnly" | "none";
 }): Promise<GoogleCalendarEvent> {
-  const url = `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`;
+  const params = new URLSearchParams();
+  params.set("sendUpdates", sendUpdates ?? "none");
+  const url = `${CAL_BASE}/calendars/${encodeURIComponent(
+    calendarId
+  )}/events?${params.toString()}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -290,25 +340,27 @@ export async function createCalendarEvent({
   return (await res.json()) as GoogleCalendarEvent;
 }
 
-/**
- * Patch (partial update) an existing event. We use PATCH not PUT so
- * a missing field doesn't clear it on Google's side — important if
- * the user added attendees or notes there that we don't track.
- */
 export async function patchCalendarEvent({
   accessToken,
   calendarId,
   eventId,
   patch,
+  sendUpdates,
 }: {
   accessToken: string;
   calendarId: string;
   eventId: string;
   patch: Partial<GoogleCalendarEventInput>;
+  sendUpdates?: "all" | "externalOnly" | "none";
 }): Promise<GoogleCalendarEvent> {
+  const params = new URLSearchParams();
+  // Default to "all" for patches because the most common reason a user
+  // patches an event is to change the time / title — they'd expect
+  // attendees to be notified. Caller can override.
+  params.set("sendUpdates", sendUpdates ?? "all");
   const url = `${CAL_BASE}/calendars/${encodeURIComponent(
     calendarId
-  )}/events/${encodeURIComponent(eventId)}`;
+  )}/events/${encodeURIComponent(eventId)}?${params.toString()}`;
   const res = await fetch(url, {
     method: "PATCH",
     headers: {
@@ -317,8 +369,6 @@ export async function patchCalendarEvent({
     },
     body: JSON.stringify(patch),
   });
-  // 404 means the event was already deleted on Google's side. Treat as
-  // a no-op success so our cron doesn't loop forever.
   if (res.status === 404) {
     return { id: eventId, status: "cancelled" } as GoogleCalendarEvent;
   }
@@ -329,22 +379,22 @@ export async function patchCalendarEvent({
   return (await res.json()) as GoogleCalendarEvent;
 }
 
-/**
- * Delete an event. 404 (already gone) and 410 (gone) are treated as
- * success so the queue can clear the row.
- */
 export async function deleteCalendarEvent({
   accessToken,
   calendarId,
   eventId,
+  sendUpdates,
 }: {
   accessToken: string;
   calendarId: string;
   eventId: string;
+  sendUpdates?: "all" | "externalOnly" | "none";
 }): Promise<void> {
+  const params = new URLSearchParams();
+  params.set("sendUpdates", sendUpdates ?? "all");
   const url = `${CAL_BASE}/calendars/${encodeURIComponent(
     calendarId
-  )}/events/${encodeURIComponent(eventId)}`;
+  )}/events/${encodeURIComponent(eventId)}?${params.toString()}`;
   const res = await fetch(url, {
     method: "DELETE",
     headers: { authorization: `Bearer ${accessToken}` },
