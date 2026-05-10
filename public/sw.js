@@ -10,7 +10,7 @@
  *
  * Increment SW_VERSION when shipping changes so old caches get evicted.
  */
-const SW_VERSION = "fl-v46-2026-05-10-event-chip-task-look";
+const SW_VERSION = "fl-v47-2026-05-10-text-lg-bumps";
 const SHELL_CACHE = `shell-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
