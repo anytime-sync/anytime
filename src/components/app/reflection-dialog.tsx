@@ -90,8 +90,8 @@ export function ReflectionDialog() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-xl">{tr(lang, "reflect.title")}</h2>
-          <span className="editorial-number text-[10px] text-muted-fg">
+          <h2 className="font-display text-2xl">{tr(lang, "reflect.title")}</h2>
+          <span className="editorial-number text-xs text-muted-fg">
             {new Date().toLocaleDateString(undefined, {
               weekday: "long",
               month: "short",
@@ -106,22 +106,22 @@ export function ReflectionDialog() {
 
         {data && (
           <>
-            <h3 className="font-display text-lg leading-snug mb-2">
+            <h3 className="font-display text-xl leading-snug mb-2">
               {data.headline}
             </h3>
-            <p className="text-sm text-fg leading-relaxed italic font-display mb-4">
+            <p className="text-base text-fg leading-relaxed italic font-display mb-4">
               {data.body}
             </p>
 
             {data.carry_forward_ids.length > 0 && (
               <section className="mb-4">
                 <div className="flex items-baseline justify-between mb-2">
-                  <h4 className="text-[11px] uppercase tracking-wider text-muted-fg">
+                  <h4 className="text-xs uppercase tracking-wider text-muted-fg">
                     {tr(lang, "reflect.carryHeading")}
                   </h4>
                   <button
                     onClick={carryAll}
-                    className="text-[11px] text-muted-fg hover:text-fg underline"
+                    className="text-xs text-muted-fg hover:text-fg underline"
                   >
                     {tr(lang, "reflect.rollAll")}
                   </button>
@@ -148,7 +148,7 @@ export function ReflectionDialog() {
 
             {data.drop_suggestions_ids.length > 0 && (
               <section className="mb-4">
-                <h4 className="text-[11px] uppercase tracking-wider text-muted-fg mb-2">
+                <h4 className="text-xs uppercase tracking-wider text-muted-fg mb-2">
                   {tr(lang, "reflect.dropHeading")}
                 </h4>
                 <ul className="space-y-1.5">
@@ -172,7 +172,7 @@ export function ReflectionDialog() {
             )}
 
             <section className="mt-4">
-              <h4 className="text-[11px] uppercase tracking-wider text-muted-fg mb-2">
+              <h4 className="text-xs uppercase tracking-wider text-muted-fg mb-2">
                 {tr(lang, "reflect.notesHeading")}
               </h4>
               <textarea
