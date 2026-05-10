@@ -88,7 +88,7 @@ export async function POST(req: Request) {
   endOfTomorrowLocal.setDate(endOfTomorrowLocal.getDate() + 1);
   const yesterdayStart = new Date(Date.now() - 24 * 3600_000);
 
-  const [todayTasksResp, tomorrowCountResp, doneCountResp, reflectionResp] =
+  const [todayTasksResp, tomorrowCountResp, doneCountResp, reflectionResp, todayEventsResp] =
     await Promise.all([
       supabase
         .from("tasks")
@@ -121,6 +121,18 @@ export async function POST(req: Request) {
         .order("local_date", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      // Round F v4.5: today's Google Calendar events so the co-pilot
+      // knows which hours are blocked by real meetings vs. movable
+      // task slots.
+      supabase
+        .from("calendar_events")
+        .select("title,start_at,end_at,is_all_day,location,attendees_count")
+        .eq("user_id", u.user.id)
+        .eq("cancelled", false)
+        .gte("start_at", startOfTodayLocal.toISOString())
+        .lt("start_at", startOfTomorrowLocal.toISOString())
+        .order("start_at", { ascending: true })
+        .limit(20),
     ]);
 
   const todayTasks = (todayTasksResp.data ?? []).map((row: any) => ({
@@ -154,6 +166,9 @@ export async function POST(req: Request) {
           local_date: (reflectionResp.data as any).local_date,
         }
       : null,
+    // Round F v4.5: real meetings the user has on the calendar today.
+    // The co-pilot uses these to schedule around blocked hours.
+    calendar_events: todayEventsResp.data ?? [],
   };
 
   // Collect valid task ids so we can validate the model didn't invent any.
