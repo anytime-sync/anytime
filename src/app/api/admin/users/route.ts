@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isAdmin } from "@/lib/feature-flags";
+import { isOwner } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,11 @@ export const dynamic = "force-dynamic";
  * for the admin members management page. Requires the caller's email to be
  * in ADMIN_EMAILS.
  *
- * We pull from auth.users (admin API) + the user_plans view, joined by user_id.
+ * Response also includes:
+ *   - override_plan_raw: the raw plan from plan_overrides ('vip', 'free', etc.) so
+ *     the admin UI can distinguish a VIP comp from a regular Pro override.
+ *   - viewer_is_owner: true only if the caller is the canonical owner. The UI
+ *     uses this to show/hide the VIP option in the dropdown.
  */
 
 function service() {
@@ -41,10 +46,10 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 500);
   const search = url.searchParams.get("q")?.toLowerCase() ?? "";
+  const viewerIsOwner = isOwner(auth.user.email);
 
   try {
     const sb = service();
-    // List users via the auth admin API.
     const { data: usersList, error: usersErr } = await sb.auth.admin.listUsers({
       page: 1,
       perPage: limit,
@@ -52,20 +57,33 @@ export async function GET(req: Request) {
     if (usersErr) throw usersErr;
     const users = usersList.users ?? [];
 
-    // Pull plan info for these users in one query.
     const ids = users.map((u) => u.id);
-    const { data: plans } = await sb
-      .from("user_plans")
-      .select(
-        "user_id, plan, status, current_period_end, cancel_at_period_end, is_manual_override, override_reason, override_expires_at"
-      )
-      .in("user_id", ids);
-    const planMap = new Map<string, NonNullable<typeof plans>[number]>(
-      (plans ?? []).map((p) => [p.user_id as string, p])
+    const [planRes, overrideRes] = await Promise.all([
+      sb
+        .from("user_plans")
+        .select(
+          "user_id, plan, status, current_period_end, cancel_at_period_end, is_manual_override, override_reason, override_expires_at"
+        )
+        .in("user_id", ids),
+      sb
+        .from("plan_overrides")
+        .select("user_id, plan, reason, expires_at")
+        .in("user_id", ids),
+    ]);
+    type Row = NonNullable<typeof planRes.data>[number];
+    const planMap = new Map<string, Row>(
+      (planRes.data ?? []).map((p) => [p.user_id as string, p])
+    );
+    const overrideMap = new Map<string, { plan: string; reason: string | null; expires_at: string | null }>(
+      (overrideRes.data ?? []).map((o) => [
+        o.user_id as string,
+        { plan: o.plan as string, reason: (o.reason ?? null) as string | null, expires_at: (o.expires_at ?? null) as string | null },
+      ])
     );
 
     let rows = users.map((u) => {
       const p = planMap.get(u.id);
+      const ov = overrideMap.get(u.id);
       return {
         id: u.id,
         email: u.email ?? null,
@@ -77,8 +95,9 @@ export async function GET(req: Request) {
         current_period_end: p?.current_period_end ?? null,
         cancel_at_period_end: !!p?.cancel_at_period_end,
         is_manual_override: !!p?.is_manual_override,
-        override_reason: p?.override_reason ?? null,
-        override_expires_at: p?.override_expires_at ?? null,
+        override_plan_raw: ov?.plan ?? null,
+        override_reason: ov?.reason ?? p?.override_reason ?? null,
+        override_expires_at: ov?.expires_at ?? p?.override_expires_at ?? null,
       };
     });
 
@@ -90,7 +109,11 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({ users: rows, total: usersList.total ?? rows.length });
+    return NextResponse.json({
+      users: rows,
+      total: usersList.total ?? rows.length,
+      viewer_is_owner: viewerIsOwner,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("[admin/users]", msg);
