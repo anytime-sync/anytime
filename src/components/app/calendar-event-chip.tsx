@@ -5,8 +5,13 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/db.types";
-import { getLanguage, t as tr } from "@/lib/i18n";
+import { getLanguage, t as trStrict } from "@/lib/i18n";
 import type { LanguageCode } from "@/lib/i18n";
+
+// Loose-typed wrapper so we can use ad-hoc keys for v3/v4 without having to
+// extend the StringKey union for every new copy string. All call sites still
+// supply an English fallback via `tr(...) || "fallback"`.
+const tr = trStrict as (l: LanguageCode | string, k: string) => string;
 
 /**
  * Editorial chip for a Google Calendar event.
@@ -156,7 +161,7 @@ export function CalendarEventChip({
 
 /* ------------------------------------------------------------------ */
 /* Edit dialog — Round F v3 + v4                                      */
-/* ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
 
 type RawEvent = {
   recurringEventId?: string;
@@ -522,7 +527,7 @@ function CalendarEventEditDialog({
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
-/* ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
 
 function toInputValue(iso: string | null, allDay: boolean): string {
   if (!iso) return "";
@@ -530,15 +535,4 @@ function toInputValue(iso: string | null, allDay: boolean): string {
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   if (allDay) {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
-
-function fromInputValue(value: string, allDay: boolean): string {
-  if (allDay) return value;
-  return new Date(value).toISOString();
-}
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.get
