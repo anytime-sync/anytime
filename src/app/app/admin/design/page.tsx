@@ -169,7 +169,7 @@ export default function AdminDesignPage() {
               label="Bullet list (one per line)"
               multiline
               value={(dPricing.free?.features ?? m.pricing?.free?.features ?? []).join("\n")}
-              placeholder={m.pricing?.free?.features.join("\n")}
+              placeholder={(m.pricing?.free?.features ?? []).join("\n")}
               onChange={(v) =>
                 set(["pricing", "free", "features"], v ? v.split("\n").filter(Boolean) : undefined)
               }
@@ -194,7 +194,7 @@ export default function AdminDesignPage() {
               label="Bullet list (one per line)"
               multiline
               value={(dPricing.pro?.features ?? m.pricing?.pro?.features ?? []).join("\n")}
-              placeholder={m.pricing?.pro?.features.join("\n")}
+              placeholder={(m.pricing?.pro?.features ?? []).join("\n")}
               onChange={(v) =>
                 set(["pricing", "pro", "features"], v ? v.split("\n").filter(Boolean) : undefined)
               }
