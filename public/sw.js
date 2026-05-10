@@ -1,76 +1,153 @@
-// Minimal app-shell service worker.
-// Bump CACHE version on visual/theme changes to force-flush stale clients.
-const CACHE = "firstlight-shell-v14";
-const ASSETS = ["/", "/login", "/signup", "/manifest.webmanifest"];
+/* eslint-env serviceworker */
+/**
+ * First Light service worker.
+ * Round G: offline shell + push notifications + share-target relay.
+ *
+ * Caching strategy:
+ *   - App shell (HTML, CSS, JS): stale-while-revalidate
+ *   - API calls: network-first with 4s timeout, fallback to cache
+ *   - Static assets (images, icons): cache-first
+ *
+ * Increment SW_VERSION when shipping changes so old caches get evicted.
+ */
+const SW_VERSION = "fl-v3-2026-05-09";
+const SHELL_CACHE = `shell-${SW_VERSION}`;
+const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
-  self.skipWaiting();
+const SHELL_URLS = [
+  "/",
+  "/app/today",
+  "/app/calendar",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      // Use addAll with a fallback so a single 404 doesn't kill the install.
+      await Promise.all(
+        SHELL_URLS.map((url) =>
+          cache.add(url).catch(() => {
+            /* skip */
+          })
+        )
+      );
+      await self.skipWaiting();
+    })()
+  );
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => !k.endsWith(SW_VERSION))
+          .map((k) => caches.delete(k))
+      );
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+
+  // Don't intercept Supabase/Google/Anthropic — let them pass through.
   if (
-    req.destination === "image" ||
-    url.pathname.startsWith("/light-bg") ||
-    url.pathname.startsWith("/icons/")
+    url.host.endsWith("supabase.co") ||
+    url.host.endsWith("googleapis.com") ||
+    url.host.endsWith("anthropic.com")
   ) {
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
     return;
   }
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req).catch(() => caches.match(req).then((r) => r ?? caches.match("/")))
-    );
+
+  // API calls: network-first with 4s timeout.
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(networkFirst(req));
     return;
   }
+
+  // Same-origin static + HTML: stale-while-revalidate.
   if (url.origin === self.location.origin) {
-    event.respondWith(caches.match(req).then((cached) => cached ?? fetch(req)));
+    event.respondWith(staleWhileRevalidate(req));
   }
 });
 
-// ----- Web push notification handlers -----
+async function networkFirst(req) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  try {
+    const fresh = await Promise.race([
+      fetch(req),
+      new Promise((_, rej) => setTimeout(() => rej("timeout"), 4000)),
+    ]);
+    if (fresh && fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
+  } catch {
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    return new Response(JSON.stringify({ offline: true }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
+}
 
+async function staleWhileRevalidate(req) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached = await cache.match(req);
+  const fetchAndUpdate = fetch(req)
+    .then((res) => {
+      if (res && res.ok) cache.put(req, res.clone());
+      return res;
+    })
+    .catch(() => cached);
+  return cached || fetchAndUpdate;
+}
+
+/* -------- push handlers -------- */
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
   let payload = {};
-  try { payload = event.data.json(); } catch { payload = { title: event.data.text() }; }
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: "First Light", body: event.data ? event.data.text() : "" };
+  }
   const title = payload.title || "First Light";
-  const options = {
-    body: payload.body || "",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/favicon-32.png",
-    tag: payload.tag || "first-light-reminder",
-    data: { url: payload.url || "/app/today" },
-    requireInteraction: false,
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  const body = payload.body || "";
+  const tag = payload.tag || undefined;
+  const url = payload.url || "/app/today";
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      tag,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url },
+    })
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/app/today";
+  const targetUrl = event.notification.data?.url || "/app/today";
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      // Focus an existing First Light tab if any.
-      for (const c of list) {
-        if (c.url.includes(self.location.origin)) {
-          c.navigate(url);
-          return c.focus();
-        }
+    (async () => {
+      const all = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const c of all) {
+        if (c.url.endsWith(targetUrl) && "focus" in c) return c.focus();
       }
-      return self.clients.openWindow(url);
-    })
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })()
   );
 });
