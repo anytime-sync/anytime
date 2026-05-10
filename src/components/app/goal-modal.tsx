@@ -98,7 +98,7 @@ export function GoalModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-display text-xl">{tr(lang, "goal.title")}</h2>
+          <h2 className="font-display text-2xl">{tr(lang, "goal.title")}</h2>
           {plan && (
             <span className="text-xs text-muted-fg">
               {plan.tasks.length} {tr(lang, "goal.steps")}
@@ -108,7 +108,7 @@ export function GoalModal() {
 
         {!plan && (
           <>
-            <p className="text-sm text-muted-fg mb-3 italic font-display">
+            <p className="text-base text-muted-fg mb-3 italic font-display leading-relaxed">
               {tr(lang, "goal.intro")}
             </p>
             <textarea
@@ -150,7 +150,7 @@ export function GoalModal() {
                 {tr(lang, "goal.projectLabel")}
               </div>
               <div className="font-medium text-sm">~{plan.project_name}</div>
-              <p className="text-xs text-muted-fg mt-1 italic">{plan.summary}</p>
+              <p className="text-sm text-muted-fg mt-1 italic leading-relaxed">{plan.summary}</p>
             </div>
             <ul className="space-y-2">
               {plan.tasks.map((t, i) => (
@@ -175,7 +175,7 @@ export function GoalModal() {
                         )
                       }
                     />
-                    <div className="text-[11px] text-muted-fg">
+                    <div className="text-xs text-muted-fg">
                       <span className="text-fg">Q{t.quadrant}</span> · p{t.priority} · in{" "}
                       {t.due_offset_days === 0 ? tr(lang, "goal.todayLabel") : `${t.due_offset_days}d`} · {t.rationale}
                     </div>
