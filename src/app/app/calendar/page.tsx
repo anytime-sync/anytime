@@ -15,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import { CalendarEventChip } from "@/components/app/calendar-event-chip";
+import { EventEditDialog } from "@/components/app/event-edit-dialog";
+import { EventTaskRow } from "@/components/app/event-task-row";
 import { DraggableEventChip } from "@/components/app/draggable-event-chip";
 import type { CalendarEvent } from "@/lib/db.types";
 import { useUIStore } from "@/store/ui";
@@ -138,7 +140,9 @@ function MonthView({
   // routed only at its draggable inner element.
   const multiDayBars = useMemo(() => {
     type Bar = {
-      task: TaskWithTags;
+      kind: "task" | "event";
+      task?: TaskWithTags;
+      event?: CalendarEvent;
       weekRow: number;       // 0..5
       startCol: number;      // 1..7 (CSS grid col)
       endCol: number;        // 1..7
@@ -170,12 +174,52 @@ function MonthView({
         const segS = Math.max(startIdx, rowStart);
         const segE = Math.min(endIdx, rowEnd);
         out.push({
+          kind: "task",
           task: t,
           weekRow: row,
           startCol: segS - rowStart + 1,
           endCol: segE - rowStart + 1,
           isFirstSegment: row === startRow && s === clampedS,
           isLastSegment: row === endRow && e === clampedE,
+          segDays: days.slice(segS, segE + 1),
+          lane: 0,
+        });
+      }
+    }
+    // Round F v4.7: GCal events with start_at < end_at spanning more than
+    // one calendar day render as continuous bars across covered cells,
+    // mirroring how multi-day tasks render. All-day events that span
+    // `is_all_day` use [start_at, end_at] inclusive minus a day; timed
+    // multi-day events use the same date span as tasks.
+    for (const ev of calEventsAll) {
+      if (!ev.start_at || !ev.end_at) continue;
+      const startMs = startOfDay(new Date(ev.start_at)).getTime();
+      // Google's all-day events use exclusive end (e.g. start=Mon, end=Wed
+      // means Mon+Tue, not Mon+Tue+Wed). Subtract a day for those.
+      const endRawMs = startOfDay(new Date(ev.end_at)).getTime();
+      const endMs = ev.is_all_day ? endRawMs - 86400000 : endRawMs;
+      if (endMs <= startMs) continue;
+      if (startMs > lastMs || endMs < firstMs) continue;
+      const clampedS = Math.max(startMs, firstMs);
+      const clampedE = Math.min(endMs, lastMs);
+      const startIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedS);
+      const endIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedE);
+      if (startIdx < 0 || endIdx < 0) continue;
+      const startRow = Math.floor(startIdx / 7);
+      const endRow = Math.floor(endIdx / 7);
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * 7;
+        const rowEnd = rowStart + 6;
+        const segS = Math.max(startIdx, rowStart);
+        const segE = Math.min(endIdx, rowEnd);
+        out.push({
+          kind: "event",
+          event: ev,
+          weekRow: row,
+          startCol: segS - rowStart + 1,
+          endCol: segE - rowStart + 1,
+          isFirstSegment: row === startRow && startMs === clampedS,
+          isLastSegment: row === endRow && endMs === clampedE,
           segDays: days.slice(segS, segE + 1),
           lane: 0,
         });
@@ -222,15 +266,33 @@ function MonthView({
   const hoverHighlightKeys = useMemo(() => {
     const set = new Set<string>();
     if (!hoveredBarTaskId) return set;
+    // Look in tasks first, then fall through to events.
     const t = tasks.find((x) => x.id === hoveredBarTaskId);
-    if (!t?.start_at || !t?.due_at) return set;
-    const s = startOfDay(new Date(t.start_at));
-    const e = startOfDay(new Date(t.due_at));
-    for (let d = new Date(s); d.getTime() <= e.getTime(); d = addDays(d, 1)) {
-      set.add(format(d, "yyyy-MM-dd"));
+    let startAt: string | null = null;
+    let endAt: string | null = null;
+    let allDay = false;
+    if (t?.start_at && t.due_at) {
+      startAt = t.start_at;
+      endAt = t.due_at;
+    } else {
+      const ev = calEventsAll.find((x) => x.id === hoveredBarTaskId);
+      if (ev?.start_at && ev?.end_at) {
+        startAt = ev.start_at;
+        endAt = ev.end_at;
+        allDay = !!ev.is_all_day;
+      }
+    }
+    if (!startAt || !endAt) return set;
+    const startMs = startOfDay(new Date(startAt)).getTime();
+    // GCal all-day events have exclusive end, subtract 1 day
+    const endMs = allDay
+      ? startOfDay(new Date(endAt)).getTime() - 86400000
+      : startOfDay(new Date(endAt)).getTime();
+    for (let ms = startMs; ms <= endMs; ms += 86400000) {
+      set.add(format(new Date(ms), "yyyy-MM-dd"));
     }
     return set;
-  }, [hoveredBarTaskId, tasks]);
+  }, [hoveredBarTaskId, tasks, calEventsAll]);
 
   // While the user is dragging a task, track which cell their cursor is
   // over so we can light up the FULL range the bar would land on (not
@@ -241,11 +303,28 @@ function MonthView({
   const dragHoverKeys = useMemo(() => {
     const set = new Set<string>();
     if (!activeId || !dragOverDateKey) return set;
-    const [taskId, fromKey] = activeId.split("::");
-    const t = tasks.find((x) => x.id === taskId);
-    if (!t?.start_at || !t?.due_at) return set;
-    const s = startOfDay(new Date(t.start_at)).getTime();
-    const e = startOfDay(new Date(t.due_at)).getTime();
+    const idStr = String(activeId);
+    let startMs: number | null = null;
+    let endMs: number | null = null;
+    let fromKey: string | undefined;
+    if (idStr.startsWith("event::")) {
+      const [, eventId, fk] = idStr.split("::");
+      fromKey = fk;
+      const ev = calEventsAll.find((x) => x.id === eventId);
+      if (!ev?.start_at || !ev?.end_at) return set;
+      startMs = startOfDay(new Date(ev.start_at)).getTime();
+      const allDay = !!ev.is_all_day;
+      endMs = allDay
+        ? startOfDay(new Date(ev.end_at)).getTime() - 86400000
+        : startOfDay(new Date(ev.end_at)).getTime();
+    } else {
+      const [taskId, fk] = idStr.split("::");
+      fromKey = fk;
+      const t = tasks.find((x) => x.id === taskId);
+      if (!t?.start_at || !t?.due_at) return set;
+      startMs = startOfDay(new Date(t.start_at)).getTime();
+      endMs = startOfDay(new Date(t.due_at)).getTime();
+    }
     const [oy, om, od] = dragOverDateKey.split("-").map(Number);
     const dropDay = new Date(oy, om - 1, od);
     let offsetMs: number;
@@ -254,15 +333,15 @@ function MonthView({
       const fromDay = new Date(fy, fm - 1, fd);
       offsetMs = startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime();
     } else {
-      offsetMs = startOfDay(dropDay).getTime() - s;
+      offsetMs = startOfDay(dropDay).getTime() - startMs;
     }
-    const newStart = s + offsetMs;
-    const newEnd = e + offsetMs;
+    const newStart = startMs + offsetMs;
+    const newEnd = endMs + offsetMs;
     for (let ms = newStart; ms <= newEnd; ms += 86400000) {
       set.add(format(new Date(ms), "yyyy-MM-dd"));
     }
     return set;
-  }, [activeId, dragOverDateKey, tasks]);
+  }, [activeId, dragOverDateKey, tasks, calEventsAll]);
 
   // Measure the cell width so the DragOverlay can render multi-day
   // tasks at their REAL bar width (cellWidth * duration) instead of a
@@ -449,15 +528,21 @@ function MonthView({
                 exactly the covered cells. pointer-events: none on the
                 wrapper so the cells underneath stay clickable; only the
                 inner draggable surface captures drag/click. */}
-            {multiDayBars.map((bar, i) => (
-              <DraggableBar
-                key={`bar-${bar.task.id}-${bar.weekRow}-${i}`}
-                bar={bar}
-                dimmed={activeId?.startsWith(`${bar.task.id}::`) ?? false}
-                onPickDay={onPickDay}
-                onHoverChange={setHoveredBarTaskId}
-              />
-            ))}
+            {multiDayBars.map((bar, i) => {
+              const itemId = bar.kind === "event" ? bar.event!.id : bar.task!.id;
+              const dimmedPrefix = bar.kind === "event"
+                ? `event::${itemId}::`
+                : `${itemId}::`;
+              return (
+                <DraggableBar
+                  key={`bar-${itemId}-${bar.weekRow}-${i}`}
+                  bar={bar}
+                  dimmed={activeId?.startsWith(dimmedPrefix) ?? false}
+                  onPickDay={onPickDay}
+                  onHoverChange={setHoveredBarTaskId}
+                />
+              );
+            })}
           </div>
           <DragOverlay dropAnimation={{ duration: 150 }}>
             {activeItem && activeItem.kind === "task" ? (
@@ -592,7 +677,9 @@ function DraggableBar({
   onHoverChange,
 }: {
   bar: {
-    task: TaskWithTags;
+    kind: "task" | "event";
+    task?: TaskWithTags;
+    event?: CalendarEvent;
     weekRow: number;
     startCol: number;
     endCol: number;
@@ -603,24 +690,32 @@ function DraggableBar({
   };
   dimmed?: boolean;
   onPickDay: (d: Date) => void;
-  // Notify parent which task is being hovered so it can highlight all
-  // cells covered by the same task (across week-rows).
-  onHoverChange: (taskId: string | null) => void;
+  onHoverChange: (id: string | null) => void;
 }) {
-  const dragId = `${bar.task.id}::${format(
-    // Anchor multi-day drag to the bar's leftmost visible day so the
-    // common onDragEnd shift-by-(drop − from) math lines up.
-    new Date(bar.task.start_at!),
-    "yyyy-MM-dd"
-  )}`;
+  // Round F v4.7: bars now render either a task OR a Google Calendar event.
+  // The drag id, anchor day, and visual treatment branch on bar.kind.
+  const isEvent = bar.kind === "event";
+  const item = isEvent ? bar.event! : bar.task!;
+  const itemId = item.id;
+  const anchorIso = isEvent
+    ? new Date(bar.event!.start_at!).toISOString()
+    : new Date(bar.task!.start_at!).toISOString();
+  const anchorYmd = format(new Date(anchorIso), "yyyy-MM-dd");
+  const dragId = isEvent
+    ? `event::${itemId}::${anchorYmd}`
+    : `${itemId}::${anchorYmd}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId });
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
-  // A click on the bar should behave like clicking the cell underneath
-  // it: open the day view for that specific day. We compute which of
-  // the bar's covered days the user clicked on by mapping the click X
-  // to a column within the bar's bounding box.
+
+  const [editingEvent, setEditingEvent] = useState(false);
+
   function handleBarClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
+    if (isEvent) {
+      // Events open the shared edit dialog.
+      setEditingEvent(true);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const n = bar.segDays.length;
     if (n <= 0 || rect.width <= 0) return;
@@ -628,16 +723,21 @@ function DraggableBar({
     const idx = Math.min(n - 1, Math.max(0, Math.floor((rel / rect.width) * n)));
     onPickDay(bar.segDays[idx]);
   }
-  // Absolute-positioned overlay sitting on top of the cell grid. The
-  // bar takes ZERO grid space, so cells underneath retain their normal
-  // height and styling. left/width derive from start/end columns as
-  // percentages of the 7-col grid; top stacks bars by lane so multiple
-  // multi-day tasks in the same week-row never overlap.
+
   const numCols = bar.endCol - bar.startCol + 1;
   const leftPadPx = bar.isFirstSegment ? 6 : 0;
   const rightPadPx = bar.isLastSegment ? 6 : 0;
   const LANE_HEIGHT = 22;
-  const LANE_TOP_OFFSET = 26; // clears the date number row
+  const LANE_TOP_OFFSET = 26;
+
+  const title = isEvent
+    ? bar.event!.title?.trim() || "Untitled event"
+    : bar.task!.title;
+  const completed = !isEvent && !!bar.task!.is_completed;
+  const bgClass = isEvent
+    ? "bg-sky-500/55 hover:bg-sky-500/70 text-fg"
+    : priorityBg(bar.task!.priority);
+
   return (
     <div
       style={{
@@ -645,8 +745,6 @@ function DraggableBar({
         top: `calc(${(bar.weekRow * 100) / 6}% + ${LANE_TOP_OFFSET + bar.lane * LANE_HEIGHT}px)`,
         left: `calc(${((bar.startCol - 1) * 100) / 7}% + ${leftPadPx}px)`,
         width: `calc(${(numCols * 100) / 7}% - ${leftPadPx + rightPadPx}px)`,
-        // Wrapper has no pointer events; the inner chip re-enables
-        // them so cells around the chip stay clickable.
         pointerEvents: "none",
         zIndex: 5,
       }}
@@ -656,22 +754,33 @@ function DraggableBar({
         {...listeners}
         {...attributes}
         onClick={handleBarClick}
-        onDoubleClick={(e) => { e.stopPropagation(); setSelected(bar.task.id); }}
-        onMouseEnter={() => onHoverChange(bar.task.id)}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (!isEvent) setSelected(bar.task!.id);
+          else setEditingEvent(true);
+        }}
+        onMouseEnter={() => onHoverChange(itemId)}
         onMouseLeave={() => onHoverChange(null)}
-        title={bar.task.title}
+        title={title}
         className={cn(
           "px-1.5 py-1 text-[11px] truncate cursor-grab active:cursor-grabbing pointer-events-auto",
-          priorityBg(bar.task.priority),
-          bar.task.is_completed && "line-through opacity-60",
+          bgClass,
+          completed && "line-through opacity-60",
           bar.isFirstSegment && bar.isLastSegment && "rounded",
           bar.isFirstSegment && !bar.isLastSegment && "rounded-l",
           !bar.isFirstSegment && bar.isLastSegment && "rounded-r",
           (dimmed || isDragging) && "opacity-30"
         )}
       >
-        {bar.isFirstSegment ? bar.task.title : " "}
+        {bar.isFirstSegment ? title : " "}
       </div>
+      {isEvent && editingEvent && (
+        <EventEditDialog
+          event={bar.event!}
+          lang={"en"}
+          onClose={() => setEditingEvent(false)}
+        />
+      )}
     </div>
   );
 }
@@ -861,31 +970,49 @@ function DayView({
           defaultDueAt={dayStart.toISOString()}
         />
 
-        {dayEvents.length > 0 && (
-          <div className="space-y-1.5 px-3">
-            <p className="editorial-number text-[10px]">
-              {tr(lang, "view.today.events.heading")}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {dayEvents.map((ev) => (
-                <CalendarEventChip key={ev.id} event={ev} lang={lang} />
-              ))}
+        {/* Round F v4.7: events render as EventTaskRow rows interleaved
+            with tasks, sorted chronologically — same UX as Today list view. */}
+        {(() => {
+          type Row =
+            | { kind: "task"; sortAt: number; task: TaskWithTags }
+            | { kind: "event"; sortAt: number; event: CalendarEvent };
+          const rows: Row[] = [
+            ...incomplete.map((t) => ({
+              kind: "task" as const,
+              sortAt: t.due_at
+                ? new Date(t.due_at).getTime()
+                : Number.POSITIVE_INFINITY,
+              task: t,
+            })),
+            ...dayEvents.map((ev) => ({
+              kind: "event" as const,
+              sortAt: ev.start_at
+                ? new Date(ev.start_at).getTime()
+                : Number.POSITIVE_INFINITY,
+              event: ev,
+            })),
+          ];
+          rows.sort((a, b) => a.sortAt - b.sortAt);
+          if (rows.length === 0) {
+            return (
+              <div className="px-3 py-12 text-center text-muted-fg">
+                <div className="text-3xl mb-2 font-display"><em>{"—"}</em></div>
+                <p className="text-sm">{tr(lang, "view.calendar.nothingScheduled")}</p>
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-1">
+              {rows.map((r) =>
+                r.kind === "task" ? (
+                  <TaskItem key={r.task.id} task={r.task} />
+                ) : (
+                  <EventTaskRow key={`ev-${r.event.id}`} event={r.event} lang={lang} />
+                )
+              )}
             </div>
-          </div>
-        )}
-
-        {dayTasks.length === 0 ? (
-          <div className="px-3 py-12 text-center text-muted-fg">
-            <div className="text-3xl mb-2 font-display"><em>{"—"}</em></div>
-            <p className="text-sm">{tr(lang, "view.calendar.nothingScheduled")}</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {incomplete.map((t) => (
-              <TaskItem key={t.id} task={t} />
-            ))}
-          </div>
-        )}
+          );
+        })()}
 
         {completed.length > 0 && (
           <div className="pt-4">
