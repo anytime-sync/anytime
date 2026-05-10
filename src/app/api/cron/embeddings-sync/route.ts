@@ -45,7 +45,13 @@ async function handle(req: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Default: last 24h. Override with ?since=<ISO> to backfill old content
+  // (e.g. ?since=2020-01-01 sweeps everything ever created).
+  const url = new URL(req.url);
+  const sinceParam = url.searchParams.get("since");
+  const since = sinceParam
+    ? new Date(sinceParam).toISOString()
+    : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   let processed = 0;
   let skipped = 0;
