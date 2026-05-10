@@ -11,13 +11,17 @@ import { TodayAiBar } from "@/components/app/today-ai-bar";
 import { StreakRibbon } from "@/components/app/streak-ribbon";
 import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
 import { Celebrations } from "@/components/app/celebrations";
-import { TodayCalendarEvents } from "@/components/app/today-calendar-events";
 
 /**
- * Today â toggleable between the editorial list (default) and the new
+ * Today — toggleable between the editorial list (default) and the new
  * vertical timeline that shows time-blocked tasks against an hour rail.
  *
  * Choice persists per-device via localStorage (see useDayViewMode).
+ *
+ * Round F v4.3: Google Calendar events now render directly inside the
+ * task list (interleaved with native tasks by start time). The
+ * <TodayCalendarEvents /> prelude block is gone — events are first-class
+ * rows in the same chronological stream.
  */
 export default function TodayPage() {
   const [mode, setMode] = useDayViewMode();
@@ -29,21 +33,21 @@ export default function TodayPage() {
       <>
         <Celebrations />
         <TaskListView
-        title={t(lang, "sidebar.today")}
-        subtitle={format(new Date(), "EEEE, MMMM d")}
-        filter={{ view: "today" }}
-        showDailyEdition
-        sortBy="due_at"
-        sortKey="today"
-        prelude={<><StreakRibbon /><TodayCalendarEvents /></>}
-        headerExtra={
-          <>
-            <TodayAiBar />
-            <PlanMyDayButton />
-            <DayViewToggle mode={mode} setMode={setMode} />
-          </>
-        }
-      />
+          title={t(lang, "sidebar.today")}
+          subtitle={format(new Date(), "EEEE, MMMM d")}
+          filter={{ view: "today" }}
+          showDailyEdition
+          sortBy="due_at"
+          sortKey="today"
+          prelude={<StreakRibbon />}
+          headerExtra={
+            <>
+              <TodayAiBar />
+              <PlanMyDayButton />
+              <DayViewToggle mode={mode} setMode={setMode} />
+            </>
+          }
+        />
       </>
     );
   }
@@ -64,7 +68,6 @@ export default function TodayPage() {
             <TodayAiBar />
             <PlanMyDayButton />
             <DayViewToggle mode={mode} setMode={setMode} />
-            {/* Icon-only on mobile so the title isn't squeezed to "T..." */}
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
               onClick={() => setQuickAdd(true)}
