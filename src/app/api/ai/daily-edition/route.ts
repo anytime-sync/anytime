@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   const endOfTomorrowLocal = new Date(startOfTomorrowLocal);
   endOfTomorrowLocal.setDate(endOfTomorrowLocal.getDate() + 1);
 
-  const [todayTasks, tomorrowTasks, overdueTasks, recentDone] = await Promise.all([
+  const [todayTasks, tomorrowTasks, overdueTasks, recentDone, todayEvents] = await Promise.all([
     supabase.from("tasks").select("title,priority,due_at,project_id,is_completed,estimated_minutes")
       .eq("is_completed", false)
       .lt("due_at", startOfTomorrowLocal.toISOString())
@@ -92,6 +92,15 @@ export async function POST(req: Request) {
       .gte("completed_at", new Date(Date.now() - 3 * 24 * 3600_000).toISOString())
       .order("completed_at", { ascending: false })
       .limit(20),
+    // Round F v4.5: include today's Google Calendar events in the AI
+    // context so the daily edition can plan around real meetings, not
+    // just tasks.
+    supabase.from("calendar_events").select("title,start_at,end_at,is_all_day,location,attendees_count")
+      .eq("cancelled", false)
+      .gte("start_at", startOfTodayLocal.toISOString())
+      .lt("start_at", startOfTomorrowLocal.toISOString())
+      .order("start_at", { ascending: true })
+      .limit(20),
   ]);
 
   const ctx = {
@@ -101,6 +110,10 @@ export async function POST(req: Request) {
     tomorrow: tomorrowTasks.data ?? [],
     overdue: overdueTasks.data ?? [],
     recent_done: recentDone.data ?? [],
+    // Round F v4.5: meetings/events from Google Calendar — same calendar
+    // day as `today`. The AI uses these to know which hours are blocked
+    // by real meetings vs. flexible tasks.
+    calendar_events: todayEvents.data ?? [],
   };
 
   try {
