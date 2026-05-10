@@ -20,7 +20,27 @@ export type LandingConfig = {
   };
 };
 
-export const DEFAULT_LANDING_CONFIG: Required<LandingConfig> = {
+/**
+ * Same shape as LandingConfig but every leaf is concrete. Used as the type
+ * of DEFAULT_LANDING_CONFIG and as the return of withDefaults() so consumers
+ * never need to deal with `| undefined` on nested fields.
+ */
+export type LandingConfigResolved = {
+  pricing: {
+    hero: { title: string; subtitle: string; eyebrow: string };
+    free: { tagline: string; features: string[] };
+    pro: { tagline: string; features: string[]; badge: string };
+    demos: Array<{ title: string; subtitle?: string; asset: string }>;
+    faq: Array<{ q: string; a: string }>;
+    finalCta: { helper: string };
+  };
+  features: {
+    headerSubtitle: string;
+    unlockTitle: string;
+  };
+};
+
+export const DEFAULT_LANDING_CONFIG: LandingConfigResolved = {
   pricing: {
     hero: {
       eyebrow: "PRICING",
@@ -83,25 +103,26 @@ export const DEFAULT_LANDING_CONFIG: Required<LandingConfig> = {
  * Merge config from DB on top of defaults. Each leaf is replaced atomically;
  * arrays replace whole, scalars replace, missing keys fall through.
  */
-export function withDefaults(c: LandingConfig | null | undefined): Required<LandingConfig> {
+export function withDefaults(c: LandingConfig | null | undefined): LandingConfigResolved {
   const cfg = c ?? {};
+  const d = DEFAULT_LANDING_CONFIG;
   return {
     pricing: {
-      hero: { ...DEFAULT_LANDING_CONFIG.pricing.hero, ...(cfg.pricing?.hero ?? {}) },
+      hero: { ...d.pricing.hero, ...(cfg.pricing?.hero ?? {}) },
       free: {
-        ...DEFAULT_LANDING_CONFIG.pricing.free,
+        ...d.pricing.free,
         ...(cfg.pricing?.free ?? {}),
-        features: cfg.pricing?.free?.features ?? DEFAULT_LANDING_CONFIG.pricing.free.features,
+        features: cfg.pricing?.free?.features ?? d.pricing.free.features,
       },
       pro: {
-        ...DEFAULT_LANDING_CONFIG.pricing.pro,
+        ...d.pricing.pro,
         ...(cfg.pricing?.pro ?? {}),
-        features: cfg.pricing?.pro?.features ?? DEFAULT_LANDING_CONFIG.pricing.pro.features,
+        features: cfg.pricing?.pro?.features ?? d.pricing.pro.features,
       },
-      demos: cfg.pricing?.demos ?? DEFAULT_LANDING_CONFIG.pricing.demos,
-      faq: cfg.pricing?.faq ?? DEFAULT_LANDING_CONFIG.pricing.faq,
-      finalCta: { ...DEFAULT_LANDING_CONFIG.pricing.finalCta, ...(cfg.pricing?.finalCta ?? {}) },
+      demos: cfg.pricing?.demos ?? d.pricing.demos,
+      faq: cfg.pricing?.faq ?? d.pricing.faq,
+      finalCta: { ...d.pricing.finalCta, ...(cfg.pricing?.finalCta ?? {}) },
     },
-    features: { ...DEFAULT_LANDING_CONFIG.features, ...(cfg.features ?? {}) },
+    features: { ...d.features, ...(cfg.features ?? {}) },
   };
 }
