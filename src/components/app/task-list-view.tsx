@@ -1,12 +1,13 @@
 "use client";
 
-import { useTasks, type TasksFilter, type TaskWithTags } from "@/hooks/use-tasks";
+import { type TasksFilter, type TaskWithTags } from "@/hooks/use-tasks";
+import { useViewItems, type ViewItem, byTimeAsc } from "@/hooks/use-view-items";
 import { TaskItem } from "./task-item";
 import { useUIStore } from "@/store/ui";
 import { Plus, ArrowDownUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InlineTaskInput } from "./inline-task-input";
-import { SortableTaskList } from "./sortable-task-list";
+import { SortableMixedList } from "./sortable-mixed-list";
 import { DailyEdition } from "./daily-edition";
 import { MorningCopilotCard } from "./morning-copilot-card";
 import { AntiOverloadBanner } from "./anti-overload-banner";
@@ -20,12 +21,9 @@ type Props = {
   defaults?: { project_id?: string | null };
   /** Show the AI Daily Edition card and anti-overload banner (Today view). */
   showDailyEdition?: boolean;
-  /** Optional content rendered above the inline-task-input — used by
-   *  Today to show the streak ribbon (current streak, habits today,
-   *  Q1 count). Renders right under any DailyEdition card. */
+  /** Optional content rendered above the inline-task-input. */
   prelude?: React.ReactNode;
-  /** Optional element rendered to the right of the Quick add button —
-   *  used by Today to show its List/Timeline toggle. */
+  /** Optional element rendered to the right of the Quick add button. */
   headerExtra?: React.ReactNode;
   /** Default sort. "manual" keeps drag-to-reorder against stored positions
    *  (Inbox / project lists). "due_at" sorts by deadline ascending —
@@ -36,23 +34,11 @@ type Props = {
   /** localStorage key suffix (e.g. "today", "tomorrow"). Required when
    *  sortBy="due_at" so the manual-override flag can persist per view. */
   sortKey?: string;
-  /** Split incomplete tasks into date-bucket sections (Today / Tomorrow /
+  /** Split incomplete items into date-bucket sections (Today / Tomorrow /
    *  Next 7 days / Next 90 days / No date). Each section is its own
-   *  SortableTaskList — drag-to-reorder still works within a bucket. */
+   *  SortableMixedList — drag-to-reorder still works within a bucket. */
   groupByDate?: boolean;
 };
-
-/** Sort tasks ascending by due_at; tasks without a due_at fall to the
- *  bottom in stable creation order. */
-function byDueAtAsc(a: TaskWithTags, b: TaskWithTags): number {
-  const ad = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
-  const bd = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
-  if (ad !== bd) return ad - bd;
-  // Stable tiebreak — older created first when due_at matches or both are null.
-  const ac = a.created_at ? new Date(a.created_at).getTime() : 0;
-  const bc = b.created_at ? new Date(b.created_at).getTime() : 0;
-  return ac - bc;
-}
 
 function readSortOverride(sortKey?: string): "manual" | null {
   if (!sortKey || typeof window === "undefined") return null;
@@ -64,6 +50,17 @@ function readSortOverride(sortKey?: string): "manual" | null {
   }
 }
 
+/**
+ * Round F v4.3: TaskListView consumes useViewItems so Google Calendar
+ * events render alongside tasks in the same flat list, sorted by start/due
+ * time. Events are non-draggable; only tasks reorder.
+ *
+ * Completed-task drawer at the bottom is unchanged — events don't have a
+ * "completed" state in the local DB and aren't included there.
+ *
+ * `groupByDate` still works for Inbox / Next 90 — events get bucketed
+ * into Today / Tomorrow / Next 7 / Next 90 / No date alongside tasks.
+ */
 export function TaskListView({
   title,
   subtitle,
@@ -76,32 +73,62 @@ export function TaskListView({
   sortKey,
   groupByDate = false,
 }: Props) {
-  const { data: tasks = [], isLoading } = useTasks(filter);
+  const { items, isLoading } = useViewItems(filter);
   const lang = useLanguage();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const [showCompleted, setShowCompleted] = useState(false);
 
-  // Manual-override flag: only meaningful when default is "due_at".
-  // Hydrate from localStorage on the client (SSR-safe — start as null).
   const [manualOverride, setManualOverride] = useState<"manual" | null>(null);
   useEffect(() => {
     setManualOverride(readSortOverride(sortKey));
   }, [sortKey]);
 
-  // Effective sort mode for THIS render. When the user has dragged in a
-  // date-based view, we honor their hand-arrangement until they explicitly
-  // revert via the "Sort by date" chip.
   const effectiveSort: "manual" | "due_at" =
     sortBy === "due_at" && manualOverride !== "manual" ? "due_at" : "manual";
 
-  let incomplete = tasks.filter((t) => !t.is_completed);
-  const completed = tasks.filter((t) => t.is_completed);
+  const incompleteItems = items.filter((it) =>
+    it.kind === "task" ? !it.task.is_completed : true
+  );
+  const completedTasks: TaskWithTags[] = items
+    .filter((it): it is Extract<ViewItem, { kind: "task" }> => it.kind === "task")
+    .filter((it) => it.task.is_completed)
+    .map((it) => it.task);
 
-  if (effectiveSort === "due_at") {
-    incomplete = [...incomplete].sort(byDueAtAsc);
-  }
-  // In manual mode, useTasks already returns rows ordered by `position`,
-  // so no further sort is needed.
+  const renderItems = useMemo(() => {
+    if (effectiveSort === "due_at") {
+      return [...incompleteItems].sort(byTimeAsc);
+    }
+    // Manual mode: tasks keep stored position order; events are spliced in
+    // by sortAt so they slot into the right place by date even with hand-
+    // arranged tasks.
+    const tasks = incompleteItems.filter((it) => it.kind === "task");
+    const events = incompleteItems
+      .filter((it) => it.kind === "event")
+      .sort(byTimeAsc);
+    if (events.length === 0) return tasks;
+
+    const out: ViewItem[] = [];
+    let ti = 0;
+    let ei = 0;
+    while (ti < tasks.length || ei < events.length) {
+      const t = tasks[ti];
+      const e = events[ei];
+      if (!t) {
+        out.push(e);
+        ei++;
+      } else if (!e) {
+        out.push(t);
+        ti++;
+      } else if (t.sortAt <= e.sortAt) {
+        out.push(t);
+        ti++;
+      } else {
+        out.push(e);
+        ei++;
+      }
+    }
+    return out;
+  }, [incompleteItems, effectiveSort]);
 
   function flipToManual() {
     if (!sortKey) return;
@@ -119,8 +146,6 @@ export function TaskListView({
     setManualOverride(null);
   }
 
-  // Show the revert chip only when (a) the view defaults to date-sort and
-  // (b) the user has actively flipped it to manual on this device.
   const showRevertChip = sortBy === "due_at" && manualOverride === "manual";
 
   return (
@@ -144,8 +169,6 @@ export function TaskListView({
               </button>
             )}
             {headerExtra}
-            {/* Icon-only on mobile so a long title (e.g. "Last week's
-                edition", multi-word l10n strings) gets the room it needs. */}
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
               onClick={() => setQuickAdd(true)}
@@ -172,20 +195,16 @@ export function TaskListView({
 
         {isLoading ? (
           <div className="text-sm text-muted-fg px-3">{tr(lang, "taskList.loading")}</div>
-        ) : incomplete.length === 0 && completed.length === 0 ? (
+        ) : renderItems.length === 0 && completedTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
             <div className="text-3xl mb-2 font-display"><em>—</em></div>
             <p className="text-sm">{tr(lang, "taskList.emptyHint")}</p>
           </div>
         ) : null}
 
-        {/* Always wrap in SortableTaskList so drag works in every view.
-            In date-sorted views, dragging flips the view to manual mode
-            (per-device, via localStorage) — the new positions stick and
-            the "Sort by date" chip appears to revert. */}
         {groupByDate ? (
           <GroupedSections
-            tasks={incomplete}
+            items={renderItems}
             lang={lang}
             onManualReorder={
               sortBy === "due_at" && manualOverride !== "manual"
@@ -194,8 +213,9 @@ export function TaskListView({
             }
           />
         ) : (
-          <SortableTaskList
-            tasks={incomplete}
+          <SortableMixedList
+            items={renderItems}
+            lang={lang}
             onManualReorder={
               sortBy === "due_at" && manualOverride !== "manual"
                 ? flipToManual
@@ -204,16 +224,16 @@ export function TaskListView({
           />
         )}
 
-        {completed.length > 0 && (
+        {completedTasks.length > 0 && (
           <div className="pt-4">
             <button
               className="px-3 text-xs text-muted-fg hover:text-fg"
               onClick={() => setShowCompleted((v) => !v)}
             >
-              {showCompleted ? "Hide" : "Show"} completed ({completed.length})
+              {showCompleted ? "Hide" : "Show"} completed ({completedTasks.length})
             </button>
             {showCompleted &&
-              completed.map((t) => <TaskItem key={t.id} task={t} />)}
+              completedTasks.map((t) => <TaskItem key={t.id} task={t} />)}
           </div>
         )}
       </div>
@@ -221,22 +241,20 @@ export function TaskListView({
   );
 }
 
-
 /**
  * Date-bucket grouping for views that opt in via `groupByDate`. Splits
- * incomplete tasks into editorial sections that read like a small
- * calendar. Each bucket renders its own SortableTaskList so
- * drag-to-reorder still works within a section without leaking across
- * boundaries. Section titles use the i18n table.
+ * incomplete items into editorial sections that read like a small
+ * calendar. Each bucket renders its own SortableMixedList so drag-to-
+ * reorder still works within a section without leaking across boundaries.
  */
 function GroupedSections({
-  tasks,
-  onManualReorder,
+  items,
   lang,
+  onManualReorder,
 }: {
-  tasks: TaskWithTags[];
+  items: ViewItem[];
+  lang: import("@/lib/i18n").LanguageCode | string;
   onManualReorder?: () => void;
-  lang: import("@/lib/i18n").LanguageCode;
 }) {
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -249,58 +267,54 @@ function GroupedSections({
   const startIn90 = new Date(startToday);
   startIn90.setDate(startIn90.getDate() + 90);
 
-  const today: TaskWithTags[] = [];
-  const tomorrow: TaskWithTags[] = [];
-  const next7: TaskWithTags[] = [];
-  const next90: TaskWithTags[] = [];
-  const noDate: TaskWithTags[] = [];
+  const today: ViewItem[] = [];
+  const tomorrow: ViewItem[] = [];
+  const next7: ViewItem[] = [];
+  const next90: ViewItem[] = [];
+  const noDate: ViewItem[] = [];
 
-  for (const tk of tasks) {
-    if (!tk.due_at) {
-      noDate.push(tk);
+  for (const it of items) {
+    const stamp = it.sortAt;
+    if (!Number.isFinite(stamp)) {
+      noDate.push(it);
       continue;
     }
-    const d = new Date(tk.due_at);
-    if (d < startTomorrow) today.push(tk);
-    else if (d < startDayAfter) tomorrow.push(tk);
-    else if (d < startIn7) next7.push(tk);
-    else if (d < startIn90) next90.push(tk);
-    else noDate.push(tk);
+    const d = new Date(stamp);
+    if (d < startTomorrow) today.push(it);
+    else if (d < startDayAfter) tomorrow.push(it);
+    else if (d < startIn7) next7.push(it);
+    else if (d < startIn90) next90.push(it);
+    else noDate.push(it);
   }
 
-  const sortBucket = (a: TaskWithTags, b: TaskWithTags) => {
-    const ad = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
-    const bd = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
-    if (ad !== bd) return ad - bd;
-    return (a.created_at ? new Date(a.created_at).getTime() : 0) -
-      (b.created_at ? new Date(b.created_at).getTime() : 0);
-  };
-  today.sort(sortBucket);
-  tomorrow.sort(sortBucket);
-  next7.sort(sortBucket);
-  next90.sort(sortBucket);
+  today.sort(byTimeAsc);
+  tomorrow.sort(byTimeAsc);
+  next7.sort(byTimeAsc);
+  next90.sort(byTimeAsc);
 
   return (
     <div className="space-y-4">
-      <Section title={tr(lang, "sidebar.today")} tasks={today} onManualReorder={onManualReorder} />
-      <Section title={tr(lang, "sidebar.tomorrow")} tasks={tomorrow} onManualReorder={onManualReorder} />
-      <Section title={tr(lang, "sidebar.next7")} tasks={next7} onManualReorder={onManualReorder} />
-      <Section title={tr(lang, "sidebar.next90")} tasks={next90} onManualReorder={onManualReorder} />
-      <Section title={tr(lang, "view.bucket.noDate")} tasks={noDate} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "sidebar.today")} items={today} lang={lang} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "sidebar.tomorrow")} items={tomorrow} lang={lang} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "sidebar.next7")} items={next7} lang={lang} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "sidebar.next90")} items={next90} lang={lang} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "view.bucket.noDate")} items={noDate} lang={lang} onManualReorder={onManualReorder} />
     </div>
   );
 }
 
 function Section({
   title,
-  tasks,
+  items,
+  lang,
   onManualReorder,
 }: {
   title: string;
-  tasks: TaskWithTags[];
+  items: ViewItem[];
+  lang: import("@/lib/i18n").LanguageCode | string;
   onManualReorder?: () => void;
 }) {
-  if (tasks.length === 0) return null;
+  if (items.length === 0) return null;
   return (
     <div className="space-y-1.5">
       <div className="px-3 pt-1 flex items-baseline gap-2">
@@ -308,10 +322,10 @@ function Section({
           {title}
         </p>
         <span className="text-[10px] text-muted-fg/70 tabular-nums">
-          ({tasks.length})
+          ({items.length})
         </span>
       </div>
-      <SortableTaskList tasks={tasks} onManualReorder={onManualReorder} />
+      <SortableMixedList items={items} lang={lang} onManualReorder={onManualReorder} />
     </div>
   );
 }
