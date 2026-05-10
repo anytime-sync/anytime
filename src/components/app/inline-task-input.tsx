@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles } from "lucide-react";
+import { Bell, Calendar, CalendarClock, ChevronDown, Flag, Folder, Hash, Repeat, Sparkles } from "lucide-react";
 import {
   parseQuickInput,
   describeParsed,
   type ParsedQuickInput,
 } from "@/lib/quick-parse";
 import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
+import { useCalendarConnection } from "@/hooks/use-calendar";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { useParseTaskAI } from "@/hooks/use-ai";
@@ -38,6 +41,12 @@ export function InlineTaskInput({
 }) {
   const lang = useLanguage();
   const [text, setText] = useState("");
+  // Round F v4.7: when GCal is connected, allow user to create the
+  // input as a Google Calendar event instead of a native task.
+  const [mode, setMode] = useState<"task" | "event">("task");
+  const { data: gcalConn } = useCalendarConnection();
+  const gcalAvailable = !!gcalConn?.connected;
+  const qc = useQueryClient();
   const create = useCreateTask();
   const update = useUpdateTask();
   const createProject = useCreateProject();
@@ -82,7 +91,47 @@ export function InlineTaskInput({
     const localP = parsed;
     if (!localP.title) localP.title = raw;
     setText("");
-    void instantInsertAndRefine(raw, localP);
+    if (mode === "event" && gcalAvailable) {
+      void createGCalEvent(raw, localP);
+    } else {
+      void instantInsertAndRefine(raw, localP);
+    }
+  }
+
+  // Round F v4.7: hit POST /api/calendar/google/event so the input
+  // creates a Google Calendar event instead of a native task. Uses
+  // the same chrono parse to determine start_at; falls back to "now"
+  // if no date was typed (the user can adjust on the calendar page).
+  async function createGCalEvent(raw: string, p: ParsedQuickInput) {
+    const startIso =
+      p.start_at ||
+      p.due_at ||
+      defaultDueAt ||
+      new Date(Date.now() + 60 * 60_000).toISOString();
+    const endIso = p.due_at || undefined;
+    const isAllDay = p.is_all_day && !!p.due_at;
+    try {
+      const res = await fetch("/api/calendar/google/event", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: p.title,
+          start_at: startIso,
+          end_at: endIso,
+          is_all_day: isAllDay,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `http_${res.status}`);
+      }
+      qc.invalidateQueries({ queryKey: ["calendarEvents"] });
+      toast.success("Added to Google Calendar");
+    } catch (e) {
+      toast.error(
+        "Couldn't create event: " + (e instanceof Error ? e.message : "unknown")
+      );
+    }
   }
 
   async function instantInsertAndRefine(raw: string, p: ParsedQuickInput) {
@@ -167,6 +216,27 @@ export function InlineTaskInput({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        {gcalAvailable && (
+          <button
+            type="button"
+            onClick={() => setMode((m) => (m === "task" ? "event" : "task"))}
+            title={
+              mode === "event"
+                ? "Creates a Google Calendar event on Enter — click to switch back to Task"
+                : "Click to switch — Enter will create a Google Calendar event"
+            }
+            className={cn(
+              "inline-flex items-center gap-1 px-2 h-7 rounded-md text-[11px] shrink-0 border",
+              mode === "event"
+                ? "bg-sky-500/40 hover:bg-sky-500/55 text-fg border-sky-500/40"
+                : "bg-transparent hover:bg-muted text-muted-fg border-border"
+            )}
+          >
+            <Calendar className="size-3" />
+            {mode === "event" ? "Event" : "Task"}
+            <ChevronDown className="size-3 opacity-60" />
+          </button>
+        )}
         <VoiceButton
           onTranscript={(t) => setText(t)}
           onFinal={(t) => setText(t)}
