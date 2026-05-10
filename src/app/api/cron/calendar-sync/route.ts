@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { syncUserCalendar, type SyncResult } from "@/lib/calendar-sync";
+import {
+  drainCalendarDeletions,
+  pushPendingTasksForUser,
+} from "@/lib/calendar-write";
+import { getValidAccessToken } from "@/lib/calendar-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Cron: every 5 minutes (vercel.json). Iterates every connected user
- * and runs an incremental sync. Vercel Cron sends GET with
- * `Authorization: Bearer ${CRON_SECRET}`; POST works too for manual
- * curl testing.
+ * Cron: every 5 min. Three passes:
  *
- * Per-user errors don't fail the whole run — we collect a per-user
- * status array and return it so the response is debuggable when one
- * user's refresh token has been revoked while everyone else syncs
- * fine.
+ *   1. Drain pending_calendar_deletions (Round F v2) — issue DELETE
+ *      to Google for any task that was deleted since the last tick.
+ *      One pass before per-user work because deletions are global.
+ *   2. Per user, READ pass — pull events from Google → calendar_events.
+ *   3. Per user, WRITE pass — find tasks needing push/patch + push them.
+ *
+ * Per-user errors don't fail the whole run.
  */
 export async function GET(req: Request) {
   return handle(req);
@@ -43,18 +48,33 @@ async function handle(req: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Pass 1: drain deletions queue (uses its own per-user token refresh).
+  const drainOut = await drainCalendarDeletions({ supabase });
+
+  // Pass 2 + 3: per-user read + write.
   const { data: conns, error } = await supabase
     .from("user_calendar_connections")
-    .select("user_id")
+    .select("user_id, primary_calendar_id")
     .eq("provider", "google");
   if (error) {
     console.error("[cron calendar-sync] fetch", error);
     return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
   }
-  const rows = (conns ?? []) as Array<{ user_id: string }>;
+  const rows = (conns ?? []) as Array<{
+    user_id: string;
+    primary_calendar_id: string | null;
+  }>;
 
   const syncs: SyncResult[] = [];
+  const pushes: Array<{
+    user_id: string;
+    created: number;
+    patched: number;
+    failed: number;
+  }> = [];
+
   for (const r of rows) {
+    // Read pass.
     try {
       const out = await syncUserCalendar({ supabase, userId: r.user_id });
       syncs.push(out);
@@ -67,7 +87,43 @@ async function handle(req: Request) {
         error: msg,
       });
     }
+
+    // Write pass — only if we have a primary calendar id and an access token.
+    if (!r.primary_calendar_id) continue;
+    let accessToken: string | null = null;
+    try {
+      accessToken = await getValidAccessToken({
+        supabase,
+        userId: r.user_id,
+      });
+    } catch {
+      continue;
+    }
+    if (!accessToken) continue;
+
+    try {
+      const pushOut = await pushPendingTasksForUser({
+        supabase,
+        userId: r.user_id,
+        primaryCalendarId: r.primary_calendar_id,
+        accessToken,
+      });
+      pushes.push({ user_id: r.user_id, ...pushOut });
+    } catch (e) {
+      console.error("[cron calendar-sync] push pass failed", r.user_id, e);
+      pushes.push({
+        user_id: r.user_id,
+        created: 0,
+        patched: 0,
+        failed: -1,
+      });
+    }
   }
 
-  return NextResponse.json({ ok: true, syncs });
+  return NextResponse.json({
+    ok: true,
+    drain: drainOut,
+    syncs,
+    pushes,
+  });
 }
