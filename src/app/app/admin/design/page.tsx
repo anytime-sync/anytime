@@ -138,21 +138,21 @@ export default function AdminDesignPage() {
             <h2 className="font-display text-2xl tracking-tight">Hero</h2>
             <Field
               label="Eyebrow"
-              value={dPricing.hero?.eyebrow ?? m.pricing.hero.eyebrow ?? ""}
-              placeholder={m.pricing.hero.eyebrow}
+              value={dPricing.hero?.eyebrow ?? m.pricing?.hero?.eyebrow ?? ""}
+              placeholder={m.pricing?.hero?.eyebrow}
               onChange={(v) => set(["pricing", "hero", "eyebrow"], v || undefined)}
             />
             <Field
               label="Title"
-              value={dPricing.hero?.title ?? m.pricing.hero.title ?? ""}
-              placeholder={m.pricing.hero.title}
+              value={dPricing.hero?.title ?? m.pricing?.hero?.title ?? ""}
+              placeholder={m.pricing?.hero?.title}
               onChange={(v) => set(["pricing", "hero", "title"], v || undefined)}
             />
             <Field
               label="Subtitle"
               multiline
-              value={dPricing.hero?.subtitle ?? m.pricing.hero.subtitle ?? ""}
-              placeholder={m.pricing.hero.subtitle}
+              value={dPricing.hero?.subtitle ?? m.pricing?.hero?.subtitle ?? ""}
+              placeholder={m.pricing?.hero?.subtitle}
               onChange={(v) => set(["pricing", "hero", "subtitle"], v || undefined)}
             />
           </section>
@@ -161,15 +161,15 @@ export default function AdminDesignPage() {
             <h2 className="font-display text-2xl tracking-tight">Free plan card</h2>
             <Field
               label="Tagline"
-              value={dPricing.free?.tagline ?? m.pricing.free.tagline ?? ""}
-              placeholder={m.pricing.free.tagline}
+              value={dPricing.free?.tagline ?? m.pricing?.free?.tagline ?? ""}
+              placeholder={m.pricing?.free?.tagline}
               onChange={(v) => set(["pricing", "free", "tagline"], v || undefined)}
             />
             <Field
               label="Bullet list (one per line)"
               multiline
-              value={(dPricing.free?.features ?? m.pricing.free.features ?? []).join("\n")}
-              placeholder={m.pricing.free.features.join("\n")}
+              value={(dPricing.free?.features ?? m.pricing?.free?.features ?? []).join("\n")}
+              placeholder={m.pricing?.free?.features.join("\n")}
               onChange={(v) =>
                 set(["pricing", "free", "features"], v ? v.split("\n").filter(Boolean) : undefined)
               }
@@ -180,21 +180,21 @@ export default function AdminDesignPage() {
             <h2 className="font-display text-2xl tracking-tight">Pro plan card</h2>
             <Field
               label="Badge"
-              value={dPricing.pro?.badge ?? m.pricing.pro.badge ?? ""}
-              placeholder={m.pricing.pro.badge}
+              value={dPricing.pro?.badge ?? m.pricing?.pro?.badge ?? ""}
+              placeholder={m.pricing?.pro?.badge}
               onChange={(v) => set(["pricing", "pro", "badge"], v || undefined)}
             />
             <Field
               label="Tagline"
-              value={dPricing.pro?.tagline ?? m.pricing.pro.tagline ?? ""}
-              placeholder={m.pricing.pro.tagline}
+              value={dPricing.pro?.tagline ?? m.pricing?.pro?.tagline ?? ""}
+              placeholder={m.pricing?.pro?.tagline}
               onChange={(v) => set(["pricing", "pro", "tagline"], v || undefined)}
             />
             <Field
               label="Bullet list (one per line)"
               multiline
-              value={(dPricing.pro?.features ?? m.pricing.pro.features ?? []).join("\n")}
-              placeholder={m.pricing.pro.features.join("\n")}
+              value={(dPricing.pro?.features ?? m.pricing?.pro?.features ?? []).join("\n")}
+              placeholder={m.pricing?.pro?.features.join("\n")}
               onChange={(v) =>
                 set(["pricing", "pro", "features"], v ? v.split("\n").filter(Boolean) : undefined)
               }
@@ -214,7 +214,7 @@ export default function AdminDesignPage() {
               value={(dPricing.demos ?? m.pricing.demos ?? [])
                 .map((d) => `${d.title}|${d.subtitle ?? ""}|${d.asset}`)
                 .join("\n")}
-              placeholder={m.pricing.demos.map((d) => `${d.title}|${d.subtitle ?? ""}|${d.asset}`).join("\n")}
+              placeholder={(m.pricing?.demos ?? []).map((d) => `${d.title}|${d.subtitle ?? ""}|${d.asset}`).join("\n")}
               onChange={(v) => {
                 const parsed = v
                   ? v.split("\n").filter(Boolean).map((line) => {
@@ -239,7 +239,7 @@ export default function AdminDesignPage() {
               value={(dPricing.faq ?? m.pricing.faq ?? [])
                 .flatMap((f) => [`Q: ${f.q}`, `A: ${f.a}`])
                 .join("\n")}
-              placeholder={m.pricing.faq.flatMap((f) => [`Q: ${f.q}`, `A: ${f.a}`]).join("\n")}
+              placeholder={(m.pricing?.faq ?? []).flatMap((f) => [`Q: ${f.q}`, `A: ${f.a}`]).join("\n")}
               onChange={(v) => {
                 if (!v) {
                   set(["pricing", "faq"], undefined);
