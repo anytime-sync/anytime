@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
+import { BillingSection } from "@/components/app/billing-section";
 import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -177,6 +178,9 @@ export default function SettingsPage() {
 
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl space-y-10">
+
+          {/* ---------- Billing ---------- */}
+          <BillingSection />
 
           {/* ---------- Account ---------- */}
           <Section kicker={tr(lang, "view.settings.section.account")}>
