@@ -30,6 +30,7 @@ type Invite = {
   status: string;
   created_at: string;
   group: { id: string; name: string } | null;
+  viewer_role?: "invitee" | "owner";
 };
 
 export default function GroupsPage() {
@@ -53,7 +54,7 @@ export default function GroupsPage() {
 
   // Fetch member + invite lists for every owned group whenever the groups
   // list refreshes. Both are cheap (RLS-gated) and rendering them inline
-  // makes the approve / accept loop visible without a notification round-trip.
+  // makes the invite loop visible without a notification round-trip.
   async function loadGroupSidebars(groupIds: string[]) {
     const memberResults = await Promise.all(
       groupIds.map(async (id) => {
@@ -75,9 +76,9 @@ export default function GroupsPage() {
           const r = await fetch(`/api/share-groups/${id}/invites`);
           if (!r.ok) return [id, []] as const;
           const j = await r.json();
-          // Show only invites that still need action (approval or acceptance).
+          // Only show invites still awaiting the invitee.
           const open = ((j.rows ?? []) as Array<{ status: string }>).filter(
-            (i) => i.status === "pending_approval" || i.status === "pending_acceptance"
+            (i) => i.status === "pending_acceptance"
           );
           return [id, open] as const;
         } catch {
@@ -86,24 +87,6 @@ export default function GroupsPage() {
       })
     );
     setInvitesByGroup(Object.fromEntries(inviteResults));
-  }
-
-  async function respondToInvite(inviteId: string, action: "approve" | "revoke" | "decline" | "accept") {
-    const res = await fetch(`/api/share-groups/invites/${inviteId}/respond`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast.error(j.error ?? tr(lang, "view.groups.toast.couldntInvite").replace("{action}", action));
-      return;
-    }
-    if (action === "approve") toast.success(tr(lang, "view.groups.toast.approved"));
-    if (action === "revoke") toast.message(tr(lang, "view.groups.toast.revoked"));
-    if (action === "decline") toast.message(tr(lang, "view.groups.toast.declined"));
-    if (action === "accept") toast.success(tr(lang, "view.groups.toast.joined"));
-    reload();
   }
 
   async function rename(id: string) {
@@ -172,8 +155,6 @@ export default function GroupsPage() {
     setBusy(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      // Surface the actual server message + status so we can debug
-      // future failures from the user-side toast itself.
       toast.error(`${j.error ?? tr(lang, "view.groups.toast.createFailed")} (${res.status})`);
       console.error("[groups] create failed", res.status, j);
       return;
@@ -252,65 +233,43 @@ export default function GroupsPage() {
         </button>
       </form>
 
-      {/* Pending invites */}
+      {/* Pending invites — invites where I'm the invitee, awaiting my accept/decline. */}
       {invites.length > 0 && (
         <section className="mb-8">
           <h2 className="text-sm font-semibold uppercase tracking-wide mb-3">
             {tr(lang, "view.groups.pendingInvites").replace("{n}", String(invites.length))}
           </h2>
           <ul className="space-y-2">
-            {invites.map((inv) => {
-              const isInvitee = inv.status === "pending_acceptance";
-              return (
-                <li
-                  key={inv.id}
-                  className="surface border border-border rounded-md p-3 flex items-center gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display">
-                      {inv.group?.name ?? tr(lang, "view.groups.unknownGroup")}
-                    </div>
-                    <div className="text-xs text-muted-fg">
-                      {inv.invitee_email} · {inv.status} ·{" "}
-                      {format(new Date(inv.created_at), "MMM d", { locale: dfLocale })}
-                    </div>
+            {invites.map((inv) => (
+              <li
+                key={inv.id}
+                className="surface border border-border rounded-md p-3 flex items-center gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-display">
+                    {inv.group?.name ?? tr(lang, "view.groups.unknownGroup")}
                   </div>
-                  <div className="flex items-center gap-1">
-                    {isInvitee ? (
-                      <>
-                        <button
-                          onClick={() => respond(inv.id, "accept")}
-                          className="btn-primary h-8 px-2 text-xs inline-flex items-center gap-1"
-                        >
-                          <Check className="size-3" /> {tr(lang, "view.groups.accept")}
-                        </button>
-                        <button
-                          onClick={() => respond(inv.id, "decline")}
-                          className="btn-ghost h-8 px-2 text-xs inline-flex items-center gap-1 text-danger"
-                        >
-                          <X className="size-3" /> {tr(lang, "view.groups.decline")}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => respond(inv.id, "approve")}
-                          className="btn-primary h-8 px-2 text-xs inline-flex items-center gap-1"
-                        >
-                          <Check className="size-3" /> {tr(lang, "view.groups.approveSend")}
-                        </button>
-                        <button
-                          onClick={() => respond(inv.id, "decline")}
-                          className="btn-ghost h-8 px-2 text-xs inline-flex items-center gap-1 text-danger"
-                        >
-                          <X className="size-3" /> {tr(lang, "view.groups.decline")}
-                        </button>
-                      </>
-                    )}
+                  <div className="text-xs text-muted-fg">
+                    {inv.invitee_email} ·{" "}
+                    {format(new Date(inv.created_at), "MMM d", { locale: dfLocale })}
                   </div>
-                </li>
-              );
-            })}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => respond(inv.id, "accept")}
+                    className="btn-primary h-8 px-2 text-xs inline-flex items-center gap-1"
+                  >
+                    <Check className="size-3" /> {tr(lang, "view.groups.accept")}
+                  </button>
+                  <button
+                    onClick={() => respond(inv.id, "decline")}
+                    className="btn-ghost h-8 px-2 text-xs inline-flex items-center gap-1 text-danger"
+                  >
+                    <X className="size-3" /> {tr(lang, "view.groups.decline")}
+                  </button>
+                </div>
+              </li>
+            ))}
           </ul>
         </section>
       )}
@@ -360,44 +319,28 @@ export default function GroupsPage() {
                   </ul>
                 </div>
               )}
-              {/* Inline pending invites — owner sees both their own
-                  unapproved invites (need their click) and already-
-                  approved ones still waiting on the invitee. */}
+              {/* Outgoing invites still waiting on the invitee — owner can revoke. */}
               {invitesByGroup[g.group.id] && invitesByGroup[g.group.id].length > 0 && g.role === "owner" && (
                 <ul className="mt-3 space-y-1.5">
-                  {invitesByGroup[g.group.id].map((inv) => {
-                    const isPendingApproval = inv.status === "pending_approval";
-                    return (
-                      <li
-                        key={inv.id}
-                        className={cn(
-                          "border rounded-md px-3 py-2 flex items-center gap-2 text-sm",
-                          isPendingApproval
-                            ? "border-warning/60 bg-warning/5 text-warning"
-                            : "border-border text-muted-fg"
-                        )}
+                  {invitesByGroup[g.group.id].map((inv) => (
+                    <li
+                      key={inv.id}
+                      className={cn(
+                        "border border-border rounded-md px-3 py-2 flex items-center gap-2 text-sm text-muted-fg"
+                      )}
+                    >
+                      <span className="flex-1 min-w-0 truncate">
+                        {tr(lang, "view.groups.awaiting")}{" "}
+                        <span className="text-fg">{inv.invitee_email}</span>
+                      </span>
+                      <button
+                        onClick={() => respond(inv.id, "revoke")}
+                        className="btn-ghost h-7 px-2.5 text-xs text-muted-fg hover:text-warning"
                       >
-                        <span className="flex-1 min-w-0 truncate">
-                          {isPendingApproval ? tr(lang, "view.groups.needsApproval") : tr(lang, "view.groups.awaiting")}
-                          <span className="text-fg">{inv.invitee_email}</span>
-                        </span>
-                        {isPendingApproval && (
-                          <button
-                            onClick={() => respondToInvite(inv.id, "approve")}
-                            className="btn-primary h-7 px-2.5 text-xs"
-                          >
-                            {tr(lang, "view.groups.approveSend")}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => respondToInvite(inv.id, "revoke")}
-                          className="btn-ghost h-7 px-2.5 text-xs text-muted-fg hover:text-warning"
-                        >
-                          {tr(lang, "view.groups.revoke")}
-                        </button>
-                      </li>
-                    );
-                  })}
+                        {tr(lang, "view.groups.revoke")}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
               {g.role === "owner" && (
