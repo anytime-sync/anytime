@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isAdmin } from "@/lib/feature-flags";
+import { isOwner } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,14 +10,16 @@ export const dynamic = "force-dynamic";
 /**
  * PUT /api/admin/users/[id]/plan
  *
- * Set or remove a manual plan override for a single user. Manual overrides
- * win over Stripe-derived plan in the user_plans view.
- *
  * Body:
- *   { plan: "free"|"pro"|"team"|null, reason?: string, expires_at?: string|null }
+ *   { plan: "free"|"pro"|"vip"|"team"|null, reason?: string, expires_at?: string|null }
  *
- * Setting plan=null deletes the override (user falls back to whatever
- * Stripe says, or 'free' if no Stripe sub).
+ * Rules:
+ *   - Caller must be admin (ADMIN_EMAILS).
+ *   - "vip" can only be set by the *owner* (ADMIN_OWNER_EMAIL).
+ *   - "pro" cannot be set manually — Pro must come from a real Stripe sub.
+ *     Use "vip" to grant Pro-level access without payment.
+ *   - "free" forces the user back to Free regardless of Stripe status.
+ *   - plan=null deletes the override (revert to Stripe-driven plan or Free).
  */
 
 function service() {
@@ -50,7 +53,7 @@ export async function PUT(
   }
 
   let body: {
-    plan?: "free" | "pro" | "team" | null;
+    plan?: "free" | "pro" | "vip" | "team" | null;
     reason?: string | null;
     expires_at?: string | null;
   };
@@ -61,8 +64,22 @@ export async function PUT(
   }
 
   const plan = body.plan ?? null;
-  if (plan !== null && !["free", "pro", "team"].includes(plan)) {
+  if (plan !== null && !["free", "pro", "vip", "team"].includes(plan)) {
     return NextResponse.json({ error: "bad_plan" }, { status: 400 });
+  }
+  // Only the owner can grant VIP.
+  if (plan === "vip" && !isOwner(auth.user.email)) {
+    return NextResponse.json({ error: "vip_requires_owner" }, { status: 403 });
+  }
+  // Pro is not manually grantable — it must come from Stripe.
+  if (plan === "pro") {
+    return NextResponse.json(
+      {
+        error: "pro_requires_stripe",
+        hint: "Pro can only be set by a real Stripe subscription. Use 'vip' to comp Pro access without payment.",
+      },
+      { status: 400 }
+    );
   }
 
   try {
