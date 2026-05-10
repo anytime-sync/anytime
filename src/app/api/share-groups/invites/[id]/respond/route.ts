@@ -6,17 +6,20 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/share-groups/invites/[id]/respond
- * Body: { action: "approve" | "decline" | "accept" | "revoke" }
+ * Body: { action: "decline" | "accept" | "revoke" | "approve" }
  *
- * - `approve` (owner): pending_approval -> pending_acceptance
- * - `decline` (owner or invitee): -> declined
  * - `accept`  (invitee): pending_acceptance -> accepted; trigger
- *   `tg_share_invite_after_update` materialises the membership row.
- * - `revoke`  (owner): -> revoked
+ *   `tg_share_invite_after_update` materializes the membership row.
+ * - `decline` (invitee or inviter): -> declined
+ * - `revoke`  (owner or inviter): -> revoked
+ * - `approve` (owner or inviter, legacy only): pending_approval ->
+ *   pending_acceptance. Kept so any pre-existing rows still work,
+ *   but new invites skip this step.
  *
- * RLS gates each path: invitees can see their own invites by
- * `invitee_user_id = auth.uid()` (or by `invitee_email = jwt.email`),
- * owners can see all invites for groups they own.
+ * We compute caller role explicitly and 403 on a wrong-perspective
+ * call so failures are visible instead of silently no-op-ing
+ * (RLS would allow the UPDATE statement to run with zero rows
+ * affected, which the prior version reported as success).
  */
 export async function POST(
   req: Request,
@@ -42,7 +45,6 @@ export async function POST(
     return NextResponse.json({ error: "invalid_action" }, { status: 400 });
   }
 
-  // Look up the invite first so we can route + validate.
   const { data: invite, error: lookupErr } = await supabase
     .from("share_group_invites")
     .select("id, group_id, inviter_id, invitee_user_id, status")
@@ -55,8 +57,26 @@ export async function POST(
     );
   }
 
+  const callerIsInviter = invite.inviter_id === user.id;
+  const callerIsInvitee = invite.invitee_user_id === user.id;
+
+  // Owner-of-group lookup, only for actions that need it.
+  let callerIsOwner = false;
+  if (action === "approve" || action === "revoke") {
+    const { data: m } = await supabase
+      .from("share_group_members")
+      .select("role")
+      .eq("group_id", invite.group_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    callerIsOwner = m?.role === "owner";
+  }
+
   const patch: Record<string, unknown> = {};
   if (action === "approve") {
+    if (!(callerIsOwner || callerIsInviter)) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
     if (invite.status !== "pending_approval") {
       return NextResponse.json({ error: "wrong_state" }, { status: 400 });
     }
@@ -64,28 +84,39 @@ export async function POST(
     patch.approved_by = user.id;
     patch.approved_at = new Date().toISOString();
   } else if (action === "decline") {
+    if (!(callerIsInvitee || callerIsInviter)) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
     patch.status = "declined";
   } else if (action === "accept") {
+    if (!callerIsInvitee) {
+      return NextResponse.json({ error: "not_your_invite" }, { status: 403 });
+    }
     if (invite.status !== "pending_acceptance") {
       return NextResponse.json({ error: "wrong_state" }, { status: 400 });
     }
-    if (invite.invitee_user_id && invite.invitee_user_id !== user.id) {
-      return NextResponse.json({ error: "not_your_invite" }, { status: 403 });
-    }
     patch.status = "accepted";
-    // If the invite was created without invitee_user_id, set it now so
-    // the trigger can materialize the membership.
-    if (!invite.invitee_user_id) patch.invitee_user_id = user.id;
   } else if (action === "revoke") {
+    if (!(callerIsOwner || callerIsInviter)) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
     patch.status = "revoked";
   }
 
-  const { error: updateErr } = await supabase
+  // Update with .select() so we can detect zero-row changes (e.g.
+  // RLS unexpectedly blocking) and report them instead of returning
+  // a misleading success.
+  const { data: updated, error: updateErr } = await supabase
     .from("share_group_invites")
     .update(patch)
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 400 });
+  }
+  if (!updated) {
+    return NextResponse.json({ error: "no_row_updated" }, { status: 403 });
   }
 
   // Look up the group name once for the notification body.
@@ -112,7 +143,11 @@ export async function POST(
       kind: "invite_accepted",
       title: "Joined " + groupName,
       body: "Your invitee accepted and is now a member.",
-      payload: { invite_id: invite.id, group_id: invite.group_id, member_id: user.id },
+      payload: {
+        invite_id: invite.id,
+        group_id: invite.group_id,
+        member_id: user.id,
+      },
       action_url: "/app/groups",
     });
   } else if (action === "decline" && invite.inviter_id !== user.id) {
