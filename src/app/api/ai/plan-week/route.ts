@@ -94,9 +94,46 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
+  // Round F v4.5: fetch the next 7 days of Google Calendar events so the
+  // weekly plan accounts for real meetings + travel + offsites, not just
+  // tasks. Skips past meetings.
+  const now = new Date();
+  const horizonEnd = new Date(now);
+  horizonEnd.setDate(horizonEnd.getDate() + 7);
+  const { data: events } = await supabase
+    .from("calendar_events")
+    .select("title,start_at,end_at,is_all_day,location,attendees_count")
+    .eq("cancelled", false)
+    .gte("start_at", now.toISOString())
+    .lt("start_at", horizonEnd.toISOString())
+    .order("start_at", { ascending: true })
+    .limit(60);
+
+  const eventBlock = (events ?? [])
+    .map((e) => {
+      const day = e.start_at ? new Date(e.start_at).toISOString().slice(0, 10) : "";
+      const time = e.is_all_day
+        ? "all-day"
+        : e.start_at && e.end_at
+        ? `${new Date(e.start_at).toISOString().slice(11, 16)}-${new Date(e.end_at).toISOString().slice(11, 16)}`
+        : "";
+      const parts = [
+        day,
+        e.title || "(untitled)",
+        time && `· ${time}`,
+        e.location && `· @${e.location}`,
+        e.attendees_count ? `· ${e.attendees_count} attendees` : "",
+      ];
+      return parts.filter(Boolean).join(" ");
+    })
+    .join("\n");
+
   const userMsg = [
     `NOW: ${new Date().toISOString()}`,
     `WEEK_HORIZON: 7 days from now`,
+    eventBlock
+      ? `CALENDAR EVENTS THIS WEEK (${(events ?? []).length}):\n${eventBlock}`
+      : `CALENDAR EVENTS THIS WEEK: (none)`,
     `TASKS (${tasks.length}):`,
     taskBlock,
   ].join("\n");
