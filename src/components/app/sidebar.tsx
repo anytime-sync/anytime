@@ -6,7 +6,7 @@ import {
   Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
   Moon, SunMedium, Newspaper, CheckCircle2, GripVertical, Settings,
-} from "lucide-react";
+, StickyNote } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
