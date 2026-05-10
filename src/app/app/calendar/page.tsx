@@ -97,6 +97,15 @@ function MonthView({
     const m = new Map<string, CalendarEvent[]>();
     for (const ev of calEventsAll) {
       if (!ev.start_at) continue;
+      // Round F v4.7 fix: skip multi-day events — they render as a single
+      // continuous bar via multiDayBars, so per-day chips would duplicate
+      // them visually (same logic the task path uses for multi-day tasks).
+      if (ev.end_at) {
+        const startMs = startOfDay(new Date(ev.start_at)).getTime();
+        const rawEndMs = startOfDay(new Date(ev.end_at)).getTime();
+        const endMs = ev.is_all_day ? rawEndMs - 86400000 : rawEndMs;
+        if (endMs > startMs) continue;
+      }
       const k = format(new Date(ev.start_at), "yyyy-MM-dd");
       const arr = m.get(k) ?? [];
       arr.push(ev);
