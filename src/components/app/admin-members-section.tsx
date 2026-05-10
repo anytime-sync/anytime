@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, Search } from "lucide-react";
+import { Sparkles, Search, Crown } from "lucide-react";
 
 type AdminUser = {
   id: string;
@@ -16,35 +16,48 @@ type AdminUser = {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   is_manual_override: boolean;
+  override_plan_raw: "free" | "pro" | "vip" | "team" | null;
   override_reason: string | null;
   override_expires_at: string | null;
 };
 
+type UsersResponse = {
+  users: AdminUser[];
+  total: number;
+  viewer_is_owner: boolean;
+};
+
 /**
  * Admin members section. Lists every user with their effective plan and a
- * dropdown to apply a manual override. The Stripe-derived plan is shown read
- * only as the "from Stripe" tag so the admin can see what would happen if
- * the override were removed.
+ * dropdown to apply a manual override.
+ *
+ * Override options:
+ *   - Default → no override; user falls back to whatever Stripe says (or Free).
+ *   - Free    → forces the user to Free regardless of Stripe.
+ *   - VIP     → grants Pro-level access without payment. Owner-only.
+ *   - Team    → reserved.
+ *
+ * Pro is *not* a manual option — Pro must come from a real Stripe subscription.
+ * The "From Stripe" column shows the user's payment-derived plan.
  */
 export function AdminMembersSection() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
 
-  const usersQ = useQuery<AdminUser[]>({
+  const usersQ = useQuery<UsersResponse>({
     queryKey: ["admin", "users", q],
     queryFn: async () => {
       const url = q ? `/api/admin/users?q=${encodeURIComponent(q)}` : "/api/admin/users";
       const r = await fetch(url);
       if (!r.ok) throw new Error(`http_${r.status}`);
-      const j = await r.json();
-      return (j.users ?? []) as AdminUser[];
+      return (await r.json()) as UsersResponse;
     },
   });
 
   const setPlan = useMutation({
     mutationFn: async (vars: {
       id: string;
-      plan: "free" | "pro" | "team" | null;
+      plan: "free" | "vip" | "team" | null;
       reason?: string;
     }) => {
       const r = await fetch(`/api/admin/users/${vars.id}/plan`, {
@@ -54,7 +67,7 @@ export function AdminMembersSection() {
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        throw new Error(j.error ?? `http_${r.status}`);
+        throw new Error(j.hint ?? j.error ?? `http_${r.status}`);
       }
     },
     onSuccess: () => {
@@ -64,13 +77,17 @@ export function AdminMembersSection() {
     onError: (e: Error) => toast.error(`Couldn't save: ${e.message}`),
   });
 
+  const isOwner = usersQ.data?.viewer_is_owner ?? false;
+
   return (
     <section>
-      <div className="flex items-end justify-between mb-4">
+      <div className="flex items-end justify-between mb-4 gap-4 flex-wrap">
         <div>
           <h2 className="font-display text-2xl tracking-tight">Members</h2>
           <p className="text-sm text-muted-fg mt-1">
-            Override a user's plan independent of Stripe. Manual overrides win.
+            {isOwner
+              ? "Override a user's plan independent of Stripe. Manual overrides win. Pro must come from Stripe — use VIP to comp Pro access."
+              : "Override a user's plan to Free. Pro must come from Stripe."}
           </p>
         </div>
         <div className="relative">
@@ -100,11 +117,12 @@ export function AdminMembersSection() {
             <span className="text-center">Effective</span>
           </header>
           <ul className="divide-y divide-border">
-            {(usersQ.data ?? []).map((u) => {
+            {(usersQ.data?.users ?? []).map((u) => {
               const stripePlan: "free" | "pro" | "team" =
                 u.plan_status && ["active", "trialing", "past_due"].includes(u.plan_status)
                   ? (u.plan as "free" | "pro" | "team")
                   : "free";
+              const isVip = u.override_plan_raw === "vip";
               return (
                 <li
                   key={u.id}
@@ -124,20 +142,32 @@ export function AdminMembersSection() {
                   </div>
                   <div className="flex items-center gap-2">
                     <select
-                      value={u.is_manual_override ? u.plan : ""}
+                      value={u.override_plan_raw ?? ""}
                       disabled={setPlan.isPending}
                       onChange={(e) => {
-                        const v = e.target.value as "" | "free" | "pro" | "team";
-                        setPlan.mutate({ id: u.id, plan: v === "" ? null : v });
+                        const v = e.target.value as
+                          | ""
+                          | "free"
+                          | "vip"
+                          | "team";
+                        setPlan.mutate({
+                          id: u.id,
+                          plan: v === "" ? null : v,
+                        });
                       }}
                       className="input h-8 text-xs flex-1"
                     >
                       <option value="">— (use Stripe)</option>
                       <option value="free">Free</option>
-                      <option value="pro">Pro</option>
+                      {isOwner ? <option value="vip">VIP (comp Pro)</option> : null}
                       <option value="team">Team</option>
                     </select>
-                    {u.is_manual_override ? (
+                    {isVip ? (
+                      <Crown
+                        className="size-3.5 text-accent shrink-0"
+                        aria-label="VIP comp"
+                      />
+                    ) : u.is_manual_override ? (
                       <Sparkles
                         className="size-3 text-accent shrink-0"
                         aria-label="Manual override"
@@ -155,7 +185,7 @@ export function AdminMembersSection() {
                 </li>
               );
             })}
-            {(usersQ.data ?? []).length === 0 ? (
+            {(usersQ.data?.users ?? []).length === 0 ? (
               <li className="px-4 py-8 text-sm text-muted-fg text-center">
                 No members{q ? ` matching "${q}"` : " yet"}.
               </li>
@@ -165,8 +195,10 @@ export function AdminMembersSection() {
       )}
 
       <p className="text-xs text-muted-fg mt-3">
-        Tip: setting a manual override to "—" removes it; the user reverts to
-        whatever Stripe says (or Free if they don't have a subscription).
+        Setting "—" removes the override; the user reverts to Stripe (or Free).{" "}
+        {isOwner
+          ? "VIP is invisible to the user — they appear as Pro internally."
+          : null}
       </p>
     </section>
   );
