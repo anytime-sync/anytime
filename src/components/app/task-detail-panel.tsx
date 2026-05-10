@@ -6,8 +6,9 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import { Bell, Flag, Trash2, X, Repeat, Paperclip } from "lucide-react";
+import { Bell, Flag, Trash2, X, Repeat, Paperclip, NotebookPen } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn, priorityColorClass } from "@/lib/utils";
 import { SubtaskList } from "./subtask-list";
 import { AttachmentList } from "./attachment-list";
@@ -39,6 +40,30 @@ function localInputValue(iso: string | null): string {
 }
 
 export function TaskDetailPanel() {
+  const router = useRouter();
+  const [openingNote, setOpeningNote] = useState(false);
+  const openAsNote = async () => {
+    if (!task || openingNote) return;
+    setOpeningNote(true);
+    try {
+      const r = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: task.title, body: task.notes ?? null, task_id: task.id }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        alert("Couldn't open as note: " + (j.error ?? r.status));
+        return;
+      }
+      const j = await r.json();
+      const noteId = j.id ?? j.note?.id ?? j.noteId;
+      if (noteId) router.push("/app/notes/" + noteId);
+      else router.push("/app/notes");
+    } finally {
+      setOpeningNote(false);
+    }
+  };
   const lang = useLanguage();
   const id = useUIStore((s) => s.selectedTaskId);
   const setId = useUIStore((s) => s.setSelectedTaskId);
@@ -101,6 +126,15 @@ export function TaskDetailPanel() {
           )}
         </button>
         <div className="flex items-center gap-1">
+          <button
+            className="btn-ghost size-9 p-0 grid place-items-center"
+            onClick={openAsNote}
+            disabled={openingNote}
+            title="Open as note"
+            aria-label="Open as note"
+          >
+            <NotebookPen className="size-4" />
+          </button>
           <button
             className="btn-ghost size-9 p-0 grid place-items-center text-danger"
             onClick={async () => {
