@@ -16,6 +16,7 @@ type Note = {
 export default function NoteEditorPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [note, setNote] = useState<Note | null>(null);
+  const [converting, setConverting] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -64,6 +65,37 @@ export default function NoteEditorPage({ params }: { params: { id: string } }) {
     debounceRef.current = setTimeout(() => void save({ body: v }), 800);
   }
 
+  async function convertToTask() {
+
+    if (converting) return;
+
+    setConverting(true);
+
+    try {
+
+      const r = await fetch(`/api/notes/${params.id}/convert-to-task`, { method: "POST" });
+
+      if (!r.ok) {
+
+        const j = await r.json().catch(() => ({}));
+
+        alert("Couldn't convert: " + (j.error ?? r.status));
+
+        return;
+
+      }
+
+      router.push("/app/today");
+
+    } finally {
+
+      setConverting(false);
+
+    }
+
+  }
+
+
   async function deleteNote() {
     if (!confirm("Delete this note? This can't be undone.")) return;
     await fetch(`/api/notes/${params.id}`, { method: "DELETE" });
@@ -83,6 +115,14 @@ export default function NoteEditorPage({ params }: { params: { id: string } }) {
         </button>
         <div className="flex items-center gap-3">
           <span>{saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : ""}</span>
+          <button
+            onClick={convertToTask}
+            disabled={converting}
+            className="text-xs px-2 py-1 rounded hover:bg-muted/40 disabled:opacity-50"
+            title="Create a task from this note"
+          >
+            {converting ? "Converting…" : "Convert to task"}
+          </button>
           <button
             onClick={deleteNote}
             className="text-red-600 hover:underline"
