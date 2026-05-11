@@ -6,8 +6,9 @@ import {
   Inbox, CalendarDays, CalendarRange, CalendarSearch, Sun, Sunrise, Hash, Folder, Clock,
   Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
   Moon, SunMedium, Newspaper, CheckCircle2, GripVertical, Settings,
-  StickyNote } from "lucide-react";
+  StickyNote, Shield } from "lucide-react";
 import { useUIStore } from "@/store/ui";
+import { isOwner } from "@/lib/plans";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useProjects, useReorderProjects } from "@/hooks/use-projects";
@@ -50,7 +51,7 @@ type LinkDef = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-function topLinks(lang: Lang): LinkDef[] {
+function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
   return [
     { href: "/app/today",     label: t(lang, "sidebar.today"),        icon: Sun },
     { href: "/app/tomorrow",  label: t(lang, "sidebar.tomorrow"),     icon: Sunrise },
@@ -67,6 +68,7 @@ function topLinks(lang: Lang): LinkDef[] {
     { href: "/app/notes",     label: t(lang, "sidebar.notes"),        icon: StickyNote },
           { href: "/app/features", label: t(lang, "sidebar.features"),     icon: Sparkles },
           { href: "/app/settings",  label: t(lang, "sidebar.settings"),     icon: Settings },
+          ...(isAdmin ? [{ href: "/app/admin", label: "Admin", icon: Shield }] : []),
   ];
 }
 
@@ -111,7 +113,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const lang = useLanguage();
 
   // Top nav: ordered links with localStorage-backed reordering.
-  const baseLinks = useMemo(() => topLinks(lang), [lang]);
+  const baseLinks = useMemo(() => topLinks(lang, isOwner(user.email)), [lang, user.email]);
   const [orderedLinks, setOrderedLinks] = useState<LinkDef[]>(baseLinks);
   // Reapply the saved order whenever the language changes (link labels
   // change but href identity is stable, so order is preserved).
