@@ -139,8 +139,17 @@ export default function GroupsPage() {
     setLoading(false);
   }
 
+  // Auto-refresh when tab regains focus so the owner sees a new
+  // member instantly after the invitee accepts (no realtime channel).
   useEffect(() => {
     reload();
+    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   async function createGroup(e: React.FormEvent) {
