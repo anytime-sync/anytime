@@ -17,6 +17,7 @@ import {
   FEATURES,
   getFeature as getStaticFeature,
   planSatisfies,
+  isOwner,
   type FeatureSpec,
   type Plan,
 } from "@/lib/plans";
@@ -122,6 +123,8 @@ export async function canUseFeature(
  */
 export function isAdmin(email: string | null | undefined): boolean {
   if (!email) return false;
+  // The canonical owner is always an admin, regardless of the env allowlist.
+  if (isOwner(email)) return true;
   const raw = process.env.ADMIN_EMAILS ?? "";
   const allowed = raw
     .split(",")
