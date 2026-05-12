@@ -9,10 +9,11 @@ import { useUIStore } from "@/store/ui";
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import {
-  Bell, CalendarClock, Flag, Folder, Hash, Repeat, Sparkles, ChevronDown,
+  Bell, CalendarClock, CalendarPlus, Flag, Folder, Hash, Repeat, Sparkles, ChevronDown,
   ScanLine,
 } from "lucide-react";
 import { ScanTasksSheet } from "./scan-tasks-sheet";
+import { toast } from "sonner";
 import { addDays, isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
@@ -82,6 +83,8 @@ export function QuickAdd() {
   // bulk-create itself; we just need to know when it succeeds so we can
   // close QuickAdd as well (consistent with the single-task submit flow).
   const [scanOpen, setScanOpen] = useState(false);
+  // When ON, Quick Add submit creates a Google Calendar event instead of a task.
+  const [eventMode, setEventMode] = useState(false);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -205,6 +208,7 @@ export function QuickAdd() {
     if (open) {
       setText("");
       setNow(new Date());
+      setEventMode(false);
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   }, [open]);
@@ -239,8 +243,42 @@ export function QuickAdd() {
     if (!raw) return;
     const localP = parsed;
     if (!localP.title) localP.title = raw;
+    if (eventMode) {
+      setOpen(false);
+      void createGoogleEvent(localP.title, localP.start_at ?? localP.due_at);
+      return;
+    }
     setOpen(false);
     void instantCreateAndRefine(raw, localP);
+  }
+
+  /** Round a Date up to the next 15-minute boundary. */
+  function roundUpQuarterHour(d) {
+    const ms = 15 * 60 * 1000;
+    return new Date(Math.ceil(d.getTime() / ms) * ms);
+  }
+
+  /** POST a Google Calendar event from the Quick Add input. */
+  async function createGoogleEvent(title, startIso) {
+    let start;
+    if (startIso) start = new Date(startIso);
+    else start = roundUpQuarterHour(new Date(Date.now() + 60 * 60 * 1000));
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    try {
+      const res = await fetch("/api/calendar/google/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, start_at: start.toISOString(), end_at: end.toISOString(), is_all_day: false }),
+      });
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        toast.error(msg || "Could not create event on Google Calendar");
+        return;
+      }
+      toast.success("Event created on Google Calendar");
+    } catch (err) {
+      toast.error(err?.message || "Could not create event on Google Calendar");
+    }
   }
 
   async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
@@ -363,6 +401,21 @@ export function QuickAdd() {
         <div className="grid md:grid-cols-[1fr_auto] gap-3 md:gap-4 min-w-0">
           <div className="space-y-2 content-start min-w-0">
             <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setEventMode((m) => !m)}
+                aria-pressed={eventMode}
+                className={cn(
+                  "h-6 px-2 inline-flex items-center gap-1 rounded-full border text-xs transition-colors",
+                  eventMode
+                    ? "border-sky-500/60 bg-sky-500/15 text-sky-600"
+                    : "border-border text-muted-fg hover:bg-muted hover:text-fg"
+                )}
+                title="Create a Google Calendar event instead of a task"
+              >
+                <CalendarPlus className="size-3.5" />
+                Event
+              </button>
               <Chip
                 kind="time"
                 active={!!parsed.due_at}
