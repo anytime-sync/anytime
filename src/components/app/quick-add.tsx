@@ -91,13 +91,18 @@ export function QuickAdd() {
   const [scanOpen, setScanOpen] = useState(false);
   // When ON, Quick Add submit creates a Google Calendar event instead of a task.
   const [eventMode, setEventMode] = useState(false);
+  // Tracks whether the user manually clicked the Event pill. When set
+  // (true or false), the text-driven auto-toggle stops overwriting them,
+  // so they keep control until the modal closes.
+  const manualOverrideRef = useRef<boolean | null>(null);
 
   // Auto-flip to Event mode when the input contains a calendar trigger.
   // We never auto-turn-OFF on text change — user must click the pill
   // to revert, so deleting the word does not silently swap modes mid-typing.
   useEffect(() => {
-    if (!eventMode && EVENT_TRIGGER_RE.test(text)) setEventMode(true);
-  }, [text, eventMode]);
+    if (manualOverrideRef.current !== null) return; // user chose manually
+    setEventMode(EVENT_TRIGGER_RE.test(text));
+  }, [text]);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -222,6 +227,7 @@ export function QuickAdd() {
       setText("");
       setNow(new Date());
       setEventMode(false);
+      manualOverrideRef.current = null;
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   }, [open]);
@@ -422,7 +428,7 @@ export function QuickAdd() {
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
-                onClick={() => setEventMode((m) => !m)}
+                onClick={() => { const next = !eventMode; manualOverrideRef.current = next; setEventMode(next); }}
                 aria-pressed={eventMode}
                 className={cn(
                   "h-6 px-2 inline-flex items-center gap-1 rounded-full border text-xs transition-colors",
