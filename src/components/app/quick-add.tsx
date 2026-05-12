@@ -253,14 +253,14 @@ export function QuickAdd() {
   }
 
   /** Round a Date up to the next 15-minute boundary. */
-  function roundUpQuarterHour(d) {
+  function roundUpQuarterHour(d: Date): Date {
     const ms = 15 * 60 * 1000;
     return new Date(Math.ceil(d.getTime() / ms) * ms);
   }
 
   /** POST a Google Calendar event from the Quick Add input. */
-  async function createGoogleEvent(title, startIso) {
-    let start;
+  async function createGoogleEvent(title: string, startIso: string | null | undefined) {
+    let start: Date;
     if (startIso) start = new Date(startIso);
     else start = roundUpQuarterHour(new Date(Date.now() + 60 * 60 * 1000));
     const end = new Date(start.getTime() + 60 * 60 * 1000);
@@ -276,7 +276,7 @@ export function QuickAdd() {
         return;
       }
       toast.success("Event created on Google Calendar");
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || "Could not create event on Google Calendar");
     }
   }
