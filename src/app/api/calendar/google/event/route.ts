@@ -63,11 +63,11 @@ export async function POST(req: Request) {
   // Look up the user's primary calendar id from their connection row.
   const { data: conn } = await supabase
     .from("user_calendar_connections")
-    .select("calendar_id")
+    .select("primary_calendar_id")
     .eq("user_id", user.id)
     .eq("provider", "google")
     .maybeSingle();
-  const calendarId = (conn as { calendar_id?: string } | null)?.calendar_id;
+  const calendarId = (conn as { primary_calendar_id?: string } | null)?.primary_calendar_id;
   if (!calendarId) {
     return NextResponse.json(
       { error: "no_calendar_connection" },
