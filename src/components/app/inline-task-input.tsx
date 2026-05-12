@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Calendar, CalendarClock, ChevronDown, Flag, Folder, Hash, Repeat, Sparkles } from "lucide-react";
 import {
   parseQuickInput,
@@ -30,6 +30,11 @@ import { t } from "@/lib/i18n";
  *   include a date (calendar single-day view passes the day so anything
  *   typed there lands on the visible date, not at "no date").
  */
+/** Natural-language triggers that auto-flip the input into Event mode.
+ *  Same conservative list as Quick Add. Stripped from the title before submit. */
+const EVENT_TRIGGER_RE =
+  /\b(google(?:\s+calendar)?|gcal|gmeet|calendar event)\b/i;
+
 export function InlineTaskInput({
   defaultProjectId = null,
   defaultDueAt = null,
@@ -44,6 +49,9 @@ export function InlineTaskInput({
   // Round F v4.7: when GCal is connected, allow user to create the
   // input as a Google Calendar event instead of a native task.
   const [mode, setMode] = useState<"task" | "event">("task");
+  // Tracks whether the user manually clicked the Event toggle. When set,
+  // the text-driven auto-toggle stops overwriting their choice.
+  const manualOverrideRef = useRef<"task" | "event" | null>(null);
   const { data: gcalConn } = useCalendarConnection();
   const gcalAvailable = !!gcalConn?.connected;
   const qc = useQueryClient();
@@ -68,6 +76,12 @@ export function InlineTaskInput({
     [existingTags, projects]
   );
   const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
+  // Auto-flip mode based on whether the text contains a calendar trigger.
+  // Manual clicks (via manualOverrideRef) lock the state until submit/clear.
+  useEffect(() => {
+    if (manualOverrideRef.current !== null) return;
+    setMode(EVENT_TRIGGER_RE.test(text) ? "event" : "task");
+  }, [text]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
   /**
@@ -91,7 +105,11 @@ export function InlineTaskInput({
     const localP = parsed;
     if (!localP.title) localP.title = raw;
     setText("");
+    manualOverrideRef.current = null;
     if (mode === "event" && gcalAvailable) {
+      // Strip the calendar trigger words from the title before saving.
+      const stripped = (localP.title || raw).replace(EVENT_TRIGGER_RE, "").replace(/\s+/g, " ").trim();
+      if (stripped) localP.title = stripped;
       void createGCalEvent(raw, localP);
     } else {
       void instantInsertAndRefine(raw, localP);
@@ -219,7 +237,7 @@ export function InlineTaskInput({
         {gcalAvailable && (
           <button
             type="button"
-            onClick={() => setMode((m) => (m === "task" ? "event" : "task"))}
+            onClick={() => () => { const next = mode === "task" ? "event" : "task"; manualOverrideRef.current = next; setMode(next); }}
             title={
               mode === "event"
                 ? "Creates a Google Calendar event on Enter — click to switch back to Task"
