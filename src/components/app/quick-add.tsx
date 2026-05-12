@@ -23,7 +23,7 @@ import { t as tr } from "@/lib/i18n";
  *  Conservative on purpose: only unambiguous calendar-y words.
  *  Case-insensitive, matched as whole words. Stripped from title before submit. */
 const EVENT_TRIGGER_RE =
-  /\b(google(?:\s+calendar)?|gcal|gmeet|meeting|appointment|appt|calendar event)\b/i;
+  /\b(google(?:\s+calendar)?|gcal|gmeet|calendar event)\b/i;
 
 const EXAMPLES = [
   "Email Sam tomorrow at 9am with a reminder 30 minutes before, urgent #work",
