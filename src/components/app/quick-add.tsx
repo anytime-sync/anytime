@@ -19,6 +19,12 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
 
+/** Natural-language triggers that auto-flip Quick Add into Event mode.
+ *  Conservative on purpose: only unambiguous calendar-y words.
+ *  Case-insensitive, matched as whole words. Stripped from title before submit. */
+const EVENT_TRIGGER_RE =
+  /\b(google(?:\s+calendar)?|gcal|gmeet|meeting|appointment|appt|calendar event)\b/i;
+
 const EXAMPLES = [
   "Email Sam tomorrow at 9am with a reminder 30 minutes before, urgent #work",
   "Stand-up every weekday at 10am",
@@ -85,6 +91,13 @@ export function QuickAdd() {
   const [scanOpen, setScanOpen] = useState(false);
   // When ON, Quick Add submit creates a Google Calendar event instead of a task.
   const [eventMode, setEventMode] = useState(false);
+
+  // Auto-flip to Event mode when the input contains a calendar trigger.
+  // We never auto-turn-OFF on text change — user must click the pill
+  // to revert, so deleting the word does not silently swap modes mid-typing.
+  useEffect(() => {
+    if (!eventMode && EVENT_TRIGGER_RE.test(text)) setEventMode(true);
+  }, [text, eventMode]);
 
   /** Inject (or replace) an attribute phrase into the input.
    *
@@ -245,7 +258,8 @@ export function QuickAdd() {
     if (!localP.title) localP.title = raw;
     if (eventMode) {
       setOpen(false);
-      void createGoogleEvent(localP.title, localP.start_at ?? localP.due_at);
+      const cleanTitle = stripEventTriggers(localP.title);
+      void createGoogleEvent(cleanTitle || localP.title, localP.start_at ?? localP.due_at);
       return;
     }
     setOpen(false);
@@ -279,6 +293,11 @@ export function QuickAdd() {
     } catch (err: any) {
       toast.error(err?.message || "Could not create event on Google Calendar");
     }
+  }
+
+  /** Remove the calendar trigger words from the title before saving. */
+  function stripEventTriggers(title: string): string {
+    return title.replace(EVENT_TRIGGER_RE, "").replace(/\s+/g, " ").trim();
   }
 
   async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
