@@ -21,6 +21,7 @@ import { NotificationBell } from "./notification-bell";
 import { Target, Sunset } from "lucide-react";
 import { SidebarTagItem } from "./sidebar-tag-item";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
 import {
@@ -50,6 +51,46 @@ type LinkDef = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 };
+
+/**
+ * Sidebar href → feature_id (matches FEATURES in src/lib/plans.ts).
+ *
+ * When an admin flips a feature's `disabled` bit via /app/admin, the matching
+ * sidebar row disappears for every signed-in user. Links not in this map
+ * (Features, Settings, Admin) are always visible.
+ */
+const HREF_TO_FEATURE_ID: Record<string, string> = {
+  "/app/today":     "tasks_today",
+  "/app/tomorrow":  "tasks_tomorrow",
+  "/app/next7":     "tasks_next7",
+  "/app/next90":    "tasks_next90",
+  "/app/inbox":     "tasks_inbox",
+  "/app/calendar":  "cal_view",
+  "/app/matrix":    "tasks_matrix",
+  "/app/pomodoro":  "tasks_pomodoro",
+  "/app/habits":    "tasks_habits",
+  "/app/retro":     "review_weekly_retro",
+  "/app/completed": "tasks_completed",
+  "/app/groups":    "tasks_groups",
+  "/app/notes":     "tasks_notes",
+};
+
+/**
+ * Fetch the set of feature_ids the admin has disabled. Cached for 30s, fails
+ * open (empty set) on error so a broken endpoint never blanks the sidebar.
+ */
+function useDisabledFeatureIds(): Set<string> {
+  const { data } = useQuery({
+    queryKey: ["feature-flags", "disabled"],
+    queryFn: async () => {
+      const r = await fetch("/api/feature-flags/effective");
+      if (!r.ok) return { disabled: [] as string[] };
+      return (await r.json()) as { disabled: string[] };
+    },
+    staleTime: 30_000,
+  });
+  return useMemo(() => new Set(data?.disabled ?? []), [data]);
+}
 
 function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
   return [
@@ -112,8 +153,19 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const [showCreate, setShowCreate] = useState(false);
   const lang = useLanguage();
 
-  // Top nav: ordered links with localStorage-backed reordering.
-  const baseLinks = useMemo(() => topLinks(lang, isOwner(user.email)), [lang, user.email]);
+  // Top nav: ordered links with localStorage-backed reordering. Rows for
+  // features the admin has disabled are filtered out here, so flipping
+  // "tasks_today" off in /app/admin removes the Today row for every user.
+  const disabledIds = useDisabledFeatureIds();
+  const baseLinks = useMemo(() => {
+    const all = topLinks(lang, isOwner(user.email));
+    if (disabledIds.size === 0) return all;
+    return all.filter((l) => {
+      const fid = HREF_TO_FEATURE_ID[l.href];
+      if (!fid) return true; // Features / Settings / Admin always visible
+      return !disabledIds.has(fid);
+    });
+  }, [lang, user.email, disabledIds]);
   const [orderedLinks, setOrderedLinks] = useState<LinkDef[]>(baseLinks);
   // Reapply the saved order whenever the language changes (link labels
   // change but href identity is stable, so order is preserved).
