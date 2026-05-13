@@ -3,11 +3,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import type { Plan } from "@/lib/plans";
 
 /**
  * Round Z (billing): client-side hooks.
  *
- * - useUserPlan(): returns the current plan ('free' | 'pro' | 'team').
+ * - useUserPlan(): returns the current plan ('free' | 'plus' | 'pro' | 'vip' | 'team').
  *   Reads from the RLS-gated user_plans view directly via supabase, so
  *   it stays in sync with whatever the Stripe webhook last wrote.
  *
@@ -17,8 +18,6 @@ import { toast } from "sonner";
  * - useOpenBillingPortal(): mutation that POSTs /api/billing/portal,
  *   then redirects to Stripe's hosted Customer Portal.
  */
-
-export type Plan = "free" | "pro" | "team";
 
 export function useUserPlan() {
   return useQuery({
