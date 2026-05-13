@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * PUT /api/admin/users/[id]/plan
  *
  * Body:
- *   { plan: "free"|"pro"|"vip"|"team"|null, reason?: string, expires_at?: string|null }
+ *   { plan: "free"|"plus"|"pro"|"vip"|"team"|null, reason?: string, expires_at?: string|null }
  *
  * Rules:
  *   - Caller must be admin (ADMIN_EMAILS).
@@ -64,7 +64,7 @@ export async function PUT(
   }
 
   const plan = body.plan ?? null;
-  if (plan !== null && !["free", "pro", "vip", "team"].includes(plan)) {
+  if (plan !== null && !["free", "plus", "pro", "vip", "team"].includes(plan)) {
     return NextResponse.json({ error: "bad_plan" }, { status: 400 });
   }
   // Only the owner can grant VIP.
