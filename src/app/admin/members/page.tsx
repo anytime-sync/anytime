@@ -205,7 +205,7 @@ export default function MembersPage() {
   );
 }
 
-function PlanBadge({ plan, raw }: { plan: "free" | "pro" | "vip" | "team"; raw: string | null }) {
+function PlanBadge({ plan, raw }: { plan: "free" | "plus" | "pro" | "vip" | "team"; raw: string | null }) {
   // Pill colour communicates tier rank: muted for free, gold for pro/vip, blue for team.
   // The "raw" hint surfaces VIP comp distinctly so the admin can tell a comp from a real Pro.
   const label = raw === "vip" ? "VIP" : plan.toUpperCase();
@@ -263,7 +263,7 @@ function EditDialog({
   const [lang, setLang] = useState<LanguageCode>(
     (member.language as LanguageCode) ?? "en"
   );
-  type PlanChoice = "free" | "pro" | "vip" | "default";
+  type PlanChoice = "free" | "plus" | "pro" | "vip" | "default";
   const initialPlan: PlanChoice = (member.override_plan_raw as PlanChoice | null) ?? "default";
   const [plan, setPlan] = useState<PlanChoice>(initialPlan);
   const [busy, setBusy] = useState(false);
@@ -432,6 +432,7 @@ function EditDialog({
             >
               <option value="default">Default (Stripe-resolved)</option>
               <option value="free">Free (override)</option>
+              <option value="plus">Plus (manual comp)</option>
               <option value="pro">Pro (manual comp)</option>
               {viewerIsOwner ? <option value="vip">VIP (free Pro)</option> : null}
             </select>
