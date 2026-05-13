@@ -65,7 +65,7 @@ export async function PUT(req: Request) {
 
   let body: {
     feature_id?: string;
-    override_plan?: "free" | "pro" | "vip" | "team" | null;
+    override_plan?: "free" | "plus" | "pro" | "vip" | "team" | null;
     disabled?: boolean;
     note?: string | null;
   };
@@ -86,7 +86,7 @@ export async function PUT(req: Request) {
   const override_plan = body.override_plan ?? null;
   if (
     override_plan !== null &&
-    !["free", "pro", "vip", "team"].includes(override_plan)
+    !["free", "plus", "pro", "vip", "team"].includes(override_plan)
   ) {
     return NextResponse.json({ error: "bad_override_plan" }, { status: 400 });
   }
