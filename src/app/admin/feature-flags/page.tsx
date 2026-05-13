@@ -156,7 +156,7 @@ export default function AdminFeatureFlagsPage() {
                             <option value="">Default</option>
                             <option value="free">Free</option>
                             <option value="pro">Pro</option>
-                            <option value="team">Team</option>
+                            <option value="vip">VIP</option>
                           </select>
                         </div>
                         <div className="flex justify-center">
