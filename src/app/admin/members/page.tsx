@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { Plan } from "@/lib/plans";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { LANGUAGES, type LanguageCode } from "@/lib/i18n";
@@ -19,6 +21,9 @@ type Member = {
   completed_count: number;
   pomodoro_count: number;
   banned_until: string | null;
+  /** Hydrated client-side from /api/admin/users; absent for free users with no override. */
+  plan?: Plan;
+  override_plan_raw?: string | null;
 };
 
 export default function MembersPage() {
@@ -40,6 +45,23 @@ export default function MembersPage() {
   useEffect(() => {
     reload();
   }, []);
+
+  // Effective-plan + ownership for each member, hydrated from /api/admin/users.
+  // Separate from the SQL RPC because the plan resolver wants the same
+  // (manual override > Stripe > free) logic the rest of the app uses, which
+  // already lives in /api/admin/users.
+  const plansQ = useQuery({
+    queryKey: ["admin", "members-plans"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/users?limit=500");
+      if (!r.ok) return { users: [] as { id: string; plan: Plan; override_plan_raw: string | null }[], viewer_is_owner: false };
+      return (await r.json()) as { users: { id: string; plan: Plan; override_plan_raw: string | null }[]; viewer_is_owner: boolean };
+    },
+  });
+  const planByUserId = new Map<string, { plan: Plan; raw: string | null }>(
+    (plansQ.data?.users ?? []).map((u) => [u.id, { plan: u.plan, raw: u.override_plan_raw }])
+  );
+  const viewerIsOwner = plansQ.data?.viewer_is_owner ?? false;
 
   return (
     <div className="px-8 md:px-12 py-12 max-w-6xl">
@@ -78,6 +100,7 @@ export default function MembersPage() {
               <Th>Lang</Th>
               <Th>Joined</Th>
               <Th>Last active</Th>
+              <Th>Plan</Th>
               <Th align="right">Tasks</Th>
               <Th align="right">Done</Th>
               <Th align="right">Pomodoros</Th>
@@ -87,7 +110,7 @@ export default function MembersPage() {
             {loading && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-6 py-12 text-center text-muted-fg italic font-display"
                 >
                   Reading the roster…
@@ -97,7 +120,7 @@ export default function MembersPage() {
             {!loading && members.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-6 py-12 text-center text-muted-fg italic font-display"
                 >
                   No members yet — the readership awaits.
@@ -135,6 +158,12 @@ export default function MembersPage() {
                       ? format(new Date(m.last_active), "MMM d, h:mm a")
                       : "—"}
                   </td>
+                  <td className="px-4 py-3">
+                    <PlanBadge
+                      plan={planByUserId.get(m.id)?.plan ?? "free"}
+                      raw={planByUserId.get(m.id)?.raw ?? null}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums font-display">
                     {m.task_count.toLocaleString()}
                   </td>
@@ -153,11 +182,13 @@ export default function MembersPage() {
 
       {editing && (
         <EditDialog
-          member={editing}
+          member={{ ...editing, plan: planByUserId.get(editing.id)?.plan ?? "free", override_plan_raw: planByUserId.get(editing.id)?.raw ?? null }}
+          viewerIsOwner={viewerIsOwner}
           onClose={() => setEditing(null)}
           onChanged={() => {
             setEditing(null);
             reload();
+            plansQ.refetch();
           }}
         />
       )}
@@ -171,6 +202,28 @@ export default function MembersPage() {
         />
       )}
     </div>
+  );
+}
+
+function PlanBadge({ plan, raw }: { plan: "free" | "pro" | "vip" | "team"; raw: string | null }) {
+  // Pill colour communicates tier rank: muted for free, gold for pro/vip, blue for team.
+  // The "raw" hint surfaces VIP comp distinctly so the admin can tell a comp from a real Pro.
+  const label = raw === "vip" ? "VIP" : plan.toUpperCase();
+  const tone =
+    raw === "vip"
+      ? "bg-accent/15 text-accent border-accent/30"
+      : plan === "pro"
+        ? "bg-accent/10 text-accent border-accent/20"
+        : plan === "team"
+          ? "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400"
+          : "bg-muted/40 text-muted-fg border-border";
+  return (
+    <span
+      className={`inline-flex items-center px-2 h-5 rounded-full border editorial-number text-[9px] tracking-wider ${tone}`}
+      title={raw ? `manual override: ${raw}` : "plan resolved from Stripe / default"}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -197,10 +250,12 @@ function Th({
 
 function EditDialog({
   member,
+  viewerIsOwner,
   onClose,
   onChanged,
 }: {
   member: Member;
+  viewerIsOwner: boolean;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -208,6 +263,9 @@ function EditDialog({
   const [lang, setLang] = useState<LanguageCode>(
     (member.language as LanguageCode) ?? "en"
   );
+  type PlanChoice = "free" | "pro" | "vip" | "default";
+  const initialPlan: PlanChoice = (member.override_plan_raw as PlanChoice | null) ?? "default";
+  const [plan, setPlan] = useState<PlanChoice>(initialPlan);
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -244,15 +302,29 @@ function EditDialog({
 
   async function save() {
     setBusy(true);
-    const res = await fetch(`/api/admin/members/${member.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ full_name: name || null, language: lang }),
-    });
+    const [profileRes, planRes] = await Promise.all([
+      fetch(`/api/admin/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ full_name: name || null, language: lang }),
+      }),
+      plan !== initialPlan
+        ? fetch(`/api/admin/users/${member.id}/plan`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ plan: plan === "default" ? null : plan }),
+          })
+        : Promise.resolve(null),
+    ]);
     setBusy(false);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast.error(j.error ?? "Save failed");
+    if (!profileRes.ok) {
+      const j = await profileRes.json().catch(() => ({}));
+      toast.error(j.error ?? "Profile save failed");
+      return;
+    }
+    if (planRes && !planRes.ok) {
+      const j = await planRes.json().catch(() => ({}));
+      toast.error(j.error ?? "Plan save failed");
       return;
     }
     toast.success("Saved");
@@ -347,6 +419,26 @@ function EditDialog({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="block">
+            <span className="editorial-number text-[10px] mb-1.5 block">
+              Plan
+            </span>
+            <select
+              className="input w-full"
+              value={plan}
+              onChange={(e) => setPlan(e.target.value as typeof plan)}
+            >
+              <option value="default">Default (Stripe-resolved)</option>
+              <option value="free">Free (override)</option>
+              <option value="pro">Pro (manual comp)</option>
+              {viewerIsOwner ? <option value="vip">VIP (free Pro)</option> : null}
+            </select>
+            <span className="block mt-1 text-[11px] text-muted-fg italic font-display">
+              Effective now: <em>{member.plan ?? "free"}</em>
+              {member.override_plan_raw ? ` (override: ${member.override_plan_raw})` : ""}
+            </span>
           </label>
         </div>
 
