@@ -18,7 +18,11 @@ export default function FeaturesPage() {
   const checkout = useStartCheckout();
   const portal = useOpenBillingPortal();
 
-  const isPro = plan?.plan === "pro";
+  // Treat plus + pro + vip as "paid" for surfaces that just need to swap
+  // Upgrade → Manage billing. The plan label still shows the precise tier.
+  const isPlus = plan?.plan === "plus";
+  const isPro = plan?.plan === "pro" || plan?.plan === "vip";
+  const isPaid = isPlus || isPro;
 
   return (
     <div className="flex flex-col h-full">
@@ -41,11 +45,13 @@ export default function FeaturesPage() {
               <p className="font-display text-2xl tracking-tight flex items-center gap-2">
                 {isPro ? (
                   <>Pro <Sparkles className="size-5 text-accent" /></>
+                ) : isPlus ? (
+                  <>Plus <Sparkles className="size-5 text-accent/70" /></>
                 ) : (
                   "Free"
                 )}
               </p>
-              {isPro ? (
+              {isPaid ? (
                 plan?.cancelAtPeriodEnd ? (
                   <p className="text-xs text-muted-fg mt-1">
                     Cancels at the end of the current period
@@ -70,7 +76,7 @@ export default function FeaturesPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {isPro ? (
+              {isPaid ? (
                 <button
                   onClick={() => portal.mutate()}
                   disabled={portal.isPending}
@@ -95,7 +101,7 @@ export default function FeaturesPage() {
           </section>
 
           {/* What's new in Pro (only for Free users) */}
-          {!isPro ? (
+          {!isPaid ? (
             <section className="border border-accent/40 bg-accent/5 rounded-2xl p-5">
               <p className="editorial-number text-[11px] mb-3">WHAT YOU UNLOCK</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -147,7 +153,9 @@ export default function FeaturesPage() {
             <p className="text-sm text-muted-fg mb-6">
               {isPro
                 ? "You have access to everything below."
-                : "Lock icons mark features that are Pro-only."}
+                : isPlus
+                  ? "You have everything in Plus. Pro adds the full AI co-pilot."
+                  : "Lock icons mark features that aren't included in your tier."}
             </p>
             <FeatureMatrix currentPlan={(plan?.plan as any) ?? "free"} />
           </section>
