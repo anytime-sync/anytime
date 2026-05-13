@@ -66,14 +66,14 @@ export default function PricingPage() {
             Built for the way you actually plan.
           </h1>
           <p className="text-lg text-muted-fg leading-relaxed">
-            Free covers the full task system, indefinitely. Pro adds the AI
-            co-pilot and two-way calendar — for people who want a daily edition
-            instead of a to-do list.
+            Free covers the full task system, indefinitely. Plus unlocks
+            two-way calendar and unlimited daily editions. Pro adds the full
+            AI co-pilot — Plan my day, Voice → Task, and the review suite.
           </p>
         </section>
 
         {/* Plan cards */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-20">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
           {/* Free */}
           <div className="border border-border rounded-2xl p-6 flex flex-col">
             <div className="flex items-baseline justify-between mb-2">
@@ -109,6 +109,46 @@ export default function PricingPage() {
             </div>
           </div>
 
+          {/* Plus — calendar + unlimited Daily Edition. Most-popular middle tier. */}
+          <div className="border border-border rounded-2xl p-6 flex flex-col">
+            <div className="flex items-baseline justify-between mb-2">
+              <h2 className="font-display text-2xl tracking-tight">Plus</h2>
+              <span className="text-2xl font-semibold">
+                $4<span className="text-sm text-muted-fg font-normal"> / month</span>
+              </span>
+            </div>
+            <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>
+            <ul className="space-y-2 text-sm flex-1">
+              {[
+                "Everything in Free",
+                "Unlimited Daily Edition",
+                "Two-way Google Calendar sync",
+                "End-of-day Reflection",
+                "Drag-to-reschedule across views",
+              ].map((line) => (
+                <li key={line} className="flex items-start gap-2">
+                  <Check className="size-4 text-accent mt-0.5 shrink-0" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6">
+              {authState === "in" ? (
+                <button
+                  disabled
+                  className="btn-ghost h-10 w-full justify-center opacity-60 cursor-not-allowed"
+                  title="Plus checkout opens once we finish payments onboarding."
+                >
+                  Coming soon
+                </button>
+              ) : (
+                <Link href="/signup?next=/pricing" className="btn-ghost h-10 w-full justify-center">
+                  Start free, upgrade later <ArrowRight className="size-4 ml-1" />
+                </Link>
+              )}
+            </div>
+          </div>
+
           {/* Pro */}
           <div className="border-2 border-accent rounded-2xl p-6 flex flex-col relative">
             <span className="absolute -top-3 left-6 bg-accent text-white text-[11px] px-2 py-0.5 rounded-full uppercase tracking-wide">
@@ -125,16 +165,16 @@ export default function PricingPage() {
                 </span>
               </span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{PLANS[2].tagline}</p>
             <ul className="space-y-2 text-sm flex-1">
               {[
-                "Everything in Free",
-                "Unlimited Daily Edition",
+                "Everything in Plus",
                 "Plan-my-day & Plan-my-week",
                 "Morning Co-pilot (conversational briefing)",
-                "Reflection & Weekly review",
-                "Two-way Google Calendar sync",
-                "Voice capture & Smart triage",
+                "Voice → Task & Snapshot → Task",
+                "Smart triage (AI Eisenhower)",
+                "Weekly review + Goal tracker",
+                "Semantic search across everything",
                 "Priority support",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">
