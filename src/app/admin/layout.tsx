@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
-import { Users, BarChart3, FileText, Home, Palette, Tags } from "lucide-react";
+import { Users, BarChart3, FileText, Home, Palette, Tags, ToggleLeft } from "lucide-react";
 
 /**
  * Admin layout — server-rendered auth gate + editorial sidebar shell.
@@ -25,12 +25,13 @@ export default async function AdminLayout({
   if (!isAdminEmail(user.email)) redirect("/app");
 
   const navItems = [
-    { kicker: "01", href: "/admin",          label: "Overview", icon: Home       },
-    { kicker: "02", href: "/admin/members",  label: "Members",  icon: Users      },
-    { kicker: "03", href: "/admin/insights", label: "Insights", icon: BarChart3  },
-    { kicker: "04", href: "/admin/content",  label: "Content",  icon: FileText   },
-    { kicker: "05", href: "/admin/design",   label: "Design",   icon: Palette    },
-    { kicker: "06", href: "/admin/keywords", label: "Keywords", icon: Tags       },
+    { kicker: "01", href: "/admin", label: "Overview", icon: Home },
+    { kicker: "02", href: "/admin/members", label: "Members", icon: Users },
+    { kicker: "03", href: "/admin/feature-flags", label: "Feature flags", icon: ToggleLeft },
+    { kicker: "04", href: "/admin/insights", label: "Insights", icon: BarChart3 },
+    { kicker: "05", href: "/admin/content", label: "Content", icon: FileText },
+    { kicker: "06", href: "/admin/design", label: "Design", icon: Palette },
+    { kicker: "07", href: "/admin/keywords", label: "Keywords", icon: Tags },
   ];
 
   return (
