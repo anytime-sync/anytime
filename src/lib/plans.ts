@@ -19,7 +19,7 @@
  *   - team: reserved for future team plan
  */
 
-export type Plan = "free" | "pro" | "vip" | "team";
+export type Plan = "free" | "plus" | "pro" | "vip" | "team";
 export type FeatureCategory =
   | "tasks"
   | "ai"
@@ -69,7 +69,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "cal_view",            label: "Calendar view",    description: "Month / week / day grid with tasks and events together.", category: "calendar", minPlan: "free", order: 10 },
   { id: "cal_gcal_read",       label: "Google Calendar (read)", description: "See your Google events alongside tasks across all views.", category: "calendar", minPlan: "free", order: 20 },
   { id: "cal_drag",            label: "Drag-to-reschedule",description: "Drag tasks and events to new dates from any view.", category: "calendar", minPlan: "free", order: 30 },
-  { id: "cal_gcal_write",      label: "Google Calendar (two-way sync)", description: "Quick-add creates GCal events; edits propagate back.", category: "calendar", minPlan: "pro", order: 40 },
+  { id: "cal_gcal_write",      label: "Google Calendar (two-way sync)", description: "Quick-add creates GCal events; edits propagate back.", category: "calendar", minPlan: "plus", order: 40 },
 
   // ─── AI co-pilot ───────────────────────────────────────────────────────
   // Goals live here — designing a tracker for a project is intellectual work
@@ -84,7 +84,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Outcome-shaped goals with AI-designed sub-trackers and weekly check-ins.", category: "ai", minPlan: "pro", order: 70 },
 
   // ─── Review ───────────────────────────────────────────────────────────
-  { id: "review_reflect",      label: "Reflection",       description: "End-of-day reflection with AI-assisted prompts.", category: "review", minPlan: "pro", order: 10 },
+  { id: "review_reflect",      label: "Reflection",       description: "End-of-day reflection with AI-assisted prompts.", category: "review", minPlan: "plus", order: 10 },
   { id: "review_weekly_retro", label: "Weekly review",    description: "Friday-style retro that surfaces patterns across the week.", category: "review", minPlan: "pro", order: 20 },
 
   // ─── Data ────────────────────────────────────────────────────────────
@@ -102,14 +102,18 @@ export const FEATURES: FeatureSpec[] = [
 
 export const PLANS: { plan: Plan; label: string; tagline: string }[] = [
   { plan: "free", label: "Free",  tagline: "The full task system, forever." },
-  { plan: "pro",  label: "Pro",   tagline: "Add the AI co-pilot and two-way calendar." },
+  { plan: "plus", label: "Plus",  tagline: "Two-way calendar, unlimited Daily Editions, end-of-day reflection." },
+  { plan: "pro",  label: "Pro",   tagline: "Add the AI co-pilot — Plan my day, Voice → Task, and the full review suite." },
 ];
 
 /**
  * Plan rank — higher number means a strictly better tier.
  * VIP and Pro share rank 1: VIP is just a payment-bypass for Pro access.
  */
-const RANK: Record<Plan, number> = { free: 0, pro: 1, vip: 1, team: 2 };
+// Rank by capability tier:
+//   free=0, plus=1 (calendar + light AI), pro=2 (full AI co-pilot), team=3.
+// VIP shares rank with pro — it's a payment-bypass for Pro access, not a tier.
+const RANK: Record<Plan, number> = { free: 0, plus: 1, pro: 2, vip: 2, team: 3 };
 
 /** Does `userPlan` satisfy `minPlan`? */
 export function planSatisfies(userPlan: Plan, minPlan: Plan): boolean {
