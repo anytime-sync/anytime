@@ -109,7 +109,6 @@ function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
     { href: "/app/notes",     label: t(lang, "sidebar.notes"),        icon: StickyNote },
           { href: "/app/features", label: t(lang, "sidebar.features"),     icon: Sparkles },
           { href: "/app/settings",  label: t(lang, "sidebar.settings"),     icon: Settings },
-          ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 }
 
