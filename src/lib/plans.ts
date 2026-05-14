@@ -1,4 +1,4 @@
-→→/**
+/**
  * First Light — feature-by-tier source of truth.
  *
  * One file lists every gateable feature, which tier it belongs to, and what
