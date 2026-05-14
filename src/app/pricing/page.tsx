@@ -633,27 +633,34 @@ export default function PricingPage() {
               </figcaption>
             </figure>
 
-            {/* 16 ── Priority support */}
+            {/* 16 ── Priority support: real human, fast email replies */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SUPPORT · PRO ONLY</p>
-                <p className="font-display text-base text-stone-800 leading-tight">A real human, fast.</p>
-                <div className="flex gap-2 items-start">
-                  <div className="size-6 rounded-full bg-emerald-200 grid place-items-center text-[8px] text-emerald-700 font-semibold shrink-0">Y</div>
-                  <div className="bg-accent/10 rounded-2xl rounded-tl-sm px-2.5 py-1.5 text-[10px] text-stone-700">Quick one — can I move my Plus to annual?</div>
+                <div className="bg-white border border-stone-200 rounded-md shadow-sm flex-1 flex flex-col text-[10px]">
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-stone-100">
+                    <div className="size-5 rounded-md bg-accent/30 grid place-items-center text-[8px] text-accent font-semibold">FL</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-stone-800 font-medium truncate">Re: Move my Plus to annual</p>
+                      <p className="text-[8px] text-stone-400">First Light support · 8 min ago</p>
+                    </div>
+                  </div>
+                  <div className="px-2.5 py-2 text-stone-700 leading-snug border-b border-stone-100">
+                    Done — switched you to the annual plan. Pro-rated credit applied to your next renewal.
+                  </div>
+                  <div className="px-2.5 py-1.5 text-stone-500 flex items-center justify-between text-[9px]">
+                    <span>Reply · Forward</span>
+                    <span className="text-stone-400">support@firstlight.to</span>
+                  </div>
                 </div>
-                <div className="flex gap-2 items-start">
-                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center text-[8px] text-accent font-semibold shrink-0">FL</div>
-                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-2.5 py-1.5 text-[10px] text-stone-700 leading-snug">Yes — done. 8 min reply. Anything else?</div>
-                </div>
-                <div className="mt-auto text-[9px] text-stone-500 italic flex items-center gap-2">
+                <div className="text-[9px] text-stone-500 italic flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Avg reply time today: 14 minutes.
+                  Replies within one business day. Often faster.
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Priority support</p>
-                <p className="text-xs text-muted-fg">Pro questions get answered within one business day. Often faster.</p>
+                <p className="text-xs text-muted-fg">Real human, real fast — straight to your inbox.</p>
               </figcaption>
             </figure>
           </div>
