@@ -70,12 +70,22 @@ export function renderDigestHtml(p: DigestPayload): string {
 
   return `<!doctype html>
 <html lang="${p.language}">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escapeHtml(p.chrome.kicker)}</title>
+<!-- Outfit is the wordmark font from the public landing page. Gmail honors
+     external stylesheets; Outlook & co. will fall back to the sans stack. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
 <body style="margin:0;padding:0;background:#f7f5f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#222;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f5f0;padding:40px 16px;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border:1px solid #ebe7df;border-radius:8px;padding:32px 36px;text-align:left;">
         <tr><td>
-          <p style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.18em;color:#a67d3d;text-transform:uppercase;margin:0 0 6px;">${escapeHtml(p.chrome.kicker)}</p>
+          <p style="font-family:'Outfit','Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.22em;color:#a67d3d;text-transform:uppercase;margin:0 0 6px;font-weight:400;">${escapeHtml(p.chrome.kicker)}</p>
           <p style="color:#999;font-size:13px;margin:0 0 18px;">${escapeHtml(dateLine)}</p>
           <h1 style="font-family:Georgia,serif;font-size:26px;line-height:1.25;color:#222;margin:0 0 14px;font-weight:500;">${escapeHtml(p.chrome.headline)}</h1>
           <p style="font-size:15px;line-height:1.55;color:#333;margin:0 0 8px;">${escapeHtml(p.chrome.intro)}</p>
