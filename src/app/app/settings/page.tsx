@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { BillingSection } from "@/components/app/billing-section";
-import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, RefreshCw, Trash2, Upload, User, CreditCard, Bell, Sparkles, Database, Plug } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
@@ -178,12 +178,71 @@ export default function SettingsPage() {
 
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl space-y-10">
+            {/* -------- Jump menu -------- */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+              <a href="#settings-account" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <User className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">Account</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Profile, language, capacity</p>
+                </div>
+              </a>
+              <a href="#settings-billing" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <CreditCard className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">Billing</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Plan, invoices</p>
+                </div>
+              </a>
+              <a href="#settings-notifications" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <Bell className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">Notifications</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Email, push, digest</p>
+                </div>
+              </a>
+              <a href="#settings-aiFeatures" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <Sparkles className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">AI</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Behaviour, limits</p>
+                </div>
+              </a>
+              <a href="#settings-yourData" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <Database className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">Your data</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Export, import</p>
+                </div>
+              </a>
+              <a href="#settings-calendarSync" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
+                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
+                  <Plug className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight">Integrations</p>
+                  <p className="text-[11px] text-muted-fg leading-tight">Calendar, email</p>
+                </div>
+              </a>
+            </div>
 
           {/* ---------- Billing ---------- */}
-          <BillingSection />
+          <div id="settings-billing" className="scroll-mt-6">
+            <BillingSection />
+          </div>
 
           {/* ---------- Account ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.account")}>
+          <Section id="settings-account" kicker={tr(lang, "view.settings.section.account")}>
             <Row label={tr(lang, "view.settings.row.name")}>
               <input
                 className="input flex-1"
@@ -206,7 +265,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Language ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.language")}>
+          <Section id="settings-language" kicker={tr(lang, "view.settings.section.language")}>
             <Row label={tr(lang, "view.settings.row.displayLanguage")}>
               <LanguagePicker />
             </Row>
@@ -216,7 +275,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Capacity & energy ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.dayCapacity")}>
+          <Section id="settings-dayCapacity" kicker={tr(lang, "view.settings.section.dayCapacity")}>
             <Row label={tr(lang, "view.settings.row.dailyCapacity")}>
               <div className="flex items-center gap-2 flex-1">
                 <input
@@ -251,7 +310,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- AI ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.aiFeatures")}>
+          <Section id="settings-aiFeatures" kicker={tr(lang, "view.settings.section.aiFeatures")}>
             <Toggle
               label={tr(lang, "view.settings.toggle.aiEnabled")}
               hint={tr(lang, "view.settings.toggle.aiEnabledHint")}
@@ -282,7 +341,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Notifications ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.notifications")}>
+          <Section id="settings-notifications" kicker={tr(lang, "view.settings.section.notifications")}>
             <Toggle
               label={tr(lang, "view.settings.toggle.emailReminders")}
               hint={tr(lang, "view.settings.toggle.emailRemindersHint")}
@@ -322,7 +381,7 @@ export default function SettingsPage() {
           <GoogleCalendarSection lang={lang} />
 
           {/* ---------- Import ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.import")}>
+          <Section id="settings-import" kicker={tr(lang, "view.settings.section.import")}>
             <Row label={tr(lang, "view.settings.row.from")}>
               <select
                 className="input flex-1"
@@ -354,7 +413,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Data ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.yourData")}>
+          <Section id="settings-yourData" kicker={tr(lang, "view.settings.section.yourData")}>
             <Row label={tr(lang, "view.settings.row.export")}>
               <button onClick={exportData} className="btn-ghost h-9 px-3 text-sm gap-2">
                 <Download className="size-3.5" />
@@ -367,7 +426,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Danger ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.danger")} tone="danger">
+          <Section id="settings-danger" kicker={tr(lang, "view.settings.section.danger")} tone="danger">
             <Row label={tr(lang, "view.settings.row.deleteAccount")}>
               {!confirmDelete ? (
                 <button
@@ -408,7 +467,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- Legal ---------- */}
-          <Section kicker={tr(lang, "view.settings.section.legal")}>
+          <Section id="settings-legal" kicker={tr(lang, "view.settings.section.legal")}>
             <Row label={tr(lang, "view.settings.row.documents")}>
               <div className="flex gap-3 text-sm">
                 <Link href="/privacy" className="text-accent hover:underline">{tr(lang, "view.settings.privacyPolicy")}</Link>
@@ -515,7 +574,7 @@ function CalendarFeedSection({ lang }: { lang: string }) {
   }
 
   return (
-    <Section kicker={tr(lang, "view.settings.section.calendarSync")}>
+    <Section id="settings-calendarSync" kicker={tr(lang, "view.settings.section.calendarSync")}>
       <Row label={tr(lang, "view.settings.row.subscribe")}>
         <div className="flex-1 min-w-0">
           {loading ? (
@@ -678,7 +737,7 @@ function InboxAliasSection({ lang }: { lang: string }) {
   }
 
   return (
-    <Section kicker={tr(lang, "view.settings.section.inbox")}>
+    <Section id="settings-inbox" kicker={tr(lang, "view.settings.section.inbox")}>
       <p className="text-xs text-muted-fg leading-relaxed">
         {tr(lang, "view.settings.inbox.description")}
       </p>
@@ -842,7 +901,7 @@ function GoogleCalendarSection({ lang }: { lang: string }) {
     : tr(lang, "view.settings.gcal.never");
 
   return (
-    <Section kicker={tr(lang, "view.settings.section.gcal")}>
+    <Section id="settings-gcal" kicker={tr(lang, "view.settings.section.gcal")}>
       <p className="text-sm text-muted-fg leading-relaxed max-w-prose">
         {tr(lang, "view.settings.gcal.description")}
       </p>
@@ -898,14 +957,15 @@ function GoogleCalendarSection({ lang }: { lang: string }) {
 }
 
 function Section({
-  kicker, children, tone,
+  kicker, children, tone, id,
 }: {
   kicker: string;
   children: React.ReactNode;
   tone?: "danger";
+  id?: string;
 }) {
   return (
-    <section className="space-y-3">
+    <section id={id} className="scroll-mt-6 space-y-3">
       <h2 className={`editorial-number text-[11px] ${tone === "danger" ? "text-danger" : ""}`}>{kicker}</h2>
       <div className="space-y-3">{children}</div>
     </section>
