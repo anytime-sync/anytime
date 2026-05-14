@@ -194,3 +194,15 @@
     "Nanum Myeongjo", "Noto Serif KR", var(--font-cormorant),
     "Apple SD Gothic Neo", serif;
 }
+
+
+/* Voice button waveform — staggered pulse bars while recording.
+   Referenced by src/components/app/voice-button.tsx; each bar gets its
+   own animationDelay inline so they ripple instead of pulsing in sync. */
+@keyframes voice-bar {
+  0%, 100% { height: 30%; }
+  50%      { height: 100%; }
+}
+.animate-voice-bar {
+  animation: voice-bar 720ms ease-in-out infinite;
+}
