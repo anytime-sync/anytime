@@ -76,6 +76,37 @@ const HREF_TO_FEATURE_ID: Record<string, string> = {
 };
 
 /**
+ * Visual grouping for the top nav. Drag-to-reorder works within a section.
+ * Section labels render in soft lowercase italic — warmer than the older
+ * editorial-number caps treatment.
+ */
+const SECTION_FOR_HREF: Record<string, "plan" | "build" | "look" | "more"> = {
+  "/app/today": "plan",
+  "/app/tomorrow": "plan",
+  "/app/next7": "plan",
+  "/app/next90": "plan",
+  "/app/inbox": "plan",
+  "/app/calendar": "plan",
+  "/app/matrix": "build",
+  "/app/pomodoro": "build",
+  "/app/habits": "build",
+  "/app/groups": "build",
+  "/app/notes": "build",
+  "/app/retro": "look",
+  "/app/completed": "look",
+  "/app/features": "more",
+  "/app/settings": "more",
+  "/app/admin": "more",
+};
+
+const SIDEBAR_SECTIONS: { id: "plan" | "build" | "look" | "more"; label: string; canReorder: boolean }[] = [
+  { id: "plan",  label: "plan",      canReorder: true  },
+  { id: "build", label: "build",     canReorder: true  },
+  { id: "look",  label: "look back", canReorder: true  },
+  { id: "more",  label: "more",      canReorder: false },
+];
+
+/**
  * Fetch the set of feature_ids the admin has disabled. Cached for 30s, fails
  * open (empty set) on error so a broken endpoint never blanks the sidebar.
  */
@@ -236,34 +267,62 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-        >
-          <SortableContext
-            items={orderedLinks.map((l) => l.href)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div>
-              {orderedLinks.map((link) => (
-                <SortableLink
-                  key={link.href}
-                  link={link}
-                  active={pathname === link.href}
-                  collapsed={collapsed}
-                />
-              ))}
+        {SIDEBAR_SECTIONS.map((section) => {
+          const items = orderedLinks.filter(
+            (l) => SECTION_FOR_HREF[l.href] === section.id
+          );
+          if (items.length === 0) return null;
+          return (
+            <div key={section.id}>
+              {!collapsed && (
+                <p className="font-display italic text-[13px] text-muted-fg/70 lowercase px-2 mb-1 mt-1">
+                  {section.label}.
+                </p>
+              )}
+              {section.canReorder ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                >
+                  <SortableContext
+                    items={items.map((l) => l.href)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div>
+                      {items.map((link) => (
+                        <SortableLink
+                          key={link.href}
+                          link={link}
+                          active={pathname === link.href}
+                          collapsed={collapsed}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div>
+                  {items.map((link) => (
+                    <PlainNavLink
+                      key={link.href}
+                      link={link}
+                      active={pathname === link.href}
+                      collapsed={collapsed}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </SortableContext>
-        </DndContext>
+          );
+        })}
 
         {!collapsed && (
           <>
             <div>
               <div className="flex items-center justify-between px-2 mb-1">
-                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.lists")}</span>
+                <span className="font-display italic text-[13px] text-muted-fg/70 lowercase">{t(lang, "sidebar.lists")}</span>
                 <button
                   className="text-muted-fg hover:text-fg"
                   onClick={() => setShowCreate(true)}
@@ -313,7 +372,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
 
             <div>
               <div className="flex items-center justify-between px-2 mb-1.5">
-                <span className="editorial-number text-[10px] uppercase tracking-[0.18em]">{t(lang, "sidebar.tags")}</span>
+                <span className="font-display italic text-[13px] text-muted-fg/70 lowercase">{t(lang, "sidebar.tags")}</span>
               </div>
               <div className="flex flex-wrap gap-1 px-2">
                 {tags.map((tag) => (
@@ -479,5 +538,35 @@ function SortableSidebarList({
         aria-hidden
       />
     </div>
+  );
+}
+
+
+/** Non-draggable nav link — same look as SortableLink without the dnd plumbing.
+ *  Used for singleton rows (Features, Settings, Admin) that don't belong to a
+ *  reorderable group. */
+function PlainNavLink({
+  link,
+  active,
+  collapsed,
+}: {
+  link: LinkDef;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const Icon = link.icon;
+  return (
+    <Link
+      href={link.href}
+      className={cn(
+        "flex items-center gap-2 h-9 px-2 rounded-md text-sm select-none",
+        active ? "bg-muted text-fg" : "text-muted-fg hover:bg-muted hover:text-fg",
+        collapsed && "justify-center"
+      )}
+      title={link.label}
+    >
+      <Icon className="size-4 shrink-0" />
+      {!collapsed && <span className="truncate flex-1">{link.label}</span>}
+    </Link>
   );
 }
