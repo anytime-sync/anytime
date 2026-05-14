@@ -144,7 +144,6 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const setCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const setCmdOpen = useUIStore((s) => s.setCommandOpen);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const setGoalModal = useUIStore((s) => s.setGoalModalOpen);
   const setReflection = useUIStore((s) => s.setReflectionOpen);
   const { data: projects = [] } = useProjects();
   const reorderProjects = useReorderProjects();
@@ -225,14 +224,6 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           <Search className="size-4" />
           {!collapsed && <span>{t(lang, "sidebar.search")}</span>}
           {!collapsed && <span className="ml-auto text-xs text-muted-fg">⌘K</span>}
-        </button>
-        <button
-          className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
-          onClick={() => setGoalModal(true)}
-          title={t(lang, "sidebar.planGoal")}
-        >
-          <Target className="size-4" />
-          {!collapsed && <span>Goal</span>}
         </button>
         <button
           className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
