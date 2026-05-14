@@ -11,6 +11,7 @@ import { TodayAiBar } from "@/components/app/today-ai-bar";
 import { StreakRibbon } from "@/components/app/streak-ribbon";
 import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
 import { Celebrations } from "@/components/app/celebrations";
+import { OnboardingModal } from "@/components/app/onboarding-modal";
 
 /**
  * Today — toggleable between the editorial list (default) and the new
@@ -84,6 +85,7 @@ export default function TodayPage() {
         <MorningCopilotCard />
       </div>
       <DayTimeline date={new Date()} />
+      <OnboardingModal />
     </div>
   );
 }
