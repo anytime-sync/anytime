@@ -471,7 +471,13 @@ function MonthView({
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy", { locale: dfLocale })}</h1>
+          <div className="flex items-baseline gap-3 flex-wrap">
+              <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy", { locale: dfLocale })}</h1>
+              {/* Two-way GCal sync indicator — gold pill matches /pricing carousel mockup */}
+              <span className="editorial-number text-[10px] tracking-[0.18em] text-accent shrink-0">
+                ↔ G&#8209;CAL
+              </span>
+            </div>
           <div className="flex">
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(subMonths(cursor, 1))}>
               <ChevronLeft className="size-4" />
