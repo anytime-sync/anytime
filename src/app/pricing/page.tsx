@@ -98,7 +98,7 @@ export default function PricingPage() {
               {[
                 "Today, Tomorrow, Next 7 / 90 days, Inbox",
                 "Calendar with Google Calendar (read)",
-                "Lists, Tags, Groups, Habits, Notes, Pomodoro",
+                "Lists, Tags, Groups, Habits, Notes, Focus",
                 "Daily Edition (1 / day)",
                 "Email-to-inbox, push, daily digest",
                 "Export your data, anytime",
@@ -440,52 +440,222 @@ export default function PricingPage() {
               </figcaption>
             </figure>
 
-            {/* 8 ── Email-to-inbox + Push */}
+
+            {/* 8 ── Notes → Task: convert note to task in one click */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">CAPTURE FROM ANYWHERE</p>
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">NOTE · STRATEGY SESSION</p>
+                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] text-stone-700 leading-snug flex-1">
+                  Discussed Q4 priorities with Maya. Key decision: ship the export feature before holidays.
+                  <span className="block mt-1.5 text-stone-400">[[ship-export]]</span>
+                </div>
+                <div className="text-[9px] text-stone-400 text-center">↓ one click</div>
+                <div className="bg-accent/10 border border-accent/40 rounded-md px-2 py-1.5 text-[10px] flex items-center gap-2">
+                  <input type="checkbox" className="size-3" readOnly />
+                  <span className="text-stone-800 font-medium truncate">Ship export feature</span>
+                  <span className="ml-auto text-[8px] text-stone-400">linked</span>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Notes → Task</p>
+                <p className="text-xs text-muted-fg">Any note becomes a linked task. Edit either side; both update.</p>
+              </figcaption>
+            </figure>
+
+            {/* 9 ── Goal tracker: outcome-shaped goals with AI sub-trackers */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">GOAL · Q4</p>
+                <p className="font-display text-base text-stone-800 leading-tight">Ship v2 by Aug 31.</p>
+                <div className="space-y-1.5 text-[10px]">
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 flex items-center gap-2">
+                    <span className="text-stone-700 flex-1 truncate">Export feature</span>
+                    <div className="h-1.5 w-12 bg-stone-200 rounded-full overflow-hidden"><div className="h-full bg-accent" style={{ width: "78%" }} /></div>
+                    <span className="text-stone-500 text-[8px]">78%</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 flex items-center gap-2">
+                    <span className="text-stone-700 flex-1 truncate">Onboarding</span>
+                    <div className="h-1.5 w-12 bg-stone-200 rounded-full overflow-hidden"><div className="h-full bg-accent" style={{ width: "45%" }} /></div>
+                    <span className="text-stone-500 text-[8px]">45%</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 flex items-center gap-2">
+                    <span className="text-stone-700 flex-1 truncate">Pricing page</span>
+                    <div className="h-1.5 w-12 bg-stone-200 rounded-full overflow-hidden"><div className="h-full bg-accent" style={{ width: "100%" }} /></div>
+                    <span className="text-stone-500 text-[8px]">✓</span>
+                  </div>
+                </div>
+                <p className="text-[9px] text-stone-500 italic mt-auto">AI checks in every Friday.</p>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Goal tracker</p>
+                <p className="text-xs text-muted-fg">Outcomes, not checklists. AI designs the sub-trackers.</p>
+              </figcaption>
+            </figure>
+
+            {/* 10 ── Weekly Review + Next Week Preview */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50/40 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">FRIDAY · WEEKLY REVIEW</p>
+                <p className="font-display text-base text-stone-800 leading-tight">Look back, then forward.</p>
                 <div className="bg-white border border-stone-200 rounded-md p-2 text-[10px]">
-                  <p className="text-[8px] text-stone-400">From: client@acme.com</p>
-                  <p className="text-stone-700 font-medium truncate">Re: invoice approval</p>
-                  <p className="text-stone-500 text-[9px] mt-0.5">Forward to → you+inbox@firstlight.to</p>
+                  <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">LAST WEEK</p>
+                  <p className="text-stone-700 leading-snug">14 done · 3 carried · best morning Tue.</p>
                 </div>
-                <div className="text-[9px] text-stone-400 text-center">↓ becomes a task</div>
-                <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                  <p className="text-stone-800">Re: invoice approval · #inbox</p>
+                <div className="bg-accent/10 border border-accent/30 rounded-md p-2 text-[10px]">
+                  <p className="text-[7px] tracking-[0.2em] text-stone-500 mb-1">NEXT WEEK · PREVIEW</p>
+                  <p className="text-stone-700 leading-snug">3 deep-work blocks pre-staged. Mon 10am, Wed 9am, Thu 1pm.</p>
                 </div>
-                <div className="mt-auto bg-stone-900/95 text-white rounded-xl p-2.5 text-[10px] flex items-center gap-2 shadow-lg">
-                  <div className="size-7 rounded-md bg-accent grid place-items-center text-[10px] font-semibold">FL</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white/60 text-[8px]">First Light · just now</p>
-                    <p className="truncate">Q4 doc is due today — start at 9?</p>
+                <p className="text-[9px] text-stone-500 italic mt-auto">A Friday-style retro that actually surfaces patterns.</p>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Weekly Review + Next-week Preview</p>
+                <p className="text-xs text-muted-fg">Close last week. Pre-stage the next one.</p>
+              </figcaption>
+            </figure>
+
+            {/* 11 ── Semantic search */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SEARCH · BY MEANING</p>
+                <div className="bg-white border border-stone-200 rounded-md px-2.5 py-2 text-[10px] flex items-center gap-2">
+                  <span className="text-stone-400">⌕</span>
+                  <span className="text-stone-700">things i decided about Q4 pricing</span>
+                </div>
+                <p className="text-[8px] tracking-[0.2em] text-stone-400 mt-1">3 RESULTS</p>
+                <div className="space-y-1.5 text-[10px]">
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5">
+                    <p className="text-stone-700 truncate">Note · Strategy session</p>
+                    <p className="text-stone-400 text-[8px] truncate">"...$4 tier between free and pro..."</p>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5">
+                    <p className="text-stone-700 truncate">Task · Draft pricing page</p>
+                    <p className="text-stone-400 text-[8px] truncate">Done · Tuesday</p>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5">
+                    <p className="text-stone-700 truncate">Reflection · Apr 18</p>
+                    <p className="text-stone-400 text-[8px] truncate">"...Plus tier worth testing..."</p>
                   </div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-                <p className="font-medium text-sm">Email-to-Inbox · Push</p>
-                <p className="text-xs text-muted-fg">Forward an email or accept a nudge — captured in one tap.</p>
+                <p className="font-medium text-sm">Semantic search</p>
+                <p className="text-xs text-muted-fg">Find by meaning across tasks, notes, comments — no keyword gymnastics.</p>
               </figcaption>
             </figure>
 
-            {/* 9 ── Reflection + Weekly Review */}
-            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50/40 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">END OF DAY</p>
-                <p className="font-display text-base md:text-lg text-stone-800 leading-tight">What surprised you?</p>
-                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] text-stone-700 leading-snug">
-                  Maya's feedback unlocked the Q4 framing. Worth keeping the door open for cross-team review next week.
+            {/* 12 ── Push notifications */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-100 to-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2 justify-center">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500 mb-2">PUSH · BROWSER + PWA</p>
+                <div className="bg-stone-900/95 text-white rounded-xl p-3 text-[10px] flex items-start gap-2 shadow-lg">
+                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold">FL</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-white/60 text-[8px]">First Light</p>
+                      <p className="text-white/40 text-[7px]">now</p>
+                    </div>
+                    <p className="font-medium">Deep-work window opens in 10 min.</p>
+                    <p className="text-white/70 text-[9px] truncate">Q4 doc is queued — start at 9.</p>
+                  </div>
                 </div>
-                <div className="bg-accent/10 border border-accent/30 rounded-md p-2.5 mt-auto">
-                  <p className="text-[7px] tracking-[0.2em] text-stone-500 mb-1">PATTERN · LAST 7 DAYS</p>
-                  <p className="text-[10px] text-stone-700 leading-snug">Deep work lands best between 9:30 and 11:00. Tuesdays are your strongest day.</p>
+                <div className="bg-stone-900/85 text-white rounded-xl p-3 text-[10px] flex items-start gap-2 shadow-lg mt-2 ml-4 opacity-70">
+                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold">FL</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/60 text-[8px]">First Light · 5m ago</p>
+                    <p className="truncate">3pm review starts in 15 min.</p>
+                  </div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-                <p className="font-medium text-sm">Reflection · Weekly Review</p>
-                <p className="text-xs text-muted-fg">Close the day clean. Surface patterns weekly.</p>
+                <p className="font-medium text-sm">Push notifications</p>
+                <p className="text-xs text-muted-fg">Quiet nudges — browser, PWA, mobile. Never spammy.</p>
               </figcaption>
             </figure>
 
+            {/* 13 ── Email digest */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-4 flex flex-col gap-1.5">
+                <div className="bg-white border border-stone-200 rounded-md p-3 shadow-sm flex-1 flex flex-col">
+                  <p className="editorial-number text-[7px] tracking-[0.22em] text-accent">FIRST LIGHT · DAILY DIGEST</p>
+                  <p className="font-display text-sm text-stone-800 leading-tight mt-1.5">Aaron, here's your day.</p>
+                  <p className="text-[8px] text-stone-400 mt-0.5">Wednesday, May 13</p>
+                  <p className="text-[9px] tracking-[0.2em] text-stone-500 mt-2.5">URGENT + IMPORTANT</p>
+                  <p className="text-[10px] text-stone-700 leading-snug">Q4 doc — feedback by EOD.</p>
+                  <p className="text-[9px] tracking-[0.2em] text-stone-500 mt-2">ON THE AGENDA</p>
+                  <p className="text-[10px] text-stone-700 truncate">3pm — Review with Maya</p>
+                  <div className="mt-auto bg-accent rounded-md text-white text-[9px] px-2 py-1 text-center font-medium">Open today in First Light</div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Email digest</p>
+                <p className="text-xs text-muted-fg">Your day, in your inbox at 6am. Read it once, then close it.</p>
+              </figcaption>
+            </figure>
+
+            {/* 14 ── Email reminders */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">PER-TASK · IF YOU SET ONE</p>
+                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] shadow-sm flex-1">
+                  <div className="flex items-center gap-2 pb-2 border-b border-stone-100">
+                    <div className="size-6 rounded-md bg-accent/30 grid place-items-center text-[9px] text-accent font-semibold">FL</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[8px] text-stone-400">First Light · noreply@firstlight.to</p>
+                      <p className="font-medium truncate text-stone-800">Reminder: Q4 strategy doc — 5pm</p>
+                    </div>
+                  </div>
+                  <p className="text-stone-700 mt-2 leading-snug">Due at 5:00 PM today. The doc is open at firstlight.to/app/today.</p>
+                  <p className="text-[8px] text-stone-400 mt-2">Snooze · Done · Manage reminders</p>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Email reminders</p>
+                <p className="text-xs text-muted-fg">For the tasks you really can't forget — set once, arrives on time.</p>
+              </figcaption>
+            </figure>
+
+            {/* 15 ── Reflection (standalone, evening) */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50/40 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">END OF DAY · REFLECTION</p>
+                <p className="font-display text-base md:text-lg text-stone-800 leading-tight">What surprised you?</p>
+                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] text-stone-700 leading-snug">
+                  Maya's feedback unlocked the Q4 framing. Worth keeping cross-team review on the calendar next week.
+                </div>
+                <div className="bg-accent/10 border border-accent/30 rounded-md p-2.5 mt-auto">
+                  <p className="text-[7px] tracking-[0.2em] text-stone-500 mb-1">AI · CONNECTED THE DOTS</p>
+                  <p className="text-[10px] text-stone-700 leading-snug">Three of your last five wins came from cross-team conversations.</p>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Reflection</p>
+                <p className="text-xs text-muted-fg">One prompt at sunset. AI notices what you wouldn't.</p>
+              </figcaption>
+            </figure>
+
+            {/* 16 ── Priority support */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SUPPORT · PRO ONLY</p>
+                <p className="font-display text-base text-stone-800 leading-tight">A real human, fast.</p>
+                <div className="flex gap-2 items-start">
+                  <div className="size-6 rounded-full bg-emerald-200 grid place-items-center text-[8px] text-emerald-700 font-semibold shrink-0">Y</div>
+                  <div className="bg-accent/10 rounded-2xl rounded-tl-sm px-2.5 py-1.5 text-[10px] text-stone-700">Quick one — can I move my Plus to annual?</div>
+                </div>
+                <div className="flex gap-2 items-start">
+                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center text-[8px] text-accent font-semibold shrink-0">FL</div>
+                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-2.5 py-1.5 text-[10px] text-stone-700 leading-snug">Yes — done. 8 min reply. Anything else?</div>
+                </div>
+                <div className="mt-auto text-[9px] text-stone-500 italic flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Avg reply time today: 14 minutes.
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Priority support</p>
+                <p className="text-xs text-muted-fg">Pro questions get answered within one business day. Often faster.</p>
+              </figcaption>
+            </figure>
           </div>
 
           {/* Three-moment callout strip */}
