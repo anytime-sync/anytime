@@ -42,7 +42,13 @@ export default function Home() {
               First Light
             </DesignSlot>
           </Link>
-          <nav className="flex items-center text-sm text-muted-fg">
+          <nav className="flex items-center gap-4 text-sm text-muted-fg">
+            <Link
+              href="/pricing"
+              className="hover:text-fg transition-colors hidden sm:inline"
+            >
+              Pricing
+            </Link>
             <LanguagePicker mode="local" onChange={setLang} />
           </nav>
         </div>
