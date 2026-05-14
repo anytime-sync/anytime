@@ -162,20 +162,25 @@ export function VoiceButton({ onTranscript, onFinal, className }: Props) {
         else startRecording();
       }}
       className={cn(
-        "relative inline-grid place-items-center size-8 rounded-full transition-colors shrink-0",
+        "relative inline-flex items-center justify-center transition-all shrink-0",
         recording
-          ? "bg-danger text-white"
-          : "text-muted-fg hover:text-fg hover:bg-muted",
+          ? "h-8 px-2.5 gap-1.5 rounded-full bg-danger text-white"
+          : "size-8 rounded-full text-muted-fg hover:text-fg hover:bg-muted",
         className,
       )}
     >
       {recording ? (
         <>
-          <span
-            aria-hidden
-            className="absolute inset-0 rounded-full bg-danger/40 animate-ping"
-          />
-          <Mic className="size-4 relative" />
+          <Mic className="size-3.5 shrink-0" />
+          <span aria-hidden className="flex items-end gap-[2px] h-3.5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span
+                key={i}
+                className="w-[2px] bg-white rounded-full animate-voice-bar"
+                style={{ animationDelay: `${i * 90}ms` }}
+              />
+            ))}
+          </span>
         </>
       ) : (
         <Mic className="size-4" />
