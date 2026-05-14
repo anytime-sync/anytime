@@ -154,6 +154,25 @@ export default function RetroPage() {
                 {format(weekRange.start, "EEEE, MMMM d, yyyy", { locale })}
               </p>
 
+              {/* "Pre-staged" callout — makes the carousel promise explicit:
+                  the next-week view is the place where the AI surfaces deep-work
+                  blocks before they happen. Only shows on the next-week target. */}
+              {target === "next" && (
+                <section className="rounded-2xl border border-accent/30 bg-accent/5 px-4 py-4">
+                  <p className="editorial-number text-[10px] tracking-[0.22em] text-accent mb-1.5">
+                    PRE-STAGED · NEXT WEEK
+                  </p>
+                  <p className="font-display text-lg leading-tight text-stone-800 mb-2">
+                    Deep-work blocks, waiting for you.
+                  </p>
+                  <p className="text-sm text-muted-fg leading-snug">
+                    AI looks at last week\'s pattern and pre-stages your next-week
+                    focus windows below. Move them around like any task — they\'ll
+                    sync to Google Calendar if you\'ve connected it.
+                  </p>
+                </section>
+              )}
+
               {/* The Scheduled section is the actual source of truth —
                   it lists every timed/all-day task in the visible week so
                   the user can see exactly what's on the calendar. We
