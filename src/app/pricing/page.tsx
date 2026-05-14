@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useProPrice } from "@/hooks/use-pricing";
@@ -24,6 +24,19 @@ export default function PricingPage() {
   const { data: pro, isLoading: priceLoading } = useProPrice();
   const checkout = useStartCheckout();
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
+
+  // Carousel state for the "See it in motion" demo strip. The scroll container
+  // is the source of truth — we nudge it programmatically when arrows are
+  // clicked and let scroll-snap handle the rest.
+  const demosRef = useRef<HTMLDivElement>(null);
+  function scrollDemos(direction: 1 | -1) {
+    const el = demosRef.current;
+    if (!el) return;
+    // Scroll by one card width (3 cards visible on md+, 1 on mobile).
+    const card = el.querySelector("figure") as HTMLElement | null;
+    const step = (card?.offsetWidth ?? 280) + 16;
+    el.scrollBy({ left: direction * step, behavior: "smooth" });
+  }
 
   useEffect(() => {
     const sb = createClient();
@@ -203,24 +216,45 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Demo strip — inline HTML mockups (no external screenshots needed). */}
-        <section className="mb-20">
-          <h2 className="font-display text-3xl tracking-tight mb-2 text-center">See it in motion</h2>
-          <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
-            Three surfaces where First Light earns its $4 (and its $9). Real screens, not stock art.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* ── Mockup 1: Daily Edition ─────────────────────────────────── */}
-            <figure className="border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50/60 to-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2 relative">
+        {/* Demo strip — 9-card carousel showcasing every Plus + Pro surface. */}
+        <section className="mb-16">
+          <div className="flex items-end justify-between mb-3 gap-4 flex-wrap">
+            <div>
+              <h2 className="font-display text-3xl tracking-tight">See it in motion</h2>
+              <p className="text-muted-fg text-sm md:text-base max-w-xl mt-2">
+                Nine surfaces where First Light earns its keep. Scroll, or use the arrows.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => scrollDemos(-1)}
+                aria-label="Previous demos"
+                className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                onClick={() => scrollDemos(1)}
+                aria-label="More demos"
+                className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          </div>
+          <div
+            ref={demosRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-6 px-6 [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none" }}
+          >
+
+            {/* 1 ── Daily Edition: the morning brief */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50/60 to-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TUESDAY MORNING BRIEF</p>
-                <p className="font-display text-base md:text-lg leading-tight text-stone-800">
-                  An open day asks its own kind of question.
-                </p>
+                <p className="font-display text-base md:text-lg leading-tight text-stone-800">An open day asks its own kind of question.</p>
                 <div className="h-px bg-accent/40 w-10" />
-                <p className="text-[11px] text-stone-600 leading-snug">
-                  Nothing is scheduled. Nothing is due. That is either a gift or a gap — the distinction matters.
-                </p>
+                <p className="text-[11px] text-stone-600 leading-snug">Nothing is scheduled. Nothing is due. That is either a gift or a gap.</p>
                 <div className="mt-auto bg-white border border-stone-200 rounded-md p-2.5 text-[10px] shadow-sm">
                   <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">A QUESTION FOR YOU</p>
                   <p className="text-stone-700 leading-snug">Is this day genuinely free, or have the things that matter simply not been written down yet?</p>
@@ -228,50 +262,94 @@ export default function PricingPage() {
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Daily Edition</p>
-                <p className="text-xs text-muted-fg">A morning briefing, never a to-do list.</p>
+                <p className="text-xs text-muted-fg">A morning briefing — never a to-do list.</p>
               </figcaption>
             </figure>
 
-            {/* ── Mockup 2: Plan my day ──────────────────────────────────── */}
-            <figure className="border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+            {/* 2 ── Plan my day */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
               <div className="aspect-[4/3] p-5 flex flex-col gap-2">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">ENERGY-AWARE SEQUENCING</p>
                 <p className="font-display text-base md:text-lg text-stone-800 mb-1">Tuesday, mapped.</p>
                 <div className="grid grid-cols-[24px_1fr] gap-x-2 gap-y-1.5 text-[10px] items-center">
                   <span className="text-stone-400 tabular-nums text-right">9</span>
-                  <div className="rounded-md bg-accent/20 border-l-2 border-accent px-2 py-1 text-stone-800 font-medium">
-                    Deep work · draft Q4 strategy
-                  </div>
+                  <div className="rounded-md bg-accent/20 border-l-2 border-accent px-2 py-1 text-stone-800 font-medium">Deep work · draft Q4 strategy</div>
                   <span className="text-stone-400 tabular-nums text-right">11</span>
-                  <div className="rounded-md bg-stone-200/70 border-l-2 border-stone-400 px-2 py-1 text-stone-700">
-                    Standup
-                  </div>
+                  <div className="rounded-md bg-stone-200/70 border-l-2 border-stone-400 px-2 py-1 text-stone-700">Standup</div>
                   <span className="text-stone-400 tabular-nums text-right">1</span>
-                  <div className="rounded-md bg-accent/15 border-l-2 border-accent/80 px-2 py-1 text-stone-700">
-                    Review PR #142
-                  </div>
+                  <div className="rounded-md bg-accent/15 border-l-2 border-accent/80 px-2 py-1 text-stone-700">Review PR #142</div>
                   <span className="text-stone-400 tabular-nums text-right">3</span>
-                  <div className="rounded-md bg-stone-200/40 border-l-2 border-stone-300 px-2 py-1 text-stone-600">
-                    Email batch
-                  </div>
+                  <div className="rounded-md bg-stone-200/40 border-l-2 border-stone-300 px-2 py-1 text-stone-600">Email batch</div>
                   <span className="text-stone-400 tabular-nums text-right">5</span>
-                  <div className="rounded-md bg-accent/10 border-l-2 border-accent/60 px-2 py-1 text-stone-600">
-                    Reflection
-                  </div>
+                  <div className="rounded-md bg-accent/10 border-l-2 border-accent/60 px-2 py-1 text-stone-600">Reflection</div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Plan my day</p>
-                <p className="text-xs text-muted-fg">AI sequences your day around your real energy.</p>
+                <p className="text-xs text-muted-fg">AI sequences work around your real energy peaks.</p>
               </figcaption>
             </figure>
 
-            {/* ── Mockup 3: Calendar ─────────────────────────────────────── */}
-            <figure className="border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+            {/* 3 ── Morning Co-pilot: conversational briefing */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">CO-PILOT · 7:42 AM</p>
+                <div className="flex gap-2 items-start">
+                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center shrink-0">
+                    <span className="text-[9px] text-accent font-semibold">FL</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-3 py-2 text-[11px] text-stone-700 leading-snug">Your only fixed thing today is the 3pm review. Two open windows for deep work — 9–11 and 1–3. Want me to slot Q4 doc?</div>
+                </div>
+                <div className="bg-accent/20 rounded-2xl rounded-br-sm px-3 py-2 text-[11px] text-stone-800 ml-auto max-w-[80%]">Yes, and move the 4pm to tomorrow.</div>
+                <div className="flex gap-2 items-start">
+                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center shrink-0">
+                    <span className="text-[9px] text-accent font-semibold">FL</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-3 py-2 text-[11px] text-stone-700">Done. Your day is two long blocks and one short meeting.</div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Morning Co-pilot</p>
+                <p className="text-xs text-muted-fg">Talk to your day. It rearranges itself.</p>
+              </figcaption>
+            </figure>
+
+            {/* 4 ── The Sift: AI triage */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">THE SIFT · BY AI</p>
+                <p className="font-display text-base md:text-lg text-stone-800 mb-1">What actually needs you today.</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <span className="size-2 rounded-full bg-red-500 shrink-0" />
+                    <span className="text-stone-700 truncate">Q4 doc — feedback by EOD</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U1·I1</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                    <span className="text-stone-700 truncate">3pm review · prep notes</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U2·I1</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <span className="size-2 rounded-full bg-stone-400 shrink-0" />
+                    <span className="text-stone-700 truncate">Reply to Maya · re: design</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U2·I2</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-stone-500 italic mt-auto">+ 14 others — they can wait.</p>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">The Sift</p>
+                <p className="text-xs text-muted-fg">AI separates the 3 that matter from the 17 that don't.</p>
+              </figcaption>
+            </figure>
+
+            {/* 5 ── Calendar with two-way Google sync */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
               <div className="aspect-[4/3] p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">WEEK OF MAY 12</p>
-                  <p className="text-[9px] text-stone-400">8 items</p>
+                  <span className="text-[8px] tracking-[0.18em] text-accent font-semibold">↔ G-CAL</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-[8px] text-stone-400 px-0.5">
                   {["M","T","W","T","F","S","S"].map((d, i) => (
@@ -279,38 +357,139 @@ export default function PricingPage() {
                   ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1 flex-1">
-                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
-                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Q4 doc</div>
-                  </div>
-                  <div className="bg-white border border-accent/50 rounded p-1 flex flex-col gap-0.5 ring-1 ring-accent/30">
-                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">9 Standup</div>
-                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Review</div>
-                    <div className="bg-stone-100 text-[7px] rounded px-1 truncate text-stone-600">+2</div>
-                  </div>
-                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
-                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">11 1:1</div>
-                    <div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Reflect</div>
-                  </div>
-                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
-                    <div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Draft</div>
-                  </div>
-                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
-                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">3 Demo</div>
-                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Retro</div>
-                  </div>
+                  <div className="bg-white border border-stone-200 rounded p-1"><div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Q4 doc</div></div>
+                  <div className="bg-white border border-accent/50 rounded p-1 ring-1 ring-accent/30 space-y-0.5"><div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">9 Standup</div><div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Review</div><div className="bg-stone-100 text-[7px] rounded px-1 text-stone-600">+2</div></div>
+                  <div className="bg-white border border-stone-200 rounded p-1 space-y-0.5"><div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">11 1:1</div><div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Reflect</div></div>
+                  <div className="bg-white border border-stone-200 rounded p-1"><div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Draft</div></div>
+                  <div className="bg-white border border-stone-200 rounded p-1 space-y-0.5"><div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">3 Demo</div><div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Retro</div></div>
                   <div className="bg-white/60 border border-stone-200/60 rounded p-1" />
                   <div className="bg-white/60 border border-stone-200/60 rounded p-1" />
                 </div>
+                <p className="text-[9px] text-stone-500 italic">Drag a task → it creates a GCal event. Drag a GCal event → it reschedules.</p>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-                <p className="font-medium text-sm">Calendar</p>
-                <p className="text-xs text-muted-fg">Tasks and Google events on the same grid.</p>
+                <p className="font-medium text-sm">Two-way Google Calendar</p>
+                <p className="text-xs text-muted-fg">Tasks and events on one grid; edits sync both ways.</p>
               </figcaption>
             </figure>
+
+            {/* 6 ── Share Groups */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">DESIGN TEAM</p>
+                  <div className="flex -space-x-1.5">
+                    <div className="size-5 rounded-full bg-accent/40 border border-white grid place-items-center text-[8px] text-accent font-semibold">A</div>
+                    <div className="size-5 rounded-full bg-blue-200 border border-white grid place-items-center text-[8px] text-blue-700 font-semibold">B</div>
+                    <div className="size-5 rounded-full bg-emerald-200 border border-white grid place-items-center text-[8px] text-emerald-700 font-semibold">M</div>
+                    <div className="size-5 rounded-full bg-stone-200 border border-white grid place-items-center text-[8px] text-stone-600 font-semibold">+1</div>
+                  </div>
+                </div>
+                <p className="font-display text-base text-stone-800 mb-1">Shared, not noisy.</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <div className="size-4 rounded-full bg-accent/40 grid place-items-center text-[8px] text-accent font-semibold">A</div>
+                    <span className="text-stone-700 truncate">Ship Figma export</span>
+                    <span className="ml-auto text-[8px] text-stone-400">Today</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <div className="size-4 rounded-full bg-blue-200 grid place-items-center text-[8px] text-blue-700 font-semibold">B</div>
+                    <span className="text-stone-700 truncate">Draft case study</span>
+                    <span className="ml-auto text-[8px] text-stone-400">Wed</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 rounded-md px-2 py-1.5 text-[10px]">
+                    <div className="size-4 rounded-full bg-emerald-200 grid place-items-center text-[8px] text-emerald-700 font-semibold">Y</div>
+                    <span className="text-stone-800 font-medium truncate">Review brand copy</span>
+                    <span className="ml-auto text-[8px] text-stone-400">Today</span>
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Share Groups</p>
+                <p className="text-xs text-muted-fg">A workspace per team — without becoming a Slack.</p>
+              </figcaption>
+            </figure>
+
+            {/* 7 ── Voice → Task & Snapshot → Task */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SAY IT · SHOOT IT</p>
+                <p className="font-display text-base text-stone-800">Capture without typing.</p>
+                <div className="bg-white border border-stone-200 rounded-xl p-3 flex items-center gap-3">
+                  <div className="size-9 rounded-full bg-accent/20 grid place-items-center shrink-0">
+                    <div className="size-4 rounded-full bg-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-0.5 h-3 mb-0.5">
+                      {[3,5,8,12,9,6,4,7,10,8,5,3,7,9,4].map((h, i) => (
+                        <div key={i} className="w-0.5 bg-accent/60 rounded-full" style={{ height: h + "px" }} />
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-stone-600 italic truncate">"Reschedule team sync to Thursday 3pm"</p>
+                  </div>
+                </div>
+                <div className="text-[9px] text-stone-400 text-center">↓</div>
+                <div className="bg-accent/10 border border-accent/40 rounded-md px-2 py-1.5 text-[10px]">
+                  <p className="text-stone-800 font-medium">Team sync</p>
+                  <p className="text-stone-500 text-[9px]">Thu · 3:00 PM · GCal event</p>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Voice → Task</p>
+                <p className="text-xs text-muted-fg">Speak or photograph; we extract the structure.</p>
+              </figcaption>
+            </figure>
+
+            {/* 8 ── Email-to-inbox + Push */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">CAPTURE FROM ANYWHERE</p>
+                <div className="bg-white border border-stone-200 rounded-md p-2 text-[10px]">
+                  <p className="text-[8px] text-stone-400">From: client@acme.com</p>
+                  <p className="text-stone-700 font-medium truncate">Re: invoice approval</p>
+                  <p className="text-stone-500 text-[9px] mt-0.5">Forward to → you+inbox@firstlight.to</p>
+                </div>
+                <div className="text-[9px] text-stone-400 text-center">↓ becomes a task</div>
+                <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                  <p className="text-stone-800">Re: invoice approval · #inbox</p>
+                </div>
+                <div className="mt-auto bg-stone-900/95 text-white rounded-xl p-2.5 text-[10px] flex items-center gap-2 shadow-lg">
+                  <div className="size-7 rounded-md bg-accent grid place-items-center text-[10px] font-semibold">FL</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/60 text-[8px]">First Light · just now</p>
+                    <p className="truncate">Q4 doc is due today — start at 9?</p>
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Email-to-Inbox · Push</p>
+                <p className="text-xs text-muted-fg">Forward an email or accept a nudge — captured in one tap.</p>
+              </figcaption>
+            </figure>
+
+            {/* 9 ── Reflection + Weekly Review */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50/40 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">END OF DAY</p>
+                <p className="font-display text-base md:text-lg text-stone-800 leading-tight">What surprised you?</p>
+                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] text-stone-700 leading-snug">
+                  Maya's feedback unlocked the Q4 framing. Worth keeping the door open for cross-team review next week.
+                </div>
+                <div className="bg-accent/10 border border-accent/30 rounded-md p-2.5 mt-auto">
+                  <p className="text-[7px] tracking-[0.2em] text-stone-500 mb-1">PATTERN · LAST 7 DAYS</p>
+                  <p className="text-[10px] text-stone-700 leading-snug">Deep work lands best between 9:30 and 11:00. Tuesdays are your strongest day.</p>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Reflection · Weekly Review</p>
+                <p className="text-xs text-muted-fg">Close the day clean. Surface patterns weekly.</p>
+              </figcaption>
+            </figure>
+
           </div>
 
-          {/* Three more "moments" callout strip — copy that sells the upgrade */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-center">
+          {/* Three-moment callout strip */}
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-center">
             <div>
               <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">MORNING</p>
               <p className="text-sm text-muted-fg leading-snug">A briefing you read once, not a backlog you scroll past.</p>
