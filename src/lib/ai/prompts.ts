@@ -87,7 +87,13 @@ Lean on language signals as well as deadline proximity.`;
 
 export function planWeekSystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
-  return `You plan the user's next 7 days. You receive a batch of open tasks and produce a single coherent prioritization across all of them.
+  return `HARD RULES — apply BEFORE prioritization, NEVER violate:
+1. Calendar events have FIXED dates and times. Never suggest moving them.
+2. A task is TIME-LOCKED (keep its original date AND time) when ANY of these apply: its title contains a clock time ("3pm", "at 9", "noon", "morning", "evening"), OR it contains words like meeting, call, interview, appointment, anniversary, birthday, wedding, ceremony, dinner reservation, flight, doctor, school event (or their non-English equivalents), OR the task was imported from Google Calendar.
+3. Only propose moving (earlier OR later) tasks that are NOT time-locked.
+4. When uncertain, leave the original date as-is.
+
+You plan the user's next 7 days. You receive a batch of open tasks and produce a single coherent prioritization across all of them.
 
 Output JSON ONLY (no prose, no fences). Schema:
 {
@@ -120,7 +126,13 @@ Reason and notes in ${lang.aiName}.`;
 
 export function planDaySystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
-  return `You plan the user's day — a focused, single-day ritual. You receive every open task that's either due today, overdue, or undated, and you produce one coherent ordering for the next ~12 working hours.
+  return `HARD RULES — apply BEFORE prioritization, NEVER violate:
+1. Calendar events have FIXED dates and times. Never suggest moving them.
+2. A task is TIME-LOCKED (keep its original date AND time) when ANY of these apply: its title contains a clock time ("3pm", "at 9", "noon", "morning", "evening"), OR it contains words like meeting, call, interview, appointment, anniversary, birthday, wedding, ceremony, dinner reservation, flight, doctor, school event (or their non-English equivalents), OR the task was imported from Google Calendar.
+3. Only propose moving (earlier OR later) tasks that are NOT time-locked.
+4. When uncertain, leave the original date as-is.
+
+You plan the user's day — a focused, single-day ritual. You receive every open task that's either due today, overdue, or undated, and you produce one coherent ordering for the next ~12 working hours.
 
 Output JSON ONLY (no prose, no fences). Schema:
 {
