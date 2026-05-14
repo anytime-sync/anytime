@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUIStore } from "@/store/ui";
 import { useCreateTask } from "@/hooks/use-tasks";
-import { useLanguage } from "@/lib/use-language";
-import { t as tr } from "@/lib/i18n";
 
 /**
  * First-run welcome — shows once, on the first visit to /app/today after
@@ -22,8 +20,12 @@ import { t as tr } from "@/lib/i18n";
  *
  * The modal is fully dismissible (X button or "Skip"); we still set the
  * `fl.onboardingSeen` flag in either case so it never re-shows. If the
- * user wants it again, /app/settings has a "Replay the welcome tour"
- * button that clears the flag.
+ * user wants it again, /app/settings can expose a "Replay the welcome
+ * tour" button that clears the flag.
+ *
+ * Copy is English-only for v1 — the first-run window is short enough that
+ * matching it to the rest of the app's i18n layer is a follow-up, not a
+ * launch blocker.
  *
  * Why localStorage and not a server flag:
  *   - First-visit is per-device; new device = re-show is fine.
@@ -34,7 +36,6 @@ import { t as tr } from "@/lib/i18n";
 const SEEN_KEY = "fl.onboardingSeen";
 
 export function OnboardingModal() {
-  const lang = useLanguage();
   const setGoalModal = useUIStore((s) => s.setGoalModalOpen);
   const createTask = useCreateTask();
   const [open, setOpen] = useState(false);
@@ -88,11 +89,13 @@ export function OnboardingModal() {
         });
       }
       toast.success(
-        tr(lang, "onboarding.toast.created").replace("{n}", String(cleaned.length))
+        cleaned.length === 1
+          ? "Added 1 to Today"
+          : `Added ${cleaned.length} to Today`
       );
       close();
     } catch (e) {
-      toast.error(tr(lang, "onboarding.toast.failed"));
+      toast.error("Couldn't save — try again?");
       console.error("[onboarding] addThree failed", e);
     } finally {
       setBusy(false);
@@ -117,7 +120,7 @@ export function OnboardingModal() {
 
         <button
           onClick={close}
-          aria-label={tr(lang, "common.close")}
+          aria-label="Close"
           className="absolute top-3 right-3 btn-ghost size-8 p-0 grid place-items-center text-muted-fg"
         >
           <X className="size-4" />
@@ -126,14 +129,14 @@ export function OnboardingModal() {
         {mode === "intro" ? (
           <div className="px-8 py-9">
             <p className="editorial-number text-[11px] mb-3">
-              {tr(lang, "onboarding.kicker")}
+              Issue No. 01 · A welcome
             </p>
             <h2 className="font-display text-3xl tracking-tight leading-[1.1]">
-              {tr(lang, "onboarding.headline")}
+              Two ways to begin
               <em className="font-display">.</em>
             </h2>
             <p className="text-sm text-muted-fg mt-3 font-display italic">
-              {tr(lang, "onboarding.subhead")}
+              Pick the door that fits your morning.
             </p>
 
             <div className="mt-7 grid gap-3">
@@ -147,10 +150,10 @@ export function OnboardingModal() {
                   </span>
                   <div className="min-w-0">
                     <p className="font-display text-base leading-tight">
-                      {tr(lang, "onboarding.pathTasks.title")}
+                      Add three things
                     </p>
                     <p className="text-xs text-muted-fg mt-1">
-                      {tr(lang, "onboarding.pathTasks.body")}
+                      List what you&apos;d like to finish today — we&apos;ll drop them on the Today list.
                     </p>
                   </div>
                 </div>
@@ -166,10 +169,10 @@ export function OnboardingModal() {
                   </span>
                   <div className="min-w-0">
                     <p className="font-display text-base leading-tight">
-                      {tr(lang, "onboarding.pathGoal.title")}
+                      Plan a goal
                     </p>
                     <p className="text-xs text-muted-fg mt-1">
-                      {tr(lang, "onboarding.pathGoal.body")}
+                      Paste a goal sentence. AI breaks it into a weekly plan you can actually run.
                     </p>
                   </div>
                 </div>
@@ -181,52 +184,59 @@ export function OnboardingModal() {
                 onClick={close}
                 className="text-xs text-muted-fg hover:text-fg underline underline-offset-2"
               >
-                {tr(lang, "onboarding.skip")}
+                Skip for now
               </button>
               <span className="editorial-number text-[10px] text-muted-fg inline-flex items-center gap-1.5">
                 <Sparkles className="size-3" />
-                {tr(lang, "onboarding.footnote")}
+                You can replay this from Settings
               </span>
             </div>
           </div>
         ) : (
           <div className="px-8 py-9">
             <p className="editorial-number text-[11px] mb-3">
-              {tr(lang, "onboarding.tasks.kicker")}
+              Issue No. 01 · Today
             </p>
             <h2 className="font-display text-3xl tracking-tight leading-[1.1]">
-              {tr(lang, "onboarding.tasks.headline")}
+              Three things for today
               <em className="font-display">.</em>
             </h2>
             <p className="text-sm text-muted-fg mt-3 font-display italic">
-              {tr(lang, "onboarding.tasks.subhead")}
+              Keep them small. Momentum is the only goal of day one.
             </p>
 
             <ol className="mt-6 space-y-2">
-              {tasks.map((value, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <span className="editorial-number text-[10px] text-muted-fg w-4 text-right shrink-0">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <input
-                    autoFocus={i === 0}
-                    value={value}
-                    onChange={(e) =>
-                      setTasks((prev) => {
-                        const next = [...prev] as [string, string, string];
-                        next[i] = e.target.value;
+              {tasks.map((value, i) => {
+                const placeholders = [
+                  "e.g. Draft the email to the new team",
+                  "e.g. Block 25 minutes for deep work",
+                  "e.g. One thing you've been avoiding",
+                ];
+                return (
+                  <li key={i} className="flex items-center gap-3">
+                    <span className="editorial-number text-[10px] text-muted-fg w-4 text-right shrink-0">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <input
+                      autoFocus={i === 0}
+                      value={value}
+                      onChange={(e) =>
+                        setTasks((prev) => {
+                          const next = [...prev] as [string, string, string];
+                          next[i] = e.target.value;
                         return next;
-                      })
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && i === tasks.length - 1) addThree();
-                    }}
-                    placeholder={tr(lang, `onboarding.tasks.placeholder.${i}`)}
-                    className="input flex-1 h-9 text-sm"
-                    maxLength={140}
-                  />
-                </li>
-              ))}
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && i === tasks.length - 1) addThree();
+                      }}
+                      placeholder={placeholders[i]}
+                      className="input flex-1 h-9 text-sm"
+                      maxLength={140}
+                    />
+                  </li>
+                );
+              })}
             </ol>
 
             <div className="mt-7 flex items-center justify-between gap-3">
@@ -234,14 +244,14 @@ export function OnboardingModal() {
                 onClick={() => setMode("intro")}
                 className="text-xs text-muted-fg hover:text-fg underline underline-offset-2"
               >
-                {tr(lang, "common.back")}
+                Back
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={close}
                   className="btn-ghost h-9 px-3 text-sm"
                 >
-                  {tr(lang, "onboarding.skip")}
+                  Skip for now
                 </button>
                 <button
                   onClick={addThree}
@@ -251,7 +261,7 @@ export function OnboardingModal() {
                     busy && "opacity-70"
                   )}
                 >
-                  {busy ? tr(lang, "onboarding.tasks.saving") : tr(lang, "onboarding.tasks.cta")}
+                  {busy ? "Adding…" : "Add to Today"}
                 </button>
               </div>
             </div>
