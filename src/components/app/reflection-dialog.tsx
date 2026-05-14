@@ -32,6 +32,12 @@ export function ReflectionDialog() {
   const [journal, setJournal] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // "Connected the dots" — single-sentence pattern across the user's last
+  // few reflections. Fetched lazily once the daily reflection has loaded,
+  // so the dialog never blocks on this slower call.
+  const [patternInsight, setPatternInsight] = useState<string | null>(null);
+  const [patternLoading, setPatternLoading] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     setLoading(true);
@@ -46,6 +52,17 @@ export function ReflectionDialog() {
         }
         setData(r);
         setJournal(r.user_journal ?? "");
+        // Fire pattern fetch in the background — purely additive,
+        // never blocks the main reflection rendering.
+        setPatternLoading(true);
+        setPatternInsight(null);
+        fetch("/api/ai/reflection-patterns", { cache: "no-store" })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((j) => {
+            if (j && typeof j.insight === "string") setPatternInsight(j.insight);
+          })
+          .catch(() => {})
+          .finally(() => setPatternLoading(false));
       })
       .catch(() => toast.error(tr(lang, "reflect.errLoad")))
       .finally(() => setLoading(false));
@@ -168,6 +185,21 @@ export function ReflectionDialog() {
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {(patternLoading || patternInsight) && (
+              <section className="mt-4 rounded-md border border-accent/30 bg-accent/5 px-3 py-2.5">
+                <p className="text-[10px] tracking-[0.22em] uppercase text-stone-500 mb-1.5">
+                  AI · Connected the dots
+                </p>
+                {patternLoading ? (
+                  <p className="text-sm text-muted-fg italic">Reading the last few reflections…</p>
+                ) : (
+                  <p className="text-base leading-snug text-stone-800 font-display italic">
+                    {patternInsight}
+                  </p>
+                )}
               </section>
             )}
 
