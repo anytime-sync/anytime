@@ -104,6 +104,7 @@ function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
     { href: "/app/pomodoro",  label: t(lang, "sidebar.pomodoro"),     icon: Clock },
     { href: "/app/habits",    label: t(lang, "sidebar.habits"),       icon: Sparkles },
     { href: "/app/retro",     label: t(lang, "sidebar.weeklyReview"), icon: Newspaper },
+    { href: "/app/goals",     label: "Goals",                          icon: Target },
     { href: "/app/completed", label: t(lang, "sidebar.completed"),    icon: CheckCircle2 },
     { href: "/app/groups",    label: t(lang, "sidebar.groups"),                        icon: Users },
     { href: "/app/notes",     label: t(lang, "sidebar.notes"),        icon: StickyNote },
