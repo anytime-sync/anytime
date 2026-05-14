@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import { addDays } from "date-fns";
@@ -18,6 +19,7 @@ import { t as tr } from "@/lib/i18n";
  * project and bulk-creates the tasks under it.
  */
 export function GoalModal() {
+  const router = useRouter();
   const lang = useLanguage();
   const open = useUIStore((s) => s.goalModalOpen);
   const setOpen = useUIStore((s) => s.setGoalModalOpen);
@@ -75,6 +77,9 @@ export function GoalModal() {
       setOpen(false);
       setGoal("");
       setPlan(null);
+      // Land on the Goal tracker so the user sees their new goal
+      // with a fresh 0% progress bar — the carousel promise fulfilled.
+      router.push("/app/goals");
     } catch (e: any) {
       toast.error(e?.message ?? tr(lang, "goal.errCreate"));
     } finally {
