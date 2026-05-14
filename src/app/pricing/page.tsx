@@ -269,19 +269,28 @@ export default function PricingPage() {
             {/* 2 ── Plan my day */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
               <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">ENERGY-AWARE SEQUENCING</p>
-                <p className="font-display text-base md:text-lg text-stone-800 mb-1">Tuesday, mapped.</p>
-                <div className="grid grid-cols-[24px_1fr] gap-x-2 gap-y-1.5 text-[10px] items-center">
-                  <span className="text-stone-400 tabular-nums text-right">9</span>
-                  <div className="rounded-md bg-accent/20 border-l-2 border-accent px-2 py-1 text-stone-800 font-medium">Deep work · draft Q4 strategy</div>
-                  <span className="text-stone-400 tabular-nums text-right">11</span>
-                  <div className="rounded-md bg-stone-200/70 border-l-2 border-stone-400 px-2 py-1 text-stone-700">Standup</div>
-                  <span className="text-stone-400 tabular-nums text-right">1</span>
-                  <div className="rounded-md bg-accent/15 border-l-2 border-accent/80 px-2 py-1 text-stone-700">Review PR #142</div>
-                  <span className="text-stone-400 tabular-nums text-right">3</span>
-                  <div className="rounded-md bg-stone-200/40 border-l-2 border-stone-300 px-2 py-1 text-stone-600">Email batch</div>
-                  <span className="text-stone-400 tabular-nums text-right">5</span>
-                  <div className="rounded-md bg-accent/10 border-l-2 border-accent/60 px-2 py-1 text-stone-600">Reflection</div>
+                <div className="flex items-baseline justify-between">
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TODAY · 4 ITEMS</p>
+                  <p className="text-[8px] text-stone-400">AI · ROUND 1</p>
+                </div>
+                <p className="text-[11px] text-stone-700 italic leading-snug">Tackle the overdue model first, then anchor both p0 meetings before lunch — afternoon reserved for product work.</p>
+                <div className="space-y-1.5">
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <p className="text-stone-800 font-medium truncate">Model SKP scenarios</p>
+                    <p className="text-stone-500 text-[8px]">Q1 · p5 · Overdue 3 days — blocks downstream decisions.</p>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <p className="text-stone-800 font-medium truncate">ASM Meeting</p>
+                    <p className="text-stone-500 text-[8px]">Q1 · p5 · Anchor the morning — fixed calendar slot.</p>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <p className="text-stone-800 font-medium truncate">Camillia Meeting</p>
+                    <p className="text-stone-500 text-[8px]">Q2 · p3 · High-signal — schedule after ASM.</p>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
+                    <p className="text-stone-800 font-medium truncate">BC product RL</p>
+                    <p className="text-stone-500 text-[8px]">Q2 · p3 · Deep work — fits afternoon if meetings land.</p>
+                  </div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
@@ -323,17 +332,17 @@ export default function PricingPage() {
                   <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
                     <span className="size-2 rounded-full bg-red-500 shrink-0" />
                     <span className="text-stone-700 truncate">Q4 doc — feedback by EOD</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U1·I1</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Urgent</span>
                   </div>
                   <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
                     <span className="size-2 rounded-full bg-amber-500 shrink-0" />
                     <span className="text-stone-700 truncate">3pm review · prep notes</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U2·I1</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Important</span>
                   </div>
                   <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
                     <span className="size-2 rounded-full bg-stone-400 shrink-0" />
                     <span className="text-stone-700 truncate">Reply to Maya · re: design</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">U2·I2</span>
+                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Later</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-stone-500 italic mt-auto">+ 14 others — they can wait.</p>
