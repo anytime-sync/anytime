@@ -39,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ insight: null, sample_size: sample.length });
   }
 
-  const budget = await checkAiBudget(u.user.id, "reflection_patterns");
+  const budget = await checkAiBudget(u.user.id, "reflection");
   if (!budget.ok) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
@@ -80,7 +80,7 @@ export async function GET() {
       .join("")
       .trim();
 
-    await logAiCall(u.user.id, "reflection_patterns", {
+    await logAiCall(u.user.id, "reflection", {
       model: res.model,
       status: 200,
     });
