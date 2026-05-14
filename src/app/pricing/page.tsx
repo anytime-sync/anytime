@@ -134,16 +134,18 @@ export default function PricingPage() {
             </ul>
             <div className="mt-6">
               {authState === "in" ? (
-                <button
-                  disabled
-                  className="btn-ghost h-10 w-full justify-center opacity-60 cursor-not-allowed"
-                  title="Plus checkout opens once we finish payments onboarding."
+                <Link
+                  href="/app/features"
+                  className="btn-primary h-10 w-full justify-center"
                 >
-                  Coming soon
-                </button>
+                  Upgrade to Plus <ArrowRight className="size-4 ml-1" />
+                </Link>
               ) : (
-                <Link href="/signup?next=/pricing" className="btn-ghost h-10 w-full justify-center">
-                  Start free, upgrade later <ArrowRight className="size-4 ml-1" />
+                <Link
+                  href="/signup?next=/pricing&plan=plus"
+                  className="btn-primary h-10 w-full justify-center"
+                >
+                  Upgrade to Plus <ArrowRight className="size-4 ml-1" />
                 </Link>
               )}
             </div>
@@ -201,42 +203,130 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Demo strip */}
+        {/* Demo strip — inline HTML mockups (no external screenshots needed). */}
         <section className="mb-20">
           <h2 className="font-display text-3xl tracking-tight mb-2 text-center">See it in motion</h2>
-          <p className="text-muted-fg text-center mb-8 max-w-xl mx-auto">
-            A glimpse of the surfaces where Pro shines.
+          <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
+            Three surfaces where First Light earns its $4 (and its $9). Real screens, not stock art.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { title: "Daily Edition", subtitle: "Your morning briefing", asset: "/screenshots/daily-edition.png" },
-              { title: "Plan my day",   subtitle: "Energy-aware sequencing", asset: "/screenshots/plan-my-day.png" },
-              { title: "Calendar",      subtitle: "Tasks + events together",  asset: "/screenshots/calendar.png" },
-            ].map((d) => (
-              <figure key={d.title} className="border border-border rounded-xl overflow-hidden bg-muted/20">
-                <div className="aspect-[4/3] bg-muted/40 flex items-center justify-center">
-                  {/* Screenshot drops in here once captured. Until then we
-                      show a clean placeholder so the layout stays right. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={d.asset}
-                    alt={d.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* ── Mockup 1: Daily Edition ─────────────────────────────────── */}
+            <figure className="border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50/60 to-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2 relative">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TUESDAY MORNING BRIEF</p>
+                <p className="font-display text-base md:text-lg leading-tight text-stone-800">
+                  An open day asks its own kind of question.
+                </p>
+                <div className="h-px bg-accent/40 w-10" />
+                <p className="text-[11px] text-stone-600 leading-snug">
+                  Nothing is scheduled. Nothing is due. That is either a gift or a gap — the distinction matters.
+                </p>
+                <div className="mt-auto bg-white border border-stone-200 rounded-md p-2.5 text-[10px] shadow-sm">
+                  <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">A QUESTION FOR YOU</p>
+                  <p className="text-stone-700 leading-snug">Is this day genuinely free, or have the things that matter simply not been written down yet?</p>
                 </div>
-                <figcaption className="p-3">
-                  <p className="font-medium text-sm">{d.title}</p>
-                  <p className="text-xs text-muted-fg">{d.subtitle}</p>
-                </figcaption>
-              </figure>
-            ))}
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Daily Edition</p>
+                <p className="text-xs text-muted-fg">A morning briefing, never a to-do list.</p>
+              </figcaption>
+            </figure>
+
+            {/* ── Mockup 2: Plan my day ──────────────────────────────────── */}
+            <figure className="border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">ENERGY-AWARE SEQUENCING</p>
+                <p className="font-display text-base md:text-lg text-stone-800 mb-1">Tuesday, mapped.</p>
+                <div className="grid grid-cols-[24px_1fr] gap-x-2 gap-y-1.5 text-[10px] items-center">
+                  <span className="text-stone-400 tabular-nums text-right">9</span>
+                  <div className="rounded-md bg-accent/20 border-l-2 border-accent px-2 py-1 text-stone-800 font-medium">
+                    Deep work · draft Q4 strategy
+                  </div>
+                  <span className="text-stone-400 tabular-nums text-right">11</span>
+                  <div className="rounded-md bg-stone-200/70 border-l-2 border-stone-400 px-2 py-1 text-stone-700">
+                    Standup
+                  </div>
+                  <span className="text-stone-400 tabular-nums text-right">1</span>
+                  <div className="rounded-md bg-accent/15 border-l-2 border-accent/80 px-2 py-1 text-stone-700">
+                    Review PR #142
+                  </div>
+                  <span className="text-stone-400 tabular-nums text-right">3</span>
+                  <div className="rounded-md bg-stone-200/40 border-l-2 border-stone-300 px-2 py-1 text-stone-600">
+                    Email batch
+                  </div>
+                  <span className="text-stone-400 tabular-nums text-right">5</span>
+                  <div className="rounded-md bg-accent/10 border-l-2 border-accent/60 px-2 py-1 text-stone-600">
+                    Reflection
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Plan my day</p>
+                <p className="text-xs text-muted-fg">AI sequences your day around your real energy.</p>
+              </figcaption>
+            </figure>
+
+            {/* ── Mockup 3: Calendar ─────────────────────────────────────── */}
+            <figure className="border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-4 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">WEEK OF MAY 12</p>
+                  <p className="text-[9px] text-stone-400">8 items</p>
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-[8px] text-stone-400 px-0.5">
+                  {["M","T","W","T","F","S","S"].map((d, i) => (
+                    <div key={i} className={"text-center " + (i===1 ? "text-accent font-semibold" : "")}>{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1 flex-1">
+                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
+                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Q4 doc</div>
+                  </div>
+                  <div className="bg-white border border-accent/50 rounded p-1 flex flex-col gap-0.5 ring-1 ring-accent/30">
+                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">9 Standup</div>
+                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Review</div>
+                    <div className="bg-stone-100 text-[7px] rounded px-1 truncate text-stone-600">+2</div>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
+                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">11 1:1</div>
+                    <div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Reflect</div>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
+                    <div className="bg-accent/20 text-[7px] rounded px-1 truncate text-stone-800">Draft</div>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded p-1 flex flex-col gap-0.5">
+                    <div className="bg-blue-100 text-[7px] rounded px-1 truncate text-blue-800">3 Demo</div>
+                    <div className="bg-accent/25 text-[7px] rounded px-1 truncate text-stone-800">Retro</div>
+                  </div>
+                  <div className="bg-white/60 border border-stone-200/60 rounded p-1" />
+                  <div className="bg-white/60 border border-stone-200/60 rounded p-1" />
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Calendar</p>
+                <p className="text-xs text-muted-fg">Tasks and Google events on the same grid.</p>
+              </figcaption>
+            </figure>
+          </div>
+
+          {/* Three more "moments" callout strip — copy that sells the upgrade */}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-center">
+            <div>
+              <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">MORNING</p>
+              <p className="text-sm text-muted-fg leading-snug">A briefing you read once, not a backlog you scroll past.</p>
+            </div>
+            <div>
+              <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">MIDDAY</p>
+              <p className="text-sm text-muted-fg leading-snug">Plan-my-day pre-arranges deep work around your peaks.</p>
+            </div>
+            <div>
+              <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">EVENING</p>
+              <p className="text-sm text-muted-fg leading-snug">Reflect, learn one thing, close the day clean.</p>
+            </div>
           </div>
         </section>
 
-        {/* Full feature matrix */}
+                {/* Full feature matrix */}
         <section className="mb-20">
           <h2 className="font-display text-3xl tracking-tight mb-2 text-center">Everything, side by side</h2>
           <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
