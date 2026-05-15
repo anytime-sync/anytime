@@ -453,20 +453,31 @@ function PlanMyWeekButton({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{t.title}</div>
-                        <div className="text-xs text-muted-fg mt-1 space-y-1">
-                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[11px]">
-                            <span>
-                              <span className="text-muted-fg/60">Q{currentQ}</span>
-                              <span className="mx-1 text-muted-fg/40">→</span>
-                              <span className={cn(currentQ !== s.quadrant ? "text-fg font-medium" : "text-muted-fg/70")}>Q{s.quadrant}</span>
-                            </span>
-                            <span>
-                              <span className="text-muted-fg/60">p{t.priority ?? 0}</span>
-                              <span className="mx-1 text-muted-fg/40">→</span>
-                              <span className={cn((t.priority ?? 0) !== s.suggested_priority ? "text-fg font-medium" : "text-muted-fg/70")}>p{s.suggested_priority}</span>
-                            </span>
+                        <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                            {currentQ !== s.quadrant ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-muted-fg/50 line-through">Q{currentQ}</span>
+                                <span className="text-accent/70">→</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent/20 text-accent font-medium">Q{s.quadrant}</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-fg/70">Q{currentQ}</span>
+                            )}
+                            {(t.priority ?? 0) !== s.suggested_priority ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-muted-fg/50 line-through">p{t.priority ?? 0}</span>
+                                <span className="text-accent/70">→</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent/20 text-accent font-medium">p{s.suggested_priority}</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-fg/70">p{t.priority ?? 0}</span>
+                            )}
                             {t.due_at && (
                               <span className="text-muted-fg/70">due {format(new Date(t.due_at), "MMM d, h:mm a")}</span>
+                            )}
+                            {currentQ === s.quadrant && (t.priority ?? 0) === s.suggested_priority && (
+                              <span className="text-muted-fg/40 italic">— already on target</span>
                             )}
                           </div>
                           <div className="italic text-muted-fg">{s.reason}</div>
