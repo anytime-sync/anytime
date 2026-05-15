@@ -167,9 +167,14 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         )}
       </button>
       <div className="flex-1 min-w-0">
+        {project && (
+          <p className="font-display italic text-[11px] lowercase text-muted-fg/80 mb-0.5 truncate">
+            {(project as any).name}.
+          </p>
+        )}
         <div
           className={cn(
-            "text-sm truncate",
+            "font-display text-[17px] leading-tight text-fg truncate",
             task.is_completed && "line-through text-muted-fg"
           )}
         >
@@ -202,24 +207,6 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
           {task.priority > 0 && (
             <span className="inline-flex items-center gap-1">
               <Flag className={cn("size-3", priorityColorClass(task.priority))} />
-            </span>
-          )}
-          {/* Project pill — shows the list a task lives in. Hidden when
-              there's no project (Inbox tasks). Same coloring scheme as
-              the sidebar list dot. */}
-          {project && (
-            <span
-              className="inline-flex items-center h-5 rounded-full px-2.5 text-[11px] italic leading-none"
-              style={{
-                backgroundColor: (project as any).color
-                  ? `${(project as any).color}22`
-                  : "var(--muted)",
-                color: (project as any).color || "var(--muted-fg)",
-                border: `1px solid ${(project as any).color || "var(--border)"}`,
-              }}
-              title={`In list: ${(project as any).name}`}
-            >
-              ~{(project as any).name}
             </span>
           )}
           {/* Tags render as color-block pills — same visual language as
