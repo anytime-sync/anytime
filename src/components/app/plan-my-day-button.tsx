@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { isToday, isPast, endOfDay } from "date-fns";
+import { format, isToday, isPast, endOfDay } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { cn } from "@/lib/utils";
@@ -159,6 +159,9 @@ export function PlanMyDayButton() {
                 {results.map((s) => {
                   const t = allTasks.find((x) => x.id === s.id);
                   if (!t) return null;
+                const isUrgent = !!t.due_at && (() => { const d = new Date(t.due_at); return isPast(d) || isToday(d); })();
+                const isImportant = (t.priority ?? 0) >= 3;
+                const currentQ = isUrgent && isImportant ? 1 : !isUrgent && isImportant ? 2 : isUrgent && !isImportant ? 3 : 4;
                   return (
                     <li
                       key={s.id}
@@ -168,9 +171,40 @@ export function PlanMyDayButton() {
                         <div className="font-medium text-sm truncate">
                           {t.title}
                         </div>
-                        <div className="text-xs text-muted-fg mt-0.5">
-                          <span className="text-fg">Q{s.quadrant}</span> · p
-                          {s.suggested_priority} · {s.reason}
+                        <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {currentQ !== s.quadrant ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
+                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">Q{currentQ}</span>
+                                <span className="text-[#8D6F2A]">→</span>
+                                <span className="text-[#5C4516] font-bold">Q{s.quadrant}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
+                                Q{currentQ}
+                              </span>
+                            )}
+                            {(t.priority ?? 0) !== s.suggested_priority ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
+                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">p{t.priority ?? 0}</span>
+                                <span className="text-[#8D6F2A]">→</span>
+                                <span className="text-[#5C4516] font-bold">p{s.suggested_priority}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
+                                p{t.priority ?? 0}
+                              </span>
+                            )}
+                            {t.due_at && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
+                                {format(new Date(t.due_at), "MMM d, h:mm a")}
+                              </span>
+                            )}
+                            {currentQ === s.quadrant && (t.priority ?? 0) === s.suggested_priority && (
+                              <span className="text-muted-fg/50 italic text-[11px]">already on target</span>
+                            )}
+                          </div>
+                          <div className="italic text-muted-fg">{s.reason}</div>
                         </div>
                       </div>
                       <button
