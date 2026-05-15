@@ -173,7 +173,7 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
       {open && (
         <div
           ref={popRef}
-          className="absolute z-50 left-full ml-2 top-0 w-[340px] surface-strong border border-border rounded-lg shadow-2xl overflow-hidden"
+          className="absolute z-50 left-full ml-2 bottom-0 w-[340px] surface-strong border border-border rounded-lg shadow-2xl overflow-hidden"
           style={{ maxHeight: "70vh" }}
         >
           <div className="px-3 h-10 border-b border-border flex items-center justify-between">
