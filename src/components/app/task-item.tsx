@@ -188,11 +188,11 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         />
         {/* Inline notes preview — first line, muted, truncated. */}
         {task.notes && !task.is_completed && (
-          <p className="font-display text-[12.5px] text-muted-fg mt-1 line-clamp-1 leading-snug">
+          <p className="text-[13px] text-muted-fg mt-1 line-clamp-1 leading-snug">
             {task.notes}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-display text-[12px] text-muted-fg">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[13px] text-muted-fg">
           {task.due_at && <DueChip due_at={task.due_at} all_day={task.is_all_day} />}
           {/* Duration: explicit start->end range wins; otherwise estimated. */}
           {(task.start_at && task.due_at && !task.is_all_day) ||
