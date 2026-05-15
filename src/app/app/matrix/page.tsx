@@ -456,10 +456,10 @@ function PlanMyWeekButton({
                         <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {currentQ !== s.quadrant ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 text-[11px] leading-none">
-                                <span className="text-accent/60">Q{currentQ}</span>
-                                <span className="text-accent/80">→</span>
-                                <span className="text-accent font-semibold">Q{s.quadrant}</span>
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/25 border border-accent/50 text-[11px] leading-none">
+                                <span className="text-accent font-medium line-through decoration-accent/50">Q{currentQ}</span>
+                                <span className="text-accent">→</span>
+                                <span className="text-fg font-bold">Q{s.quadrant}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
@@ -467,10 +467,10 @@ function PlanMyWeekButton({
                               </span>
                             )}
                             {(t.priority ?? 0) !== s.suggested_priority ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 text-[11px] leading-none">
-                                <span className="text-accent/60">p{t.priority ?? 0}</span>
-                                <span className="text-accent/80">→</span>
-                                <span className="text-accent font-semibold">p{s.suggested_priority}</span>
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/25 border border-accent/50 text-[11px] leading-none">
+                                <span className="text-accent font-medium line-through decoration-accent/50">p{t.priority ?? 0}</span>
+                                <span className="text-accent">→</span>
+                                <span className="text-fg font-bold">p{s.suggested_priority}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
