@@ -130,33 +130,40 @@ export function DemoCarousel() {
               </figcaption>
             </figure>
 
-            {/* 4 ── The Sift: AI triage */}
+            {/* 4 ── The Sift: 2×2 Eisenhower quadrant grid */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">THE SIFT · BY AI</p>
-                <p className="font-display text-base md:text-lg text-stone-800 mb-1">What actually needs you today.</p>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <span className="size-2 rounded-full bg-red-500 shrink-0" />
-                    <span className="text-stone-700 truncate">Q4 doc — feedback by EOD</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Urgent</span>
+              <div className="aspect-[4/3] p-4 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">THE SIFT · 4 QUADRANTS</p>
+                <div className="grid grid-cols-2 gap-1.5 flex-1">
+                  {/* Q1 Do first — red */}
+                  <div className="rounded-md p-1.5 flex flex-col" style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.5)" }}>
+                    <p className="text-[8px] font-medium" style={{ color: "#B91C1C" }}>Do first</p>
+                    <p className="text-[7px] text-stone-400 leading-tight">Urgent · Important</p>
+                    <div className="mt-1 bg-white border border-stone-200 rounded px-1.5 py-0.5 text-[8px] text-stone-700 truncate">Q4 doc by EOD</div>
                   </div>
-                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
-                    <span className="text-stone-700 truncate">3pm review · prep notes</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Important</span>
+                  {/* Q2 Schedule — emerald */}
+                  <div className="rounded-md p-1.5 flex flex-col" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.5)" }}>
+                    <p className="text-[8px] font-medium" style={{ color: "#047857" }}>Schedule</p>
+                    <p className="text-[7px] text-stone-400 leading-tight">Not urgent · Important</p>
+                    <div className="mt-1 bg-white border border-stone-200 rounded px-1.5 py-0.5 text-[8px] text-stone-700 truncate">Model SKP scenarios</div>
                   </div>
-                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <span className="size-2 rounded-full bg-stone-400 shrink-0" />
-                    <span className="text-stone-700 truncate">Reply to Maya · re: design</span>
-                    <span className="ml-auto text-[8px] text-stone-400 shrink-0">Later</span>
+                  {/* Q3 Delegate — amber */}
+                  <div className="rounded-md p-1.5 flex flex-col" style={{ background: "rgba(245, 158, 11, 0.10)", border: "1px solid rgba(245, 158, 11, 0.55)" }}>
+                    <p className="text-[8px] font-medium" style={{ color: "#B45309" }}>Delegate</p>
+                    <p className="text-[7px] text-stone-400 leading-tight">Urgent · Not important</p>
+                    <div className="mt-1 bg-white border border-stone-200 rounded px-1.5 py-0.5 text-[8px] text-stone-700 truncate">Reply to Maya</div>
+                  </div>
+                  {/* Q4 Eliminate — slate */}
+                  <div className="rounded-md p-1.5 flex flex-col" style={{ background: "rgba(100, 116, 139, 0.08)", border: "1px solid rgba(148, 163, 184, 0.6)" }}>
+                    <p className="text-[8px] font-medium" style={{ color: "#475569" }}>Eliminate</p>
+                    <p className="text-[7px] text-stone-400 leading-tight">Not urgent · Not important</p>
+                    <div className="mt-1 bg-white border border-stone-200 rounded px-1.5 py-0.5 text-[8px] text-stone-700 truncate">Inbox zero ritual</div>
                   </div>
                 </div>
-                <p className="text-[10px] text-stone-500 italic mt-auto">+ 14 others — they can wait.</p>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">The Sift</p>
-                <p className="text-xs text-muted-fg">AI separates the 3 that matter from the 17 that don't.</p>
+                <p className="text-xs text-muted-fg">AI sorts tasks into the 4 quadrants you can actually act on.</p>
               </figcaption>
             </figure>
 
