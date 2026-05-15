@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useUserPlan, useStartCheckout, useOpenBillingPortal } from "@/hooks/use-billing";
 import { useProPrice } from "@/hooks/use-pricing";
+import { DemoCarousel } from "@/components/marketing/demo-carousel";
 
 /**
  * In-app /app/features page.
@@ -76,7 +77,7 @@ export default function FeaturesPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {isPaid ? (
+              {isPro ? (
                 <button
                   onClick={() => portal.mutate()}
                   disabled={portal.isPending}
@@ -84,18 +85,38 @@ export default function FeaturesPage() {
                 >
                   {portal.isPending ? "Opening portal…" : "Manage billing"}
                 </button>
-              ) : (
+              ) : isPlus ? (
                 <button
                   onClick={() => checkout.mutate()}
                   disabled={checkout.isPending}
                   className="btn-primary h-10 px-4"
                 >
                   {checkout.isPending
-                    ? "Opening checkout…"
+                    ? "Redirecting…"
                     : priceLoading
                     ? "Upgrade to Pro"
-                    : `Upgrade to Pro — ${pro?.formattedPerMonth ?? "$9 / month"}`}
+                    : `Upgrade to Pro — ${pro?.formatted ?? "$9 / month"}`}
                 </button>
+              ) : (
+                <>
+                  <Link
+                    href="/pricing#plus"
+                    className="btn-ghost h-10 px-4 inline-flex items-center"
+                  >
+                    Plus — $4 / month
+                  </Link>
+                  <button
+                    onClick={() => checkout.mutate()}
+                    disabled={checkout.isPending}
+                    className="btn-primary h-10 px-4"
+                  >
+                    {checkout.isPending
+                      ? "Redirecting…"
+                      : priceLoading
+                      ? "Pro — $9 / month"
+                      : `Pro — ${pro?.formatted ?? "$9 / month"}`}
+                  </button>
+                </>
               )}
             </div>
           </section>
@@ -122,29 +143,10 @@ export default function FeaturesPage() {
             </section>
           ) : null}
 
-          {/* Demo strip — same screenshots as /pricing */}
+          {/* Visual demo — same carousel as /pricing */}
           <section>
-            <h2 className="font-display text-2xl tracking-tight mb-4">A look at Pro</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[
-                { title: "Daily Edition", asset: "/screenshots/daily-edition.png" },
-                { title: "Plan my day", asset: "/screenshots/plan-my-day.png" },
-                { title: "Calendar", asset: "/screenshots/calendar.png" },
-              ].map((d) => (
-                <figure key={d.title} className="border border-border rounded-xl overflow-hidden bg-muted/20">
-                  <div className="aspect-[4/3] bg-muted/40 flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={d.asset}
-                      alt={d.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </div>
-                  <figcaption className="p-3 text-xs text-muted-fg">{d.title}</figcaption>
-                </figure>
-              ))}
-            </div>
+            <h2 className="font-display text-2xl tracking-tight mb-4">See it in motion</h2>
+            <DemoCarousel />
           </section>
 
           {/* Full matrix */}
