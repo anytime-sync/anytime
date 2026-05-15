@@ -5,7 +5,7 @@ import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
 import { usePlanWeek, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { toast } from "sonner";
-import { isPast, isToday, addDays, endOfDay } from "date-fns";
+import { format, isPast, isToday, addDays, endOfDay } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
@@ -452,8 +452,23 @@ function PlanMyWeekButton({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{t.title}</div>
-                        <div className="text-xs text-muted-fg mt-0.5">
-                          <span className="text-fg">Q{s.quadrant}</span> · p{s.suggested_priority} · {s.reason}
+                        <div className="text-xs text-muted-fg mt-1 space-y-1">
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[11px]">
+                            <span>
+                              <span className="text-muted-fg/60">Q{t.quadrant ?? "—"}</span>
+                              <span className="mx-1 text-muted-fg/40">→</span>
+                              <span className={cn(t.quadrant !== s.quadrant ? "text-fg font-medium" : "text-muted-fg/70")}>Q{s.quadrant}</span>
+                            </span>
+                            <span>
+                              <span className="text-muted-fg/60">p{t.priority ?? 0}</span>
+                              <span className="mx-1 text-muted-fg/40">→</span>
+                              <span className={cn((t.priority ?? 0) !== s.suggested_priority ? "text-fg font-medium" : "text-muted-fg/70")}>p{s.suggested_priority}</span>
+                            </span>
+                            {t.due_at && (
+                              <span className="text-muted-fg/70">due {format(new Date(t.due_at), "MMM d, h:mm a")}</span>
+                            )}
+                          </div>
+                          <div className="italic text-muted-fg">{s.reason}</div>
                         </div>
                       </div>
                       <button
