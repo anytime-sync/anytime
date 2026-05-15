@@ -54,7 +54,7 @@ export function TranslatedSubtitle({
 
   if (!translation) return null;
   return (
-    <span className="block text-[11px] text-muted-fg italic mt-0.5 truncate">
+    <span className="block text-[11px] text-muted-fg mt-0.5 truncate">
       {translation}
     </span>
   );
