@@ -68,6 +68,17 @@ export async function POST(req: Request) {
   }
   const { tasks } = parsedReq.data;
 
+  // Skip time-locked tasks entirely — meetings, calendar events, anniversaries
+  // and anything carrying a clock time in the title. Plan-my-Day suggests an order
+  // for *flexible* work; everything else stays exactly where the user put it.
+  function isTimeLocked(x: { title: string }): boolean {
+    const re = /\b(meeting|meet|call|interview|appointment|appt|anniversary|birthday|wedding|ceremony|dinner reservation|flight|doctor|dentist|hearing|exam|consultation|conference|standup|stand-up|sync|1:1|one-on-one|catch-up|catchup|review with|check-in)\b/i;
+    const time = /\b(at\s+\d|\d{1,2}\s*(am|pm|AM|PM)|\d{1,2}:\d{2})\b/;
+    return re.test(x.title) || time.test(x.title);
+  }
+  const lockedTasks = tasks.filter(isTimeLocked);
+  const flexibleTasks = tasks.filter((t) => !isTimeLocked(t));
+
   const { data: prefs } = await supabase
     .from("user_preferences")
     .select("language")
@@ -75,7 +86,7 @@ export async function POST(req: Request) {
     .maybeSingle();
   const language = (prefs?.language ?? "en") as LanguageCode;
 
-  const taskBlock = tasks
+  const taskBlock = flexibleTasks
     .map((t) => {
       const parts = [
         `[${t.id}]`,
@@ -144,7 +155,7 @@ export async function POST(req: Request) {
     const json = extractJson(content);
     const parsed = PlanDayResultSchema.parse(json);
 
-    const known = new Set(tasks.map((t) => t.id));
+    const known = new Set(flexibleTasks.map((t) => t.id));
     const filtered = parsed.suggestions.filter((s) => known.has(s.id));
 
     await logAiCall(u.user.id, "plan_day", { model: res.model, status: 200 });
