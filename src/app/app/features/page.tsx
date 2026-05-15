@@ -101,7 +101,7 @@ export default function FeaturesPage() {
                 <>
                   <Link
                     href="/pricing#plus"
-                    className="btn-ghost h-10 px-4 inline-flex items-center"
+                    className="btn-primary h-10 px-4 inline-flex items-center opacity-90"
                   >
                     Upgrade to Plus— $4 / month
                   </Link>
