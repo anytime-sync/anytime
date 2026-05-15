@@ -188,11 +188,11 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         />
         {/* Inline notes preview — first line, muted, truncated. */}
         {task.notes && !task.is_completed && (
-          <p className="font-display italic text-[12.5px] text-muted-fg mt-1 line-clamp-1 leading-snug">
+          <p className="font-display text-[12.5px] text-muted-fg mt-1 line-clamp-1 leading-snug">
             {task.notes}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-display italic text-[12px] text-muted-fg">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-display text-[12px] text-muted-fg">
           {task.due_at && <DueChip due_at={task.due_at} all_day={task.is_all_day} />}
           {/* Duration: explicit start->end range wins; otherwise estimated. */}
           {(task.start_at && task.due_at && !task.is_all_day) ||
@@ -209,7 +209,7 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
               the sidebar list dot. */}
           {project && (
             <span
-              className="inline-flex items-center h-5 rounded-full px-2.5 text-[11px] italic leading-none"
+              className="inline-flex items-center h-5 rounded-full px-2.5 text-[11px] leading-none"
               style={{
                 backgroundColor: (project as any).color
                   ? `${(project as any).color}22`
@@ -228,7 +228,7 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
           {task.tags.map((t) => (
             <span
               key={t.id}
-              className="inline-flex items-center h-5 rounded-full px-2.5 text-[11px] italic leading-none"
+              className="inline-flex items-center h-5 rounded-full px-2.5 text-[11px] leading-none"
               style={{ backgroundColor: t.color || "var(--accent)", color: "#fff" }}
             >
               {t.name}
