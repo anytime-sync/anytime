@@ -275,7 +275,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           return (
             <div key={section.id}>
               {!collapsed && (
-                <p className="font-display italic text-[13px] text-muted-fg/70 lowercase px-2 mb-1 mt-1">
+                <p className="font-display italic text-[15px] text-muted-fg/85 lowercase px-2 mb-1 mt-1">
                   {section.label}.
                 </p>
               )}
@@ -322,7 +322,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
           <>
             <div>
               <div className="flex items-center justify-between px-2 mb-1">
-                <span className="font-display italic text-[13px] text-muted-fg/70 lowercase">{t(lang, "sidebar.lists")}</span>
+                <span className="font-display italic text-[15px] text-muted-fg/85 lowercase">{t(lang, "sidebar.lists")}</span>
                 <button
                   className="text-muted-fg hover:text-fg"
                   onClick={() => setShowCreate(true)}
@@ -372,7 +372,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
 
             <div>
               <div className="flex items-center justify-between px-2 mb-1.5">
-                <span className="font-display italic text-[13px] text-muted-fg/70 lowercase">{t(lang, "sidebar.tags")}</span>
+                <span className="font-display italic text-[15px] text-muted-fg/85 lowercase">{t(lang, "sidebar.tags")}</span>
               </div>
               <div className="flex flex-wrap gap-1 px-2">
                 {tags.map((tag) => (
