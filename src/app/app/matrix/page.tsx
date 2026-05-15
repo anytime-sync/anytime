@@ -445,6 +445,7 @@ function PlanMyWeekButton({
                 {results.map((s) => {
                   const t = tasks.find((x) => x.id === s.id);
                   if (!t) return null;
+                  const currentQ = Number(classify(t).slice(1));
                   return (
                     <li
                       key={s.id}
@@ -455,9 +456,9 @@ function PlanMyWeekButton({
                         <div className="text-xs text-muted-fg mt-1 space-y-1">
                           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[11px]">
                             <span>
-                              <span className="text-muted-fg/60">Q{t.quadrant ?? "—"}</span>
+                              <span className="text-muted-fg/60">Q{currentQ}</span>
                               <span className="mx-1 text-muted-fg/40">→</span>
-                              <span className={cn(t.quadrant !== s.quadrant ? "text-fg font-medium" : "text-muted-fg/70")}>Q{s.quadrant}</span>
+                              <span className={cn(currentQ !== s.quadrant ? "text-fg font-medium" : "text-muted-fg/70")}>Q{s.quadrant}</span>
                             </span>
                             <span>
                               <span className="text-muted-fg/60">p{t.priority ?? 0}</span>
