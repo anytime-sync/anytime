@@ -912,8 +912,9 @@ function DayView({
   const { data: dayEvents = [] } = useCalendarEvents({ from: dayStart, to: dayEnd });
   const dayTasks = tasks
     .filter((t) => {
-      if (!t.due_at) return false;
-      const due = new Date(t.due_at);
+      const anchor = t.due_at ?? t.start_at;
+      if (!anchor) return false;
+      const due = new Date(t.due_at ?? t.start_at!);
       // For multi-day tasks, treat the task as active on every day its
       // [start_at, due_at] interval overlaps — not only the due day.
       const start = t.start_at ? new Date(t.start_at) : due;
@@ -921,8 +922,10 @@ function DayView({
     })
     .sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
-      const ad = a.due_at ? new Date(a.due_at).getTime() : 0;
-      const bd = b.due_at ? new Date(b.due_at).getTime() : 0;
+      const aAnchor = a.due_at ?? a.start_at;
+      const ad = aAnchor ? new Date(aAnchor).getTime() : 0;
+      const bAnchor = b.due_at ?? b.start_at;
+      const bd = bAnchor ? new Date(bAnchor).getTime() : 0;
       if (a.is_all_day && !b.is_all_day) return -1;
       if (!a.is_all_day && b.is_all_day) return 1;
       return ad - bd;
