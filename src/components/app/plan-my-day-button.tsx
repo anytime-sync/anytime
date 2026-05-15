@@ -18,6 +18,19 @@ import { t as tr } from "@/lib/i18n";
  * 6-12 word reason for each. User can apply individually or "Apply all"
  * to commit the new priorities + due_at changes.
  */
+const Q_LABEL: Record<number, string> = {
+  1: "Do first",
+  2: "Schedule",
+  3: "Delegate",
+  4: "Eliminate",
+};
+const P_LABEL: Record<number, string> = {
+  0: "None",
+  1: "Low",
+  3: "Medium",
+  5: "High",
+};
+
 export function PlanMyDayButton() {
   const lang = useLanguage();
   const { data: allTasks = [] } = useTasks({});
@@ -175,24 +188,24 @@ export function PlanMyDayButton() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             {currentQ !== s.quadrant ? (
                               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
-                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">Q{currentQ}</span>
+                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">{Q_LABEL[currentQ] ?? `Q${currentQ}`}</span>
                                 <span className="text-[#8D6F2A]">→</span>
-                                <span className="text-[#5C4516] font-bold">Q{s.quadrant}</span>
+                                <span className="text-[#5C4516] font-bold">{Q_LABEL[s.quadrant] ?? `Q${s.quadrant}`}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
-                                Q{currentQ}
+                                {Q_LABEL[currentQ] ?? `Q${currentQ}`}
                               </span>
                             )}
                             {(t.priority ?? 0) !== s.suggested_priority ? (
                               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
-                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">p{t.priority ?? 0}</span>
+                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">{P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}</span>
                                 <span className="text-[#8D6F2A]">→</span>
-                                <span className="text-[#5C4516] font-bold">p{s.suggested_priority}</span>
+                                <span className="text-[#5C4516] font-bold">{P_LABEL[s.suggested_priority] ?? `p${s.suggested_priority}`}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
-                                p{t.priority ?? 0}
+                                {P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}
                               </span>
                             )}
                             {t.due_at && (
