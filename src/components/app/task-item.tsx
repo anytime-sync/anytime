@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Calendar, Clock, Flag, Hash, ListTree, Repeat, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, Clock, Flag, Hash, ListTree, Repeat, Trash2, Users } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { useDeleteTask, useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
@@ -26,6 +27,25 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
   // dnd-kit TouchSensor (configured in SortableTaskList) requires a
   // 250ms hold to begin a reorder, so a quick swipe never competes.
   const del = useDeleteTask();
+  // Look up the share-group name for the badge. React Query dedupes across rows so
+  // 100 task-items still trigger exactly one fetch.
+  const { data: shareGroupsMap = {} } = useQuery<Record<string, string>>({
+    queryKey: ["share-groups", "names"],
+    queryFn: async () => {
+      const r = await fetch("/api/share-groups");
+      if (!r.ok) return {};
+      const j = await r.json();
+      const map: Record<string, string> = {};
+      for (const row of ((j.rows ?? []) as Array<{ group?: { id?: string; name?: string } | null }>)) {
+        if (row?.group?.id && row?.group?.name) map[row.group.id] = row.group.name;
+      }
+      return map;
+    },
+    staleTime: 60_000,
+  });
+  const shareGroupId: string | null = (task as { share_group_id?: string | null }).share_group_id ?? null;
+  const shareGroupName = shareGroupId ? shareGroupsMap[shareGroupId] ?? null : null;
+
   const [swipeX, setSwipeX] = useState(0);
   const [swipeAnim, setSwipeAnim] = useState(false);
   const [swiping, setSwiping] = useState(false);
@@ -154,6 +174,12 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
           )}
         >
           {task.title}
+          {shareGroupName && (
+            <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-medium align-middle leading-none">
+              <Users className="size-2.5" aria-hidden="true" />
+              {shareGroupName}
+            </span>
+          )}
         </div>
         <TranslatedSubtitle
           taskId={task.id}
