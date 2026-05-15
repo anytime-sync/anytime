@@ -58,14 +58,14 @@ export function DemoCarousel() {
             {/* 1 ── Daily Edition: the morning brief */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50/60 to-stone-50 shadow-sm">
               <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TUESDAY MORNING BRIEF</p>
-                <p className="font-display text-base md:text-lg leading-tight text-stone-800">An open day asks its own kind of question.</p>
-                <div className="h-px bg-accent/40 w-10" />
-                <p className="text-[11px] text-stone-600 leading-snug">Nothing is scheduled. Nothing is due. That is either a gift or a gap.</p>
-                <div className="mt-auto bg-white border border-stone-200 rounded-md p-2.5 text-[10px] shadow-sm">
-                  <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">A QUESTION FOR YOU</p>
-                  <p className="text-stone-700 leading-snug">Is this day genuinely free, or have the things that matter simply not been written down yet?</p>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TUESDAY · OPEN DAY</p>
+                  <p className="text-[8px] text-stone-400">May 13</p>
                 </div>
+                <p className="font-display text-base md:text-lg leading-tight text-stone-800">An open day asks its own kind of question.</p>
+                <p className="text-[11px] text-stone-700 leading-snug">Nothing is scheduled. Nothing is due. The morning is yours to shape — start with the Q4 doc while the room is still quiet.</p>
+                <p className="text-[10px] text-stone-600 leading-snug">Two windows of deep work fit cleanly before the 3pm review. Maya's note on cross-team framing is worth a second read first.</p>
+                <p className="text-[10px] italic text-stone-500 border-t border-stone-200/70 pt-1.5 mt-auto leading-snug">Three of your last five wins started in mornings exactly like this one.</p>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Daily Edition</p>
@@ -77,56 +77,89 @@ export function DemoCarousel() {
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
               <div className="aspect-[4/3] p-5 flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
-                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TODAY · 4 ITEMS</p>
-                  <p className="text-[8px] text-stone-400">AI · ROUND 1</p>
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">PLAN MY DAY · 4 ITEMS</p>
                 </div>
-                <p className="text-[11px] text-stone-700 italic leading-snug">Tackle the overdue model first, then anchor both p0 meetings before lunch — afternoon reserved for product work.</p>
+                <p className="text-[10px] text-stone-700 italic leading-snug">Tackle the overdue doc first, then anchor both meetings before lunch. Afternoon protected for deep work.</p>
                 <div className="space-y-1.5">
                   <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
                     <p className="text-stone-800 font-medium truncate">Model SKP scenarios</p>
-                    <p className="text-stone-500 text-[8px]">Q1 · p5 · Overdue 3 days — blocks downstream decisions.</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[8px] leading-none">
+                        <span className="line-through opacity-70" style={{ color: "#8D6F2A" }}>Schedule</span>
+                        <span style={{ color: "#8D6F2A" }}>→</span>
+                        <span className="font-bold" style={{ color: "#5C4516" }}>Do first</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">High</span>
+                    </div>
                   </div>
                   <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <p className="text-stone-800 font-medium truncate">ASM Meeting</p>
-                    <p className="text-stone-500 text-[8px]">Q1 · p5 · Anchor the morning — fixed calendar slot.</p>
+                    <p className="text-stone-800 font-medium truncate">ASM review</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">Do first</span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">High</span>
+                    </div>
                   </div>
                   <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <p className="text-stone-800 font-medium truncate">Camillia Meeting</p>
-                    <p className="text-stone-500 text-[8px]">Q2 · p3 · High-signal — schedule after ASM.</p>
+                    <p className="text-stone-800 font-medium truncate">Reply to Maya</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[8px] leading-none">
+                        <span className="line-through opacity-70" style={{ color: "#8D6F2A" }}>Do first</span>
+                        <span style={{ color: "#8D6F2A" }}>→</span>
+                        <span className="font-bold" style={{ color: "#5C4516" }}>Delegate</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">Low</span>
+                    </div>
                   </div>
                   <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px]">
-                    <p className="text-stone-800 font-medium truncate">BC product RL</p>
-                    <p className="text-stone-500 text-[8px]">Q2 · p3 · Deep work — fits afternoon if meetings land.</p>
+                    <p className="text-stone-800 font-medium truncate">BC product reading</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">Schedule</span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-stone-100 text-[8px] text-stone-500 leading-none">Medium</span>
+                    </div>
                   </div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Plan my day</p>
-                <p className="text-xs text-muted-fg">AI sequences work around your real energy peaks.</p>
+                <p className="text-xs text-muted-fg">AI re-sorts today's work into the four quadrants — apply each, or all.</p>
               </figcaption>
             </figure>
 
-            {/* 3 ── Morning Co-pilot: conversational briefing */}
+            {/* 3 ── Morning Co-pilot: editorial brief with suggested actions */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">CO-PILOT · 7:42 AM</p>
-                <div className="flex gap-2 items-start">
-                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center shrink-0">
-                    <span className="text-[9px] text-accent font-semibold">FL</span>
-                  </div>
-                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-3 py-2 text-[11px] text-stone-700 leading-snug">Your only fixed thing today is the 3pm review. Two open windows for deep work — 9–11 and 1–3. Want me to slot Q4 doc?</div>
+              <div className="aspect-[4/3] p-5 flex flex-col gap-1.5">
+                <div className="flex items-baseline justify-between">
+                  <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">CO-PILOT · TUESDAY</p>
+                  <p className="text-[8px] text-stone-400">May 13</p>
                 </div>
-                <div className="bg-accent/20 rounded-2xl rounded-br-sm px-3 py-2 text-[11px] text-stone-800 ml-auto max-w-[80%]">Yes, and move the 4pm to tomorrow.</div>
-                <div className="flex gap-2 items-start">
-                  <div className="size-6 rounded-full bg-accent/30 grid place-items-center shrink-0">
-                    <span className="text-[9px] text-accent font-semibold">FL</span>
-                  </div>
-                  <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-sm px-3 py-2 text-[11px] text-stone-700">Done. Your day is two long blocks and one short meeting.</div>
+                <p className="font-display text-[13px] leading-tight text-stone-800">Three things you could let go of.</p>
+                <p className="text-[10px] text-stone-700 leading-snug">Your morning is heavier than last week. A few items below could move or close cleanly.</p>
+                <ul className="space-y-1 mt-0.5">
+                  <li className="flex items-start gap-1.5 text-[9px] leading-snug">
+                    <input type="checkbox" defaultChecked readOnly className="size-2.5 mt-0.5 accent-stone-700 shrink-0" />
+                    <span className="text-[8px] tracking-wide uppercase text-stone-500 shrink-0">Defer</span>
+                    <span className="text-stone-700 flex-1 min-w-0">3pm review fits Thursday better.</span>
+                  </li>
+                  <li className="flex items-start gap-1.5 text-[9px] leading-snug">
+                    <input type="checkbox" defaultChecked readOnly className="size-2.5 mt-0.5 accent-stone-700 shrink-0" />
+                    <span className="text-[8px] tracking-wide uppercase text-stone-500 shrink-0">Batch</span>
+                    <span className="text-stone-700 flex-1 min-w-0">Two Slack replies can move together.</span>
+                  </li>
+                  <li className="flex items-start gap-1.5 text-[9px] leading-snug">
+                    <input type="checkbox" readOnly className="size-2.5 mt-0.5 accent-stone-700 shrink-0" />
+                    <span className="text-[8px] tracking-wide uppercase text-stone-500 shrink-0">Drop</span>
+                    <span className="text-stone-700 flex-1 min-w-0">Inbox-zero ritual didn't earn its slot.</span>
+                  </li>
+                </ul>
+                <p className="text-[9px] italic text-stone-500 border-t border-stone-200/70 pt-1.5 mt-auto leading-snug">Apply the two you agree with — I'll handle the moves.</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[8px] px-2 py-0.5 rounded bg-stone-800 text-white">Apply</span>
+                  <span className="text-[8px] px-2 py-0.5 text-stone-500">Snooze</span>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Morning Co-pilot</p>
-                <p className="text-xs text-muted-fg">Talk to your day. It rearranges itself.</p>
+                <p className="text-xs text-muted-fg">Proactive nudges with one-click apply — defer, drop, batch, reschedule.</p>
               </figcaption>
             </figure>
 
@@ -235,34 +268,41 @@ export function DemoCarousel() {
 
             {/* 7 ── Voice → Task & Snapshot → Task */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2.5">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SAY IT · SHOOT IT</p>
-                <p className="font-display text-base text-stone-800">Capture without typing.</p>
-                <div className="bg-white border border-stone-200 rounded-xl p-3 flex items-center gap-3">
-                  <div className="size-9 rounded-full bg-accent/20 grid place-items-center shrink-0">
-                    <div className="size-4 rounded-full bg-accent" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-0.5 h-3 mb-0.5">
-                      {[3,5,8,12,9,6,4,7,10,8,5,3,7,9,4].map((h, i) => (
-                        <div key={i} className="w-0.5 bg-accent/60 rounded-full" style={{ height: h + "px" }} />
+                <div className="bg-white border border-stone-200 rounded-xl p-2.5 flex items-center gap-2">
+                  <div className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-rose-500 text-white shrink-0">
+                    <div className="size-2.5 rounded-full bg-white" />
+                    <span className="flex items-end gap-[1.5px] h-3">
+                      {[5,8,12,7,4].map((h, i) => (
+                        <span key={i} className="w-[2px] bg-white rounded-full" style={{ height: h + "px" }} />
                       ))}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-700 italic truncate flex-1 min-w-0">“Draft Q4 strategy doc by Thursday 5pm”</p>
+                </div>
+                <div className="text-[9px] text-stone-400 text-center">↓ AI parses</div>
+                <div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 text-[10px] flex items-start gap-2">
+                  <div className="size-3.5 rounded-full border-2 border-stone-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-stone-800 font-medium truncate">Draft Q4 strategy doc</p>
+                    <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                      <span className="text-[8px] italic text-stone-500">Thu · 5:00 PM</span>
+                      <span className="text-[8px] italic text-stone-500">· High</span>
                     </div>
-                    <p className="text-[10px] text-stone-600 italic truncate">"Reschedule team sync to Thursday 3pm"</p>
                   </div>
                 </div>
-                <div className="text-[9px] text-stone-400 text-center">↓</div>
-                <div className="bg-accent/10 border border-accent/40 rounded-md px-2 py-1.5 text-[10px]">
-                  <p className="text-stone-800 font-medium">Team sync</p>
-                  <p className="text-stone-500 text-[9px]">Thu · 3:00 PM · GCal event</p>
+                <div className="flex items-center gap-1.5 mt-auto pt-1">
+                  <span className="text-[8px] tracking-[0.18em] text-stone-400">OR</span>
+                  <span className="text-[9px] text-stone-600">Snapshot a whiteboard →</span>
+                  <span className="text-[8px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">5 tasks</span>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-                <p className="font-medium text-sm">Voice → Task</p>
-                <p className="text-xs text-muted-fg">Speak or photograph; we extract the structure.</p>
+                <p className="font-medium text-sm">Voice → Task · Snapshot → Task</p>
+                <p className="text-xs text-muted-fg">Speak or photograph; AI extracts a task with the right date and priority.</p>
               </figcaption>
             </figure>
-
 
             {/* 8 ── Notes → Task: convert note to task in one click */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
@@ -371,27 +411,31 @@ export function DemoCarousel() {
               <div className="aspect-[4/3] p-5 flex flex-col gap-2 justify-center">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500 mb-2">PUSH · BROWSER + PWA</p>
                 <div className="bg-stone-900/95 text-white rounded-xl p-3 text-[10px] flex items-start gap-2 shadow-lg">
-                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold">FL</div>
+                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold shrink-0">FL</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between">
-                      <p className="text-white/60 text-[8px]">First Light</p>
+                      <p className="text-white/60 text-[8px]">firstlight.to</p>
                       <p className="text-white/40 text-[7px]">now</p>
                     </div>
-                    <p className="font-medium">Deep-work window opens in 10 min.</p>
-                    <p className="text-white/70 text-[9px] truncate">Q4 doc is queued — start at 9.</p>
+                    <p className="font-medium">Draft Q4 strategy doc</p>
+                    <p className="text-white/70 text-[9px] truncate">First Light · Reminder</p>
                   </div>
                 </div>
                 <div className="bg-stone-900/85 text-white rounded-xl p-3 text-[10px] flex items-start gap-2 shadow-lg mt-2 ml-4 opacity-70">
-                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold">FL</div>
+                  <div className="size-8 rounded-md bg-accent grid place-items-center text-[11px] font-semibold shrink-0">FL</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white/60 text-[8px]">First Light · 5m ago</p>
-                    <p className="truncate">3pm review starts in 15 min.</p>
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-white/60 text-[8px]">firstlight.to</p>
+                      <p className="text-white/40 text-[7px]">5m</p>
+                    </div>
+                    <p className="font-medium truncate">Review with Maya</p>
+                    <p className="text-white/70 text-[9px] truncate">First Light · Reminder</p>
                   </div>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Push notifications</p>
-                <p className="text-xs text-muted-fg">Quiet nudges — browser, PWA, mobile. Never spammy.</p>
+                <p className="text-xs text-muted-fg">Per-task reminders — browser, PWA, mobile. Only when you ask for one.</p>
               </figcaption>
             </figure>
 
@@ -417,18 +461,16 @@ export function DemoCarousel() {
 
             {/* 14 ── Email reminders */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
-              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+              <div className="aspect-[4/3] p-4 flex flex-col gap-1.5">
                 <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">PER-TASK · IF YOU SET ONE</p>
-                <div className="bg-white border border-stone-200 rounded-md p-2.5 text-[10px] shadow-sm flex-1">
-                  <div className="flex items-center gap-2 pb-2 border-b border-stone-100">
-                    <div className="size-6 rounded-md bg-accent/30 grid place-items-center text-[9px] text-accent font-semibold">FL</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[8px] text-stone-400">First Light · noreply@firstlight.to</p>
-                      <p className="font-medium truncate text-stone-800">Reminder: Q4 strategy doc — 5pm</p>
-                    </div>
+                <div className="rounded-md border border-stone-200 shadow-sm flex-1 flex flex-col p-3" style={{ background: "#FAF7F2" }}>
+                  <p className="editorial-number text-[7px] tracking-[0.22em] text-stone-500">FIRST LIGHT · REMINDER</p>
+                  <p className="font-display text-sm text-stone-800 leading-tight mt-1.5">Draft Q4 strategy doc</p>
+                  <p className="text-[9px] text-stone-500 mt-1"><span className="text-stone-400">Due · </span>Thursday, May 15 · 17:00</p>
+                  <div className="mt-auto pt-3">
+                    <span className="inline-block text-[9px] text-white px-2.5 py-1 rounded" style={{ background: "#C89B5A" }}>Open in First Light →</span>
                   </div>
-                  <p className="text-stone-700 mt-2 leading-snug">Due at 5:00 PM today. The doc is open at firstlight.to/app/today.</p>
-                  <p className="text-[8px] text-stone-400 mt-2">Snooze · Done · Manage reminders</p>
+                  <p className="text-[7px] text-stone-400 mt-2 leading-snug border-t border-stone-200/70 pt-1.5">First Light · Reminder. <span className="underline">Unsubscribe</span></p>
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
