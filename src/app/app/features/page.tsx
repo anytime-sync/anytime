@@ -103,7 +103,7 @@ export default function FeaturesPage() {
                     href="/pricing#plus"
                     className="btn-ghost h-10 px-4 inline-flex items-center"
                   >
-                    Plus — $4 / month
+                    Upgrade to Plus— $4 / month
                   </Link>
                   <button
                     onClick={() => checkout.mutate()}
@@ -113,8 +113,8 @@ export default function FeaturesPage() {
                     {checkout.isPending
                       ? "Redirecting…"
                       : priceLoading
-                      ? "Pro — $9 / month"
-                      : `Pro — ${pro?.formatted ?? "$9 / month"}`}
+                      ? "Upgrade to Pro— $9 / month"
+                      : `Upgrade to Pro— ${pro?.formatted ?? "$9 / month"}`}
                   </button>
                 </>
               )}
