@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: { token: string } }
 ) {
   const token = params.token?.replace(/\.ics$/, "").trim();
-  if (!token || token.length < 16) {
+  if (!token || token.length < 32) {
     return new NextResponse("not found", { status: 404 });
   }
 
