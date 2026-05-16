@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     const { data: existing } = await supabase
       .from("projects")
       .select("id, name")
+      .eq("user_id", u.user!.id)
       .in("name", listNames);
     for (const p of existing ?? []) projectIdByName.set(p.name, p.id);
     const missing = listNames.filter((n) => !projectIdByName.has(n));
