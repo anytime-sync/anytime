@@ -42,7 +42,7 @@ export default function PricingPage() {
       {/* Top bar */}
       <header className="border-b border-border">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-display text-xl tracking-tight">
+          <Link href="/" className="wordmark text-base">
             First Light
           </Link>
           <nav className="flex items-center gap-4 text-sm">
