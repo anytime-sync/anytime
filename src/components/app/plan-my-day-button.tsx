@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format, isToday, isPast, endOfDay } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
@@ -32,6 +33,8 @@ const P_LABEL: Record<number, string> = {
 };
 
 export function PlanMyDayButton() {
+  const aiEnabled = useCanUseFeature("ai_plan_my_day");
+  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data: allTasks = [] } = useTasks({});
   const update = useUpdateTask();
