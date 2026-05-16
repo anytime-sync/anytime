@@ -97,11 +97,7 @@ export default function PrivacyPage() {
         </Section>
 
         <p className="text-xs text-muted-fg pt-8 border-t border-border">
-          Built with care, hosted on Vercel + Supabase. The source for First
-          Light is open at{" "}
-          <a href="https://github.com/anytime-sync/anytime" className="hover:text-fg underline">
-            github.com/anytime-sync/anytime
-          </a>.
+          First Light is operated and hosted on enterprise-grade infrastructure. For questions about this Privacy Policy, contact support through the app or via your account settings.
         </p>
       </div>
     </main>
