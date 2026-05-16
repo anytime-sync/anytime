@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getLanguage, t, type StringKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 import { cn } from "@/lib/utils";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 
 // Map an action kind to its translation key + icon. Centralised so the
 // chip and the row label stay in sync and a future kind only needs a
@@ -66,6 +67,8 @@ function ActionIcon({ kind }: { kind: MorningCopilotActionKind }) {
 }
 
 export function MorningCopilotCard() {
+  const aiEnabled = useCanUseFeature("ai_morning_copilot");
+  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data: prefs } = useUserPrefs();
   const locale = getLanguage(prefs?.language).dateFnsLocale;
