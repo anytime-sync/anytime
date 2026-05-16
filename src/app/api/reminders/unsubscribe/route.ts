@@ -46,7 +46,10 @@ export async function GET(req: Request) {
 
   if (error) {
     console.error("[reminders.unsubscribe]", error);
-    return new NextResponse(htmlPage("Could not unsubscribe", error.message), {
+    // Defense-in-depth: HTML-escape the Supabase error message before
+    // interpolating into the response page.
+    const safeMsg = String(error.message).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;"})[c] ?? c);
+    return new NextResponse(htmlPage("Could not unsubscribe", safeMsg), {
       status: 500, headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
