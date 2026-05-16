@@ -368,6 +368,32 @@ export function useToggleTask() {
             new Date(task.start_at).getTime() + delta
           ).toISOString();
         }
+        // Log this occurrence as a completed historical record so streaks,
+        // weekly retros, and the Completed view count the recurring
+        // completion. The live row keeps its id and slides forward (below);
+        // the clone is a one-off without rrule.
+        void (async () => {
+          try {
+            const sb = createClient();
+            const { data: u } = await sb.auth.getUser();
+            if (!u.user) return;
+            await sb.from("tasks").insert({
+              user_id: u.user.id,
+              project_id: task.project_id,
+              title: task.title,
+              notes: task.notes,
+              priority: task.priority,
+              due_at: task.due_at,
+              start_at: task.start_at,
+              is_all_day: task.is_all_day,
+              is_completed: true,
+              completed_at: new Date().toISOString(),
+              position: 0,
+            });
+          } catch (e) {
+            console.error("[useToggleTask] recurring log clone failed", e);
+          }
+        })();
         update.mutate(patch);
         return;
       }
