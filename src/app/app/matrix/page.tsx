@@ -11,6 +11,7 @@ import {
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
@@ -343,6 +344,8 @@ function PlanMyWeekButton({
   onApply: (id: string, q: QuadrantKey, suggestedPriority: 0 | 1 | 3 | 5) => void;
   lang: string;
 }) {
+  const aiEnabled = useCanUseFeature("ai_plan_my_week");
+  if (!aiEnabled) return null;
   const planMutation = usePlanWeek();
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<PlanWeekSuggestion[] | null>(null);
