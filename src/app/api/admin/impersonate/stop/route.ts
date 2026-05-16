@@ -14,7 +14,23 @@ export const dynamic = "force-dynamic";
  *
  * Idempotent: if there's no snapshot, returns ok with no_session_to_restore.
  */
-export async function POST() {
+export async function POST(req: Request) {
+  // CSRF protection: only allow same-origin POSTs. Without this, any
+  // cross-origin page that lures an admin into a fetch can force-end
+  // their impersonation session (or worse, trigger cookie restoration
+  // race conditions). Same-origin is sufficient because Supabase auth
+  // cookies are httpOnly + SameSite=Lax.
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("host");
+  if (origin && host) {
+    try {
+      if (new URL(origin).host !== host) {
+        return NextResponse.json({ error: "bad_origin" }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ error: "bad_origin" }, { status: 403 });
+    }
+  }
   const cookieStore = await cookies();
   const baseCookieOpts = {
     maxAge: 30 * 24 * 60 * 60,
