@@ -47,7 +47,7 @@ export async function GET() {
     const sb = supaService();
     const { data, error } = await sb
       .from("feature_flags")
-      .select("feature_id,override_plan,disabled,note,updated_at,updated_by")
+      .select("feature_id,override_plan,disabled,note,updated_at,updated_by,enabled_free,enabled_plus,enabled_pro,enabled_vip")
       .order("feature_id");
     if (error) throw error;
     return NextResponse.json({ flags: data ?? [] });
@@ -68,6 +68,10 @@ export async function PUT(req: Request) {
     override_plan?: "free" | "plus" | "pro" | "vip" | "team" | null;
     disabled?: boolean;
     note?: string | null;
+    enabled_free?: boolean | null;
+    enabled_plus?: boolean | null;
+    enabled_pro?: boolean | null;
+    enabled_vip?: boolean | null;
   };
   try {
     body = await req.json();
@@ -92,13 +96,22 @@ export async function PUT(req: Request) {
   }
   const disabled = !!body.disabled;
   const note = body.note ?? null;
+  const enabled_free = body.enabled_free === undefined ? null : body.enabled_free;
+  const enabled_plus = body.enabled_plus === undefined ? null : body.enabled_plus;
+  const enabled_pro  = body.enabled_pro  === undefined ? null : body.enabled_pro;
+  const enabled_vip  = body.enabled_vip  === undefined ? null : body.enabled_vip;
 
   try {
     const sb = supaService();
     // If both override_plan is null and disabled is false (a "no-op"), delete
     // the row so the table stays sparse and getEffectiveFeature falls back to
     // code default.
-    if (override_plan === null && !disabled && !note) {
+    const allPerPlanNull =
+      enabled_free === null &&
+      enabled_plus === null &&
+      enabled_pro === null &&
+      enabled_vip === null;
+    if (override_plan === null && !disabled && !note && allPerPlanNull) {
       await sb.from("feature_flags").delete().eq("feature_id", id);
     } else {
       const { error } = await sb.from("feature_flags").upsert({
@@ -106,6 +119,10 @@ export async function PUT(req: Request) {
         override_plan,
         disabled,
         note,
+        enabled_free,
+        enabled_plus,
+        enabled_pro,
+        enabled_vip,
         updated_by: auth.user.id,
       });
       if (error) throw error;
