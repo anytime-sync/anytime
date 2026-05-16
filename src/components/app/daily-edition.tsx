@@ -8,6 +8,7 @@ import { getLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 
 /**
  * The Daily Edition card — editorial AI briefing on the Today view.
@@ -21,6 +22,8 @@ import { t } from "@/lib/i18n";
  * Padding and headline size also scale down on mobile.
  */
 export function DailyEdition() {
+  const aiEnabled = useCanUseFeature("ai_daily_edition");
+  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data, isLoading, isError, error } = useDailyEdition();
   const regen = useRegenerateEdition();
