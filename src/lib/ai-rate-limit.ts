@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getUserPlan } from "./billing";
 
 /**
  * Per-user AI rate limiting. Daily budgets are intentionally generous
@@ -99,7 +100,14 @@ function secondsUntilUtcMidnight(): number {
 export async function checkAiBudget(userId: string, feature: AiFeature): Promise<
   { ok: true } | { ok: false; retryAfter: number; used: number; limit: number }
 > {
-  const supa = admin();
+
+  // Plan gate — AI features are Pro-only. Free / Plus users hit a hard
+  // limit (used:999, limit:0). The frontend can detect limit===0 to show
+  // an Upgrade-to-Pro CTA instead of a "rate limited" message.
+  const plan = await getUserPlan(userId);
+  if (plan !== "pro" && plan !== "team") {
+    return { ok: false, retryAfter: secondsUntilUtcMidnight(), used: 999, limit: 0 };
+  }  const supa = admin();
   const limit = AI_DAILY_LIMITS[feature];
   const sinceIso = startOfUtcDay();
 
