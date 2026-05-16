@@ -95,8 +95,7 @@ export function MorningCopilotCard() {
   // mount adds noise. Quiet failure mode.
   if (isLoading) return null;
   if (isError) {
-    if (!aiEnabled) return null;
-  return (
+    return (
       <article className="rounded-xl border border-border surface p-4 mb-4 text-sm text-muted-fg">
         <p>
           {t(lang, "copilot.errLoad")}{" "}
@@ -228,6 +227,7 @@ export function MorningCopilotCard() {
     locale,
   });
 
+  if (!aiEnabled) return null;
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-4">
       {/* Kicker + date */}
