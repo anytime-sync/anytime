@@ -105,7 +105,7 @@ export async function checkAiBudget(userId: string, feature: AiFeature): Promise
   // limit (used:999, limit:0). The frontend can detect limit===0 to show
   // an Upgrade-to-Pro CTA instead of a "rate limited" message.
   const plan = await getUserPlan(userId);
-  if (plan !== "pro" && plan !== "team") {
+  if (plan !== "pro" && plan !== "team" && plan !== "vip") {
     return { ok: false, retryAfter: secondsUntilUtcMidnight(), used: 999, limit: 0 };
   }  const supa = admin();
   const limit = AI_DAILY_LIMITS[feature];
