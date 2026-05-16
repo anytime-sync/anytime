@@ -146,15 +146,6 @@ export default function Home() {
       <DesignSlot id="landing.footer" as="footer" className="px-6 py-8 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
           <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
-          <DesignSlot
-            id="landing.footer.source"
-            as="a"
-            textKey="landing.footerSource"
-            href="https://github.com/anytime-sync/anytime"
-            className="hover:text-fg"
-          >
-            {t(lang, "landing.footerSource")}
-          </DesignSlot>
         </div>
       </DesignSlot>
 
