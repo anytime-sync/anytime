@@ -68,7 +68,6 @@ function ActionIcon({ kind }: { kind: MorningCopilotActionKind }) {
 
 export function MorningCopilotCard() {
   const aiEnabled = useCanUseFeature("ai_morning_copilot");
-  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data: prefs } = useUserPrefs();
   const locale = getLanguage(prefs?.language).dateFnsLocale;
@@ -96,7 +95,8 @@ export function MorningCopilotCard() {
   // mount adds noise. Quiet failure mode.
   if (isLoading) return null;
   if (isError) {
-    return (
+    if (!aiEnabled) return null;
+  return (
       <article className="rounded-xl border border-border surface p-4 mb-4 text-sm text-muted-fg">
         <p>
           {t(lang, "copilot.errLoad")}{" "}
