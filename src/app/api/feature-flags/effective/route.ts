@@ -34,14 +34,20 @@ export async function GET() {
     });
     const { data, error } = await svc
       .from("feature_flags")
-      .select("feature_id")
-      .eq("disabled", true);
+      .select("feature_id,override_plan,disabled,enabled_free,enabled_plus,enabled_pro,enabled_vip");
     if (error) throw error;
-    const disabled = (data ?? []).map(
-      (r: { feature_id: string }) => r.feature_id,
-    );
+    const rows = (data ?? []) as Array<{
+      feature_id: string;
+      override_plan: string | null;
+      disabled: boolean;
+      enabled_free: boolean | null;
+      enabled_plus: boolean | null;
+      enabled_pro: boolean | null;
+      enabled_vip: boolean | null;
+    }>;
+    const disabled = rows.filter((r) => r.disabled).map((r) => r.feature_id);
     return NextResponse.json(
-      { disabled },
+      { disabled, rows },
       {
         headers: {
           // Browsers can hold this for 30s; CDN can hold it too. The admin
@@ -57,7 +63,7 @@ export async function GET() {
     // Fail open: if we can't read the flags, behave as if nothing is disabled.
     // Better to over-show a link than to break the whole sidebar.
     return NextResponse.json(
-      { disabled: [] as string[], error: msg },
+      { disabled: [] as string[], rows: [], error: msg },
       { status: 200 },
     );
   }
