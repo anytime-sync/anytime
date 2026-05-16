@@ -29,6 +29,11 @@ export type FeatureFlagRow = {
   note: string | null;
   updated_at: string;
   updated_by: string | null;
+  /** Per-plan explicit overrides. NULL means "fall back to minPlan rule". */
+  enabled_free: boolean | null;
+  enabled_plus: boolean | null;
+  enabled_pro: boolean | null;
+  enabled_vip: boolean | null;
 };
 
 let cached: { rows: FeatureFlagRow[]; at: number } | null = null;
@@ -49,7 +54,7 @@ async function loadFlags(force = false): Promise<FeatureFlagRow[]> {
     const sb = service();
     const { data, error } = await sb
       .from("feature_flags")
-      .select("feature_id,override_plan,disabled,note,updated_at,updated_by");
+      .select("feature_id,override_plan,disabled,note,updated_at,updated_by,enabled_free,enabled_plus,enabled_pro,enabled_vip");
     if (error) throw error;
     const rows = (data ?? []) as FeatureFlagRow[];
     cached = { rows, at: Date.now() };
@@ -112,9 +117,40 @@ export async function canUseFeature(
   userPlan: Plan,
   featureId: string
 ): Promise<boolean> {
-  const f = await getEffectiveFeature(featureId);
-  if (!f) return false;
-  return planSatisfies(userPlan, f.minPlan);
+  const flags = await loadFlags();
+  const flag = flags.find((r) => r.feature_id === featureId);
+  if (flag?.disabled) return false;
+  const base = getStaticFeature(featureId);
+  if (!base) return false;
+  // Per-plan explicit override wins.
+  const override = isPlanEnabledByOverride(userPlan, flag);
+  if (override !== null) return override;
+  // Otherwise fall back to override_plan or static minPlan.
+  const minPlan = flag?.override_plan ?? base.minPlan;
+  return planSatisfies(userPlan, minPlan);
+}
+
+/**
+ * Resolve the per-plan boolean override for a single (userPlan, feature) pair.
+ * Returns true/false if the admin has explicitly set the column, or null to
+ * mean "no override, fall back to minPlan rule".
+ *
+ * Used by canUseFeature (server-side) and exposed via /api/feature-flags/
+ * effective so the client can hide UI without round-tripping to the gate.
+ */
+export function isPlanEnabledByOverride(
+  userPlan: Plan,
+  flag: FeatureFlagRow | undefined | null
+): boolean | null {
+  if (!flag) return null;
+  const col = (
+    userPlan === "free" ? flag.enabled_free :
+    userPlan === "plus" ? flag.enabled_plus :
+    userPlan === "pro"  ? flag.enabled_pro  :
+    userPlan === "vip"  ? flag.enabled_vip  :
+    /* team */            flag.enabled_pro // team inherits Pro
+  );
+  return col === null || col === undefined ? null : col;
 }
 
 /**
