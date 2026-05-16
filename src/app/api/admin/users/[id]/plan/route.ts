@@ -53,7 +53,7 @@ export async function PUT(
   }
 
   let body: {
-    plan?: "free" | "pro" | "vip" | "team" | null;
+    plan?: "free" | "plus" | "pro" | "vip" | "team" | null;
     reason?: string | null;
     expires_at?: string | null;
   };
