@@ -132,5 +132,5 @@ function cssEscapeAttr(s: string): string {
  */
 function escapeCssValue(v: string | undefined | null): string | undefined {
   if (v === undefined || v === null) return undefined;
-  return v.replace(/[};]/g, "");
+  return v.replace(/[};<>\r\n]/g, "");
 }
