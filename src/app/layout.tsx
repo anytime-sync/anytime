@@ -176,7 +176,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `window.__I18N_INITIAL_OVERRIDES = ${JSON.stringify(
               i18nOverrides
-            )};`,
+            ).replace(/</g, "\u003c")};`,
           }}
         />
         <LanguageBootstrap />
