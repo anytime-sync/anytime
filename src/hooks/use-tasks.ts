@@ -63,13 +63,13 @@ export function useTasks(filter: TasksFilter = {}) {
       endOf90.setDate(endOf90.getDate() + 90);
 
       if (filter.view === "today") {
-        q = q.lt("due_at", startOfTomorrow.toISOString());
+        q = q.or(`due_at.lt.${startOfTomorrow.toISOString()},and(due_at.is.null,start_at.lt.${startOfTomorrow.toISOString()})`);
       } else if (filter.view === "tomorrow") {
-        q = q.gte("due_at", startOfTomorrow.toISOString()).lt("due_at", endOfTomorrow.toISOString());
+        q = q.or(`and(due_at.gte.${startOfTomorrow.toISOString()},due_at.lt.${endOfTomorrow.toISOString()}),and(due_at.is.null,start_at.gte.${startOfTomorrow.toISOString()},start_at.lt.${endOfTomorrow.toISOString()})`);
       } else if (filter.view === "next7") {
-        q = q.lt("due_at", endOf7.toISOString());
+        q = q.or(`due_at.lt.${endOf7.toISOString()},and(due_at.is.null,start_at.lt.${endOf7.toISOString()})`);
       } else if (filter.view === "next90") {
-        q = q.lt("due_at", endOf90.toISOString());
+        q = q.or(`due_at.lt.${endOf90.toISOString()},and(due_at.is.null,start_at.lt.${endOf90.toISOString()})`);
       }
 
       const { data, error } = await q;
