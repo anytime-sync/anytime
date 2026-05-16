@@ -16,6 +16,10 @@ type FlagRow = {
   note: string | null;
   updated_at: string;
   updated_by: string | null;
+  enabled_free: boolean | null;
+  enabled_plus: boolean | null;
+  enabled_pro: boolean | null;
+  enabled_vip: boolean | null;
 };
 
 /**
@@ -52,6 +56,10 @@ export default function AdminFeatureFlagsPage() {
       override_plan: Plan | null;
       disabled: boolean;
       note?: string | null;
+      enabled_free?: boolean | null;
+      enabled_plus?: boolean | null;
+      enabled_pro?: boolean | null;
+      enabled_vip?: boolean | null;
     }) => {
       const r = await fetch("/api/admin/feature-flags", {
         method: "PUT",
@@ -113,53 +121,61 @@ export default function AdminFeatureFlagsPage() {
               </h2>
               <div className="surface border border-border rounded-lg overflow-hidden relative">
                 <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
-                <header className="grid grid-cols-[1fr_90px_120px_60px] items-center bg-muted/40 px-4 py-2 editorial-number text-[10px]">
+                <header className="grid grid-cols-[1fr_64px_72px_72px_72px_72px_44px] items-center bg-muted/40 px-4 py-2 editorial-number text-[10px] gap-1">
                   <span>Feature</span>
-                  <span>Default</span>
-                  <span>Override</span>
+                  <span className="text-center">Default</span>
+                  <span className="text-center">Free</span>
+                  <span className="text-center">Plus</span>
+                  <span className="text-center">Pro</span>
+                  <span className="text-center">VIP</span>
                   <span className="text-center">Off</span>
                 </header>
                 <ul className="divide-y divide-border">
                   {groups[cat].map((f) => {
                     const flag = flagFor(f.id);
+                    const triValue = (v: boolean | null | undefined): string =>
+                      v === true ? "on" : v === false ? "off" : "";
+                    const triParse = (s: string): boolean | null =>
+                      s === "on" ? true : s === "off" ? false : null;
+                    function savePlan(planKey: "enabled_free"|"enabled_plus"|"enabled_pro"|"enabled_vip", v: boolean | null) {
+                      setFlag.mutate({
+                        feature_id: f.id,
+                        override_plan: flag?.override_plan ?? null,
+                        disabled: !!flag?.disabled,
+                        note: flag?.note ?? null,
+                        enabled_free: planKey === "enabled_free" ? v : (flag?.enabled_free ?? null),
+                        enabled_plus: planKey === "enabled_plus" ? v : (flag?.enabled_plus ?? null),
+                        enabled_pro:  planKey === "enabled_pro"  ? v : (flag?.enabled_pro  ?? null),
+                        enabled_vip:  planKey === "enabled_vip"  ? v : (flag?.enabled_vip  ?? null),
+                      });
+                    }
                     return (
                       <li
                         key={f.id}
-                        className="grid grid-cols-[1fr_90px_120px_60px] items-center px-4 py-3 text-sm gap-2"
+                        className="grid grid-cols-[1fr_64px_72px_72px_72px_72px_44px] items-center px-4 py-3 text-sm gap-1"
                       >
                         <div>
-                          <p className="font-display text-base leading-tight">
-                            {f.label}
-                          </p>
-                          <p className="text-xs text-muted-fg mt-0.5 font-mono">
-                            {f.id}
-                          </p>
+                          <p className="font-display text-base leading-tight">{f.label}</p>
+                          <p className="text-xs text-muted-fg mt-0.5 font-mono">{f.id}</p>
                         </div>
-                        <div className="text-xs text-muted-fg uppercase">
-                          {f.minPlan}
-                        </div>
-                        <div>
-                          <select
-                            value={flag?.override_plan ?? ""}
-                            disabled={setFlag.isPending}
-                            onChange={(e) => {
-                              const v = e.target.value as "" | Plan;
-                              setFlag.mutate({
-                                feature_id: f.id,
-                                override_plan: v === "" ? null : v,
-                                disabled: !!flag?.disabled,
-                                note: flag?.note ?? null,
-                              });
-                            }}
-                            className="input h-8 text-xs w-full"
-                          >
-                            <option value="">Default</option>
-                            <option value="free">Free</option>
-                            <option value="plus">Plus</option>
-                            <option value="pro">Pro</option>
-                            <option value="vip">VIP</option>
-                          </select>
-                        </div>
+                        <div className="text-[10px] text-muted-fg uppercase text-center">{f.minPlan}</div>
+                        {(["enabled_free","enabled_plus","enabled_pro","enabled_vip"] as const).map((col) => {
+                          const cur = flag?.[col] ?? null;
+                          return (
+                            <select
+                              key={col}
+                              value={triValue(cur)}
+                              disabled={setFlag.isPending}
+                              onChange={(e) => savePlan(col, triParse(e.target.value))}
+                              className="input h-7 text-[11px] w-full px-1"
+                              title={`Override ${col.replace("enabled_","")} access for this feature. "—" falls back to the default tier rule.`}
+                            >
+                              <option value="">—</option>
+                              <option value="on">On</option>
+                              <option value="off">Off</option>
+                            </select>
+                          );
+                        })}
                         <div className="flex justify-center">
                           <input
                             type="checkbox"
@@ -171,9 +187,14 @@ export default function AdminFeatureFlagsPage() {
                                 override_plan: flag?.override_plan ?? null,
                                 disabled: e.target.checked,
                                 note: flag?.note ?? null,
+                                enabled_free: flag?.enabled_free ?? null,
+                                enabled_plus: flag?.enabled_plus ?? null,
+                                enabled_pro:  flag?.enabled_pro  ?? null,
+                                enabled_vip:  flag?.enabled_vip  ?? null,
                               });
                             }}
                             className="size-4"
+                            title="Disable this feature globally (overrides all per-plan toggles)"
                           />
                         </div>
                       </li>
