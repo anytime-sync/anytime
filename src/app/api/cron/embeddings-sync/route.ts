@@ -6,6 +6,7 @@ import {
   snippetForTask,
   syncEmbedding,
 } from "@/lib/embeddings";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
 async function handle(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(auth)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
