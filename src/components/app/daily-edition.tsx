@@ -23,7 +23,6 @@ import { useCanUseFeature } from "@/hooks/use-feature-access";
  */
 export function DailyEdition() {
   const aiEnabled = useCanUseFeature("ai_daily_edition");
-  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data, isLoading, isError, error } = useDailyEdition();
   const regen = useRegenerateEdition();
@@ -42,7 +41,8 @@ export function DailyEdition() {
   }, []);
 
   if (isLoading) {
-    return (
+    if (!aiEnabled) return null;
+  return (
       <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 animate-pulse">
         <div className="h-3 w-24 bg-muted rounded mb-3" />
         <div className="h-7 w-3/4 bg-muted rounded mb-3" />
