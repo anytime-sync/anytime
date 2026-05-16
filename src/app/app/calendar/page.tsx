@@ -515,8 +515,9 @@ function MonthView({
               // day chips.
               const dayMs = startOfDay(d).getTime();
               const dayTasks = tasks.filter((t) => {
-                if (!t.due_at) return false;
-                const due = startOfDay(new Date(t.due_at)).getTime();
+                const anchor = t.due_at ?? t.start_at;
+                if (!anchor) return false;
+                const due = startOfDay(new Date(t.due_at ?? t.start_at!)).getTime();
                 if (t.start_at) {
                   const start = startOfDay(new Date(t.start_at)).getTime();
                   if (start !== due) return false;
