@@ -71,6 +71,34 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        // First-line defense against the "paid but stayed on Free" race:
+        // checkout.session.completed reliably carries client_reference_id /
+        // metadata.user_id, even when the subsequent subscription.created
+        // arrives before Stripe has propagated its metadata.
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId =
+          session.client_reference_id ??
+          (session.metadata?.user_id as string | undefined) ??
+          null;
+        if (!userId || !session.subscription) {
+          return NextResponse.json({ ok: true, skipped: "incomplete_session" });
+        }
+        const subId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription.id;
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const row = subscriptionToRow(userId, sub);
+        const { error } = await service
+          .from("subscriptions")
+          .upsert(row, { onConflict: "user_id" });
+        if (error) {
+          console.error("[stripe webhook] checkout upsert failed", error);
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        break;
+      }
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
@@ -97,6 +125,25 @@ export async function POST(req: Request) {
           );
           return NextResponse.json({ ok: true, skipped: "no_user_id" });
         }
+        // Idempotency / out-of-order protection: skip if this event is older
+        // than the existing row's last update. Protects against Stripe retries
+        // delivering a stale subscription.updated after a newer one.
+        if (event.type === "customer.subscription.updated") {
+          const { data: existing } = await service
+            .from("subscriptions")
+            .select("updated_at")
+            .eq("user_id", userId)
+            .maybeSingle();
+          const existingUpdatedAt = (existing as { updated_at?: string } | null)?.updated_at;
+          if (existingUpdatedAt) {
+            const existingMs = new Date(existingUpdatedAt).getTime();
+            const eventMs = event.created * 1000;
+            if (eventMs < existingMs) {
+              return NextResponse.json({ ok: true, skipped: "stale_event" });
+            }
+          }
+        }
+        
         const row = subscriptionToRow(userId, sub);
         const { error } = await service
           .from("subscriptions")
