@@ -8,6 +8,7 @@ import {
   renderDigestText,
   type DigestTask,
 } from "@/lib/email/daily-digest-template";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,8 +29,7 @@ export async function POST(req: Request) { return handle(req); }
 
 async function handle(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!process.env.CRON_SECRET || auth !== expected) {
+  if (!isAuthorizedCron(auth)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const resend = getResend();
