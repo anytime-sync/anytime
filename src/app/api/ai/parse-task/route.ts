@@ -29,6 +29,7 @@ export async function POST(req: Request) {
   const text: string = (body.text ?? "").toString().trim();
   const tz: string = body.tz || "UTC";
   if (!text) return NextResponse.json({ error: "empty" }, { status: 400 });
+  if (text.length > 2000) return NextResponse.json({ error: "too_long", max: 2000 }, { status: 400 });
 
   // Read user's preferred language for prompt and title preservation.
   const { data: prefs } = await supabase
