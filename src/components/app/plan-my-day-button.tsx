@@ -34,7 +34,6 @@ const P_LABEL: Record<number, string> = {
 
 export function PlanMyDayButton() {
   const aiEnabled = useCanUseFeature("ai_plan_my_day");
-  if (!aiEnabled) return null;
   const lang = useLanguage();
   const { data: allTasks = [] } = useTasks({});
   const update = useUpdateTask();
@@ -130,6 +129,7 @@ export function PlanMyDayButton() {
     setResults(null);
   }
 
+  if (!aiEnabled) return null;
   return (
     <>
       <button
