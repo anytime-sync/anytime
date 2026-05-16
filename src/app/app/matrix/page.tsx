@@ -345,7 +345,6 @@ function PlanMyWeekButton({
   lang: string;
 }) {
   const aiEnabled = useCanUseFeature("ai_plan_my_week");
-  if (!aiEnabled) return null;
   const planMutation = usePlanWeek();
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<PlanWeekSuggestion[] | null>(null);
@@ -418,6 +417,7 @@ function PlanMyWeekButton({
     setResults(null);
   }
 
+  if (!aiEnabled) return null;
   return (
     <>
       <button
