@@ -109,7 +109,11 @@ export async function POST(
     });
   }
 
-  return NextResponse.json({ row: data });
+  // Strip invitee_user_id so callers cannot use this endpoint as an
+  // account-existence oracle (was returning whether the email is a
+  // registered user). Owner still sees full data via GET.
+  const { invitee_user_id: _ignored, ...safeRow } = (data ?? {}) as Record<string, unknown>;
+  return NextResponse.json({ row: safeRow });
 }
 
 /**
