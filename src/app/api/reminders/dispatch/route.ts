@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { getLanguage, t, type LanguageCode } from "@/lib/i18n";
 import { makeUnsubToken } from "@/lib/unsub-token";
 import webpush from "web-push";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,8 +36,7 @@ export async function POST(req: Request) { return handle(req); }
 
 async function handle(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!process.env.CRON_SECRET || auth !== expected) {
+  if (!isAuthorizedCron(auth)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
