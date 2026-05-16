@@ -10,10 +10,11 @@ import {
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useCalendarEvents } from "@/hooks/use-calendar";
+import { useCalendarEvents, useCalendarConnection } from "@/hooks/use-calendar";
 import { CalendarEventChip } from "@/components/app/calendar-event-chip";
 import { EventEditDialog } from "@/components/app/event-edit-dialog";
 import { EventTaskRow } from "@/components/app/event-task-row";
@@ -92,6 +93,7 @@ function MonthView({
     from: startOfDay(gridStart),
     to: endOfDay(gridEnd),
   });
+  const { data: gcalConn } = useCalendarConnection();
   // Group by day for O(1) cell lookup; key by yyyy-MM-dd in local TZ.
   const eventsByDay = useMemo(() => {
     const m = new Map<string, CalendarEvent[]>();
@@ -474,9 +476,13 @@ function MonthView({
           <div className="flex items-baseline gap-3 flex-wrap">
               <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">{format(cursor, "MMMM yyyy", { locale: dfLocale })}</h1>
               {/* Two-way GCal sync indicator — gold pill matches /pricing carousel mockup */}
-              <span className="editorial-number text-[10px] tracking-[0.18em] text-accent shrink-0">
-                ↔ G&#8209;CAL
-              </span>
+              <Link
+                href="/app/settings"
+                title={gcalConn?.connected ? "Two-way Google Calendar sync — click to manage in Settings" : "Click to connect Google Calendar"}
+                className="editorial-number text-[10px] tracking-[0.18em] text-accent shrink-0 hover:underline"
+              >
+                {gcalConn?.connected ? <>↔ G&#8209;CAL</> : <>Connect G&#8209;CAL →</>}
+              </Link>
             </div>
           <div className="flex">
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(subMonths(cursor, 1))}>
