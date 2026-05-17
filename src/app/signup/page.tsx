@@ -9,6 +9,7 @@ import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { FloatingLayer } from "@/lib/design/floating-layer";
 import { readStoredLanguage, t, type LanguageCode } from "@/lib/i18n";
+import { isPasswordBreached, validatePasswordStrength } from "@/lib/password-security";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -29,6 +30,19 @@ export default function SignupPage() {
     document.cookie = `fl.auth.persist=1; path=/; max-age=${
       60 * 60 * 24 * 365
     }; SameSite=Lax`;
+    // Password security (replaces the Pro-tier "Prevent use of leaked
+    // passwords" Supabase toggle on free tier). Local strength check first,
+    // then a HaveIBeenPwned k-anonymity lookup.
+    const strength = validatePasswordStrength(password);
+    if (!strength.ok) {
+      setLoading(false);
+      return toast.error(strength.reason);
+    }
+    const breached = await isPasswordBreached(password);
+    if (breached) {
+      setLoading(false);
+      return toast.error("This password has appeared in a known data breach. Please choose another.");
+    }
     const supabase = createClient();
     const { error, data } = await supabase.auth.signUp({
       email,
