@@ -13,6 +13,7 @@ import {
   t,
   type LanguageCode,
 } from "@/lib/i18n";
+import { isPasswordBreached, validatePasswordStrength } from "@/lib/password-security";
 
 type Mode = "login" | "signup";
 
@@ -252,6 +253,17 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
     document.cookie = `fl.auth.persist=1; path=/; max-age=${
       60 * 60 * 24 * 365
     }; SameSite=Lax`;
+    // Password security (replaces Supabase Pro's leaked-password toggle).
+    const strength = validatePasswordStrength(password);
+    if (!strength.ok) {
+      setLoading(false);
+      return toast.error(strength.reason);
+    }
+    const breached = await isPasswordBreached(password);
+    if (breached) {
+      setLoading(false);
+      return toast.error("This password has appeared in a known data breach. Please choose another.");
+    }
     const supabase = createClient();
     const { error, data } = await supabase.auth.signUp({
       email,
