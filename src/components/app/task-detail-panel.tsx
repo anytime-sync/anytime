@@ -190,13 +190,26 @@ export function TaskDetailPanel() {
                   id: task.id,
                   start_at: iso,
                 };
-                if (iso && task.start_at && task.due_at) {
-                  const newStart = new Date(iso).getTime();
-                  const oldStart = new Date(task.start_at).getTime();
-                  const oldDue = new Date(task.due_at).getTime();
-                  if (newStart > oldDue) {
-                    const delta = oldDue - oldStart;
-                    patch.due_at = new Date(newStart + delta).toISOString();
+                if (iso) {
+                  // Auto-fill empty due with the new start so a single-anchor
+                  // task always has both ends defined.
+                  if (!task.due_at) {
+                    patch.due_at = iso;
+                  } else if (task.start_at) {
+                    // Both ends existed: maintain original time-gap if the new
+                    // start would land after due.
+                    const newStartMs = new Date(iso).getTime();
+                    const oldStartMs = new Date(task.start_at).getTime();
+                    const oldDueMs = new Date(task.due_at).getTime();
+                    if (newStartMs > oldDueMs) {
+                      const delta = oldDueMs - oldStartMs;
+                      patch.due_at = new Date(newStartMs + delta).toISOString();
+                    }
+                  } else {
+                    // Start was empty: collapse due to new start when start > due.
+                    const newStartMs = new Date(iso).getTime();
+                    const oldDueMs = new Date(task.due_at).getTime();
+                    if (newStartMs > oldDueMs) patch.due_at = iso;
                   }
                 }
                 update.mutate(patch);
@@ -216,13 +229,21 @@ export function TaskDetailPanel() {
                   due_at: iso,
                   is_all_day: false,
                 };
-                if (iso && task.start_at && task.due_at) {
-                  const newDue = new Date(iso).getTime();
-                  const oldStart = new Date(task.start_at).getTime();
-                  const oldDue = new Date(task.due_at).getTime();
-                  if (newDue < oldStart) {
-                    const delta = oldDue - oldStart;
-                    patch.start_at = new Date(newDue - delta).toISOString();
+                if (iso) {
+                  if (!task.start_at) {
+                    patch.start_at = iso;
+                  } else if (task.due_at) {
+                    const newDueMs = new Date(iso).getTime();
+                    const oldStartMs = new Date(task.start_at).getTime();
+                    const oldDueMs = new Date(task.due_at).getTime();
+                    if (newDueMs < oldStartMs) {
+                      const delta = oldDueMs - oldStartMs;
+                      patch.start_at = new Date(newDueMs - delta).toISOString();
+                    }
+                  } else {
+                    const newDueMs = new Date(iso).getTime();
+                    const oldStartMs = new Date(task.start_at).getTime();
+                    if (newDueMs < oldStartMs) patch.start_at = iso;
                   }
                 }
                 update.mutate(patch);
