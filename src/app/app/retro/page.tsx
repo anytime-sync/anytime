@@ -166,9 +166,9 @@ export default function RetroPage() {
                     Deep-work blocks, waiting for you.
                   </p>
                   <p className="text-sm text-muted-fg leading-snug">
-                    AI looks at last week\'s pattern and pre-stages your next-week
-                    focus windows below. Move them around like any task — they\'ll
-                    sync to Google Calendar if you\'ve connected it.
+                    AI looks at last week’s pattern and pre-stages your next-week
+                    focus windows below. Move them around like any task — they’ll
+                    sync to Google Calendar if you’ve connected it.
                   </p>
                 </section>
               )}
