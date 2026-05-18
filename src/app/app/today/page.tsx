@@ -12,6 +12,7 @@ import { StreakRibbon } from "@/components/app/streak-ribbon";
 import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
 import { Celebrations } from "@/components/app/celebrations";
 import { OnboardingModal } from "@/components/app/onboarding-modal";
+import { endOfDay } from "date-fns";
 
 /**
  * Today — toggleable between the editorial list (default) and the new
@@ -37,6 +38,7 @@ export default function TodayPage() {
           title={t(lang, "sidebar.today")}
           subtitle={format(new Date(), "EEEE, MMMM d")}
           filter={{ view: "today" }}
+          defaults={{ due_at: endOfDay(new Date()).toISOString() }}
           showDailyEdition
           sortBy="due_at"
           sortKey="today"
