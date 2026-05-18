@@ -7,7 +7,7 @@ import {
   Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
   Moon, SunMedium, Newspaper, CheckCircle2, GripVertical, Settings,
   StickyNote, Shield } from "lucide-react";
-import { useUIStore } from "@/store/ui";
+import { useUIStore } from "@/store/ui";import { useCanUseFeature } from "@/hooks/use-feature-access";
 import { isOwner } from "@/lib/plans";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -175,7 +175,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const setCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const setCmdOpen = useUIStore((s) => s.setCommandOpen);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const setReflection = useUIStore((s) => s.setReflectionOpen);
+  const setReflection = useUIStore((s) => s.setReflectionOpen);const canUseReflect = useCanUseFeature("review_reflect");
   const { data: projects = [] } = useProjects();
   const reorderProjects = useReorderProjects();
   const { data: tags = [] } = useTags();
@@ -258,7 +258,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
         </button>
         <button
           className={cn("w-full btn-ghost justify-start gap-2", collapsed && "px-0 justify-center")}
-          onClick={() => setReflection(true)}
+          onClick={() => canUseReflect && setReflection(true)} style={canUseReflect ? undefined : {display:'none'}}
           title={t(lang, "sidebar.reflectAria")}
         >
           <Sunset className="size-4" />
