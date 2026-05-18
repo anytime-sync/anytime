@@ -18,7 +18,7 @@ type Props = {
   title: string;
   subtitle?: string;
   filter: TasksFilter;
-  defaults?: { project_id?: string | null };
+  defaults?: { project_id?: string | null; due_at?: string | null };
   /** Show the AI Daily Edition card and anti-overload banner (Today view). */
   showDailyEdition?: boolean;
   /** Optional content rendered above the inline-task-input. */
@@ -191,7 +191,10 @@ export function TaskListView({
           </div>
         )}
         {prelude && <div className="px-3">{prelude}</div>}
-        <InlineTaskInput defaultProjectId={defaults?.project_id ?? null} />
+        <InlineTaskInput
+          defaultProjectId={defaults?.project_id ?? null}
+          defaultDueAt={defaults?.due_at ?? null}
+        />
 
         {isLoading ? (
           <div className="text-sm text-muted-fg px-3">{tr(lang, "taskList.loading")}</div>
