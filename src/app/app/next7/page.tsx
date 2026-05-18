@@ -30,6 +30,7 @@ export default function Next7Page() {
         filter={{ view: "next7" }}
         sortBy="due_at"
         sortKey="next7"
+        groupByDate
         headerExtra={<WeekViewToggle mode={mode} setMode={setMode} />}
       />
     );
