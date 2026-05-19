@@ -189,7 +189,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const disabledIds = useDisabledFeatureIds();
   const baseLinks = useMemo(() => {
     const all = topLinks(lang, isOwner(user.email));
-    if (disabledIds.size === 0) return all;
+    
     return all.filter((l) => {
       const fid = HREF_TO_FEATURE_ID[l.href];
       if (!fid) return true; // Features / Settings / Admin always visible
