@@ -7,8 +7,8 @@ import {
   Sparkles, LayoutGrid, Users, Search, Plus, ChevronLeft, ChevronRight, LogOut,
   Moon, SunMedium, Newspaper, CheckCircle2, GripVertical, Settings,
   StickyNote, Shield } from "lucide-react";
-import { useUIStore } from "@/store/ui";import { useCanUseFeature } from "@/hooks/use-feature-access";
-import { isOwner } from "@/lib/plans";
+import { useUIStore } from "@/store/ui";import { useCanUseFeature } from "@/hooks/use-feature-access";import { useUserPlan } from "@/hooks/use-billing";
+import { isOwner, getFeature, planSatisfies, type Plan } from "@/lib/plans";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useProjects, useReorderProjects } from "@/hooks/use-projects";
@@ -72,7 +72,7 @@ const HREF_TO_FEATURE_ID: Record<string, string> = {
   "/app/retro":     "review_weekly_retro",
   "/app/completed": "tasks_completed",
   "/app/groups":    "tasks_groups",
-  "/app/notes":     "tasks_notes",
+  "/app/notes":     "tasks_notes","/app/goals":     "ai_goal_tracker",
 };
 
 /**
@@ -175,7 +175,7 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   const setCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const setCmdOpen = useUIStore((s) => s.setCommandOpen);
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const setReflection = useUIStore((s) => s.setReflectionOpen);const canUseReflect = useCanUseFeature("review_reflect");
+  const setReflection = useUIStore((s) => s.setReflectionOpen);const canUseReflect = useCanUseFeature("review_reflect");const _planQ = useUserPlan();const _plan = (_planQ.data?.plan ?? 'free') as Plan;
   const { data: projects = [] } = useProjects();
   const reorderProjects = useReorderProjects();
   const { data: tags = [] } = useTags();
@@ -193,9 +193,9 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
     return all.filter((l) => {
       const fid = HREF_TO_FEATURE_ID[l.href];
       if (!fid) return true; // Features / Settings / Admin always visible
-      return !disabledIds.has(fid);
+      if (disabledIds.has(fid)) return false; const _f = getFeature(fid); return !_f || planSatisfies(_plan, _f.minPlan);
     });
-  }, [lang, user.email, disabledIds]);
+  }, [lang, user.email, disabledIds, _plan]);
   const [orderedLinks, setOrderedLinks] = useState<LinkDef[]>(baseLinks);
   // Reapply the saved order whenever the language changes (link labels
   // change but href identity is stable, so order is preserved).
