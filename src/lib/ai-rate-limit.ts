@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { getUserPlan } from "./billing";
+import { getUserPlan } from "./billing";import { planSatisfies, type Plan } from "./plans";
 
 /**
  * Per-user AI rate limiting. Daily budgets are intentionally generous
@@ -105,7 +105,7 @@ export async function checkAiBudget(userId: string, feature: AiFeature): Promise
   // limit (used:999, limit:0). The frontend can detect limit===0 to show
   // an Upgrade-to-Pro CTA instead of a "rate limited" message.
   const plan = await getUserPlan(userId);
-  if (plan !== "pro" && plan !== "team") {
+  const AI_MIN_PLAN: Record<AiFeature, Plan> = {parse_task:"free",quadrant:"free",daily_edition:"free",weekly_retro:"pro",plan_week:"pro",plan_day:"pro",estimate_task:"free",reschedule_task:"free",find_time:"pro",auto_triage:"free",prep_meeting:"pro",procrastination:"pro",goal_decompose:"pro",morning_copilot:"pro",search:"pro",translate_task:"free",reflection:"plus"}; if (!planSatisfies(plan as Plan, AI_MIN_PLAN[feature] ?? "free")) {
     return { ok: false, retryAfter: secondsUntilUtcMidnight(), used: 999, limit: 0 };
   }  const supa = admin();
   const limit = AI_DAILY_LIMITS[feature];
