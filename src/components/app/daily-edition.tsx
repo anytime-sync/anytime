@@ -40,7 +40,7 @@ export function DailyEdition() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  if (isLoading) {
+  if (!aiEnabled) return null; if (isLoading) {
     return (
       <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 animate-pulse">
         <div className="h-3 w-24 bg-muted rounded mb-3" />
@@ -73,7 +73,7 @@ export function DailyEdition() {
   }
   if (!data) return null;
 
-  if (!aiEnabled) return null;
+  
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 group">
       <header className="flex items-baseline justify-between gap-3 mb-2.5">
