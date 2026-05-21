@@ -35,7 +35,7 @@ export function OAuthButtons({ next = "/app" }: { next?: string }) {
       </button>
       <button
         type="button"
-        onClick={() => go("apple")}
+        onClick={() => go("apple")} style={{ display: "none" }}
         disabled={loading !== null}
         className="btn-outline w-full gap-2"
         aria-label="Continue with Apple"
