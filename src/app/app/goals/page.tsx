@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";import { useRouter } from "next/navigation";import { useCanUseFeature } from "@/hooks/use-feature-access";
 import { ArrowRight, Sparkles, Target } from "lucide-react";
 import { useProjects } from "@/hooks/use-projects";
 import { useTasks } from "@/hooks/use-tasks";
@@ -20,7 +20,7 @@ import { useUIStore } from "@/store/ui";
 export default function GoalsPage() {
   const { data: projects = [] } = useProjects();
   const { data: tasks = [] } = useTasks({});
-  const setGoalModal = useUIStore((s) => s.setGoalModalOpen);
+  const setGoalModal = useUIStore((s) => s.setGoalModalOpen);const _canUse = useCanUseFeature("ai_goal_tracker");const _router = useRouter();useEffect(() => { if (!_canUse) _router.replace("/app/features"); }, [_canUse, _router]);
 
   // Compute progress per project.
   const goals = useMemo(() => {
