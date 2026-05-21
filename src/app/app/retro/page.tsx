@@ -2,7 +2,7 @@
 
 import { useWeeklyRetro, useUserPrefs } from "@/hooks/use-ai";
 import { useTasks } from "@/hooks/use-tasks";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";import { useRouter } from "next/navigation";import { useCanUseFeature } from "@/hooks/use-feature-access";
 import {
   addDays,
   addWeeks,
@@ -22,7 +22,7 @@ import type { Task } from "@/lib/db.types";
 type RetroTarget = "last" | "current" | "next";
 
 export default function RetroPage() {
-  const lang = useLanguage();
+  const lang = useLanguage();const _canUse = useCanUseFeature("review_weekly_retro");const _router = useRouter();useEffect(() => { if (!_canUse) _router.replace("/app/features"); }, [_canUse, _router]);
   const [target, setTarget] = useState<RetroTarget>("current");
   const { data, isLoading, isFetching, isError } = useWeeklyRetro(
     // The AI retro hook only knows "last" and "current". For "next" we
