@@ -93,7 +93,7 @@ export function MorningCopilotCard() {
   // Loading skeleton is intentionally suppressed: the morning brief is
   // proactive, not requested, so flashing a skeleton on every Today
   // mount adds noise. Quiet failure mode.
-  if (isLoading) return null;
+  if (!aiEnabled) return null; if (isLoading) return null;
   if (isError) {
     return (
       <article className="rounded-xl border border-border surface p-4 mb-4 text-sm text-muted-fg">
@@ -227,7 +227,7 @@ export function MorningCopilotCard() {
     locale,
   });
 
-  if (!aiEnabled) return null;
+  
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-4">
       {/* Kicker + date */}
