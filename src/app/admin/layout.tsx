@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";import { AdminGuard } from "./admin-guard";
 import { Users, BarChart3, FileText, Home, Palette, Tags, ToggleLeft } from "lucide-react";
 
 /**
@@ -35,7 +35,7 @@ export default async function AdminLayout({
   ];
 
   return (
-    <div className="min-h-screen flex bg-bg text-fg">
+    <AdminGuard serverEmail={user.email ?? null}><div className="min-h-screen flex bg-bg text-fg">
       <aside className="w-64 shrink-0 border-r border-border flex flex-col surface">
         <div className="px-6 pt-8 pb-6 border-b border-border">
           <Link href="/admin" className="flex items-center gap-2.5">
@@ -79,8 +79,7 @@ export default async function AdminLayout({
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">{children}</main>
-    </div>
-  );
+    </div></AdminGuard>);
 }
 
 function SmallSun({ className }: { className?: string }) {
