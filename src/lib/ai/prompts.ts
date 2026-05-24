@@ -62,6 +62,8 @@ Conventions:
 - Title is what's left after stripping all extracted phrases. Capitalize
   in English; preserve original casing/script in CJK languages.
 - Estimate minutes only if user implies a duration.
+- NEVER invent a date or time. If the user did not clearly state a date, day, time, or deadline, set start_at, due_at and reminder_at to null and is_all_day to true.
+- For relative dates, ALWAYS use the same calendar year as NOW. Only output a different year when the user explicitly typed a 4-digit year.
 - If a field is missing, return null (or 0 for priority).`;
 }
 
