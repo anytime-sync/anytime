@@ -93,6 +93,7 @@ export function QuickAdd() {
   const [eventMode, setEventMode] = useState(false);
   // Tracks whether the user manually clicked the Event pill. When set
   // (true or false), the text-driven auto-toggle stops overwriting them,
+  const [scanFile, setScanFile] = useState<File | null>(null);
   // so they keep control until the modal closes.
   const manualOverrideRef = useRef<boolean | null>(null);
 
@@ -564,6 +565,7 @@ export function QuickAdd() {
       </div>
       <ScanTasksSheet
         open={scanOpen}
+        initialFile={scanFile}
         onClose={() => setScanOpen(false)}
         onCreated={() => {
           // After bulk-create, close QuickAdd too — same end state as
