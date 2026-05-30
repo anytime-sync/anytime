@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * DemoCarousel — the 16-card "See it in motion" strip shared by /pricing
+ * DemoCarousel — the 17-card "See it in motion" strip shared by /pricing
  * and the public landing page. Pure presentation: every card is an inline
  * HTML/Tailwind mockup that mirrors a real feature surface in the app.
  *
@@ -23,13 +23,13 @@ export function DemoCarousel() {
 
   return (
     <>
-        {/* Demo strip — 9-card carousel showcasing every Plus + Pro surface. */}
+        {/* Demo strip — 17-card carousel showcasing every Plus + Pro surface. */}
         <section className="mb-16">
           <div className="flex items-end justify-between mb-3 gap-4 flex-wrap">
             <div>
               <h2 className="font-display text-3xl tracking-tight">See it in motion</h2>
               <p className="text-muted-fg text-sm md:text-base max-w-xl mt-2">
-                Nine surfaces where First Light earns its keep. Scroll, or use the arrows.
+                Seventeen surfaces where First Light earns its keep. Scroll, or use the arrows.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -300,9 +300,7 @@ export function DemoCarousel() {
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Voice · Snapshot · Paste → Task</p>
-                <p className="text-xs text-muted-fg">Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.</p>
-              </figcaption>
-            </figure>
+                <p className="text-xs text-muted-fg">Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.</p></figcaption></figure>{/* 17 ── Paste screenshot → Tasks */}<figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm"><div className="aspect-[4/3] p-5 flex flex-col gap-2"><p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">PASTE · SCAN</p><div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 flex items-center gap-1.5 text-[10px]"><kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-300 text-[9px] font-mono text-stone-700">⌘</kbd><kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-300 text-[9px] font-mono text-stone-700">V</kbd><span className="text-stone-500 italic flex-1 truncate">paste a screenshot…</span></div><div className="bg-white border border-stone-200 rounded-md p-2 flex items-center gap-2"><div className="size-10 rounded bg-gradient-to-br from-amber-100 via-rose-100 to-stone-200 border border-stone-200 shrink-0 grid place-items-center"><span className="text-[7px] text-stone-600 italic">whiteboard</span></div><div className="flex-1 min-w-0"><p className="text-[9px] text-stone-700 truncate font-medium">whiteboard_q4.png</p><p className="text-[8px] text-stone-400">3 tasks found</p></div></div><div className="text-[9px] text-stone-400 text-center">↓ AI extracts</div><div className="space-y-1"><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Draft Q4 roadmap</span><span className="text-[8px] text-stone-400">Today</span></div><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Ship pricing v2</span><span className="text-[8px] text-stone-400">Fri</span></div><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Sync with Alex</span><span className="text-[8px] text-stone-400">Mon</span></div></div></div><figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40"><p className="font-medium text-sm">Paste → Tasks</p><p className="text-xs text-muted-fg">⌘V a screenshot of any whiteboard, doc, or meeting notes — get a clean task list.</p></figcaption></figure>
 
             {/* 8 ── Notes → Task: convert note to task in one click */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
