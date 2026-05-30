@@ -28,11 +28,13 @@ export function ScanTasksSheet({
   open,
   onClose,
   onCreated,
+  initialFile,
 }: {
   open: boolean;
   onClose: () => void;
   /** Fires after the user confirms the bulk create — lets QuickAdd close itself. */
   onCreated?: (count: number) => void;
+  initialFile?: File | null;
 }) {
   const lang = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +64,7 @@ export function ScanTasksSheet({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+  useEffect(() => { if (open && initialFile) void handleFile(initialFile); }, [open, initialFile]);
 
   if (!open) return null;
 
