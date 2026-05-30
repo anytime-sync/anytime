@@ -404,6 +404,7 @@ export function QuickAdd() {
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
             }}
+            onPaste={(e) => { const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
           />
           <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
           <button
