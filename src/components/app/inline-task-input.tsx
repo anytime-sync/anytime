@@ -18,6 +18,7 @@ import { VoiceButton } from "./voice-button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
+import { ScanTasksSheet } from "./scan-tasks-sheet";
 
 /**
  * Reusable inline "Add task" row that runs the conversational parser on
@@ -49,6 +50,8 @@ export function InlineTaskInput({
   // Round F v4.7: when GCal is connected, allow user to create the
   // input as a Google Calendar event instead of a native task.
   const [mode, setMode] = useState<"task" | "event">("task");
+  const [scanFile, setScanFile] = useState<File | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
   // Tracks whether the user manually clicked the Event toggle. When set,
   // the text-driven auto-toggle stops overwriting their choice.
   const manualOverrideRef = useRef<"task" | "event" | null>(null);
@@ -233,6 +236,7 @@ export function InlineTaskInput({
           placeholder={placeholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => { const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
         />
         {gcalAvailable && (
           <button
@@ -323,6 +327,7 @@ export function InlineTaskInput({
           </div>
         </div>
       )}
+      <ScanTasksSheet open={scanOpen} onClose={() => { setScanOpen(false); setScanFile(null); }} initialFile={scanFile} />
     </div>
   );
 }
