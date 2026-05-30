@@ -299,8 +299,8 @@ export function DemoCarousel() {
                 </div>
               </div>
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-                <p className="font-medium text-sm">Voice → Task · Snapshot → Task</p>
-                <p className="text-xs text-muted-fg">Speak or photograph; AI extracts a task with the right date and priority.</p>
+                <p className="font-medium text-sm">Voice · Snapshot · Paste → Task</p>
+                <p className="text-xs text-muted-fg">Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.</p>
               </figcaption>
             </figure>
 
