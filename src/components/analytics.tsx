@@ -1,4 +1,5 @@
 import Script from "next/script";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 
 /**
  * Conditional analytics loader. Scripts only render when the matching
@@ -7,6 +8,8 @@ import Script from "next/script";
  * To activate, add the following to Vercel env vars (Settings → Environment):
  *   NEXT_PUBLIC_GA_ID       e.g. G-XXXXXXXXXX  (Google Analytics 4)
  *   NEXT_PUBLIC_CLARITY_ID  e.g. abc123def4    (Microsoft Clarity)
+ *
+ * Vercel Web Analytics is always active when deployed to Vercel.
  */
 export function Analytics() {
   const ga = process.env.NEXT_PUBLIC_GA_ID;
@@ -36,6 +39,7 @@ export function Analytics() {
           })(window, document, "clarity", "script", "${clarity}");
         `}</Script>
       )}
+      <VercelAnalytics />
     </>
   );
 }
