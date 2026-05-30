@@ -79,7 +79,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "ai_plan_my_week",     label: "Plan my week",     description: "Weekly plan that respects deadlines, capacity, and goals.", category: "ai", minPlan: "pro", order: 30 },
   { id: "ai_morning_copilot",  label: "Morning Co-pilot", description: "Conversational briefing that answers follow-up questions.", category: "ai", minPlan: "pro", order: 40 },
   { id: "ai_voice_capture",    label: "Voice → Task",     description: "Speak tasks; we transcribe and structure them automatically.", category: "ai", minPlan: "pro", order: 50 },
-  { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 },
+  { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 }, { id: "ai_paste_capture", label: "Paste → Task", description: "⌘V a screenshot of any whiteboard, doc, or meeting notes; we extract every task.", category: "ai", minPlan: "pro", order: 57 },
   { id: "ai_smart_eisenhower", label: "Smart triage",     description: "AI assigns Eisenhower quadrants based on context.", category: "ai", minPlan: "pro", order: 60 },
   { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Outcome-shaped goals with AI-designed sub-trackers and weekly check-ins.", category: "ai", minPlan: "pro", order: 70 },
 
