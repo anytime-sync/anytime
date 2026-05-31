@@ -23,7 +23,7 @@ interface TokenRow {
 }
 
 export default function ApiTokensPage() {
-  const canUse = useCanUseFeature("apiAccess");
+  const canUse = useCanUseFeature("plat_api_access");
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);

@@ -98,6 +98,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "plat_email_digest",   label: "Email digest",     description: "Daily digest of what's on deck, by email.", category: "platform", minPlan: "free", order: 20 },
   { id: "plat_email_reminders",label: "Email reminders",  description: "Per-task email reminders for things you can't miss.", category: "platform", minPlan: "free", order: 30 },
   { id: "plat_priority_support", label: "Priority support", description: "We respond to Pro requests within one business day.", category: "platform", minPlan: "pro", order: 40 },
+  { id: "plat_api_access",       label: "Public API + MCP",   description: "Issue access tokens and let Claude / OpenClaw / any MCP client read and edit your First Light.", category: "platform", minPlan: "pro", order: 50 },
 ];
 
 export const PLANS: { plan: Plan; label: string; tagline: string }[] = [
