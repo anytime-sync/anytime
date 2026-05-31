@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const eventsReq = ctx.supabase
     .from("calendar_events")
-    .select("id,title,start_at,end_at,all_day,task_id,external_provider")
+    .select("id,title,start_at,end_at,is_all_day,task_id,external_provider")
     .eq("user_id", ctx.userId)
     .gte("start_at", start)
     .lte("start_at", end)

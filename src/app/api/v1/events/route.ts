@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       location: body.location ?? null,
       start_at: body.start_at,
       end_at: body.end_at,
-      all_day: Boolean(body.all_day),
+      is_all_day: Boolean(body.all_day),
       task_id: body.task_id ?? null,
       // Note: writing through to Google should be handled by your existing
       // GCal writeback helper. Wire it up here when ready.
