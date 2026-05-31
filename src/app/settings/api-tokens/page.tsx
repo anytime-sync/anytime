@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useCanUseFeature } from "@/hooks/use-feature";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 
 interface TokenRow {
   id: string;
