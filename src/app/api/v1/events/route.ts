@@ -77,9 +77,8 @@ export async function POST(req: NextRequest) {
       end_at: body.end_at,
       is_all_day: Boolean(body.all_day),
       task_id: body.task_id ?? null,
-      // Note: writing through to Google should be handled by your existing
-      // GCal writeback helper. Wire it up here when ready.
-      external_provider: null,
+      // Note: external_provider is now a generated alias of `provider`;
+      // route writes through your existing GCal writeback helper when needed.
     })
     .select("*")
     .single();
@@ -87,4 +86,3 @@ export async function POST(req: NextRequest) {
   if (error) return jsonError(500, "db_error", error.message);
   return jsonOk({ data }, { status: 201 });
 }
-
