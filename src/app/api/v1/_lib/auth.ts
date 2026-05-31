@@ -69,9 +69,9 @@ async function assertPlanAllowsApi(
   // Adjust this query to match how you read effective plan elsewhere
   // (e.g. via your existing /api/feature-flags/effective logic).
   const { data, error } = await supabase
-    .from("profiles")
+    .from("user_plans")
     .select("plan")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
   if (error || !data) return false;
   const plan = (data.plan as string) ?? "free";
