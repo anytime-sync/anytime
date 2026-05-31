@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { validatePAT, type Scope } from "@/lib/pat";
 // If your project uses a different plans/feature helper, adjust this import:
-import { PLAN_FEATURES } from "@/lib/plans";
+// Plan gate: pro and vip get API access. Adjust to your plans.ts if it differs.
 
 // ---------------------------------------------------------------------------
 // Response helpers
@@ -76,11 +76,7 @@ async function assertPlanAllowsApi(
   if (error || !data) return false;
   const plan = (data.plan as string) ?? "free";
 
-  // PLAN_FEATURES.apiAccess[plan] is what the plans-patch.md row provides.
-  const feature = (PLAN_FEATURES as Record<string, Record<string, boolean>>)
-    .apiAccess;
-  if (!feature) return false;
-  return Boolean(feature[plan]);
+  return ["pro", "vip"].includes(plan);
 }
 
 // ---------------------------------------------------------------------------

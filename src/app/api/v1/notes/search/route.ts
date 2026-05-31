@@ -11,9 +11,9 @@
 import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../../_lib/auth";
 
-// If you have a typed helper for the Voyage call (e.g. embedQuery), import it.
+// If you have a typed helper for the Voyage call (e.g. embedOne), import it.
 // Adjust this path to match your codebase.
-import { embedQuery } from "@/lib/voyage";
+import { embedOne } from "@/lib/voyage";
 
 export async function GET(req: NextRequest) {
   const ctx = await requireApiAuth(req, "read");
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   let embedding: number[] | null = null;
   if (q.length >= 3) {
     try {
-      embedding = await embedQuery(q);
+      embedding = await embedOne(q);
     } catch {
       embedding = null;
     }
