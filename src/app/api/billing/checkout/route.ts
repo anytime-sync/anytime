@@ -2,20 +2,27 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getStripe, STRIPE_PRICE_ID_PRO_ENV } from "@/lib/billing";
+import { createCheckout, getVariantId } from "@/lib/lemonsqueezy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Round Z (billing): POST /api/billing/checkout
+ * POST /api/billing/checkout
  *
- * Creates a Stripe Checkout session for the user and returns the URL
- * the client should redirect to. The session is "subscription" mode
- * pinned to the single Pro monthly price (env: STRIPE_PRICE_ID_PRO_MONTHLY).
+ * Creates a checkout session and returns the URL to redirect to.
  *
- * If the user already has a Stripe customer row in our subscriptions
- * table, we reuse that customer id so they don't get a duplicate
- * customer record on a second purchase attempt.
+ * Supports two providers:
+ *   1. Lemon Squeezy (preferred — works in Taiwan and handles tax/MoR)
+ *   2. Stripe (legacy fallback)
+ *
+ * Provider selection:
+ *   - If LEMONSQUEEZY_API_KEY is set → use Lemon Squeezy
+ *   - Else if STRIPE_SECRET_KEY is set → use Stripe
+ *   - Else → 500 billing_not_configured
+ *
+ * Body (optional):
+ *   { "plan": "plus" | "pro" }  — defaults to "pro"
  */
 export async function POST(req: Request) {
   const supabase = createClient();
@@ -26,10 +33,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Parse requested plan from body
+  let requestedPlan: "plus" | "pro" = "pro";
+  try {
+    const body = await req.json().catch(() => ({}));
+    if (body.plan === "plus" || body.plan === "pro") {
+      requestedPlan = body.plan;
+    }
+  } catch {
+    // No body or invalid JSON — default to pro
+  }
+
+  const url = new URL(req.url);
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
+
+  // ─── Lemon Squeezy path ─────────────────────────────────────────────────
+  if (process.env.LEMONSQUEEZY_API_KEY) {
+    try {
+      const variantId = getVariantId(requestedPlan);
+      const checkoutUrl = await createCheckout({
+        variantId,
+        userId: user.id,
+        userEmail: user.email ?? "",
+        successUrl: `${origin}/app/settings?billing=success`,
+        cancelUrl: `${origin}/app/settings?billing=cancel`,
+      });
+      return NextResponse.json({ url: checkoutUrl });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "ls_checkout_failed";
+      console.error("[billing/checkout] Lemon Squeezy error:", msg);
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
+  }
+
+  // ─── Stripe fallback ────────────────────────────────────────────────────
   const priceId = process.env[STRIPE_PRICE_ID_PRO_ENV];
-  if (!priceId) {
+  if (!priceId || !process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json(
-      { error: "billing_not_configured", missing: STRIPE_PRICE_ID_PRO_ENV },
+      { error: "billing_not_configured" },
       { status: 500 }
     );
   }
@@ -46,8 +88,6 @@ export async function POST(req: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Reuse existing Stripe customer if we have one; otherwise let
-  // Checkout create one and the webhook will record it.
   const { data: existing } = await service
     .from("subscriptions")
     .select("stripe_customer_id")
@@ -55,11 +95,6 @@ export async function POST(req: Request) {
     .maybeSingle();
   const existingCustomerId = (existing as { stripe_customer_id?: string } | null)
     ?.stripe_customer_id;
-
-  // Where to send the user after success / cancel.
-  const url = new URL(req.url);
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
 
   const stripe = getStripe();
   let session;
@@ -69,19 +104,15 @@ export async function POST(req: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/app/settings?billing=success`,
       cancel_url: `${origin}/app/settings?billing=cancel`,
-      // Stash user id on the customer so the webhook can map back even
-      // if subscription metadata is missing (defense in depth).
       ...(existingCustomerId
         ? { customer: existingCustomerId }
         : {
             customer_email: user.email ?? undefined,
             customer_creation: "always",
           }),
-      // Subscription-level metadata — webhook reads this on .created.
       subscription_data: {
         metadata: { user_id: user.id },
       },
-      // Allow promo codes for early-access launches.
       allow_promotion_codes: true,
     });
   } catch (e) {

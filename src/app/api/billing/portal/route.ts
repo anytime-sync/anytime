@@ -2,20 +2,20 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/billing";
+import { getCustomerPortalUrl } from "@/lib/lemonsqueezy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Round Z (billing): POST /api/billing/portal
+ * POST /api/billing/portal
  *
- * Opens the Stripe Customer Portal for an existing subscriber so they
- * can update payment method, change plan, or cancel. Returns the URL
- * the client should redirect to.
+ * Opens the customer portal (Lemon Squeezy or Stripe) so the user can
+ * manage their subscription. Returns the URL to redirect to.
  *
- * Requires the user to already have a stripe_customer_id (i.e. they
- * went through Checkout once). If not, returns 400 — the UI should
- * show "Upgrade" instead of "Manage" in that case.
+ * Provider selection:
+ *   - If LEMONSQUEEZY_API_KEY is set → use Lemon Squeezy customer portal
+ *   - Else → use Stripe Customer Portal
  */
 export async function POST(req: Request) {
   const supabase = createClient();
@@ -53,6 +53,19 @@ export async function POST(req: Request) {
   const origin =
     process.env.NEXT_PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
 
+  // ─── Lemon Squeezy path ─────────────────────────────────────────────────
+  if (process.env.LEMONSQUEEZY_API_KEY) {
+    try {
+      const portalUrl = await getCustomerPortalUrl(customerId);
+      return NextResponse.json({ url: portalUrl });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "ls_portal_failed";
+      console.error("[billing/portal] Lemon Squeezy error:", msg);
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
+  }
+
+  // ─── Stripe fallback ────────────────────────────────────────────────────
   const stripe = getStripe();
   let portal;
   try {

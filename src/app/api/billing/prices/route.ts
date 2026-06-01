@@ -3,74 +3,99 @@ import { getStripe } from "@/lib/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Cache for an hour at the edge — pricing changes rarely and the page calls
-// this on every render. If you bump pricing in Stripe, redeploy or wait.
 export const revalidate = 3600;
 
 /**
  * GET /api/billing/prices
  *
- * Returns the canonical price for the Pro plan, looked up from Stripe by id.
- * Falls back to NEXT_PUBLIC_PRO_PRICE_FALLBACK env var if Stripe is not
- * configured (useful for /pricing rendering in preview deploys).
+ * Returns pricing for Plus and Pro plans.
+ * Sources from Lemon Squeezy (preferred) or Stripe (fallback).
+ * Falls back to hardcoded values if neither is configured.
  */
 export async function GET() {
-  const priceId = process.env.STRIPE_PRICE_ID_PRO_MONTHLY;
-  const fallback = process.env.NEXT_PUBLIC_PRO_PRICE_FALLBACK ?? "$9";
+  const isLs = !!process.env.LEMONSQUEEZY_API_KEY;
+  const isStripe = !!process.env.STRIPE_SECRET_KEY;
 
-  if (!priceId || !process.env.STRIPE_SECRET_KEY) {
+  // ─── Hardcoded fallback (always available) ──────────────────────────────
+  const fallback = {
+    plus: {
+      priceId: null,
+      amount: 300,
+      currency: "usd",
+      interval: "month",
+      formatted: "$3",
+      formattedPerMonth: "$3 / month",
+      source: "fallback" as const,
+    },
+    pro: {
+      priceId: null,
+      amount: 900,
+      currency: "usd",
+      interval: "month",
+      formatted: "$9",
+      formattedPerMonth: "$9 / month",
+      source: "fallback" as const,
+    },
+  };
+
+  // ─── Lemon Squeezy path ─────────────────────────────────────────────────
+  if (isLs) {
+    // LS doesn't have a simple "get price by variant" API like Stripe.
+    // Prices are set in the LS dashboard. We return our known prices.
+    // When LS is configured, we trust the env vars are correct.
     return NextResponse.json({
+      plus: {
+        ...fallback.plus,
+        priceId: process.env.LEMONSQUEEZY_PLUS_VARIANT_ID ?? null,
+        source: "lemonsqueezy",
+      },
       pro: {
-        priceId: null,
-        amount: null,
-        currency: "usd",
-        interval: "month",
-        formatted: fallback,
-        formattedPerMonth: `${fallback} / month`,
-        source: "fallback",
+        ...fallback.pro,
+        priceId: process.env.LEMONSQUEEZY_PRO_VARIANT_ID ?? null,
+        source: "lemonsqueezy",
       },
     });
   }
 
-  try {
-    const stripe = getStripe();
-    const price = await stripe.prices.retrieve(priceId);
-    const amount = price.unit_amount ?? 0;
-    const currency = (price.currency ?? "usd").toLowerCase();
-    const interval = price.recurring?.interval ?? "month";
+  // ─── Stripe path ────────────────────────────────────────────────────────
+  if (isStripe) {
+    const priceId = process.env.STRIPE_PRICE_ID_PRO_MONTHLY;
+    if (!priceId) {
+      return NextResponse.json(fallback);
+    }
 
-    const major = amount / 100;
-    const isWhole = Number.isInteger(major);
-    const formatted = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      maximumFractionDigits: isWhole ? 0 : 2,
-    }).format(major);
+    try {
+      const stripe = getStripe();
+      const price = await stripe.prices.retrieve(priceId);
+      const amount = price.unit_amount ?? 0;
+      const currency = (price.currency ?? "usd").toLowerCase();
+      const interval = price.recurring?.interval ?? "month";
+      const major = amount / 100;
+      const isWhole = Number.isInteger(major);
+      const formatted = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: currency.toUpperCase(),
+        maximumFractionDigits: isWhole ? 0 : 2,
+      }).format(major);
 
-    return NextResponse.json({
-      pro: {
-        priceId: price.id,
-        amount,
-        currency,
-        interval,
-        formatted,
-        formattedPerMonth: `${formatted} / ${interval}`,
-        source: "stripe",
-      },
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "unknown";
-    console.error("[billing/prices]", msg);
-    return NextResponse.json({
-      pro: {
-        priceId: null,
-        amount: null,
-        currency: "usd",
-        interval: "month",
-        formatted: fallback,
-        formattedPerMonth: `${fallback} / month`,
-        source: "fallback-error",
-      },
-    });
+      return NextResponse.json({
+        plus: fallback.plus, // Stripe doesn't have Plus pricing yet
+        pro: {
+          priceId: price.id,
+          amount,
+          currency,
+          interval,
+          formatted,
+          formattedPerMonth: `${formatted} / ${interval}`,
+          source: "stripe",
+        },
+      });
+    } catch (e) {
+      console.error("[billing/prices]", e);
+      return NextResponse.json(fallback);
+    }
   }
+
+  // ─── No provider configured ─────────────────────────────────────────────
+  return NextResponse.json(fallback);
 }

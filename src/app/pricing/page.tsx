@@ -115,7 +115,7 @@ export default function PricingPage() {
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">Plus</h2>
               <span className="text-2xl font-semibold">
-                $4<span className="text-sm text-muted-fg font-normal"> / month</span>
+                $3<span className="text-sm text-muted-fg font-normal"> / month</span>
               </span>
             </div>
             <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>

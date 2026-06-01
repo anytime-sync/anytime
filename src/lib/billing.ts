@@ -1,42 +1,27 @@
-import Stripe from "stripe";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 /**
- * Round Z (billing): Stripe + plan-tier helpers.
+ * First Light — billing helpers.
  *
- * - getStripe(): cached Stripe SDK instance (server-side only).
- * - getUserPlan(userId): 'free' | 'pro'. Sources from public.user_plans
- *   so the same row Stripe webhook writes to drives gates immediately.
- * - isPro(userId): convenience boolean.
+ * Provider-agnostic plan resolution. The payment provider (Lemon Squeezy,
+ * formerly Stripe) writes to public.subscriptions via its webhook; this
+ * module reads from the public.user_plans view to gate features.
  *
- * Webhook signature verification uses Stripe's official helper
- * (stripe.webhooks.constructEvent) — we just expose the env var name
- * that holds the signing secret.
+ * - getUserPlan(userId): resolves the effective plan.
+ * - isPro(userId): convenience — true for pro, vip, or team.
+ * - isPlusOrAbove(userId): true for plus, pro, vip, or team.
  */
 
-let _stripe: Stripe | null = null;
-
-export function getStripe(): Stripe {
-  if (_stripe) return _stripe;
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY not set");
-  _stripe = new Stripe(key, {
-    apiVersion: "2025-02-24.acacia",
-  });
-  return _stripe;
-}
-
-export const STRIPE_WEBHOOK_SECRET_ENV = "STRIPE_WEBHOOK_SECRET";
-export const STRIPE_PRICE_ID_PRO_ENV = "STRIPE_PRICE_ID_PRO_MONTHLY";
-
-export type Plan = "free" | "pro" | "team";
+// Re-export the canonical Plan type from plans.ts — single source of truth.
+export type { Plan } from "@/lib/plans";
+import type { Plan } from "@/lib/plans";
 
 /**
  * Resolve the user's effective plan from the Postgres view.
  * Uses service-role so this can be called from server routes that
  * gate AI features without going through user RLS.
  *
- * Returns 'free' when the user has no Stripe subscription row, or
+ * Returns 'free' when the user has no subscription row, or
  * when the row's status is canceled/unpaid/incomplete_expired.
  */
 export async function getUserPlan(userId: string): Promise<Plan> {
@@ -57,8 +42,32 @@ export async function getUserPlan(userId: string): Promise<Plan> {
 
 export async function isPro(userId: string): Promise<boolean> {
   const plan = await getUserPlan(userId);
-  return plan === "pro" || plan === "team";
+  return plan === "pro" || plan === "vip" || plan === "team";
 }
+
+export async function isPlusOrAbove(userId: string): Promise<boolean> {
+  const plan = await getUserPlan(userId);
+  return plan === "plus" || plan === "pro" || plan === "vip" || plan === "team";
+}
+
+// ─── Stripe (legacy, keep for reference until Lemon Squeezy is live) ────────
+
+import Stripe from "stripe";
+
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (_stripe) return _stripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not set");
+  _stripe = new Stripe(key, {
+    apiVersion: "2025-02-24.acacia",
+  });
+  return _stripe;
+}
+
+export const STRIPE_WEBHOOK_SECRET_ENV = "STRIPE_WEBHOOK_SECRET";
+export const STRIPE_PRICE_ID_PRO_ENV = "STRIPE_PRICE_ID_PRO_MONTHLY";
 
 /**
  * Map a Stripe subscription object into our subscriptions table shape.
@@ -71,7 +80,7 @@ export function subscriptionToRow(
   user_id: string;
   stripe_customer_id: string;
   stripe_subscription_id: string;
-  plan: "pro" | "team";
+  plan: Plan;
   status: string;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
@@ -81,7 +90,7 @@ export function subscriptionToRow(
     stripe_customer_id:
       typeof sub.customer === "string" ? sub.customer : sub.customer.id,
     stripe_subscription_id: sub.id,
-    // Single Pro tier today. Future: read sub.items.data[0].price.lookup_key.
+    // TODO: Map Stripe price ID → plan tier when Plus pricing is added
     plan: "pro",
     status: sub.status,
     current_period_end: sub.current_period_end
