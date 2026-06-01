@@ -13,10 +13,10 @@ export async function GET(req: NextRequest, { params }: Params) {
   const ctx = await requireApiAuth(req, "read");
   if (!ctx.ok) return ctx.response;
 
+  // RLS restricts visibility to own tasks + project-member tasks + group-member tasks.
   const { data, error } = await ctx.supabase
     .from("tasks")
     .select("*")
-    .eq("user_id", ctx.userId)
     .eq("id", params.id)
     .maybeSingle();
 
@@ -66,10 +66,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (patch.status === "done") patch.completed_at = new Date().toISOString();
   if (patch.status === "open") patch.completed_at = null;
 
+  // RLS restricts updates to own tasks + project-member tasks + group-member tasks.
   const { data, error } = await ctx.supabase
     .from("tasks")
     .update(patch)
-    .eq("user_id", ctx.userId)
     .eq("id", params.id)
     .select("*")
     .single();
@@ -83,12 +83,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const ctx = await requireApiAuth(req, "write");
   if (!ctx.ok) return ctx.response;
 
+  // RLS restricts deletes to own tasks + project-owner tasks + group-member tasks.
   const { error } = await ctx.supabase
     .from("tasks")
     .delete()
-    .eq("user_id", ctx.userId)
     .eq("id", params.id);
   if (error) return jsonError(500, "db_error", error.message);
   return jsonOk({ deleted: true });
 }
-

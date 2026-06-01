@@ -411,8 +411,20 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient();
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      const { error, count } = await supabase.from("tasks").delete().eq("id", id);
       if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["tasks"] });
+      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
+        old?.filter((t) => t.id !== id)
+      );
+      return { prev };
+    },
+    onError: (e: Error, _id, ctx) => {
+      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
+      toast.error(e.message || "Delete failed");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -421,7 +433,6 @@ export function useDeleteTask() {
     },
   });
 }
-
 /**
  * Batch-persist new task positions after a drag-to-reorder, with optimistic
  * UI so the list doesn't flash back to the old order.
