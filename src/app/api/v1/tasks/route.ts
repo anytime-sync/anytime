@@ -110,20 +110,17 @@ function deriveIsAllDay(body: CreateTaskBody): boolean {
   if (body.is_all_day !== undefined && body.is_all_day !== null) {
     return body.is_all_day;
   }
-  // If start_at is provided and has a time component -> timed task
-  if (body.start_at) {
-    const d = new Date(body.start_at);
-    if (d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0) {
-      return false;
-    }
+  // Check the raw ISO string for midnight in the sender's timezone.
+  // "2026-06-01T00:00:00+08:00" is midnight Taipei = all-day,
+  // even though UTC representation is 2026-05-31T16:00:00Z.
+  // A date-only string ("2026-06-01") or T00:00:00 in any offset = all-day.
+  const midnightRe = /T00:00:00([Z+-]|$)/;
+  const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
+  function isMidnightOrDateOnly(iso: string): boolean {
+    return dateOnlyRe.test(iso) || midnightRe.test(iso);
   }
-  // If due_at has a time component -> timed task
-  if (body.due_at) {
-    const d = new Date(body.due_at);
-    if (d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0) {
-      return false;
-    }
-  }
+  if (body.start_at && !isMidnightOrDateOnly(body.start_at)) return false;
+  if (body.due_at && !isMidnightOrDateOnly(body.due_at)) return false;
   // Default: all-day
   return true;
 }

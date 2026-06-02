@@ -98,10 +98,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   // Auto-derive is_all_day when dates change but is_all_day wasn't explicitly set
   if (("start_at" in patch || "due_at" in patch) && !("is_all_day" in patch)) {
+    // Check the raw ISO string for midnight in sender's timezone (not UTC).
+    // "T00:00:00+08:00" = midnight Taipei = all-day; "T10:30:00" = timed.
+    const midnightRe = /T00:00:00([Z+-]|$)/;
+    const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
     const hasTime = (iso: unknown) => {
       if (!iso || typeof iso !== "string") return false;
-      const d = new Date(iso);
-      return d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
+      return !dateOnlyRe.test(iso) && !midnightRe.test(iso);
     };
     if (hasTime(patch.start_at) || hasTime(patch.due_at)) {
       patch.is_all_day = false;
