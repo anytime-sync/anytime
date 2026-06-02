@@ -29,6 +29,7 @@ interface PatchBody {
   title?: string;
   due_at?: string | null;
   start_at?: string | null;
+  is_all_day?: boolean | null;
   priority?: "low" | "med" | "high" | null;
   notes?: string | null;
   status?: "open" | "done" | "archived";
@@ -39,6 +40,7 @@ const ALLOWED: (keyof PatchBody)[] = [
   "title",
   "due_at",
   "start_at",
+  "is_all_day",
   "priority",
   "notes",
   "status",
@@ -66,6 +68,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (patch.status === "done") patch.completed_at = new Date().toISOString();
   if (patch.status === "open") patch.completed_at = null;
 
+  // Auto-derive is_all_day when dates change but is_all_day wasn't explicitly set
+  if (("start_at" in patch || "due_at" in patch) && !("is_all_day" in patch)) {
+    const hasTime = (iso: unknown) => {
+      if (!iso || typeof iso !== "string") return false;
+      const d = new Date(iso);
+      return d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
+    };
+    if (hasTime(patch.start_at) || hasTime(patch.due_at)) {
+      patch.is_all_day = false;
+    }
+  }
+
   // RLS restricts updates to own tasks + project-member tasks + group-member tasks.
   const { data, error } = await ctx.supabase
     .from("tasks")
@@ -83,11 +97,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const ctx = await requireApiAuth(req, "write");
   if (!ctx.ok) return ctx.response;
 
-  // RLS restricts deletes to own tasks + project-owner tasks + group-member tasks.
   const { error } = await ctx.supabase
     .from("tasks")
     .delete()
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .eq("user_id", ctx.userId);
+
   if (error) return jsonError(500, "db_error", error.message);
   return jsonOk({ deleted: true });
 }
