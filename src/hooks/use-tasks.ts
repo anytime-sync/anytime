@@ -219,6 +219,11 @@ export function useCreateTask() {
         reminder_at: input.reminder_at ?? null,
         estimated_pomodoros: input.estimated_pomodoros ?? 0,
         spent_pomodoros: 0,
+        estimated_minutes: null,
+        status: 'open' as const,
+        reminder_sent_at: null,
+        share_group_id: null,
+        assignee_id: null,
         created_at: now,
         updated_at: now,
         // Synthetic tags so the row renders pills immediately. They'll
