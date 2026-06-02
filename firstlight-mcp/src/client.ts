@@ -107,5 +107,27 @@ export class FirstlightClient {
   listGoals(status: string = "active") {
     return this.req<{ data: unknown[] }>("GET", "/goals", { query: { status } });
   }
-}
 
+  // ---------- AI Intelligence -----------------------------------------------
+  planDay(tasks: Array<{ id: string; title: string; due_at?: string | null; priority: number; project?: string | null }>) {
+    return this.req<{ suggestions: unknown[]; notes: string }>("POST", "/ai/plan-day", { body: { tasks } });
+  }
+  planWeek(tasks: Array<{ id: string; title: string; due_at?: string | null; priority: number; project?: string | null }>) {
+    return this.req<{ suggestions: unknown[]; notes: string }>("POST", "/ai/plan-week", { body: { tasks } });
+  }
+  prepMeeting(taskId: string, title: string, notes?: string, refresh?: boolean) {
+    return this.req<{ agenda: string[]; questions: string[] }>("POST", "/ai/prep-meeting", { body: { task_id: taskId, title, notes, refresh } });
+  }
+  findTime(taskId: string, title: string, estimatedMinutes?: number) {
+    return this.req<{ slots: unknown[] }>("POST", "/ai/find-time", { body: { task_id: taskId, title, estimated_minutes: estimatedMinutes } });
+  }
+  rescheduleOverdue() {
+    return this.req<{ items: unknown[] }>("POST", "/ai/reschedule-overdue", { body: {} });
+  }
+  detectProcrastination() {
+    return this.req<{ items: unknown[]; summary: string }>("POST", "/ai/detect-procrastination", { body: {} });
+  }
+  morningCopilot(tz?: string, force?: boolean) {
+    return this.req<unknown>("POST", "/ai/morning-copilot", { body: { tz, force } });
+  }
+}
