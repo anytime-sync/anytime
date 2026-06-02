@@ -9,11 +9,34 @@ import { requireApiAuth, jsonError, jsonOk } from "../../_lib/auth";
 
 type Params = { params: { id: string } };
 
+// DB stores priority as integer: 0 (none) | 1 (low) | 3 (med) | 5 (high)
+const PRIORITY_MAP: Record<string, number> = {
+  none: 0,
+  low: 1,
+  med: 3,
+  medium: 3,
+  high: 5,
+  "0": 0,
+  "1": 1,
+  "3": 3,
+  "5": 5,
+};
+
+function normalizePriority(
+  val: string | number | null | undefined,
+): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "number") {
+    return [0, 1, 3, 5].includes(val) ? val : null;
+  }
+  const mapped = PRIORITY_MAP[val.toLowerCase()];
+  return mapped !== undefined ? mapped : null;
+}
+
 export async function GET(req: NextRequest, { params }: Params) {
   const ctx = await requireApiAuth(req, "read");
   if (!ctx.ok) return ctx.response;
 
-  // RLS restricts visibility to own tasks + project-member tasks + group-member tasks.
   const { data, error } = await ctx.supabase
     .from("tasks")
     .select("*")
@@ -30,7 +53,7 @@ interface PatchBody {
   due_at?: string | null;
   start_at?: string | null;
   is_all_day?: boolean | null;
-  priority?: "low" | "med" | "high" | null;
+  priority?: string | number | null;
   notes?: string | null;
   status?: "open" | "done" | "archived";
   project_id?: string | null;
@@ -68,6 +91,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (patch.status === "done") patch.completed_at = new Date().toISOString();
   if (patch.status === "open") patch.completed_at = null;
 
+  // Normalize priority from string labels to DB integer
+  if ("priority" in patch) {
+    patch.priority = normalizePriority(patch.priority as string | number | null) ?? 0;
+  }
+
   // Auto-derive is_all_day when dates change but is_all_day wasn't explicitly set
   if (("start_at" in patch || "due_at" in patch) && !("is_all_day" in patch)) {
     const hasTime = (iso: unknown) => {
@@ -80,7 +108,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
   }
 
-  // RLS restricts updates to own tasks + project-member tasks + group-member tasks.
   const { data, error } = await ctx.supabase
     .from("tasks")
     .update(patch)

@@ -1,7 +1,7 @@
 /**
  * GET  /api/v1/tasks
  *   List tasks. Filters: ?status=open|done|archived  ?from=YYYY-MM-DD
- *   ?to=YYYY-MM-DD  ?priority=low|med|high  ?project=<id>
+ *   ?to=YYYY-MM-DD  ?priority=low|med|high|0|1|3|5  ?project=<id>
  *   ?limit=1..200 (default 50)  ?cursor=<id> for pagination.
  *
  * POST /api/v1/tasks
@@ -11,6 +11,31 @@
 
 import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../_lib/auth";
+
+// DB stores priority as integer: 0 (none) | 1 (low) | 3 (med) | 5 (high)
+// API accepts both integer and string labels for ergonomics.
+const PRIORITY_MAP: Record<string, number> = {
+  none: 0,
+  low: 1,
+  med: 3,
+  medium: 3,
+  high: 5,
+  "0": 0,
+  "1": 1,
+  "3": 3,
+  "5": 5,
+};
+
+function normalizePriority(
+  val: string | number | null | undefined,
+): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "number") {
+    return [0, 1, 3, 5].includes(val) ? val : null;
+  }
+  const mapped = PRIORITY_MAP[val.toLowerCase()];
+  return mapped !== undefined ? mapped : null;
+}
 
 // --- GET --------------------------------------------------------------------
 
@@ -24,7 +49,7 @@ export async function GET(req: NextRequest) {
     200,
   );
   const status = searchParams.get("status");
-  const priority = searchParams.get("priority");
+  const priorityParam = searchParams.get("priority");
   const projectId = searchParams.get("project");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
@@ -41,7 +66,10 @@ export async function GET(req: NextRequest) {
     .limit(limit);
 
   if (status) q = q.eq("status", status);
-  if (priority) q = q.eq("priority", priority);
+  if (priorityParam) {
+    const pInt = normalizePriority(priorityParam);
+    if (pInt !== null) q = q.eq("priority", pInt);
+  }
   if (projectId) q = q.eq("project_id", projectId);
   if (from) q = q.gte("due_at", from);
   if (to) q = q.lte("due_at", to);
@@ -66,7 +94,7 @@ interface CreateTaskBody {
   due_at?: string | null;
   start_at?: string | null;
   is_all_day?: boolean | null;
-  priority?: "low" | "med" | "high" | null;
+  priority?: string | number | null;
   notes?: string | null;
   project_id?: string | null;
   status?: "open" | "done" | "archived";
@@ -82,14 +110,14 @@ function deriveIsAllDay(body: CreateTaskBody): boolean {
   if (body.is_all_day !== undefined && body.is_all_day !== null) {
     return body.is_all_day;
   }
-  // If start_at is provided and has a time component → timed task
+  // If start_at is provided and has a time component -> timed task
   if (body.start_at) {
     const d = new Date(body.start_at);
     if (d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0) {
       return false;
     }
   }
-  // If due_at has a time component → timed task
+  // If due_at has a time component -> timed task
   if (body.due_at) {
     const d = new Date(body.due_at);
     if (d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0) {
@@ -114,7 +142,7 @@ export async function POST(req: NextRequest) {
     return jsonError(
       400,
       "invalid_title",
-      "`title` is required (string, ≤ 500 chars).",
+      "\`title\` is required (string, <= 500 chars).",
     );
   }
 
@@ -126,7 +154,7 @@ export async function POST(req: NextRequest) {
       due_at: body.due_at ?? null,
       start_at: body.start_at ?? null,
       is_all_day: deriveIsAllDay(body),
-      priority: body.priority ?? null,
+      priority: normalizePriority(body.priority) ?? 0,
       notes: body.notes ?? null,
       project_id: body.project_id ?? null,
       status: body.status ?? "open",
