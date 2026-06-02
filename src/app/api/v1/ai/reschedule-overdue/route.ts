@@ -21,7 +21,7 @@ const ResSchema = z.object({
  * Returns: { items: [{ id, new_due_at, reason }] }
  */
 export async function POST(req: NextRequest) {
-  const resolved = await resolveAiContext(req, "reschedule");
+  const resolved = await resolveAiContext(req, "reschedule_task");
   if (!resolved.ok) return resolved.response;
   const { ctx } = resolved;
 
@@ -67,7 +67,7 @@ Rules:
     const known = new Set(overdue.map((t: any) => t.id));
     out.items = out.items.filter((it) => known.has(it.id));
 
-    await logAiCall(ctx.userId, "reschedule", { model: res.model, status: 200 });
+    await logAiCall(ctx.userId, "reschedule_task", { model: res.model, status: 200 });
     return jsonOk(out);
   } catch (e: any) {
     console.error("[v1/ai] reschedule-overdue", e?.message ?? e);

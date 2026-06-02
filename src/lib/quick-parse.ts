@@ -273,8 +273,8 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
   const results = chrono.parse(s, new Date(), { forwardDate: true });
   if (results.length) {
     const has = (r: any, k: string) => r?.start?.isCertain(k);
-    const dateRes = results.find((r) => has(r, "day") || has(r, "weekday") || has(r, "month"));
-    const timeRes = results.find((r) => has(r, "hour"));
+    const dateRes = results.find((r: any) => has(r, "day") || has(r, "weekday") || has(r, "month"));
+    const timeRes = results.find((r: any) => has(r, "hour"));
 
     if (dateRes && timeRes && dateRes !== timeRes) {
       const baseDate = dateRes.start.date();

@@ -174,8 +174,8 @@ function MonthView({
       if (s > lastMs || e < firstMs) continue;
       const clampedS = Math.max(s, firstMs);
       const clampedE = Math.min(e, lastMs);
-      const startIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedS);
-      const endIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedE);
+      const startIdx = days.findIndex((d: Date) => startOfDay(d).getTime() === clampedS);
+      const endIdx = days.findIndex((d: Date) => startOfDay(d).getTime() === clampedE);
       if (startIdx < 0 || endIdx < 0) continue;
       const startRow = Math.floor(startIdx / 7);
       const endRow = Math.floor(endIdx / 7);
@@ -213,8 +213,8 @@ function MonthView({
       if (startMs > lastMs || endMs < firstMs) continue;
       const clampedS = Math.max(startMs, firstMs);
       const clampedE = Math.min(endMs, lastMs);
-      const startIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedS);
-      const endIdx = days.findIndex((d) => startOfDay(d).getTime() === clampedE);
+      const startIdx = days.findIndex((d: Date) => startOfDay(d).getTime() === clampedS);
+      const endIdx = days.findIndex((d: Date) => startOfDay(d).getTime() === clampedE);
       if (startIdx < 0 || endIdx < 0) continue;
       const startRow = Math.floor(startIdx / 7);
       const endRow = Math.floor(endIdx / 7);
@@ -337,6 +337,7 @@ function MonthView({
       endMs = startOfDay(new Date(t.due_at)).getTime();
     }
     const [oy, om, od] = dragOverDateKey.split("-").map(Number);
+    if (startMs === null || endMs === null) return set;
     const dropDay = new Date(oy, om - 1, od);
     let offsetMs: number;
     if (fromKey) {
@@ -513,7 +514,7 @@ function MonthView({
           onDragCancel={() => { setActiveId(null); setDragOverDateKey(null); }}
         >
           <div ref={gridRef} className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
-            {days.map((d, i) => {
+            {days.map((d: Date, i: number) => {
               const key = format(d, "yyyy-MM-dd");
               // Single-day tasks only — multi-day tasks render as a
               // single continuous bar overlay (below) so the user sees

@@ -164,7 +164,7 @@ export default function HabitsPage() {
             style={{ gridTemplateColumns: colTemplate }}
           >
             <div />
-            {days.map((d) => {
+            {days.map((d: Date) => {
               const isToday = isSameDay(d, today);
               return (
                 <div
@@ -213,7 +213,7 @@ export default function HabitsPage() {
                     <span className="text-lg">{h.icon}</span>
                     <span className="text-sm">{h.name}</span>
                   </div>
-                  {days.map((d) => {
+                  {days.map((d: Date) => {
                     const iso = format(d, "yyyy-MM-dd");
                     const log = logs.find(
                       (l) => l.habit_id === h.id && l.log_date === iso

@@ -11,7 +11,7 @@
 
 import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../../_lib/auth";
-import { createClient as createSupabaseServiceClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
 import { checkAiBudget, logAiCall, type AiFeature } from "@/lib/ai-rate-limit";
 import { extractJson } from "@/lib/ai/types";
@@ -21,7 +21,7 @@ export { jsonError, jsonOk };
 
 export interface AiContext {
   userId: string;
-  supabase: ReturnType<typeof createSupabaseServiceClient>;
+  supabase: SupabaseClient;
   language: LanguageCode;
   anthropic: ReturnType<typeof getAnthropic>;
 }
