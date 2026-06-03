@@ -105,7 +105,7 @@ export async function checkAiBudget(userId: string, feature: AiFeature): Promise
   // limit (used:999, limit:0). The frontend can detect limit===0 to show
   // an Upgrade-to-Pro CTA instead of a "rate limited" message.
   const plan = await getUserPlan(userId);
-  const AI_FEATURE_ID: Partial<Record<AiFeature, string>> = {daily_edition:"ai_daily_edition",weekly_retro:"review_weekly_retro",plan_week:"ai_plan_my_week",plan_day:"ai_plan_my_day",morning_copilot:"ai_morning_copilot",auto_triage:"ai_smart_eisenhower",quadrant:"ai_smart_eisenhower",goal_decompose:"ai_goal_tracker",search:"data_semantic_search",reflection:"review_reflect"}; const _fid = AI_FEATURE_ID[feature]; if (_fid && !(await canUseFeature(plan as Plan, _fid))) {
+  const AI_FEATURE_ID: Partial<Record<AiFeature, string>> = {daily_edition:"ai_daily_edition",weekly_retro:"review_weekly_retro",plan_week:"ai_plan_my_week",plan_day:"ai_plan_my_day",morning_copilot:"ai_morning_copilot",auto_triage:"ai_smart_eisenhower",quadrant:"ai_smart_eisenhower",goal_decompose:"ai_goal_tracker",search:"data_semantic_search",reflection:"review_reflect",parse_task:"ai_parse_task",estimate_task:"ai_estimate_task",translate_task:"ai_translate_task",reschedule_task:"ai_reschedule_task",find_time:"ai_find_time",prep_meeting:"ai_prep_meeting",procrastination:"ai_procrastination"}; const _fid = AI_FEATURE_ID[feature]; if (_fid && !(await canUseFeature(plan as Plan, _fid))) {
     return { ok: false, retryAfter: secondsUntilUtcMidnight(), used: 999, limit: 0 };
   }  const supa = admin();
   const limit = AI_DAILY_LIMITS[feature];

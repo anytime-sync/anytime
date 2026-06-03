@@ -82,6 +82,13 @@ export const FEATURES: FeatureSpec[] = [
   { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 }, { id: "ai_paste_capture", label: "Paste → Task", description: "⌘V a screenshot of any whiteboard, doc, or meeting notes; we extract every task.", category: "ai", minPlan: "pro", order: 57 },
   { id: "ai_smart_eisenhower", label: "Smart triage",     description: "AI assigns Eisenhower quadrants based on context.", category: "ai", minPlan: "pro", order: 60 },
   { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Outcome-shaped goals with AI-designed sub-trackers and weekly check-ins.", category: "ai", minPlan: "pro", order: 70 },
+  { id: "ai_parse_task",       label: "Smart task parsing",   description: "NLP understands natural language and structures your tasks automatically.", category: "ai", minPlan: "free", order: 5 },
+  { id: "ai_estimate_task",    label: "Time estimates",       description: "AI predicts how long each task will take based on context.", category: "ai", minPlan: "free", order: 6 },
+  { id: "ai_translate_task",   label: "Task translation",     description: "Auto-translate tasks across languages for multilingual workflows.", category: "ai", minPlan: "free", order: 7 },
+  { id: "ai_reschedule_task",  label: "Smart reschedule",     description: "AI finds the best new slot when you need to push tasks.", category: "ai", minPlan: "plus", order: 62 },
+  { id: "ai_find_time",        label: "Find time",            description: "AI scans your calendar and suggests open slots for any task.", category: "ai", minPlan: "plus", order: 63 },
+  { id: "ai_prep_meeting",     label: "Meeting prep",         description: "Auto-generate agendas and context briefs before meetings.", category: "ai", minPlan: "pro", order: 65 },
+  { id: "ai_procrastination",  label: "Procrastination cleanup", description: "Weekly AI pass finds stuck tasks and suggests next moves.", category: "ai", minPlan: "pro", order: 68 },
 
   // ─── Review ───────────────────────────────────────────────────────────
   { id: "review_reflect",      label: "Reflection",       description: "End-of-day reflection with AI-assisted prompts.", category: "review", minPlan: "plus", order: 10 },
@@ -103,7 +110,7 @@ export const FEATURES: FeatureSpec[] = [
 
 export const PLANS: { plan: Plan; label: string; tagline: string }[] = [
   { plan: "free", label: "Free",  tagline: "The full task system, forever." },
-  { plan: "plus", label: "Plus",  tagline: "Two-way calendar, unlimited Daily Editions, end-of-day reflection." },
+  { plan: "plus", label: "Plus",  tagline: "Two-way calendar sync, unlimited Daily Editions, smart reschedule, find time, and end-of-day reflection." },
   { plan: "pro",  label: "Pro",   tagline: "Add the AI co-pilot — Plan my day, Voice → Task, and the full review suite." },
 ];
 
