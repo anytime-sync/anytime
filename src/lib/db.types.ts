@@ -151,8 +151,8 @@ export type PomodoroSession = {
 
 export type Subscription = {
   user_id: string;
-  stripe_customer_id: string;
-  stripe_subscription_id: string;
+  ls_customer_id: string;
+  ls_subscription_id: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   current_period_end: string | null;
