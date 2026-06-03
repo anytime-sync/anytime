@@ -13,11 +13,13 @@
  *   - LEMONSQUEEZY_STORE_ID         — your store ID
  *   - LEMONSQUEEZY_WEBHOOK_SECRET   — webhook signing secret
  *   - LEMONSQUEEZY_VARIANT_ID_PRO   — variant ID for Pro monthly plan
- *   - LEMONSQUEEZY_VARIANT_ID_PLUS  — variant ID for Plus monthly plan (optional)
+ *   - LEMONSQUEEZY_VARIANT_ID_PLUS  — variant ID for Plus monthly plan
  */
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { type Plan, planSatisfies } from "./plans";
+export type { Plan } from "./plans";
 
 // ─── Lemon Squeezy API helpers ──────────────────────────────────────────────
 
@@ -45,6 +47,20 @@ async function lsFetch(path: string, init?: RequestInit) {
   return res.json();
 }
 
+// ─── Variant → Plan mapping ────────────────────────────────────────────────
+
+/**
+ * Maps a Lemon Squeezy variant ID to our internal plan name.
+ * Configured via env vars so you can change products without a deploy.
+ */
+function variantToPlan(variantId: number | string): "plus" | "pro" {
+  const vid = String(variantId);
+  if (vid === process.env.LEMONSQUEEZY_VARIANT_ID_PLUS) return "plus";
+  if (vid === process.env.LEMONSQUEEZY_VARIANT_ID_PRO) return "pro";
+  // Default to pro for unrecognized variants (safer — gives them more, not less)
+  return "pro";
+}
+
 // ─── Checkout ───────────────────────────────────────────────────────────────
 
 export interface CreateCheckoutOptions {
@@ -67,7 +83,7 @@ export async function createCheckout(
 
   const variantId =
     opts.variantId ?? process.env.LEMONSQUEEZY_VARIANT_ID_PRO;
-  if (!variantId) throw new Error("LEMONSQUEEZY_VARIANT_ID_PRO not set");
+  if (!variantId) throw new Error("No variant ID provided or configured");
 
   const body = {
     data: {
@@ -154,13 +170,11 @@ export function verifyWebhookSignature(
 
 // ─── Subscription → DB row mapping ─────────────────────────────────────────
 
-export type Plan = "free" | "pro" | "team";
-
 export interface SubscriptionRow {
   user_id: string;
   ls_customer_id: string;
   ls_subscription_id: string;
-  plan: "pro" | "team";
+  plan: "plus" | "pro" | "team";
   status: string;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
@@ -191,7 +205,7 @@ export function lsSubscriptionToRow(
     user_id: userId,
     ls_customer_id: String(attrs.customer_id),
     ls_subscription_id: String(sub.id),
-    plan: "pro", // Single Pro tier today
+    plan: variantToPlan(attrs.variant_id),
     status: mapLsStatus(attrs.status),
     current_period_end: attrs.renews_at ?? attrs.ends_at ?? null,
     cancel_at_period_end: attrs.cancelled ?? false,
@@ -242,9 +256,31 @@ export async function getUserPlan(userId: string): Promise<Plan> {
   return plan;
 }
 
-export async function isPro(userId: string): Promise<boolean> {
+/**
+ * Does the user satisfy a given plan requirement?
+ * Uses the rank system from plans.ts: free < plus < pro < team.
+ * VIP is treated as Pro.
+ */
+export async function userSatisfies(
+  userId: string,
+  minPlan: Plan
+): Promise<boolean> {
   const plan = await getUserPlan(userId);
-  return plan === "pro" || plan === "team";
+  return planSatisfies(plan, minPlan);
+}
+
+/**
+ * Convenience: does the user have Pro or higher?
+ */
+export async function isPro(userId: string): Promise<boolean> {
+  return userSatisfies(userId, "pro");
+}
+
+/**
+ * Convenience: does the user have Plus or higher?
+ */
+export async function isPlus(userId: string): Promise<boolean> {
+  return userSatisfies(userId, "plus");
 }
 
 // ─── Env var names (for config checks) ──────────────────────────────────────
@@ -253,3 +289,4 @@ export const LS_API_KEY_ENV = "LEMONSQUEEZY_API_KEY";
 export const LS_WEBHOOK_SECRET_ENV = "LEMONSQUEEZY_WEBHOOK_SECRET";
 export const LS_STORE_ID_ENV = "LEMONSQUEEZY_STORE_ID";
 export const LS_VARIANT_ID_PRO_ENV = "LEMONSQUEEZY_VARIANT_ID_PRO";
+export const LS_VARIANT_ID_PLUS_ENV = "LEMONSQUEEZY_VARIANT_ID_PLUS";
