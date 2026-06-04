@@ -23,7 +23,7 @@ export function SoftwareApplicationJsonLd() {
       {
         "@type": "Offer",
         name: "Plus",
-        price: "4.99",
+        price: "3.00",
         priceCurrency: "USD",
         priceValidUntil: "2027-12-31",
       },

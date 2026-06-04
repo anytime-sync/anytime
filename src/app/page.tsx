@@ -171,7 +171,7 @@ export default function Home() {
             },
             {
               q: "Is it free?",
-              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($4.99/mo) and Pro ($9/mo). Both include a 14-day free trial."
+              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($3/mo) and Pro ($9/mo). Both include a 14-day free trial."
             },
             {
               q: "Does it sync with Google Calendar?",
