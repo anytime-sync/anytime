@@ -1,13 +1,30 @@
 import { ImageResponse } from "next/og";
-import { getPost } from "@/lib/blog";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "Blog post cover";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Inline post lookup to avoid importing blog.ts (which pulls in fs/path/reading-time)
+function getPostMeta(slug: string): { title: string; description: string } | null {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const matter = require("gray-matter");
+    const dir = path.join(process.cwd(), "src/content/blog");
+    const filePath = path.join(dir, `${slug}.md`);
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, "utf8");
+    const { data } = matter(raw);
+    return { title: data.title ?? slug, description: data.description ?? "" };
+  } catch {
+    return null;
+  }
+}
+
 export default async function Image({ params }: { params: { slug: string } }) {
-  const post = getPost(params.slug);
+  const post = getPostMeta(params.slug);
+
   if (!post) {
     return new ImageResponse(
       (
