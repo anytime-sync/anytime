@@ -3,28 +3,41 @@
 import { useQuery } from "@tanstack/react-query";
 
 /**
- * Reads pricing from /api/billing/prices (which calls Stripe).
- * Cache for an hour client-side; the route also has revalidate=3600.
+ * Reads pricing from /api/billing/prices (which reads from service_prices DB table).
+ * Cache for 5 minutes client-side; the route also has revalidate=60.
  */
-export type ProPrice = {
+export type PlanPrice = {
   priceId: string | null;
   amount: number | null;
   currency: string;
   interval: string;
   formatted: string;
   formattedPerMonth: string;
-  source: "stripe" | "fallback" | "fallback-error";
+  source: "db" | "env" | "lemonsqueezy" | "stripe" | "fallback" | "fallback-error";
 };
 
 export function useProPrice() {
-  return useQuery<ProPrice>({
+  return useQuery<PlanPrice>({
     queryKey: ["pricing", "pro"],
     queryFn: async () => {
       const res = await fetch("/api/billing/prices", { cache: "default" });
       if (!res.ok) throw new Error("pricing_fetch_failed");
       const j = await res.json();
-      return j.pro as ProPrice;
+      return j.pro as PlanPrice;
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePlusPrice() {
+  return useQuery<PlanPrice>({
+    queryKey: ["pricing", "plus"],
+    queryFn: async () => {
+      const res = await fetch("/api/billing/prices", { cache: "default" });
+      if (!res.ok) throw new Error("pricing_fetch_failed");
+      const j = await res.json();
+      return j.plus as PlanPrice;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }

@@ -7,7 +7,7 @@ import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import { createClient } from "@/lib/supabase/client";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
-import { useProPrice } from "@/hooks/use-pricing";
+import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { useStartCheckout } from "@/hooks/use-billing";
 import { PLANS } from "@/lib/plans";
 
@@ -23,6 +23,7 @@ import { PLANS } from "@/lib/plans";
 export default function PricingPage() {
   const router = useRouter();
   const { data: pro, isLoading: priceLoading } = useProPrice();
+  const { data: plus, isLoading: plusLoading } = usePlusPrice();
   const checkout = useStartCheckout();
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
 
@@ -115,7 +116,10 @@ export default function PricingPage() {
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">Plus</h2>
               <span className="text-2xl font-semibold">
-                $4<span className="text-sm text-muted-fg font-normal"> / month</span>
+                {plusLoading ? "—" : plus?.formatted ?? "$5"}
+                <span className="text-sm text-muted-fg font-normal">
+                  {" "}/ {plus?.interval ?? "month"}
+                </span>
               </span>
             </div>
             <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";import { AdminGuard } from "./admin-guard";
-import { Users, BarChart3, FileText, Home, Palette, Tags, ToggleLeft, CreditCard, Mail, Megaphone } from "lucide-react";
+import { Users, BarChart3, FileText, Home, Palette, Tags, ToggleLeft, CreditCard, Mail, Megaphone, DollarSign } from "lucide-react";
 
 /**
  * Admin layout — server-rendered auth gate + editorial sidebar shell.
@@ -28,13 +28,14 @@ export default async function AdminLayout({
     { kicker: "01", href: "/admin", label: "Overview", icon: Home },
     { kicker: "02", href: "/admin/members", label: "Members", icon: Users },
     { kicker: "03", href: "/admin/feature-flags", label: "Feature flags", icon: ToggleLeft },
-    { kicker: "04", href: "/admin/insights", label: "Insights", icon: BarChart3 },
-    { kicker: "05", href: "/admin/content", label: "Content", icon: FileText },
-    { kicker: "06", href: "/admin/design", label: "Design", icon: Palette },
-    { kicker: "07", href: "/admin/keywords", label: "Keywords", icon: Tags },
-    { kicker: "08", href: "/admin/billing", label: "Billing", icon: CreditCard },
-    { kicker: "09", href: "/admin/newsletter", label: "Newsletter", icon: Mail },
-    { kicker: "10", href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+    { kicker: "04", href: "/admin/service-price", label: "Service Price", icon: DollarSign },
+    { kicker: "05", href: "/admin/insights", label: "Insights", icon: BarChart3 },
+    { kicker: "06", href: "/admin/content", label: "Content", icon: FileText },
+    { kicker: "07", href: "/admin/design", label: "Design", icon: Palette },
+    { kicker: "08", href: "/admin/keywords", label: "Keywords", icon: Tags },
+    { kicker: "09", href: "/admin/billing", label: "Billing", icon: CreditCard },
+    { kicker: "10", href: "/admin/newsletter", label: "Newsletter", icon: Mail },
+    { kicker: "11", href: "/admin/announcements", label: "Announcements", icon: Megaphone },
   ];
 
   return (

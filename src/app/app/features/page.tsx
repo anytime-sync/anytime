@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useUserPlan, useStartCheckout, useOpenBillingPortal } from "@/hooks/use-billing";
-import { useProPrice } from "@/hooks/use-pricing";
+import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
 
 /**
@@ -16,6 +16,7 @@ import { DemoCarousel } from "@/components/marketing/demo-carousel";
 export default function FeaturesPage() {
   const { data: plan } = useUserPlan();
   const { data: pro, isLoading: priceLoading } = useProPrice();
+  const { data: plus, isLoading: plusLoading } = usePlusPrice();
   const checkout = useStartCheckout();
   const portal = useOpenBillingPortal();
 
@@ -103,7 +104,9 @@ export default function FeaturesPage() {
                     href="/pricing#plus"
                     className="btn-primary h-10 px-4 inline-flex items-center opacity-90"
                   >
-                    Upgrade to Plus— $4 / month
+                    {plusLoading
+                      ? "Upgrade to Plus"
+                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$5 / month"}`}
                   </Link>
                   <button
                     onClick={() => checkout.mutate()}
@@ -145,7 +148,6 @@ export default function FeaturesPage() {
 
           {/* Visual demo — same carousel as /pricing */}
           <section>
-            <h2 className="font-display text-2xl tracking-tight mb-4">See it in motion</h2>
             <DemoCarousel />
           </section>
 
