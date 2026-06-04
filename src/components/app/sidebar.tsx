@@ -111,17 +111,68 @@ const SIDEBAR_SECTIONS: { id: "plan" | "build" | "look" | "more"; label: string;
  * Fetch the set of feature_ids the admin has disabled. Cached for 30s, fails
  * open (empty set) on error so a broken endpoint never blanks the sidebar.
  */
-function useDisabledFeatureIds(): Set<string> {
+type FlagRow = {
+  feature_id: string;
+  override_plan: string | null;
+  disabled: boolean;
+  enabled_free: boolean | null;
+  enabled_plus: boolean | null;
+  enabled_pro: boolean | null;
+  enabled_vip: boolean | null;
+};
+
+type EffectiveFlags = {
+  disabledIds: Set<string>;
+  rows: Map<string, FlagRow>;
+};
+
+/**
+ * Fetch the effective feature-flag state from the admin panel. Returns:
+ *   - disabledIds: features the admin has killed entirely
+ *   - rows: per-feature overrides (override_plan + per-plan booleans)
+ *
+ * The sidebar uses both: kill-switched features vanish, and plan-gated
+ * features respect admin overrides instead of only the hardcoded minPlan.
+ */
+function useFeatureFlags(): EffectiveFlags {
   const { data } = useQuery({
-    queryKey: ["feature-flags", "disabled"],
+    queryKey: ["feature-flags", "effective"],
     queryFn: async () => {
       const r = await fetch("/api/feature-flags/effective");
-      if (!r.ok) return { disabled: [] as string[] };
-      return (await r.json()) as { disabled: string[] };
+      if (!r.ok) return { disabled: [] as string[], rows: [] as FlagRow[] };
+      return (await r.json()) as { disabled: string[]; rows: FlagRow[] };
     },
     staleTime: 30_000,
   });
-  return useMemo(() => new Set(data?.disabled ?? []), [data]);
+  return useMemo(() => ({
+    disabledIds: new Set(data?.disabled ?? []),
+    rows: new Map((data?.rows ?? []).map((r: FlagRow) => [r.feature_id, r])),
+  }), [data]);
+}
+
+/**
+ * Client-side plan-gate that mirrors the server-side canUseFeature logic.
+ * Checks per-plan booleans first, then override_plan, then hardcoded minPlan.
+ */
+function canShowFeature(plan: Plan, featureId: string, flags: EffectiveFlags): boolean {
+  if (flags.disabledIds.has(featureId)) return false;
+  const base = getFeature(featureId);
+  if (!base) return true; // unknown feature — don't hide
+  const row = flags.rows.get(featureId);
+  // Per-plan explicit override wins
+  if (row) {
+    const col =
+      plan === "free" ? row.enabled_free :
+      plan === "plus" ? row.enabled_plus :
+      plan === "pro"  ? row.enabled_pro  :
+      plan === "vip"  ? row.enabled_vip  :
+      /* team */        row.enabled_pro;
+    if (col === true) return true;
+    if (col === false) return false;
+    // null → fall through to override_plan / minPlan
+  }
+  const minPlan = row?.override_plan ?? base.minPlan;
+  return planSatisfies(plan, minPlan as Plan);
 }
 
 function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
@@ -187,16 +238,16 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
   // Top nav: ordered links with localStorage-backed reordering. Rows for
   // features the admin has disabled are filtered out here, so flipping
   // "tasks_today" off in /app/admin removes the Today row for every user.
-  const disabledIds = useDisabledFeatureIds();
+  const featureFlags = useFeatureFlags();
   const baseLinks = useMemo(() => {
     const all = topLinks(lang, isOwner(user.email));
     
     return all.filter((l) => {
       const fid = HREF_TO_FEATURE_ID[l.href];
       if (!fid) return true; // Features / Settings / Admin always visible
-      if (disabledIds.has(fid)) return false; const _f = getFeature(fid); return !_f || planSatisfies(_plan, _f.minPlan);
+      return canShowFeature(_plan, fid, featureFlags);
     });
-  }, [lang, user.email, disabledIds, _plan]);
+  }, [lang, user.email, featureFlags, _plan]);
   const [orderedLinks, setOrderedLinks] = useState<LinkDef[]>(baseLinks);
   // Reapply the saved order whenever the language changes (link labels
   // change but href identity is stable, so order is preserved).

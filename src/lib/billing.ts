@@ -18,7 +18,7 @@
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import { type Plan, planSatisfies, isOwner } from "./plans";
+import { type Plan, planSatisfies } from "./plans";
 export type { Plan } from "./plans";
 
 // ─── Lemon Squeezy API helpers ──────────────────────────────────────────────
@@ -247,11 +247,6 @@ export async function getUserPlan(userId: string): Promise<Plan> {
   const sb = createServiceClient(supaUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-
-  // Owner always gets full "pro" access — bypasses plan gates for testing
-  // and feature development without needing a real subscription.
-  const { data: authUser } = await sb.auth.admin.getUserById(userId);
-  if (authUser?.user?.email && isOwner(authUser.user.email)) return "pro";
 
   const { data } = await sb
     .from("user_plans")
