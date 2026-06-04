@@ -56,7 +56,7 @@ export function ProcrastinationPanel() {
 
   async function apply(it: ProcrastinationItem) {
     if (it.verdict === "drop") {
-      update.mutate({ id: it.id, due_at: null, priority: 0 } as any);
+      update.mutate({ id: it.id, due_at: null, start_at: null, priority: 0 } as any);
     } else if (it.verdict === "schedule") {
       // Pin to next Monday at end of day.
       const now = new Date();
@@ -64,7 +64,15 @@ export function ProcrastinationPanel() {
       const daysUntilNextMon = day === 1 ? 7 : 8 - day;
       const next = addDays(now, daysUntilNextMon);
       next.setHours(23, 59, 0, 0);
-      update.mutate({ id: it.id, due_at: next.toISOString() } as any);
+      // Preserve duration: shift start_at by the same offset
+      const task = tasks.find((t) => t.id === it.id);
+      if (task?.start_at && task?.due_at) {
+        const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+        const newStart = new Date(next.getTime() - durationMs);
+        update.mutate({ id: it.id, start_at: newStart.toISOString(), due_at: next.toISOString() } as any);
+      } else {
+        update.mutate({ id: it.id, due_at: next.toISOString() } as any);
+      }
     } else if (it.verdict === "break-down") {
       const parent = tasks.find((t) => t.id === it.id);
       const project_id = projectFor(it.id);

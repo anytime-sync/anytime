@@ -74,11 +74,19 @@ export function ReflectionDialog() {
   function carryForward(id: string) {
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(23, 59, 0, 0);
-    update.mutate({ id, due_at: tomorrow.toISOString() } as any);
+    // Preserve duration: shift start_at by the same offset
+    const task = allTasks.find((t) => t.id === id);
+    if (task?.start_at && task?.due_at) {
+      const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+      const newStart = new Date(tomorrow.getTime() - durationMs);
+      update.mutate({ id, start_at: newStart.toISOString(), due_at: tomorrow.toISOString() } as any);
+    } else {
+      update.mutate({ id, due_at: tomorrow.toISOString() } as any);
+    }
     toast.message(tr(lang, "reflect.toastRolled"));
   }
   function dropTask(id: string) {
-    update.mutate({ id, due_at: null, priority: 0 } as any);
+    update.mutate({ id, due_at: null, start_at: null, priority: 0 } as any);
     toast.message(tr(lang, "reflect.toastCleared"));
   }
   function carryAll() {
