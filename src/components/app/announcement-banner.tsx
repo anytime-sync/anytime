@@ -12,6 +12,9 @@ type Announcement = {
   link_url: string | null;
   link_text: string | null;
   style: "info" | "success" | "warning" | "accent";
+  bg_color: string | null;
+  text_color: string | null;
+  border_color: string | null;
 };
 
 const STYLE_CLASSES: Record<string, string> = {
@@ -24,6 +27,10 @@ const STYLE_CLASSES: Record<string, string> = {
 /**
  * In-app announcement banner. Reads active announcements from Supabase
  * and displays the most recent one. User can dismiss (stored in sessionStorage).
+ *
+ * Supports per-announcement custom colors (bg_color, text_color, border_color)
+ * set via /admin/format. When custom colors are present, they override the
+ * style-based Tailwind classes via inline styles.
  */
 export function AnnouncementBanner() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -41,7 +48,7 @@ export function AnnouncementBanner() {
       const supabase = createClient();
       const { data } = await supabase
         .from("announcements")
-        .select("id, message, link_url, link_text, style")
+        .select("id, message, link_url, link_text, style, bg_color, text_color, border_color")
         .eq("active", true)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -63,12 +70,19 @@ export function AnnouncementBanner() {
     );
   }
 
+  const hasCustomColors = announcement.bg_color || announcement.text_color || announcement.border_color;
+
   return (
     <div
       className={cn(
         "border-b px-4 py-2.5 text-sm flex items-center justify-center gap-3",
-        STYLE_CLASSES[announcement.style] ?? STYLE_CLASSES.accent
+        !hasCustomColors && (STYLE_CLASSES[announcement.style] ?? STYLE_CLASSES.accent)
       )}
+      style={hasCustomColors ? {
+        backgroundColor: announcement.bg_color || undefined,
+        color: announcement.text_color || undefined,
+        borderBottomColor: announcement.border_color || undefined,
+      } : undefined}
     >
       <span>{announcement.message}</span>
       {announcement.link_url && (

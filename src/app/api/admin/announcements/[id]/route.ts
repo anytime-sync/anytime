@@ -20,9 +20,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
+  // Build update payload — only include fields that are present in the request
+  const update: Record<string, unknown> = {};
+  if ("active" in body) update.active = body.active;
+  if ("bg_color" in body) update.bg_color = body.bg_color || null;
+  if ("text_color" in body) update.text_color = body.text_color || null;
+  if ("border_color" in body) update.border_color = body.border_color || null;
+  if ("style" in body) update.style = body.style;
+  if ("message" in body) update.message = body.message;
+  if ("link_url" in body) update.link_url = body.link_url;
+  if ("link_text" in body) update.link_text = body.link_text;
+
   const { error } = await sc
     .from("announcements")
-    .update({ active: body.active })
+    .update(update)
     .eq("id", params.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
