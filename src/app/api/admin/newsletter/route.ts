@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/admin";
 import { getResend, getFromAddress } from "@/lib/resend";
-import { makeUnsubToken } from "@/lib/unsub-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -157,20 +156,16 @@ async function sendBroadcast(sc: any, broadcast: any) {
   for (let i = 0; i < recipients.length; i += batchSize) {
     const batch = recipients.slice(i, i + batchSize);
     const emails = batch.map((u: any) => {
-      const unsubToken = makeUnsubToken(u.id);
-      const unsubUrl = `${APP_URL}/unsubscribe?token=${unsubToken}&type=broadcasts`;
+      
       const settingsUrl = `${APP_URL}/app/settings#settings-notifications`;
 
       return {
         from: fromAddr,
         to: u.email,
         subject: broadcast.subject,
-        html: wrapInTemplate(broadcast.body_html, unsubUrl, settingsUrl),
-        text: broadcast.body_text + broadcastTextFooter(unsubUrl, settingsUrl),
-        headers: {
-          "List-Unsubscribe": `<${unsubUrl}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
+        html: wrapInTemplate(broadcast.body_html, settingsUrl),
+        text: broadcast.body_text + broadcastTextFooter(settingsUrl),
+        
       };
     });
 
@@ -196,7 +191,7 @@ async function sendBroadcast(sc: any, broadcast: any) {
 
 // ─── Email template ─────────────────────────────────────────────────
 
-function wrapInTemplate(bodyHtml: string, unsubUrl: string, settingsUrl: string): string {
+function wrapInTemplate(bodyHtml: string, settingsUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -217,12 +212,10 @@ function wrapInTemplate(bodyHtml: string, unsubUrl: string, settingsUrl: string)
     <!-- Footer -->
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8e6e1;text-align:center;">
       <p style="font-size:12px;color:#999;line-height:1.6;margin:0 0 8px;">
-        You’re receiving this because you have a First Light account.
+        You’re receiving this as a First Light user. To adjust which emails you receive, visit your notification settings.
       </p>
       <p style="font-size:12px;color:#999;line-height:1.6;margin:0 0 8px;">
-        <a href="${settingsUrl}" style="color:#b8860b;text-decoration:underline;">Manage email preferences</a>
-        &nbsp;&middot;&nbsp;
-        <a href="${unsubUrl}" style="color:#999;text-decoration:underline;">Unsubscribe from updates</a>
+        <a href="${settingsUrl}" style="color:#b8860b;text-decoration:underline;">Go to Settings → Notifications</a>
       </p>
       <p style="font-size:11px;color:#ccc;margin:16px 0 0;">
         &copy; ${new Date().getFullYear()} First Light &middot; firstlight.to
@@ -233,8 +226,8 @@ function wrapInTemplate(bodyHtml: string, unsubUrl: string, settingsUrl: string)
 </html>`;
 }
 
-function broadcastTextFooter(unsubUrl: string, settingsUrl: string): string {
-  return `\n\n---\nYou're receiving this because you have a First Light account.\nManage preferences: ${settingsUrl}\nUnsubscribe from updates: ${unsubUrl}\n\n© ${new Date().getFullYear()} First Light · firstlight.to`;
+function broadcastTextFooter(settingsUrl: string): string {
+  return `\n\n---\nYou're receiving this because you have a First Light account.\nYou can manage your email preferences in Settings: ${settingsUrl}\n\n© ${new Date().getFullYear()} First Light · firstlight.to`;
 }
 
 // ─── Markdown → HTML ────────────────────────────────────────────────
