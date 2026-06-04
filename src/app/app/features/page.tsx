@@ -106,7 +106,7 @@ export default function FeaturesPage() {
                   >
                     {plusLoading
                       ? "Upgrade to Plus"
-                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$5 / month"}`}
+                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$3 / month"}`}
                   </Link>
                   <button
                     onClick={() => checkout.mutate()}

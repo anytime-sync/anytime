@@ -6,13 +6,13 @@ export const metadata: Metadata = {
     alternates: { canonical: "/pricing" },
     openGraph: {
           title: "Pricing — First Light",
-          description: "Free, Plus $4, Pro $9. Calm daily productivity.",
+          description: "Free, Plus $3, Pro $9. Calm daily productivity.",
           url: "https://firstlight.to/pricing",
           images: ["/og.png"],
     },
     twitter: {
           title: "Pricing — First Light",
-          description: "Free, Plus $4, Pro $9. Calm daily productivity.",
+          description: "Free, Plus $3, Pro $9. Calm daily productivity.",
           images: ["/og.png"],
     },
 };

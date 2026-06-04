@@ -52,7 +52,7 @@ export default function FirstLightVsTodoist() {
     ["Project hierarchy", "Projects · Sections · Subtasks", "Lists + Groups"],
     ["Team collaboration", "Yes", "Groups (shared lists)"],
     ["Free plan", "5 personal projects", "Generous · Daily Edition included"],
-    ["Paid entry tier", "$5/mo Pro (annual only)", "$4/mo Plus (monthly)"],
+    ["Paid entry tier", "$5/mo Pro (annual only)", "$3/mo Plus (monthly)"],
   ];
   return (
     <>
