@@ -226,7 +226,7 @@ ${oquaVoice(language)}
 Output JSON only:
 {
   "kicker": string,        // 4-8 words, ALL CAPS in English; for CJK languages use a short stand-in label like "今日 · 早報" / "今日のブリーフ" / "오늘의 브리핑"
-  "headline": string,      // 6-12 words, sentence case, the leading idea
+  "headline": string,      // 6-12 words, sentence case, the leading idea. For ZH: write like you'd text a friend — "就一件事，技術審查" not "技術審查與逾期項目的平衡週四". No literary compression. No 四字成語-style packing.
   "front_page": string,    // 1 short paragraph (≤45 words). The single most important thing today. Open with a beat — date, event, number — not a verb.
   "inside": string,        // 1 short paragraph (≤55 words). The next 1-2 things, with explicit nod to meetings or commitments.
   "below_fold": string     // 1 short sentence (≤22 words). A small note: a deferred task, a quiet win, a permission to stop.
@@ -537,7 +537,7 @@ ${oquaVoice(language)}
 
 Output JSON only:
 {
-  "headline": string,                              // <= 10 words in ${lang.aiName}
+  "headline": string,                              // <= 10 words in ${lang.aiName}. For ZH: conversational, not literary — "這週其實蠻鬆的" not "輕負荷的一週回顧".
   "body": string,                                  // 2-3 sentences in ${lang.aiName}, <= 60 words total
   "carry_forward_ids": string[],                   // ids of incomplete tasks worth rolling to tomorrow (max 4)
   "drop_suggestions_ids": string[]                 // ids worth dropping (max 2)
@@ -569,7 +569,7 @@ You receive a JSON CONTEXT with:
 Output JSON ONLY (no fences, no preamble) matching this exact shape:
 {
   "kicker": string,                          // 4-8 words; in English use ALL CAPS, in CJK use a short label like "今日 · 早報" / "今日のブリーフ" / "오늘의 브리핑"
-  "headline": string,                        // 6-12 words, sentence case, the leading idea of the day
+  "headline": string,                        // 6-12 words, sentence case, the leading idea of the day. For ZH: casual and direct — "今天輕鬆，就一件事" not "單一事項的週四". Talk, don't title. No newspaper-headline compression.
   "intro": string,                           // 1 short paragraph (≤45 words). Read the day's shape — heavy, light, scattered. Open with a beat.
   "clarifying_question": string | null,      // ONE question that would unblock the day. Null if today is genuinely unambiguous.
   "suggested_actions": [                     // 0-3 items, never more

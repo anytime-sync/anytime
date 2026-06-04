@@ -97,6 +97,7 @@ export type StringKey =
   | "sidebar.addTask"
   | "sidebar.search"
   | "sidebar.today"
+  | "view.today.heading"
   | "sidebar.tomorrow"
   | "sidebar.next7"
   | "sidebar.inbox"
@@ -807,6 +808,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.addTask": "Add task",
     "sidebar.search": "Search…",
     "sidebar.today": "Today",
+    "view.today.heading": "Today's Agenda",
     "sidebar.tomorrow": "Tomorrow",
     "sidebar.next7": "Next 7 Days",
     "sidebar.inbox": "Inbox",
@@ -1514,6 +1516,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.addTask": "新增任務",
     "sidebar.search": "搜尋…",
     "sidebar.today": "今天",
+    "view.today.heading": "今日日程",
     "sidebar.tomorrow": "明天",
     "sidebar.next7": "未來七日",
     "sidebar.inbox": "收件匣",
@@ -2221,6 +2224,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.addTask": "新增任务",
     "sidebar.search": "搜索…",
     "sidebar.today": "今天",
+    "view.today.heading": "今日日程",
     "sidebar.tomorrow": "明天",
     "sidebar.next7": "未来七日",
     "sidebar.inbox": "收件箱",
@@ -2928,6 +2932,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.addTask": "タスクを追加",
     "sidebar.search": "検索…",
     "sidebar.today": "今日",
+    "view.today.heading": "今日の予定",
     "sidebar.tomorrow": "明日",
     "sidebar.next7": "次の7日間",
     "sidebar.inbox": "受信箱",
@@ -3635,6 +3640,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "sidebar.addTask": "작업 추가",
     "sidebar.search": "검색…",
     "sidebar.today": "오늘",
+    "view.today.heading": "오늘 일정",
     "sidebar.tomorrow": "내일",
     "sidebar.next7": "향후 7일",
     "sidebar.inbox": "받은편지함",

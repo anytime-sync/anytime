@@ -35,7 +35,7 @@ export default function TodayPage() {
       <>
         <Celebrations />
         <TaskListView
-          title={t(lang, "sidebar.today")}
+          title={t(lang, "view.today.heading")}
           subtitle={format(new Date(), "EEEE, MMMM d")}
           filter={{ view: "today" }}
           defaults={{ due_at: endOfDay(new Date()).toISOString() }}
@@ -61,7 +61,7 @@ export default function TodayPage() {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight truncate">
-              {t(lang, "sidebar.today")}
+              {t(lang, "view.today.heading")}
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">
               {format(new Date(), "EEEE, MMMM d")}
