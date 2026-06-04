@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 import { SwRegister } from "@/components/app/sw-register"; import { Analytics } from "@/components/analytics";
+import { AnalyticsWrapper } from "@/components/analytics-wrapper";
 import { PhotoBackground } from "@/components/photo-background";
 import { LanguageBootstrap } from "@/components/app/language-bootstrap";
 import { I18nOverridesBootstrap } from "@/components/app/i18n-overrides-bootstrap";
@@ -205,7 +206,7 @@ export default async function RootLayout({
           </Providers>
         </DesignProvider>
         <Toaster position="bottom-right" richColors closeButton />
-        <SwRegister /><Analytics />
+        <SwRegister /><Analytics /><AnalyticsWrapper />
       </body>
     </html>
   );
