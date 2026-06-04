@@ -88,17 +88,26 @@ export default function FeaturesPage() {
                   {portal.isPending ? "Opening portal…" : "Manage billing"}
                 </button>
               ) : isPlus ? (
-                <button
-                  onClick={() => checkoutPro.mutate()}
-                  disabled={checkoutPro.isPending}
-                  className="btn-primary h-10 px-4"
-                >
-                  {checkoutPro.isPending
-                    ? "Redirecting…"
-                    : priceLoading
-                    ? "Upgrade to Pro"
-                    : `Upgrade to Pro — ${pro?.formatted ?? "$9 / month"}`}
-                </button>
+                <>
+                  <button
+                    onClick={() => checkoutPro.mutate()}
+                    disabled={checkoutPro.isPending}
+                    className="btn-primary h-10 px-4"
+                  >
+                    {checkoutPro.isPending
+                      ? "Redirecting…"
+                      : priceLoading
+                      ? "Upgrade to Pro"
+                      : `Upgrade to Pro — ${pro?.formatted ?? "$9 / month"}`}
+                  </button>
+                  <button
+                    onClick={() => portal.mutate()}
+                    disabled={portal.isPending}
+                    className="btn-ghost h-10 px-4"
+                  >
+                    {portal.isPending ? "Opening portal…" : "Manage billing"}
+                  </button>
+                </>
               ) : (
                 <>
                   <button
