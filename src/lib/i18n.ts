@@ -121,6 +121,7 @@ export type StringKey =
   | "view.completed.subtitle"
   | "sidebar.settings"
   | "sidebar.groups"
+  | "sidebar.goals"
   | "email.subject"
   | "email.kicker"
   | "email.dueLabel"
@@ -1293,6 +1294,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.placeholder.yourName": "Your name",
     "view.groups.heading": "Groups",
     "sidebar.groups": "Groups",
+    "sidebar.goals": "Goals",
     "view.groups.subtitle": "Share tasks with people you trust. Owners approve every invite before it goes out.",
     "view.groups.namePlaceholder": "New group name",
     "view.groups.create": "Create",
