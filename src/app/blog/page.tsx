@@ -63,7 +63,7 @@ export default function BlogIndex() {
                     {post.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-[10px] uppercase tracking-wider text-muted-fg/70 border border-border rounded-full px-2 py-0.5"
+                        className="text-[10px] uppercase tracking-wider text-amber-700/80 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 dark:text-amber-300/90 dark:bg-amber-950/40 dark:border-amber-800/50"
                       >
                         {tag}
                       </span>
