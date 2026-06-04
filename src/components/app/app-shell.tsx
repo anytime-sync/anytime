@@ -9,6 +9,7 @@ import { Reminders } from "./reminders";
 import { useUIStore } from "@/store/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import { ImpersonationBanner } from "./impersonation-banner";
+import { AnnouncementBanner } from "./announcement-banner";
 import { GoalModal } from "./goal-modal";
 import { ReflectionDialog } from "./reflection-dialog";
 
@@ -40,6 +41,7 @@ export function AppShell({
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
       <ImpersonationBanner />
+      <AnnouncementBanner />
       <div className="flex-1 min-h-0 grid"
         style={{
           gridTemplateColumns: sidebarCollapsed ? "64px 1fr" : "260px 1fr",
