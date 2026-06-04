@@ -55,8 +55,8 @@ export default function MembersPage() {
     queryKey: ["admin", "members-plans"],
     queryFn: async () => {
       const r = await fetch("/api/admin/users?limit=500");
-      if (!r.ok) return { users: [] as { id: string; plan: Plan; override_plan_raw: string | null }[], viewer_is_owner: false };
-      return (await r.json()) as { users: { id: string; plan: Plan; override_plan_raw: string | null }[]; viewer_is_owner: boolean };
+      if (!r.ok) return { users: [] as { id: string; plan: Plan; override_plan_raw: string | null; plan_status: string | null }[], viewer_is_owner: false };
+      return (await r.json()) as { users: { id: string; plan: Plan; override_plan_raw: string | null; plan_status: string | null }[]; viewer_is_owner: boolean };
     },
   });
   const planByUserId = new Map<string, { plan: Plan; raw: string | null; planStatus: string | null }>(
