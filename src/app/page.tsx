@@ -50,6 +50,12 @@ export default function Home() {
             >
               Pricing
             </Link>
+            <Link
+              href="/blog"
+              className="hover:text-fg transition-colors hidden sm:inline"
+            >
+              Blog
+            </Link>
             <LanguagePicker mode="local" onChange={setLang} />
           </nav>
         </div>

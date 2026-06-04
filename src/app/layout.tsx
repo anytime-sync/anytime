@@ -11,6 +11,7 @@ import { RouteTracker } from "@/components/app/route-tracker";
 import { Suspense } from "react";
 import { DesignProvider } from "@/lib/design/provider";
 import { DesignEditMode } from "@/lib/design/edit-mode";
+import { SoftwareApplicationJsonLd } from "@/components/json-ld";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
 import { generateClassOverridesCss } from "@/lib/design/class-css";
 import { fetchSiteOverrides } from "@/lib/i18n-server";
@@ -168,6 +169,7 @@ export default async function RootLayout({
         )}
       </head>
       <body>
+        <SoftwareApplicationJsonLd />
         {/* Hand the freshly-fetched i18n overrides to the client BEFORE
             React hydrates. The bootstrap component reads this window
             var on module load and seeds setI18nOverrides synchronously,
