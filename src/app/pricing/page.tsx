@@ -224,13 +224,13 @@ export default function PricingPage() {
           <FeatureMatrix />
         </section>
 
-        {/* FAQ short */}
+        {/* FAQ — expanded for SEO rich snippets */}
         <section className="max-w-2xl mx-auto mb-20">
           <h2 className="font-display text-3xl tracking-tight mb-6 text-center">Common questions</h2>
           <dl className="space-y-6 text-sm">
             <div>
               <dt className="font-medium mb-1">Can I cancel anytime?</dt>
-              <dd className="text-muted-fg">Yes. Use the customer portal in Settings → Billing. Your subscription stays active until the end of the period you've already paid for.</dd>
+              <dd className="text-muted-fg">Yes. Use the customer portal in Settings → Billing. Your subscription stays active until the end of the period you’ve already paid for.</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">What happens to my data if I downgrade?</dt>
@@ -238,7 +238,23 @@ export default function PricingPage() {
             </div>
             <div>
               <dt className="font-medium mb-1">Is there a team plan?</dt>
-              <dd className="text-muted-fg">Not yet. We're focused on making the single-player experience excellent first.</dd>
+              <dd className="text-muted-fg">Not yet. We’re focused on making the single-player experience excellent first.</dd>
+            </div>
+            <div>
+              <dt className="font-medium mb-1">What languages does First Light support?</dt>
+              <dd className="text-muted-fg">English, Traditional Chinese, Simplified Chinese, Japanese, and Korean — with native CJK typography tuned per language.</dd>
+            </div>
+            <div>
+              <dt className="font-medium mb-1">Does First Light work on mobile?</dt>
+              <dd className="text-muted-fg">Yes. First Light is a progressive web app that works on any device — phone, tablet, or desktop. Install it from your browser for an app-like experience.</dd>
+            </div>
+            <div>
+              <dt className="font-medium mb-1">How does the AI Daily Edition work?</dt>
+              <dd className="text-muted-fg">Every morning, First Light reads your calendar, tasks, and deadlines, then writes you a short editorial briefing — like a personal newspaper for your day. Free gets 1 per day; Plus and Pro get unlimited.</dd>
+            </div>
+            <div>
+              <dt className="font-medium mb-1">Is my data secure?</dt>
+              <dd className="text-muted-fg">Yes. First Light uses Supabase (built on PostgreSQL) with row-level security. Your data is encrypted in transit and at rest. We never sell your data.</dd>
             </div>
           </dl>
         </section>

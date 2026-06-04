@@ -42,7 +42,10 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "First Light — your space for clarity, focus, intentional progress",
+  title: {
+    default: "First Light — your space for clarity, focus, intentional progress",
+    template: "%s — First Light",
+  },
   // English baseline for the meta description. LanguageBootstrap swaps
   // this for the localized poetic version on the client when the user's
   // stored language isn't English — so search bots / link previews see
@@ -50,8 +53,14 @@ export const metadata: Metadata = {
   // see their language in the browser tab and any Open Graph readers
   // that re-resolve after page load.
   description:
-    "First Light · A calm daily productivity tool for getting things done.",
-  metadataBase: new URL("https://firstlight.to"), alternates: { canonical: "/" }, openGraph: { type: "website", siteName: "First Light", title: "First Light — your space for clarity, focus, intentional progress", description: "A calm daily productivity tool. Read once in the morning; the day is shaped.", url: "https://firstlight.to", locale: "en_US", images: [{ url: "/og.png", width: 1200, height: 630, alt: "First Light" }] }, twitter: { card: "summary_large_image", title: "First Light — your space for clarity, focus, intentional progress", description: "A calm daily productivity tool. Read once in the morning; the day is shaped.", images: ["/og.png"] }, robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } }, keywords: ["productivity app", "task manager", "AI daily planner", "Google Calendar sync", "Eisenhower matrix", "weekly review", "paste to task", "voice to task", "snapshot to task", "First Light"], authors: [{ name: "First Light" }], category: "productivity", verification: { google: "WIOio_NT9ylh9an2yaMZgJ30nhbmR_Pb0o4e9FDWxPY" }, manifest: "/manifest.webmanifest",
+    "First Light is a calm AI-powered daily planner. Morning briefings, Google Calendar sync, voice-to-task, Eisenhower matrix, and weekly reviews — in 5 languages.",
+  metadataBase: new URL("https://firstlight.to"), alternates: { canonical: "/" }, openGraph: { type: "website", siteName: "First Light", title: {
+    default: "First Light — your space for clarity, focus, intentional progress",
+    template: "%s — First Light",
+  }, description: "A calm daily productivity tool. Read once in the morning; the day is shaped.", url: "https://firstlight.to", locale: "en_US", images: [{ url: "/og.png", width: 1200, height: 630, alt: "First Light" }] }, twitter: { card: "summary_large_image", title: {
+    default: "First Light — your space for clarity, focus, intentional progress",
+    template: "%s — First Light",
+  }, description: "A calm daily productivity tool. Read once in the morning; the day is shaped.", images: ["/og.png"] }, robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } }, keywords: ["productivity app", "task manager", "AI daily planner", "AI task manager", "Google Calendar sync", "Eisenhower matrix", "weekly review", "paste to task", "voice to task", "snapshot to task", "morning routine app", "daily planner", "AI productivity tool", "best task manager 2026", "calm productivity", "daily briefing app", "focus timer", "pomodoro app", "habit tracker", "multilingual task manager", "CJK productivity app", "First Light"], authors: [{ name: "First Light" }], category: "productivity", verification: { google: "WIOio_NT9ylh9an2yaMZgJ30nhbmR_Pb0o4e9FDWxPY" }, manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/icons/icon.svg", type: "image/svg+xml" },
