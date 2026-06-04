@@ -42,9 +42,10 @@ export function BlogList({ posts }: { posts: BlogPostMeta[] }) {
     : "en-US";
 
   return (
-    <>
-      <BlogNav activePage="blog" onLangChange={setLang} />
+    <div className="min-h-screen">
+      <BlogNav onLangChange={setLang} />
 
+      <main className="mx-auto max-w-2xl px-4 py-16 md:py-24">
       <div className="mb-12">
         <h1 className="font-display text-4xl md:text-5xl tracking-tight">
           Blog
@@ -103,6 +104,7 @@ export function BlogList({ posts }: { posts: BlogPostMeta[] }) {
           ))}
         </div>
       )}
-    </>
+    </main>
+    </div>
   );
 }

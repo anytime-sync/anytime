@@ -49,7 +49,10 @@ export default async function BlogPostPage({ params }: Props) {
   const contentHtml = await renderMarkdown(post.content);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16 md:py-24">
+    <div className="min-h-screen">
+      <BlogNav />
+
+      <main className="mx-auto max-w-2xl px-4 py-16 md:py-24">
       <BlogPostJsonLd
         title={post.title}
         description={post.description}
@@ -59,8 +62,6 @@ export default async function BlogPostPage({ params }: Props) {
         url={`https://firstlight.to/blog/${post.slug}`}
         image={post.image}
       />
-      <BlogNav activePage="post" />
-
       <article>
         <header className="mb-10">
           <time className="text-xs uppercase tracking-widest text-muted-fg">
@@ -115,5 +116,6 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </footer>
     </main>
+    </div>
   );
 }

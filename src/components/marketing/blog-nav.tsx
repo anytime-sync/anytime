@@ -6,14 +6,12 @@ import { readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 
 /**
- * Shared top nav for blog pages — matches the pricing/landing nav
- * and includes the LanguagePicker.
+ * Shared top nav for blog pages — identical layout to the landing page nav:
+ * FIRST LIGHT wordmark (left), Pricing + Blog + LanguagePicker (right).
  */
 export function BlogNav({
-  activePage = "blog",
   onLangChange,
 }: {
-  activePage?: "blog" | "post";
   onLangChange?: (code: LanguageCode) => void;
 }) {
   const [lang, setLang] = useState<LanguageCode>("en");
@@ -28,22 +26,23 @@ export function BlogNav({
   }
 
   return (
-    <header className="border-b border-border mb-12 -mx-4 md:-mx-6 px-4 md:px-6">
-      <div className="max-w-2xl mx-auto h-14 flex items-center justify-between">
-        <Link href="/" className="wordmark text-base">
-          First Light
+    <header className="px-4 md:px-6 pt-6 md:pt-8">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+        <Link href="/" className="shrink-0">
+          <span className="wordmark text-[13px] md:text-base">
+            First Light
+          </span>
         </Link>
         <nav className="flex items-center gap-4 text-sm text-muted-fg">
-          <Link href="/pricing" className="hover:text-fg transition-colors">
+          <Link
+            href="/pricing"
+            className="hover:text-fg transition-colors hidden sm:inline"
+          >
             Pricing
           </Link>
           <Link
             href="/blog"
-            className={
-              activePage === "blog"
-                ? "font-medium text-fg"
-                : "hover:text-fg transition-colors"
-            }
+            className="hover:text-fg transition-colors hidden sm:inline"
           >
             Blog
           </Link>

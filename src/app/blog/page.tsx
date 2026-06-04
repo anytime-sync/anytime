@@ -26,9 +26,5 @@ export default function BlogIndex() {
     readingTime: p.readingTime,
   }));
 
-  return (
-    <main className="mx-auto max-w-2xl px-4 py-16 md:py-24">
-      <BlogList posts={posts} />
-    </main>
-  );
+  return <BlogList posts={posts} />;
 }
