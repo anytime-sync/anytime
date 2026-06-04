@@ -52,3 +52,7 @@ alter table public.announcements enable row level security;
 -- All authenticated users can read active announcements
 create policy "Anyone can read active announcements" on public.announcements
   for select using (active = true and (starts_at is null or starts_at <= now()) and (ends_at is null or ends_at > now()));
+
+-- Email broadcast opt-in preference (default true — users can opt out)
+alter table user_preferences
+  add column if not exists email_broadcasts boolean not null default true;

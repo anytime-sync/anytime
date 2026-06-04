@@ -12,65 +12,54 @@ async function requireAdmin(supabase: any) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) {
-    return null;
-  }
+  if (!user || !isAdminEmail(user.email)) return null;
   return user;
 }
 
-/**
- * GET /api/admin/newsletter
- * List all broadcasts (drafts + sent).
- */
-export async function GET() {
-  const supabase = await createClient();
-  const user = await requireAdmin(supabase);
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  const serviceClient = createServiceClient(
+function getServiceClient() {
+  return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+}
 
-  const { data, error } = await serviceClient
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://firstlight.to";
+
+/**
+ * GET /api/admin/newsletter — list all broadcasts.
+ */
+export async function GET() {
+  const supabase = await createClient();
+  if (!(await requireAdmin(supabase)))
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const sc = getServiceClient();
+  const { data, error } = await sc
     .from("broadcasts")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
 }
 
 /**
  * POST /api/admin/newsletter
- * Create a draft or immediately send a broadcast.
  * Body: { subject, body, audience, action: "draft" | "send" }
  */
 export async function POST(req: Request) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { subject, body, audience, action } = await req.json();
-  if (!subject?.trim()) {
+  if (!subject?.trim())
     return NextResponse.json({ error: "subject_required" }, { status: 400 });
-  }
 
-  const serviceClient = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const sc = getServiceClient();
 
-  // Save as draft first
-  const { data: broadcast, error: insertErr } = await serviceClient
+  const { data: broadcast, error: insertErr } = await sc
     .from("broadcasts")
     .insert({
       subject: subject.trim(),
@@ -83,46 +72,57 @@ export async function POST(req: Request) {
     .select()
     .single();
 
-  if (insertErr || !broadcast) {
+  if (insertErr || !broadcast)
     return NextResponse.json(
       { error: insertErr?.message ?? "insert_failed" },
       { status: 500 }
     );
-  }
 
   if (action === "send") {
-    const result = await sendBroadcast(serviceClient, broadcast);
+    const result = await sendBroadcast(sc, broadcast);
     return NextResponse.json(result);
   }
 
   return NextResponse.json(broadcast);
 }
 
-/**
- * Send a broadcast to matching users via Resend.
- */
-async function sendBroadcast(serviceClient: any, broadcast: any) {
+// ─── Send logic ─────────────────────────────────────────────────────
+
+async function sendBroadcast(sc: any, broadcast: any) {
   const resend = getResend();
   if (!resend) {
-    await serviceClient
-      .from("broadcasts")
-      .update({ status: "failed" })
-      .eq("id", broadcast.id);
+    await sc.from("broadcasts").update({ status: "failed" }).eq("id", broadcast.id);
     return { error: "RESEND_API_KEY not configured", sent_count: 0 };
   }
 
-  // Get target users based on audience
-  let query = serviceClient
+  // 1. Get users who have NOT opted out of broadcasts
+  //    Join profiles + user_preferences to check email_broadcasts flag
+  const { data: profiles } = await sc
     .from("profiles")
     .select("id, email")
     .not("email", "is", null);
 
-  if (broadcast.audience !== "all") {
-    // Join with user_plans view to filter by plan
-    const { data: planUsers } = await serviceClient
-      .from("user_plans")
-      .select("user_id, plan");
+  if (!profiles || profiles.length === 0) {
+    await sc
+      .from("broadcasts")
+      .update({ status: "sent", sent_count: 0, sent_at: new Date().toISOString() })
+      .eq("id", broadcast.id);
+    return { sent_count: 0 };
+  }
 
+  // Get users who opted out
+  const { data: optedOut } = await sc
+    .from("user_preferences")
+    .select("user_id")
+    .eq("email_broadcasts", false);
+
+  const optedOutIds = new Set((optedOut ?? []).map((r: any) => r.user_id));
+
+  // Filter by audience (plan) if not "all"
+  let eligibleIds = new Set(profiles.map((p: any) => p.id));
+
+  if (broadcast.audience !== "all") {
+    const { data: planUsers } = await sc.from("user_plans").select("user_id, plan");
     const targetIds = (planUsers ?? [])
       .filter((pu: any) => {
         if (broadcast.audience === "free") return pu.plan === "free";
@@ -133,36 +133,46 @@ async function sendBroadcast(serviceClient: any, broadcast: any) {
         return true;
       })
       .map((pu: any) => pu.user_id);
-
-    query = query.in("id", targetIds);
+    eligibleIds = new Set(targetIds);
   }
 
-  const { data: users } = await query;
-  if (!users || users.length === 0) {
-    await serviceClient
+  // Final recipient list: eligible AND not opted out
+  const recipients = profiles.filter(
+    (p: any) => eligibleIds.has(p.id) && !optedOutIds.has(p.id)
+  );
+
+  if (recipients.length === 0) {
+    await sc
       .from("broadcasts")
       .update({ status: "sent", sent_count: 0, sent_at: new Date().toISOString() })
       .eq("id", broadcast.id);
     return { sent_count: 0 };
   }
 
-  // Send via Resend batch (max 100 per call)
+  // 2. Send via Resend batch
   let sentCount = 0;
   const fromAddr = getFromAddress();
   const batchSize = 100;
 
-  for (let i = 0; i < users.length; i += batchSize) {
-    const batch = users.slice(i, i + batchSize);
-    const emails = batch.map((u: any) => ({
-      from: fromAddr,
-      to: u.email,
-      subject: broadcast.subject,
-      html: broadcast.body_html + unsubFooter(u.id),
-      text: broadcast.body_text + `\n\nUnsubscribe: ${process.env.NEXT_PUBLIC_APP_URL ?? "https://firstlight.to"}/unsubscribe?token=${makeUnsubToken(u.id)}`,
-      headers: {
-        "List-Unsubscribe": `<${process.env.NEXT_PUBLIC_APP_URL ?? "https://firstlight.to"}/api/unsubscribe?token=${makeUnsubToken(u.id)}>`,
-      },
-    }));
+  for (let i = 0; i < recipients.length; i += batchSize) {
+    const batch = recipients.slice(i, i + batchSize);
+    const emails = batch.map((u: any) => {
+      const unsubToken = makeUnsubToken(u.id);
+      const unsubUrl = `${APP_URL}/unsubscribe?token=${unsubToken}&type=broadcasts`;
+      const settingsUrl = `${APP_URL}/app/settings#settings-notifications`;
+
+      return {
+        from: fromAddr,
+        to: u.email,
+        subject: broadcast.subject,
+        html: wrapInTemplate(broadcast.body_html, unsubUrl, settingsUrl),
+        text: broadcast.body_text + broadcastTextFooter(unsubUrl, settingsUrl),
+        headers: {
+          "List-Unsubscribe": `<${unsubUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      };
+    });
 
     try {
       await resend.batch.send(emails);
@@ -172,7 +182,7 @@ async function sendBroadcast(serviceClient: any, broadcast: any) {
     }
   }
 
-  await serviceClient
+  await sc
     .from("broadcasts")
     .update({
       status: sentCount > 0 ? "sent" : "failed",
@@ -184,27 +194,64 @@ async function sendBroadcast(serviceClient: any, broadcast: any) {
   return { sent_count: sentCount, id: broadcast.id };
 }
 
-function unsubFooter(userId: string): string {
-  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://firstlight.to"}/unsubscribe?token=${makeUnsubToken(userId)}`;
-  return `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #eee;text-align:center;font-size:12px;color:#999;"><a href="${url}" style="color:#999;">Unsubscribe</a></div>`;
+// ─── Email template ─────────────────────────────────────────────────
+
+function wrapInTemplate(bodyHtml: string, unsubUrl: string, settingsUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#fafaf8;font-family:Georgia,'Times New Roman',serif;">
+  <div style="max-width:580px;margin:0 auto;padding:40px 24px;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#b8860b;margin:0;">
+        First Light · Update
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div style="font-size:16px;line-height:1.7;color:#1a1a19;">
+      ${bodyHtml}
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8e6e1;text-align:center;">
+      <p style="font-size:12px;color:#999;line-height:1.6;margin:0 0 8px;">
+        You’re receiving this because you have a First Light account.
+      </p>
+      <p style="font-size:12px;color:#999;line-height:1.6;margin:0 0 8px;">
+        <a href="${settingsUrl}" style="color:#b8860b;text-decoration:underline;">Manage email preferences</a>
+        &nbsp;&middot;&nbsp;
+        <a href="${unsubUrl}" style="color:#999;text-decoration:underline;">Unsubscribe from updates</a>
+      </p>
+      <p style="font-size:11px;color:#ccc;margin:16px 0 0;">
+        &copy; ${new Date().getFullYear()} First Light &middot; firstlight.to
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
-/**
- * Very basic markdown→HTML (bold, italic, links, paragraphs).
- * For a real product, use a proper markdown lib.
- */
+function broadcastTextFooter(unsubUrl: string, settingsUrl: string): string {
+  return `\n\n---\nYou're receiving this because you have a First Light account.\nManage preferences: ${settingsUrl}\nUnsubscribe from updates: ${unsubUrl}\n\n© ${new Date().getFullYear()} First Light · firstlight.to`;
+}
+
+// ─── Markdown → HTML ────────────────────────────────────────────────
+
 function markdownToHtml(md: string): string {
   return md
     .split("\n\n")
-    .map((p) =>
-      `<p style="margin:0 0 16px;line-height:1.6;font-family:Georgia,serif;">${p
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(
-          /\[(.+?)\]\((.+?)\)/g,
-          '<a href="$2" style="color:#b8860b;">$1</a>'
-        )
-        .replace(/\n/g, "<br>")}</p>`
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px;line-height:1.7;font-family:Georgia,serif;">${p
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.+?)\*/g, "<em>$1</em>")
+          .replace(
+            /\[(.+?)\]\((.+?)\)/g,
+            '<a href="$2" style="color:#b8860b;text-decoration:underline;">$1</a>'
+          )
+          .replace(/\n/g, "<br>")}</p>`
     )
     .join("");
 }

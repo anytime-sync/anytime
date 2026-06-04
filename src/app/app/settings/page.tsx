@@ -355,6 +355,12 @@ export default function SettingsPage() {
               onChange={(v) => setPref("email_daily_digest", v)}
             />
             <Toggle
+              label={tr(lang, "view.settings.toggle.emailBroadcasts")}
+              hint={tr(lang, "view.settings.toggle.emailBroadcastsHint")}
+              checked={prefs?.email_broadcasts ?? true}
+              onChange={(v) => setPref("email_broadcasts", v)}
+            />
+            <Toggle
               label={tr(lang, "view.settings.toggle.pushNotifications")}
               hint={pushReady
                 ? tr(lang, "view.settings.toggle.pushHint")

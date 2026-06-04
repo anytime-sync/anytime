@@ -526,6 +526,8 @@ export type StringKey =
   | "view.settings.toggle.emailRemindersHint"
   | "view.settings.toggle.dailyDigest"
   | "view.settings.toggle.dailyDigestHint"
+  | "view.settings.toggle.emailBroadcasts"
+  | "view.settings.toggle.emailBroadcastsHint"
   | "view.settings.toggle.pushNotifications"
   | "view.settings.toggle.pushHint"
   | "view.settings.toggle.pushUnsupported"
@@ -1232,6 +1234,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.emailRemindersHint": "When a task's reminder time is reached, send an email to your inbox.",
     "view.settings.toggle.dailyDigest": "Daily digest email",
     "view.settings.toggle.dailyDigestHint": "A short editorial brief at 7am: today's priorities, overdue items, and your streak.",
+    "view.settings.toggle.emailBroadcasts": "Product updates & announcements",
+    "view.settings.toggle.emailBroadcastsHint": "Occasional emails about new features, tips, and important updates. You can unsubscribe anytime.",
     "view.settings.toggle.pushNotifications": "Push notifications",
     "view.settings.toggle.pushHint": "Browser-native notifications even when the tab is closed. (PWA recommended on iOS.)",
     "view.settings.toggle.pushUnsupported": "Not supported on this device or browser.",
@@ -1936,6 +1940,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "view.settings.toggle.emailReminders": "Email 提醒",
     "view.settings.toggle.emailRemindersHint": "任務提醒時間到時,寄一封 email 到你的信箱。",
     "view.settings.toggle.dailyDigest": "每日簡報郵件",
+    "view.settings.toggle.emailBroadcasts": "產品更新與公告",
+    "view.settings.toggle.emailBroadcastsHint": "不定期的新功能、使用技巧和重要更新通知。你可以隨時取消訂閱。",
     "view.settings.toggle.dailyDigestHint": "每天早上 7 點寄出簡短編輯式版面：今日要事、順延任務與你的連續紀錄。",
     "view.settings.toggle.pushNotifications": "推播通知",
     "view.settings.toggle.pushHint": "即使分頁關閉,瀏覽器仍可推送通知。(iOS 建議使用 PWA。)",

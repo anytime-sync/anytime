@@ -263,6 +263,7 @@ export type UserPrefs = {
   email_reminders: boolean;
   push_reminders: boolean;
   email_daily_digest: boolean;
+  email_broadcasts: boolean;
   timezone: string;
   digest_send_hour: number;
   // ICS calendar subscription — token is opaque, never displayed
