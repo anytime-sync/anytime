@@ -82,6 +82,29 @@ export async function PUT(
     );
   }
 
+
+  // ── Paid-user guard ──
+  // Admin overrides only work for free users. If the user has an active
+  // Lemon Squeezy subscription, the admin cannot change their plan manually.
+  if (plan !== null) {
+    const checkSb = service();
+    const { data: sub } = await checkSb
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", userId)
+      .in("status", ["active", "trialing"])
+      .maybeSingle();
+    if (sub) {
+      return NextResponse.json(
+        {
+          error: "paid_user_locked",
+          hint: "This user has an active Lemon Squeezy subscription. Admin overrides are only available for free users.",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   try {
     const sb = service();
     if (plan === null) {

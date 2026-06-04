@@ -24,6 +24,7 @@ type Member = {
   /** Hydrated client-side from /api/admin/users; absent for free users with no override. */
   plan?: Plan;
   override_plan_raw?: string | null;
+  plan_status?: string | null;
 };
 
 export default function MembersPage() {
@@ -58,8 +59,8 @@ export default function MembersPage() {
       return (await r.json()) as { users: { id: string; plan: Plan; override_plan_raw: string | null }[]; viewer_is_owner: boolean };
     },
   });
-  const planByUserId = new Map<string, { plan: Plan; raw: string | null }>(
-    (plansQ.data?.users ?? []).map((u) => [u.id, { plan: u.plan, raw: u.override_plan_raw }])
+  const planByUserId = new Map<string, { plan: Plan; raw: string | null; planStatus: string | null }>(
+    (plansQ.data?.users ?? []).map((u) => [u.id, { plan: u.plan, raw: u.override_plan_raw, planStatus: u.plan_status ?? null }])
   );
   const viewerIsOwner = plansQ.data?.viewer_is_owner ?? false;
 
@@ -182,7 +183,7 @@ export default function MembersPage() {
 
       {editing && (
         <EditDialog
-          member={{ ...editing, plan: planByUserId.get(editing.id)?.plan ?? "free", override_plan_raw: planByUserId.get(editing.id)?.raw ?? null }}
+          member={{ ...editing, plan: planByUserId.get(editing.id)?.plan ?? "free", override_plan_raw: planByUserId.get(editing.id)?.raw ?? null, plan_status: planByUserId.get(editing.id)?.planStatus ?? null }}
           viewerIsOwner={viewerIsOwner}
           onClose={() => setEditing(null)}
           onChanged={() => {
@@ -271,6 +272,7 @@ function EditDialog({
 
   const disabled =
     member.banned_until && new Date(member.banned_until) > new Date();
+  const isPaidSubscriber = member.plan_status === "active" || member.plan_status === "trialing";
 
   async function viewAs() {
     setBusy(true);
@@ -429,6 +431,7 @@ function EditDialog({
               className="input w-full"
               value={plan}
               onChange={(e) => setPlan(e.target.value as typeof plan)}
+              disabled={isPaidSubscriber}
             >
               <option value="default">Default (Stripe-resolved)</option>
               <option value="free">Free (override)</option>
@@ -436,6 +439,11 @@ function EditDialog({
               <option value="pro">Pro (manual comp)</option>
               {viewerIsOwner ? <option value="vip">VIP (free Pro)</option> : null}
             </select>
+            {isPaidSubscriber && (
+              <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400 font-display italic">
+                Managed by Lemon Squeezy — admin overrides are disabled for paid subscribers.
+              </p>
+            )}
             <span className="block mt-1 text-[11px] text-muted-fg italic font-display">
               Effective now: <em>{member.plan ?? "free"}</em>
               {member.override_plan_raw ? ` (override: ${member.override_plan_raw})` : ""}
