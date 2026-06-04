@@ -13,13 +13,8 @@ import { useCanUseFeature } from "@/hooks/use-feature-access";
 /**
  * The Daily Edition card — editorial AI briefing on the Today view.
  *
- * Mobile vs. desktop:
- *   - Always shown: kicker, date, headline, front_page (the lead).
- *   - Below md breakpoint: 'inside' and 'below_fold' are hidden behind
- *     a "Read more" toggle so the card stays scannable on phones.
- *   - md+ : everything is visible by default.
- *
- * Padding and headline size also scale down on mobile.
+ * Collapsible on all screen sizes: header + headline always visible,
+ * body toggles on click. Starts expanded on desktop, collapsed on mobile.
  */
 export function DailyEdition() {
   const aiEnabled = useCanUseFeature("ai_daily_edition");
@@ -76,7 +71,20 @@ export function DailyEdition() {
   
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 group">
-      <header className="flex items-baseline justify-between gap-3 mb-2.5">
+      {/* Clickable header — toggles collapse */}
+      <header
+        className="flex items-baseline justify-between gap-3 cursor-pointer select-none"
+        onClick={() => setExpanded((e) => !e)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((ex) => !ex);
+          }
+        }}
+        aria-expanded={expanded}
+      >
         <div className="flex items-baseline gap-2 min-w-0">
           <Newspaper className="size-3.5 text-muted-fg translate-y-0.5 shrink-0" />
           <span className="editorial-number text-[10px] md:text-xs truncate">
@@ -97,22 +105,36 @@ export function DailyEdition() {
               "hover:bg-muted",
               regen.isPending && "opacity-100 animate-spin"
             )}
-            onClick={() => regen.mutate()}
+            onClick={(e) => {
+              e.stopPropagation();
+              regen.mutate();
+            }}
             title={t(lang, "dailyEdition.regenerate")}
             aria-label={t(lang, "dailyEdition.regenAria")}
           >
             <RefreshCw className="size-3" />
           </button>
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform duration-200",
+              !expanded && "-rotate-90"
+            )}
+          />
         </div>
       </header>
 
-      <h1 className="font-display text-lg md:text-3xl leading-tight tracking-tight mb-2 md:mb-3">
+      {/* Headline — always visible */}
+      <h1
+        className={cn(
+          "font-display text-lg md:text-3xl leading-tight tracking-tight",
+          expanded ? "mt-2.5 mb-2 md:mb-3" : "mt-1.5 mb-0"
+        )}
+      >
         {data.headline}
       </h1>
 
-      {/* Mobile: only the headline shows by default. Read more reveals
-          front_page + inside + below_fold. Desktop: everything visible. */}
-      {expanded ? (
+      {/* Collapsible body */}
+      {expanded && (
         <>
           <p className="text-[14px] md:text-[15px] leading-relaxed text-fg/90 mb-3">
             {data.front_page}
@@ -124,15 +146,6 @@ export function DailyEdition() {
             {data.below_fold}
           </p>
         </>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="md:hidden inline-flex items-center gap-1 text-xs text-muted-fg hover:text-fg transition-colors"
-        >
-          {t(lang, "dailyEdition.readMore")}
-          <ChevronDown className="size-3.5" />
-        </button>
       )}
     </article>
   );

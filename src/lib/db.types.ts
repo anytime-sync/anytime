@@ -229,6 +229,7 @@ export type FeatureFlag = {
 export type DailyEdition = {
   user_id: string;
   edition_date: string;
+  language: string;
   kicker: string | null;
   headline: string | null;
   front_page: string | null;
@@ -249,6 +250,7 @@ export type WeeklyRetro = {
   iso_year: number;
   iso_week: number;
   week_start: string;
+  language: string;
   shipped: string | null;
   slipped: string | null;
   drop_list: string | null;
