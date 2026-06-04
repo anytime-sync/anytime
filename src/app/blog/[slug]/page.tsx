@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllSlugs, getPost, renderMarkdown } from "@/lib/blog";
 import { BlogPostJsonLd } from "@/components/json-ld";
+import { BlogNav } from "@/components/marketing/blog-nav";
 
 interface Props {
   params: { slug: string };
@@ -58,18 +59,7 @@ export default async function BlogPostPage({ params }: Props) {
         url={`https://firstlight.to/blog/${post.slug}`}
         image={post.image}
       />
-      {/* Top bar — matches pricing/blog index nav */}
-      <header className="border-b border-border mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between">
-          <Link href="/" className="wordmark text-base">
-            First Light
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-fg">
-            <Link href="/pricing" className="hover:text-fg transition-colors">Pricing</Link>
-            <Link href="/blog" className="hover:text-fg transition-colors">Blog</Link>
-          </nav>
-        </div>
-      </header>
+      <BlogNav activePage="post" />
 
       <article>
         <header className="mb-10">
@@ -93,7 +83,7 @@ export default async function BlogPostPage({ params }: Props) {
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="text-[10px] uppercase tracking-wider text-muted-fg/70 border border-border rounded-full px-2 py-0.5"
+                  className="text-[10px] uppercase tracking-wider text-accent-fg bg-accent/90 rounded-full px-2 py-0.5"
                 >
                   {tag}
                 </span>
