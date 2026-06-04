@@ -58,14 +58,18 @@ export default async function BlogPostPage({ params }: Props) {
         url={`https://firstlight.to/blog/${post.slug}`}
         image={post.image}
       />
-      <nav className="mb-10">
-        <Link
-          href="/blog"
-          className="text-xs uppercase tracking-widest text-muted-fg hover:text-fg transition-colors"
-        >
-          ← Back to blog
-        </Link>
-      </nav>
+      {/* Top bar — matches pricing/blog index nav */}
+      <header className="border-b border-border mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between">
+          <Link href="/" className="wordmark text-base">
+            First Light
+          </Link>
+          <nav className="flex items-center gap-4 text-sm text-muted-fg">
+            <Link href="/pricing" className="hover:text-fg transition-colors">Pricing</Link>
+            <Link href="/blog" className="hover:text-fg transition-colors">Blog</Link>
+          </nav>
+        </div>
+      </header>
 
       <article>
         <header className="mb-10">

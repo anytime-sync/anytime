@@ -20,21 +20,28 @@ export default function BlogIndex() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 md:py-24">
-      <header className="mb-12">
-        <Link
-          href="/"
-          className="text-xs uppercase tracking-widest text-muted-fg hover:text-fg transition-colors"
-        >
-          First Light
-        </Link>
-        <h1 className="mt-4 font-display text-4xl md:text-5xl tracking-tight">
+      {/* Top bar — matches pricing page nav */}
+      <header className="border-b border-border mb-12 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between">
+          <Link href="/" className="wordmark text-base">
+            First Light
+          </Link>
+          <nav className="flex items-center gap-4 text-sm text-muted-fg">
+            <Link href="/pricing" className="hover:text-fg transition-colors">Pricing</Link>
+            <Link href="/blog" className="font-medium text-fg">Blog</Link>
+          </nav>
+        </div>
+      </header>
+
+      <div className="mb-12">
+        <h1 className="font-display text-4xl md:text-5xl tracking-tight">
           Blog
         </h1>
         <p className="mt-3 text-muted-fg text-base leading-relaxed max-w-lg">
           On calm productivity, AI-assisted mornings, and building
           intentional daily practices.
         </p>
-      </header>
+      </div>
 
       {posts.length === 0 ? (
         <p className="text-muted-fg italic">Nothing here yet. Check back soon.</p>
@@ -63,7 +70,7 @@ export default function BlogIndex() {
                     {post.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-[10px] uppercase tracking-wider text-amber-700/80 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 dark:text-amber-300/90 dark:bg-amber-950/40 dark:border-amber-800/50"
+                        className="text-[10px] uppercase tracking-wider text-accent-fg bg-accent/90 rounded-full px-2 py-0.5"
                       >
                         {tag}
                       </span>
