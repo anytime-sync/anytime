@@ -105,7 +105,21 @@ export function TodayAiBar() {
       // Drop = clear the due date but keep the task. (Soft delete is too aggressive.)
       update.mutate({ id: s.id, due_at: null } as any);
     } else {
-      update.mutate({ id: s.id, due_at: s.new_due_at } as any);
+      // Preserve duration: if the task has both start_at and due_at,
+      // shift start_at by the same offset so the duration stays intact.
+      const task = overdue.find((t) => t.id === s.id);
+      if (task?.start_at && task?.due_at && s.new_due_at) {
+        const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+        const newEnd = new Date(s.new_due_at);
+        const newStart = new Date(newEnd.getTime() - durationMs);
+        update.mutate({
+          id: s.id,
+          start_at: newStart.toISOString(),
+          due_at: s.new_due_at,
+        } as any);
+      } else {
+        update.mutate({ id: s.id, due_at: s.new_due_at } as any);
+      }
     }
     setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
   }

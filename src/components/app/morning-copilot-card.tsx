@@ -121,9 +121,33 @@ export function MorningCopilotCard() {
     for (const action of picks) {
       try {
         if (action.kind === "defer" || action.kind === "reschedule") {
+          // Fetch current task to preserve duration when shifting dates
+          const { data: task } = await supabase
+            .from("tasks")
+            .select("start_at, due_at")
+            .eq("id", action.task_id)
+            .single();
+
+          const patch: Record<string, unknown> = { is_all_day: false };
+
+          if (task?.start_at && task?.due_at) {
+            // Preserve original duration: shift both start and end
+            const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+            const newStart = tomorrowAt9;
+            const newEnd = new Date(newStart.getTime() + durationMs);
+            patch.start_at = newStart.toISOString();
+            patch.due_at = newEnd.toISOString();
+          } else if (task?.start_at && !task?.due_at) {
+            // Has start but no end — shift start, leave end null
+            patch.start_at = tomorrowIso;
+          } else {
+            // No start — just set due_at (original behavior)
+            patch.due_at = tomorrowIso;
+          }
+
           const { error } = await supabase
             .from("tasks")
-            .update({ due_at: tomorrowIso, is_all_day: false })
+            .update(patch)
             .eq("id", action.task_id);
           if (!error) applied += 1;
         } else if (action.kind === "drop") {
