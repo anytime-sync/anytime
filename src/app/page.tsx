@@ -149,6 +149,50 @@ export default function Home() {
         </div>
       </DesignSlot>
 
+
+      {/* ── FAQ ── */}
+      <section className="px-6 py-16 max-w-2xl mx-auto w-full">
+        <h2 className="font-display text-2xl md:text-3xl tracking-tight text-center mb-10">
+          Questions
+        </h2>
+        <div className="space-y-6">
+          {[
+            {
+              q: "What is the Daily Edition?",
+              a: "Every morning, First Light writes you a personal briefing about your day. It looks at your tasks, calendar, and patterns, then composes a short editorial — not bullet points, but a readable narrative that helps you see what matters."
+            },
+            {
+              q: "Is First Light a task manager?",
+              a: "It has tasks, calendar sync, habits, and focus modes — the essentials. But the core experience is the Daily Edition: an AI-written morning briefing that reads like a newspaper column about your day."
+            },
+            {
+              q: "Which languages are supported?",
+              a: "English, Traditional Chinese (繁體中文), Simplified Chinese (简体中文), Japanese (日本語), and Korean (한국어) — with native typography for each."
+            },
+            {
+              q: "Is it free?",
+              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($4.99/mo) and Pro ($9/mo). Both include a 14-day free trial."
+            },
+            {
+              q: "Does it sync with Google Calendar?",
+              a: "Yes. Your Google Calendar events appear alongside your tasks, so the Daily Edition can plan around your meetings."
+            },
+            {
+              q: "Can I use it on my phone?",
+              a: "First Light is a PWA (Progressive Web App). Add it to your home screen on iOS or Android and it works like a native app — with offline support and push notifications."
+            },
+          ].map(({ q, a }) => (
+            <details key={q} className="group border-b border-border pb-4">
+              <summary className="cursor-pointer font-medium text-sm flex items-center justify-between">
+                {q}
+                <span className="text-muted-fg transition-transform group-open:rotate-45 text-lg ml-2">+</span>
+              </summary>
+              <p className="mt-3 text-sm text-muted-fg leading-relaxed">{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       <DesignSlot id="landing.footer" as="footer" className="px-6 py-8 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
           <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
