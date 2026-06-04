@@ -24,7 +24,8 @@ export default function PricingPage() {
   const router = useRouter();
   const { data: pro, isLoading: priceLoading } = useProPrice();
   const { data: plus, isLoading: plusLoading } = usePlusPrice();
-  const checkout = useStartCheckout();
+  const checkoutPlus = useStartCheckout("plus");
+  const checkoutPro = useStartCheckout("pro");
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
 
   useEffect(() => {
@@ -139,12 +140,14 @@ export default function PricingPage() {
             </ul>
             <div className="mt-6">
               {authState === "in" ? (
-                <Link
-                  href="/app/features"
+                <button
+                  onClick={() => checkoutPlus.mutate()}
+                  disabled={checkoutPlus.isPending}
                   className="btn-primary h-10 w-full justify-center"
                 >
-                  Upgrade to Plus <ArrowRight className="size-4 ml-1" />
-                </Link>
+                  {checkoutPlus.isPending ? "Opening checkout…" : "Upgrade to Plus"}{" "}
+                  {!checkoutPlus.isPending && <ArrowRight className="size-4 ml-1" />}
+                </button>
               ) : (
                 <Link
                   href="/signup?next=/pricing&plan=plus"
@@ -193,11 +196,11 @@ export default function PricingPage() {
             <div className="mt-6">
               {authState === "in" ? (
                 <button
-                  onClick={() => checkout.mutate()}
-                  disabled={checkout.isPending}
+                  onClick={() => checkoutPro.mutate()}
+                  disabled={checkoutPro.isPending}
                   className="btn-primary h-10 w-full justify-center"
                 >
-                  {checkout.isPending ? "Opening checkout…" : "Upgrade to Pro"}
+                  {checkoutPro.isPending ? "Opening checkout…" : "Upgrade to Pro"}
                 </button>
               ) : (
                 <Link href="/signup?next=/pricing" className="btn-primary h-10 w-full justify-center">
@@ -244,11 +247,11 @@ export default function PricingPage() {
         <section className="text-center">
           {authState === "in" ? (
             <button
-              onClick={() => checkout.mutate()}
-              disabled={checkout.isPending}
+              onClick={() => checkoutPro.mutate()}
+              disabled={checkoutPro.isPending}
               className="btn-primary h-11 px-6"
             >
-              {checkout.isPending ? "Opening checkout…" : `Upgrade to ${proLabel}`}
+              {checkoutPro.isPending ? "Opening checkout…" : `Upgrade to ${proLabel}`}
             </button>
           ) : (
             <Link href="/signup" className="btn-primary h-11 px-6">

@@ -17,7 +17,8 @@ export default function FeaturesPage() {
   const { data: plan } = useUserPlan();
   const { data: pro, isLoading: priceLoading } = useProPrice();
   const { data: plus, isLoading: plusLoading } = usePlusPrice();
-  const checkout = useStartCheckout();
+  const checkoutPlus = useStartCheckout("plus");
+  const checkoutPro = useStartCheckout("pro");
   const portal = useOpenBillingPortal();
 
   // Treat plus + pro + vip as "paid" for surfaces that just need to swap
@@ -88,11 +89,11 @@ export default function FeaturesPage() {
                 </button>
               ) : isPlus ? (
                 <button
-                  onClick={() => checkout.mutate()}
-                  disabled={checkout.isPending}
+                  onClick={() => checkoutPro.mutate()}
+                  disabled={checkoutPro.isPending}
                   className="btn-primary h-10 px-4"
                 >
-                  {checkout.isPending
+                  {checkoutPro.isPending
                     ? "Redirecting…"
                     : priceLoading
                     ? "Upgrade to Pro"
@@ -100,20 +101,23 @@ export default function FeaturesPage() {
                 </button>
               ) : (
                 <>
-                  <Link
-                    href="/pricing#plus"
+                  <button
+                    onClick={() => checkoutPlus.mutate()}
+                    disabled={checkoutPlus.isPending}
                     className="btn-primary h-10 px-4 inline-flex items-center opacity-90"
                   >
-                    {plusLoading
+                    {checkoutPlus.isPending
+                      ? "Redirecting…"
+                      : plusLoading
                       ? "Upgrade to Plus"
                       : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$3 / month"}`}
-                  </Link>
+                  </button>
                   <button
-                    onClick={() => checkout.mutate()}
-                    disabled={checkout.isPending}
+                    onClick={() => checkoutPro.mutate()}
+                    disabled={checkoutPro.isPending}
                     className="btn-primary h-10 px-4"
                   >
-                    {checkout.isPending
+                    {checkoutPro.isPending
                       ? "Redirecting…"
                       : priceLoading
                       ? "Upgrade to Pro— $9 / month"

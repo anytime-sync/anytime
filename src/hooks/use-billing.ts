@@ -10,13 +10,14 @@ import type { Plan } from "@/lib/plans";
  *
  * - useUserPlan(): returns the current plan ('free' | 'plus' | 'pro' | 'vip' | 'team').
  *   Reads from the RLS-gated user_plans view directly via supabase, so
- *   it stays in sync with whatever the Stripe webhook last wrote.
+ *   it stays in sync with whatever the webhook last wrote.
  *
- * - useStartCheckout(): mutation that POSTs /api/billing/checkout, then
- *   redirects window.location to the returned Stripe URL.
+ * - useStartCheckout(plan?): mutation that POSTs /api/billing/checkout with
+ *   { plan }, then redirects window.location to the returned checkout URL.
+ *   Defaults to "pro" if no plan is specified.
  *
  * - useOpenBillingPortal(): mutation that POSTs /api/billing/portal,
- *   then redirects to Stripe's hosted Customer Portal.
+ *   then redirects to the hosted Customer Portal.
  */
 
 export function useUserPlan() {
@@ -58,14 +59,18 @@ export function useUserPlan() {
         cancelAtPeriodEnd: !!data.cancel_at_period_end,
       };
     },
-    staleTime: 60_000, // a minute is fine; webhook drives invalidation indirectly
+    staleTime: 60_000,
   });
 }
 
-export function useStartCheckout() {
+export function useStartCheckout(targetPlan: "plus" | "pro" = "pro") {
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/billing/checkout", { method: "POST" });
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: targetPlan }),
+      });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error ?? `http_${res.status}`);
