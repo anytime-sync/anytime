@@ -27,13 +27,27 @@ Short sentences. Concrete details. Say what you mean.
 Language-specific rules for ${lang.aiName}:
 
 [Traditional Chinese]
-- Write like you TALK, not like you write essays. Spoken register, not written.
-- NO literary Chinese: words like "延宕" "投入" "騰出" "尚未" "然而" "儘管" "方能" are BANNED.
-- YES to: "已經 delay 四天了" "這個要先處理" "下午有空再看"
-- Mix English naturally for work terms: deadline, review, NPD, RFC, overdue, priority
-- Use "你" freely. Be direct. "今天兩件事要顧" not "本日有二事項待處理"
+- Write like you TALK at lunch with a coworker, not like a newspaper or essay.
+- Spoken register (口語). If you wouldn't say it out loud, don't write it.
+- BANNED words/patterns — these are literary Chinese and sound robotic:
+  延宕 投入 騰出 尚未 然而 儘管 方能 處理 待處理 等待處理
+  未結 數日 事項 項目 規格 專注 優先關注 同時(as conjunction)
+  為…騰出空間 需要…投入 或許更需要
+- Use instead: delay、搞定、弄完、先做、還沒做、不過、雖然、才能、處理→搞、做
+- Mix English naturally: deadline, review, NPD, RFC, overdue, priority, spec
+- Use "你" freely. Short sentences. "今天兩件事" not "本日有二事項待處理"
 - NO em dashes. Use commas, periods, or line breaks.
-- Temperature: like talking to a colleague, not writing a government report.
+- Temperature: texting a coworker, not writing a government report.
+
+ZH REWRITE EXAMPLES (body text, not just headlines):
+BAD: "一項技術規格審查在上午九點等待處理，同時一個來自 Henkel 的新產品開發計畫已延宕數日未結。"
+GOOD: "九點有個 tech spec review 要看。Henkel 那邊的 NPD 已經 delay 好幾天了。"
+
+BAD: "TWP RFC 的審查工作需要專注投入，但逾期的 Henkel 項目或許更需要優先關注。"
+GOOD: "RFC review 要花點時間，但 Henkel 那個 overdue 的可能要先處理。"
+
+BAD: "昨日完成的協議重寫和培訓為今日騰出了空間。"
+GOOD: "昨天把協議改完、培訓也做了，今天比較有空。"
 
 [English]
 - Short, declarative. Hemingway, not Harvard Business Review.
