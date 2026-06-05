@@ -16,6 +16,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/privacy`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE}/terms`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE}/alternatives/todoist`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE}/alternatives/notion`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE}/alternatives/sunsama`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
   ];
 
   const blogPosts: MetadataRoute.Sitemap = getAllPosts().map((post) => ({
