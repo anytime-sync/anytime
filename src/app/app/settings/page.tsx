@@ -20,7 +20,6 @@ import {
   useSyncCalendarNow,
 } from "@/hooks/use-calendar";
 import { TelegramSection } from "@/components/app/telegram-section";
-} from "@/hooks/use-calendar";
 
 export default function SettingsPage() {
   const lang = useLanguage();
