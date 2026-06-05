@@ -183,7 +183,7 @@ export default function Home() {
               <span className="text-[#2AABEE] text-base">✈️</span>
             </div>
             <h3 className="font-medium text-sm">Telegram</h3>
-            <p className="text-xs text-muted-fg">Type a task in chat. Done.</p>
+            <p className="text-xs text-muted-fg">Type a task in chat. Done. <a href="https://t.me/Firstlightapp_bot" target="_blank" rel="noopener" className="underline hover:text-foreground">Try the bot</a></p>
           </div>
           <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-rose-100 grid place-items-center">
