@@ -357,10 +357,7 @@ async function handleCommand(
           return result.error;
         }
         return (
-          "✅ Account linked successfully!
-
-" +
-          "Try /today to see your tasks, or just type a task to add it."
+          "✅ Account linked successfully!\n\nTry /today to see your tasks, or just type a task to add it."
         );
       }
       // Treat free text as a new task
