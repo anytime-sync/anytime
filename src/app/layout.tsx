@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   // that re-resolve after page load.
   description:
     "First Light is a calm AI-powered daily planner. Morning briefings, Google Calendar sync, voice-to-task, Eisenhower matrix, and weekly reviews — in 5 languages.",
-  metadataBase: new URL("https://firstlight.to"), alternates: { canonical: "/" }, openGraph: { type: "website", siteName: "First Light", title: {
+  metadataBase: new URL("https://firstlight.to"), alternates: { canonical: "/", types: { "application/rss+xml": "https://firstlight.to/feed.xml" } }, openGraph: { type: "website", siteName: "First Light", title: {
     default: "First Light — your space for clarity, focus, intentional progress",
     template: "%s — First Light",
   }, description: "A calm daily productivity tool. Read once in the morning; the day is shaped.", url: "https://firstlight.to", locale: "en_US", images: [{ url: "/og.png", width: 1200, height: 630, alt: "First Light" }] }, twitter: { card: "summary_large_image", title: {
