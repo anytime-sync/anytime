@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs, useUpdatePrefs, type UserPrefs } from "@/hooks/use-ai";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { BillingSection } from "@/components/app/billing-section";
-import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, RefreshCw, Trash2, Upload, User, CreditCard, Bell, Sparkles, Database, Plug } from "lucide-react";
+import { Calendar, Check, ChevronDown, ChevronRight, Copy, Download, LogOut, Mail, MessageCircle, RefreshCw, Trash2, Upload, User, CreditCard, Bell, Sparkles, Database, Plug } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { pushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from "@/lib/push";
@@ -18,6 +18,8 @@ import {
   useCalendarConnection,
   useDisconnectCalendar,
   useSyncCalendarNow,
+} from "@/hooks/use-calendar";
+import { TelegramSection } from "@/components/app/telegram-section";
 } from "@/hooks/use-calendar";
 
 export default function SettingsPage() {
@@ -386,6 +388,8 @@ export default function SettingsPage() {
           {/* ---------- Google Calendar (Round F) ---------- */}
           <GoogleCalendarSection lang={lang} />
 
+          {/* ---------- Telegram ---------- */}
+          <TelegramSection lang={lang} />
           {/* ---------- Import ---------- */}
           <Section id="settings-import" kicker={tr(lang, "view.settings.section.import")}>
             <Row label={tr(lang, "view.settings.row.from")}>

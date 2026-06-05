@@ -50,6 +50,61 @@ async function getUserByTelegramId(
   return data ? { userId: data.user_id } : null;
 }
 
+
+async function linkByCode(
+  telegramId: number,
+  code: string,
+  telegramUsername?: string,
+): Promise<{ userId: string } | { error: string }> {
+  const sb = getSupabase();
+  
+  // Look up the code
+  const { data: token } = await sb
+    .from("telegram_link_tokens")
+    .select("user_id, expires_at")
+    .eq("code", code.toUpperCase())
+    .single();
+
+  if (!token) {
+    return { error: "Invalid code. Go to firstlight.to/app/settings → Telegram to get a new one." };
+  }
+
+  if (new Date(token.expires_at) < new Date()) {
+    // Clean up expired token
+    await sb.from("telegram_link_tokens").delete().eq("code", code.toUpperCase());
+    return { error: "Code expired. Go to Settings → Telegram and generate a new one." };
+  }
+
+  // Check if this telegram_id is already linked to another account
+  const { data: existing } = await sb
+    .from("user_telegram_links")
+    .select("user_id")
+    .eq("telegram_id", telegramId)
+    .single();
+
+  if (existing) {
+    return { error: "This Telegram account is already linked to a First Light account." };
+  }
+
+  // Create the link
+  const { error: linkError } = await sb
+    .from("user_telegram_links")
+    .upsert({
+      user_id: token.user_id,
+      telegram_id: telegramId,
+      telegram_username: telegramUsername ?? null,
+    }, { onConflict: "user_id" });
+
+  if (linkError) {
+    return { error: "Failed to link: " + linkError.message };
+  }
+
+  // Delete the used token
+  await sb.from("telegram_link_tokens").delete().eq("code", code.toUpperCase());
+
+  return { userId: token.user_id };
+}
+
 // ---------------------------------------------------------------------------
 // Task helpers
 // ---------------------------------------------------------------------------
@@ -213,18 +268,38 @@ async function handleCommand(
   telegramId: number,
   chatId: number,
   text: string,
+  username?: string,
 ): Promise<string> {
+  const cmd = text.startsWith("/") ? text.split(/\s+/)[0].toLowerCase() : null;
+  const args = cmd ? text.slice(cmd.length).trim() : text;
+  
   const link = await getUserByTelegramId(telegramId);
+  
+  // Handle /start with linking code
+  if (!link && cmd === "/start" && args.length > 0) {
+    const result = await linkByCode(telegramId, args, username);
+    if ("error" in result) {
+      return result.error;
+    }
+    return (
+      "✅ Account linked successfully!\n\n" +
+      "Try /today to see your tasks, or just type a task to add it."
+    );
+  }
+  
   if (!link) {
     return (
-      "You haven't linked your First Light account yet.\n\n" +
-      "Go to firstlight.to/app/settings and connect your Telegram."
+      "👋 Welcome to First Light!\n\n" +
+      "To connect your account:\n" +
+      "1. Go to firstlight.to/app/settings\n" +
+      "2. Scroll to \"Telegram\"\n" +
+      "3. Click \"Connect Telegram\"\n" +
+      "4. Send the code here\n\n" +
+      "Or just type a 6-character code if you have one."
     );
   }
 
   const { userId } = link;
-  const cmd = text.startsWith("/") ? text.split(/\s+/)[0].toLowerCase() : null;
-  const args = cmd ? text.slice(cmd.length).trim() : text;
 
   switch (cmd) {
     case "/start":
@@ -275,6 +350,19 @@ async function handleCommand(
     }
 
     default: {
+      // If user is not linked and sends a 6-char code, try linking
+      if (!link && /^[A-Fa-f0-9]{6}$/.test(text.trim())) {
+        const result = await linkByCode(telegramId, text.trim(), username);
+        if ("error" in result) {
+          return result.error;
+        }
+        return (
+          "✅ Account linked successfully!
+
+" +
+          "Try /today to see your tasks, or just type a task to add it."
+        );
+      }
       // Treat free text as a new task
       if (text.trim().length > 0 && !text.startsWith("/")) {
         const parsed = parseTaskInput(text);
@@ -320,7 +408,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const reply = await handleCommand(msg.from.id, msg.chat.id, msg.text);
+    const reply = await handleCommand(msg.from.id, msg.chat.id, msg.text, msg.from.username);
     await sendMessage(msg.chat.id, reply, {
       replyToMessageId: msg.message_id,
     });
