@@ -23,7 +23,7 @@ I built First Light, so take this with appropriate salt. But I also use (or have
 | **Habits** | Built-in | No | No | Built-in |
 | **Weekly retrospective** | AI-written | No | No | No |
 | **Design philosophy** | Editorial calm | Functional clean | Apple minimal | Feature-rich |
-| **Pricing** | Free + $5/mo + $9/mo | Free + $5/mo | $50 one-time | Free + $36/yr |
+| **Pricing** | Free + $3/mo + $9/mo | Free + $5/mo | $50 one-time | Free + $36/yr |
 | **Platform** | Web (PWA) | All | Apple only | All |
 | **Team features** | No — personal only | Yes | No | Yes |
 

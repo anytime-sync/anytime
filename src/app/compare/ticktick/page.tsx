@@ -73,7 +73,7 @@ const features = [
   },
   {
     "feature": "Pricing",
-    "fl": "$5/mo",
+    "fl": "$3/mo",
     "comp": "$35.99/yr"
   },
   {
