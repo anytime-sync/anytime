@@ -124,6 +124,91 @@ export default function Home() {
         <div className="h-px bg-border" />
       </div>
 
+
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+
+      {/* ── Works with your AI ── */}
+      <section className="px-6 py-16 max-w-4xl mx-auto w-full">
+        <div className="text-center mb-10">
+          <p className="editorial-number text-xs mb-3">WORKS WITH YOUR AI</p>
+          <h2 className="font-display text-3xl md:text-4xl tracking-tight">
+            Your AI assistant already knows your tasks.
+          </h2>
+          <p className="text-muted-fg text-sm md:text-base max-w-xl mx-auto mt-3">
+            First Light speaks MCP — the open protocol that lets Claude, ChatGPT, and any AI assistant read, create, and reorganize your tasks natively. No copy-pasting. No screenshots.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-6 text-center">
+          <div className="space-y-2">
+            <div className="size-12 mx-auto rounded-xl bg-violet-100 grid place-items-center">
+              <span className="text-violet-600 text-lg">🧠</span>
+            </div>
+            <h3 className="font-medium text-sm">Plan my day</h3>
+            <p className="text-xs text-muted-fg">AI reorganizes today&apos;s tasks around your calendar and energy peaks.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="size-12 mx-auto rounded-xl bg-amber-100 grid place-items-center">
+              <span className="text-amber-600 text-lg">📋</span>
+            </div>
+            <h3 className="font-medium text-sm">Prep my meeting</h3>
+            <p className="text-xs text-muted-fg">Ask your AI to pull context, create an agenda, and stage follow-up tasks.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="size-12 mx-auto rounded-xl bg-emerald-100 grid place-items-center">
+              <span className="text-emerald-600 text-lg">🔍</span>
+            </div>
+            <h3 className="font-medium text-sm">Find patterns</h3>
+            <p className="text-xs text-muted-fg">Detect procrastination, suggest reschedules, spot what keeps slipping.</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+
+      {/* ── Task from anywhere ── */}
+      <section className="px-6 py-16 max-w-4xl mx-auto w-full">
+        <div className="text-center mb-10">
+          <p className="editorial-number text-xs mb-3">TASK FROM ANYWHERE</p>
+          <h2 className="font-display text-3xl md:text-4xl tracking-tight">
+            Capture without context-switching.
+          </h2>
+        </div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div className="space-y-2">
+            <div className="size-10 mx-auto rounded-lg bg-[#2AABEE]/15 grid place-items-center">
+              <span className="text-[#2AABEE] text-base">✈️</span>
+            </div>
+            <h3 className="font-medium text-sm">Telegram</h3>
+            <p className="text-xs text-muted-fg">Type a task in chat. Done.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="size-10 mx-auto rounded-lg bg-rose-100 grid place-items-center">
+              <span className="text-rose-500 text-base">🎤</span>
+            </div>
+            <h3 className="font-medium text-sm">Voice</h3>
+            <p className="text-xs text-muted-fg">Say it. AI parses the date, priority, title.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="size-10 mx-auto rounded-lg bg-blue-100 grid place-items-center">
+              <span className="text-blue-500 text-base">📧</span>
+            </div>
+            <h3 className="font-medium text-sm">Email</h3>
+            <p className="text-xs text-muted-fg">Forward to your inbox alias. It becomes a task.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="size-10 mx-auto rounded-lg bg-stone-100 grid place-items-center">
+              <span className="text-stone-500 text-base">📸</span>
+            </div>
+            <h3 className="font-medium text-sm">Screenshot</h3>
+            <p className="text-xs text-muted-fg">Paste a whiteboard photo. Get a task list.</p>
+          </div>
+        </div>
+      </section>
+
       <DesignSlot id="landing.principles" as="section" className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -157,6 +242,15 @@ export default function Home() {
         </h2>
         <div className="space-y-6">
           {[
+
+            {
+              q: "Can I manage tasks from Telegram?",
+              a: "Yes! Our Telegram bot (@Firstlightapp_bot) lets you add tasks, check your day, mark things done, and review your week — all from a chat. Just type naturally: 'Buy groceries tomorrow 3pm' and it creates the task with the right date and priority."
+            },
+            {
+              q: "What is MCP integration?",
+              a: "MCP (Model Context Protocol) lets AI assistants like Claude directly read and manage your First Light tasks. Ask Claude to 'plan my day' or 'reschedule overdue tasks' and it actually moves items in your planner. No other task manager has this."
+            },
             {
               q: "What is the Daily Edition?",
               a: "Every morning, First Light writes you a personal briefing about your day. It looks at your tasks, calendar, and patterns, then composes a short editorial — not bullet points, but a readable narrative that helps you see what matters."

@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * DemoCarousel — the 17-card "See it in motion" strip shared by /pricing
+ * DemoCarousel — the 21-card "See it in motion" strip shared by /pricing
  * and the public landing page. Pure presentation: every card is an inline
  * HTML/Tailwind mockup that mirrors a real feature surface in the app.
  *
@@ -23,13 +23,13 @@ export function DemoCarousel() {
 
   return (
     <>
-        {/* Demo strip — 17-card carousel showcasing every Plus + Pro surface. */}
+        {/* Demo strip — 21-card carousel showcasing every Plus + Pro surface. */}
         <section className="mb-16">
           <div className="flex items-end justify-between mb-3 gap-4 flex-wrap">
             <div>
               <h2 className="font-display text-3xl tracking-tight">See it in motion</h2>
               <p className="text-muted-fg text-sm md:text-base max-w-xl mt-2">
-                Seventeen surfaces where First Light earns its keep. Scroll, or use the arrows.
+                Twenty-one surfaces where First Light earns its keep. Scroll, or use the arrows.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -301,6 +301,138 @@ export function DemoCarousel() {
               <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
                 <p className="font-medium text-sm">Voice · Snapshot · Paste → Task</p>
                 <p className="text-xs text-muted-fg">Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.</p></figcaption></figure>{/* 17 ── Paste screenshot → Tasks */}<figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm"><div className="aspect-[4/3] p-5 flex flex-col gap-2"><p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">PASTE · SCAN</p><div className="bg-white border border-stone-200 rounded-md px-2 py-1.5 flex items-center gap-1.5 text-[10px]"><kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-300 text-[9px] font-mono text-stone-700">⌘</kbd><kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-300 text-[9px] font-mono text-stone-700">V</kbd><span className="text-stone-500 italic flex-1 truncate">paste a screenshot…</span></div><div className="bg-white border border-stone-200 rounded-md p-2 flex items-center gap-2"><div className="size-10 rounded bg-gradient-to-br from-amber-100 via-rose-100 to-stone-200 border border-stone-200 shrink-0 grid place-items-center"><span className="text-[7px] text-stone-600 italic">whiteboard</span></div><div className="flex-1 min-w-0"><p className="text-[9px] text-stone-700 truncate font-medium">whiteboard_q4.png</p><p className="text-[8px] text-stone-400">3 tasks found</p></div></div><div className="text-[9px] text-stone-400 text-center">↓ AI extracts</div><div className="space-y-1"><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Draft Q4 roadmap</span><span className="text-[8px] text-stone-400">Today</span></div><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Ship pricing v2</span><span className="text-[8px] text-stone-400">Fri</span></div><div className="bg-white border border-stone-200 rounded-md px-2 py-1 flex items-center gap-1.5 text-[10px]"><div className="size-2.5 rounded-full border-2 border-stone-300 shrink-0" /><span className="text-stone-700 flex-1 truncate">Sync with Alex</span><span className="text-[8px] text-stone-400">Mon</span></div></div></div><figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40"><p className="font-medium text-sm">Paste → Tasks</p><p className="text-xs text-muted-fg">⌘V a screenshot of any whiteboard, doc, or meeting notes — get a clean task list.</p></figcaption></figure>
+
+            {/* 18 ── Telegram Bot */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TELEGRAM · CHAT TO PLAN</p>
+                <div className="bg-gradient-to-br from-[#2AABEE]/10 to-stone-50 border border-[#2AABEE]/30 rounded-xl p-3 flex-1 flex flex-col gap-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className="size-6 rounded-full bg-[#2AABEE] grid place-items-center text-white text-[10px] font-bold shrink-0">FL</div>
+                    <div className="bg-white rounded-lg rounded-tl-none px-2.5 py-1.5 text-[10px] text-stone-700 shadow-sm">
+                      Good morning! You have 4 tasks today.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 justify-end">
+                    <div className="bg-[#2AABEE]/15 rounded-lg rounded-tr-none px-2.5 py-1.5 text-[10px] text-stone-700">
+                      /add Review Maya's deck by 3pm
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="size-6 rounded-full bg-[#2AABEE] grid place-items-center text-white text-[10px] font-bold shrink-0">FL</div>
+                    <div className="bg-white rounded-lg rounded-tl-none px-2.5 py-1.5 text-[10px] text-stone-700 shadow-sm">
+                      ✓ Created: <span className="font-medium">Review Maya's deck</span><br/>
+                      <span className="text-[9px] text-stone-500">Due today · 3:00 PM</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Telegram bot</p>
+                <p className="text-xs text-muted-fg">Add tasks, check your day, mark done — without leaving the chat.</p>
+              </figcaption>
+            </figure>
+
+            {/* 19 ── AI Assistant (MCP) */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-violet-50/60 to-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">MCP · YOUR AI KNOWS YOUR TASKS</p>
+                <div className="bg-white border border-stone-200 rounded-xl p-3 flex-1 flex flex-col gap-2">
+                  <div className="bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1.5 text-[10px] text-violet-900">
+                    <span className="text-[8px] tracking-[0.18em] text-violet-500">YOU → CLAUDE</span>
+                    <p className="mt-0.5 italic">"Plan my day around the 2pm meeting"</p>
+                  </div>
+                  <div className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-[10px] text-stone-700">
+                    <span className="text-[8px] tracking-[0.18em] text-stone-400">CLAUDE → FIRST LIGHT</span>
+                    <p className="mt-0.5">Calling <span className="font-mono text-[9px] bg-stone-100 px-1 rounded">plan_day</span>...</p>
+                  </div>
+                  <div className="bg-accent/10 border border-accent/30 rounded-lg px-2.5 py-1.5 text-[10px]">
+                    <span className="text-[8px] tracking-[0.18em] text-stone-500">RESULT</span>
+                    <p className="mt-0.5 text-stone-800">✓ 4 tasks reorganized. Deep work blocked 10-12am. Post-meeting admin at 3:30pm.</p>
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Works with your AI</p>
+                <p className="text-xs text-muted-fg">Claude, ChatGPT, or any MCP client can read and manage your tasks natively.</p>
+              </figcaption>
+            </figure>
+
+            {/* 20 ── Habits */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col gap-2">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">HABITS · DAILY RHYTHM</p>
+                <div className="space-y-1.5 flex-1">
+                  <div className="bg-white border border-stone-200 rounded-md px-2.5 py-1.5 flex items-center gap-2 text-[10px]">
+                    <div className="flex gap-0.5">
+                      {[1,1,1,0,1,1,1].map((v, i) => (
+                        <div key={i} className={`size-3 rounded-sm ${v ? 'bg-emerald-500' : 'bg-stone-200'}`} />
+                      ))}
+                    </div>
+                    <span className="text-stone-700 flex-1 truncate">Morning run</span>
+                    <span className="text-[8px] text-emerald-600 font-medium">6/7</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2.5 py-1.5 flex items-center gap-2 text-[10px]">
+                    <div className="flex gap-0.5">
+                      {[1,1,1,1,1,0,0].map((v, i) => (
+                        <div key={i} className={`size-3 rounded-sm ${v ? 'bg-accent' : 'bg-stone-200'}`} />
+                      ))}
+                    </div>
+                    <span className="text-stone-700 flex-1 truncate">Read 30 min</span>
+                    <span className="text-[8px] text-accent font-medium">5/7</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2.5 py-1.5 flex items-center gap-2 text-[10px]">
+                    <div className="flex gap-0.5">
+                      {[1,0,1,0,1,0,1].map((v, i) => (
+                        <div key={i} className={`size-3 rounded-sm ${v ? 'bg-blue-500' : 'bg-stone-200'}`} />
+                      ))}
+                    </div>
+                    <span className="text-stone-700 flex-1 truncate">Meditate</span>
+                    <span className="text-[8px] text-blue-600 font-medium">4/7</span>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-md px-2.5 py-1.5 flex items-center gap-2 text-[10px]">
+                    <div className="flex gap-0.5">
+                      {[1,1,1,1,1,1,1].map((v, i) => (
+                        <div key={i} className={`size-3 rounded-sm bg-emerald-500`} />
+                      ))}
+                    </div>
+                    <span className="text-stone-700 flex-1 truncate">Journal</span>
+                    <span className="text-[8px] text-emerald-600 font-medium">7/7 🔥</span>
+                  </div>
+                </div>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Habits</p>
+                <p className="text-xs text-muted-fg">Track daily habits with a simple tap. See streaks build over weeks.</p>
+              </figcaption>
+            </figure>
+
+            {/* 21 ── Pomodoro */}
+            <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
+              <div className="aspect-[4/3] p-5 flex flex-col items-center justify-center gap-3">
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">FOCUS · POMODORO</p>
+                <div className="relative">
+                  <svg viewBox="0 0 120 120" className="size-24">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#e7e5e4" strokeWidth="4" />
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#C89B5A" strokeWidth="4" strokeDasharray="339.29" strokeDashoffset="84.82" strokeLinecap="round" transform="rotate(-90 60 60)" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <p className="text-2xl font-display text-stone-800 tabular-nums">18:42</p>
+                    <p className="text-[9px] text-stone-500">focus time</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-stone-500">
+                  <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-accent" /> 3 done</span>
+                  <span>·</span>
+                  <span>25 min / 5 min break</span>
+                </div>
+                <p className="text-[10px] text-stone-700 font-medium truncate max-w-full">Working on: Draft Q4 strategy doc</p>
+              </div>
+              <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
+                <p className="font-medium text-sm">Pomodoro timer</p>
+                <p className="text-xs text-muted-fg">Pick a task, start the clock. Distraction-free focus with smart breaks.</p>
+              </figcaption>
+            </figure>
 
             {/* 8 ── Notes → Task: convert note to task in one click */}
             <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
