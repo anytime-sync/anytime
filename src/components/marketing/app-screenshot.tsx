@@ -47,7 +47,7 @@ const screenshots: Screenshot[] = [
     label: "WEEKLY REVIEW",
     caption: "Close last week. Pre-stage the next one.",
     light: "/screenshots/app-weekly-review.png",
-    dark: null,
+    dark: "/screenshots/app-weekly-review-dark.png",
     width: 1920,
     height: 944,
   },
