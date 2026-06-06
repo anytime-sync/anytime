@@ -164,15 +164,6 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="max-w-6xl w-full mx-auto px-6">
-        <div className="h-px bg-border" />
-      </div>
-
-      <FeatureGrid />
-
-      <div className="max-w-6xl w-full mx-auto px-6">
-        <div className="h-px bg-border" />
-      </div>
 
       {/* ── Task from anywhere ── */}
       <section className="px-6 py-16 max-w-4xl mx-auto w-full">
@@ -213,6 +204,15 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+
+      <FeatureGrid />
+
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
 
       <DesignSlot id="landing.principles" as="section" className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
