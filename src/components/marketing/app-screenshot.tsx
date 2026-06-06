@@ -68,58 +68,60 @@ export function AppScreenshot() {
 
   return (
     <section className="py-12 max-w-6xl mx-auto w-full px-6">
-      {/* Header row: label + toggle + arrows */}
-      <div className="flex items-center justify-between mb-4 gap-4">
-        <p className="editorial-number text-[10px] tracking-[0.22em] text-muted-fg">
-          {shot.label}
-        </p>
+      {/* Controls bar: left arrow — label — toggle — counter — right arrow */}
+      <div className="flex items-center justify-center gap-4 mb-6">
+        {/* Left arrow */}
+        <button
+          onClick={prev}
+          aria-label="Previous screenshot"
+          className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors shrink-0"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
 
-        <div className="flex items-center gap-3">
-          {/* Light/Dark toggle */}
-          <div className="inline-flex items-center rounded-full border border-border bg-muted/30 p-0.5 text-xs">
+        {/* Center block: label + toggle + counter */}
+        <div className="flex flex-col items-center gap-2">
+          <p className="editorial-number text-[11px] tracking-[0.22em] text-muted-fg">
+            {shot.label}
+          </p>
+
+          {/* Light/Dark toggle — bigger, centered */}
+          <div className="inline-flex items-center rounded-full border border-border bg-muted/30 p-1 text-sm">
             <button
               onClick={() => setMode("light")}
-              className={`px-2.5 py-1 rounded-full transition-all ${
+              className={`px-4 py-1.5 rounded-full transition-all text-base ${
                 mode === "light"
                   ? "bg-white shadow-sm text-fg font-medium"
                   : "text-muted-fg hover:text-fg"
               }`}
             >
-              ☀️
+              ☀️ Light
             </button>
             <button
               onClick={() => setMode("dark")}
-              className={`px-2.5 py-1 rounded-full transition-all ${
+              className={`px-4 py-1.5 rounded-full transition-all text-base ${
                 mode === "dark"
                   ? "bg-stone-800 shadow-sm text-white font-medium"
                   : "text-muted-fg hover:text-fg"
               }`}
             >
-              🌙
+              🌙 Dark
             </button>
           </div>
 
-          {/* Nav arrows */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={prev}
-              aria-label="Previous screenshot"
-              className="size-9 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <span className="text-xs text-muted-fg tabular-nums min-w-[3ch] text-center">
-              {index + 1}/{screenshots.length}
-            </span>
-            <button
-              onClick={next}
-              aria-label="Next screenshot"
-              className="size-9 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          <span className="text-xs text-muted-fg tabular-nums">
+            {index + 1} / {screenshots.length}
+          </span>
         </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={next}
+          aria-label="Next screenshot"
+          className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors shrink-0"
+        >
+          <ChevronRight className="size-5" />
+        </button>
       </div>
 
       {/* Single centered screenshot */}
@@ -135,18 +137,18 @@ export function AppScreenshot() {
       </div>
 
       {/* Caption */}
-      <p className="text-center text-xs text-muted-fg mt-3">
+      <p className="text-center text-sm text-muted-fg mt-4">
         {shot.caption}
       </p>
 
       {/* Dot indicators */}
-      <div className="flex justify-center gap-2 mt-4">
+      <div className="flex justify-center gap-2.5 mt-4">
         {screenshots.map((s, i) => (
           <button
             key={s.id}
             onClick={() => setIndex(i)}
             aria-label={`View ${s.label}`}
-            className={`size-2 rounded-full transition-all ${
+            className={`size-2.5 rounded-full transition-all ${
               i === index
                 ? "bg-fg scale-110"
                 : "bg-border hover:bg-muted-fg"
