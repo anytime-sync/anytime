@@ -46,8 +46,8 @@ const screenshots: Screenshot[] = [
     id: "weekly-review",
     label: "WEEKLY REVIEW",
     caption: "Close last week. Pre-stage the next one.",
-    light: "/screenshots/app-weekly-review.png",
-    dark: "/screenshots/app-weekly-review-dark.png",
+    light: "/screenshots/app-weekly-review-dark.png",
+    dark: "/screenshots/app-weekly-review.png",
     width: 1920,
     height: 944,
   },
@@ -68,13 +68,13 @@ export function AppScreenshot() {
 
   return (
     <section className="py-12 max-w-6xl mx-auto w-full px-6">
-      {/* Controls bar: left arrow — label — toggle — counter — right arrow */}
+      {/* Controls bar: left arrow — center block — right arrow */}
       <div className="flex items-center justify-center gap-4 mb-6">
         {/* Left arrow */}
         <button
           onClick={prev}
           aria-label="Previous screenshot"
-          className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors shrink-0"
+          className="size-10 rounded-full border border-border dark:border-white/20 hover:bg-muted/60 dark:hover:bg-white/10 grid place-items-center transition-colors shrink-0"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -85,14 +85,14 @@ export function AppScreenshot() {
             {shot.label}
           </p>
 
-          {/* Light/Dark toggle — bigger, centered */}
-          <div className="inline-flex items-center rounded-full border border-border bg-muted/30 p-1 text-sm">
+          {/* Light/Dark toggle — centered, visible in both modes */}
+          <div className="inline-flex items-center rounded-full border border-border dark:border-white/20 bg-muted/30 dark:bg-white/10 p-1 text-sm">
             <button
               onClick={() => setMode("light")}
               className={`px-4 py-1.5 rounded-full transition-all text-base ${
                 mode === "light"
-                  ? "bg-white shadow-sm text-fg font-medium"
-                  : "text-muted-fg hover:text-fg"
+                  ? "bg-white dark:bg-white shadow-sm text-stone-900 font-medium"
+                  : "text-muted-fg dark:text-white/60 hover:text-fg dark:hover:text-white/90"
               }`}
             >
               ☀️ Light
@@ -102,7 +102,7 @@ export function AppScreenshot() {
               className={`px-4 py-1.5 rounded-full transition-all text-base ${
                 mode === "dark"
                   ? "bg-stone-800 shadow-sm text-white font-medium"
-                  : "text-muted-fg hover:text-fg"
+                  : "text-muted-fg dark:text-white/60 hover:text-fg dark:hover:text-white/90"
               }`}
             >
               🌙 Dark
@@ -118,14 +118,14 @@ export function AppScreenshot() {
         <button
           onClick={next}
           aria-label="Next screenshot"
-          className="size-10 rounded-full border border-border hover:bg-muted/60 grid place-items-center transition-colors shrink-0"
+          className="size-10 rounded-full border border-border dark:border-white/20 hover:bg-muted/60 dark:hover:bg-white/10 grid place-items-center transition-colors shrink-0"
         >
           <ChevronRight className="size-5" />
         </button>
       </div>
 
       {/* Single centered screenshot */}
-      <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl shadow-stone-200/50">
+      <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl shadow-stone-200/50 dark:shadow-none dark:border-white/10">
         <Image
           src={src}
           alt={`First Light — ${shot.label}`}
@@ -150,8 +150,8 @@ export function AppScreenshot() {
             aria-label={`View ${s.label}`}
             className={`size-2.5 rounded-full transition-all ${
               i === index
-                ? "bg-fg scale-110"
-                : "bg-border hover:bg-muted-fg"
+                ? "bg-fg dark:bg-white scale-110"
+                : "bg-border dark:bg-white/30 hover:bg-muted-fg dark:hover:bg-white/60"
             }`}
           />
         ))}

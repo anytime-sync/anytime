@@ -31,7 +31,7 @@ export function FeatureGrid() {
       <div className="mb-8">
         <p className="editorial-number text-xs mb-2">AND {features.length} MORE</p>
         <h3 className="font-display text-xl tracking-tight">Everything else, without the noise.</h3>
-        <p className="text-muted-fg text-sm mt-1">
+        <p className="text-muted-fg dark:text-white/60 text-sm mt-1">
           The full toolkit lives here — habits, focus timer, calendar, search, and more.
         </p>
       </div>
@@ -39,12 +39,12 @@ export function FeatureGrid() {
         {features.map((f) => (
           <div
             key={f.name}
-            className="flex items-start gap-3 px-4 py-3 rounded-xl border border-border bg-white/40 hover:bg-white/70 transition-colors"
+            className="flex items-start gap-3 px-4 py-3 rounded-xl border border-border dark:border-white/15 bg-white/60 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/15 transition-colors"
           >
             <span className="text-lg shrink-0 mt-0.5">{f.emoji}</span>
             <div className="min-w-0">
-              <p className="font-medium text-sm">{f.name}</p>
-              <p className="text-xs text-muted-fg">{f.desc}</p>
+              <p className="font-medium text-sm text-fg dark:text-white">{f.name}</p>
+              <p className="text-xs text-muted-fg dark:text-white/60">{f.desc}</p>
             </div>
           </div>
         ))}
