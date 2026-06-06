@@ -107,6 +107,8 @@ export default function Home() {
         </div>
       </DesignSlot>
 
+      <AppScreenshot />
+
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />
       </div>
