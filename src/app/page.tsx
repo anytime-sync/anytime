@@ -56,6 +56,12 @@ export default function Home() {
               Pricing
             </Link>
             <Link
+              href="/compare"
+              className="hover:text-fg transition-colors hidden sm:inline"
+            >
+              Compare
+            </Link>
+            <Link
               href="/blog"
               className="hover:text-fg transition-colors hidden sm:inline"
             >
