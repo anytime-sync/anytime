@@ -43,7 +43,7 @@ const features = [
     "comp": "✅ Built-in"
   },
   {
-    "feature": "Pomodoro timer",
+    "feature": "Focus timer",
     "fl": "✅ Built-in",
     "comp": "✅ Built-in"
   },
@@ -54,7 +54,7 @@ const features = [
   },
   {
     "feature": "Calendar view",
-    "fl": "⚠️ Coming soon",
+    "fl": "✅ Built-in",
     "comp": "✅ Built-in"
   },
   {
@@ -64,7 +64,7 @@ const features = [
   },
   {
     "feature": "Team collaboration",
-    "fl": "⚠️ Coming soon",
+    "fl": "✅ Groups",
     "comp": "✅ Shared lists"
   },
   {
@@ -101,7 +101,7 @@ export default async function CompareTickTickPage() {
           First Light vs TickTick
         </h1>
         <p className="text-muted-fg text-base leading-relaxed mb-2">
-          TickTick and First Light share several features — both have Pomodoro timers and habit tracking. But First Light goes further with native AI integration via MCP, letting your AI assistant read, create, and reorganize your tasks directly.
+          TickTick and First Light share several features — both have focus timers and habit tracking. But First Light goes further with native AI integration via MCP, letting your AI assistant read, create, and reorganize your tasks directly.
         </p>
         <p className="text-muted-fg text-sm">Last updated: June 2026</p>
       </section>

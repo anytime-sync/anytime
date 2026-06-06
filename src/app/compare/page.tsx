@@ -32,8 +32,8 @@ const comparisons = [
   {
     slug: "ticktick",
     name: "TickTick",
-    tagline: "The all-in-one with Pomodoro, habits, and calendar",
-    diff: "Both have Pomodoro and habits. First Light adds native MCP and AI-powered daily planning.",
+    tagline: "The all-in-one with focus timer, habits, and calendar",
+    diff: "Both have focus timer and habits. First Light adds native MCP and AI-powered daily planning.",
   },
 ];
 

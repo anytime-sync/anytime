@@ -45,7 +45,7 @@ const features = [
     "comp": "❌ No"
   },
   {
-    "feature": "Pomodoro timer",
+    "feature": "Focus timer",
     "fl": "✅ Built-in",
     "comp": "❌ No"
   },
@@ -55,8 +55,13 @@ const features = [
     "comp": "❌ No"
   },
   {
+    "feature": "Calendar view",
+    "fl": "✅ Built-in",
+    "comp": "❌ No"
+  },
+  {
     "feature": "Team collaboration",
-    "fl": "⚠️ Coming soon",
+    "fl": "✅ Groups",
     "comp": "✅ Full"
   },
   {
@@ -152,7 +157,7 @@ export default async function CompareTodoistPage() {
           </li>
           <li className="flex gap-2">
             <span className="text-green-600 shrink-0">✓</span>
-            You want an Eisenhower matrix + Pomodoro timer + habit tracking in one app
+            You want an Eisenhower matrix + focus timer + habit tracking in one app
           </li>
           <li className="flex gap-2">
             <span className="text-green-600 shrink-0">✓</span>

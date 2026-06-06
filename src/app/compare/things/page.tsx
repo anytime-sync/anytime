@@ -42,7 +42,7 @@ const features = [
     "comp": "❌ No"
   },
   {
-    "feature": "Pomodoro timer",
+    "feature": "Focus timer",
     "fl": "✅ Built-in",
     "comp": "❌ No"
   },
@@ -83,7 +83,7 @@ const features = [
   }
 ];
 
-const whenFirstLight = ["You want your AI assistant to manage tasks via MCP","You need cross-platform access (Windows, Android, Linux)","You want Pomodoro, habits, and Eisenhower matrix built in","You prefer AI-powered daily planning"];
+const whenFirstLight = ["You want your AI assistant to manage tasks via MCP","You need cross-platform access (Windows, Android, Linux)","You want focus timer, habits, and Eisenhower matrix built in","You prefer AI-powered daily planning"];
 const whenCompetitor = ["You live in the Apple ecosystem and want polished native apps","You prefer one-time purchase over subscription","You want full offline support with no internet required","Design polish is your #1 priority"];
 
 export default function CompareThings3Page() {
