@@ -130,4 +130,21 @@ export class FirstlightClient {
   morningCopilot(tz?: string, force?: boolean) {
     return this.req<unknown>("POST", "/ai/morning-copilot", { body: { tz, force } });
   }
+
+  // ---------- Tags ---------------------------------------------------------
+  listTags() {
+    return this.req<{ data: unknown[] }>("GET", "/tags");
+  }
+  createTag(body: { name: string; color?: string }) {
+    return this.req<{ data: unknown; created: boolean }>("POST", "/tags", { body });
+  }
+  addTagsToTask(taskId: string, tagIds: string[]) {
+    return this.req<{ data: unknown[] }>("POST", `/tasks/${taskId}/tags`, { body: { tag_ids: tagIds } });
+  }
+  removeTagFromTask(taskId: string, tagId: string) {
+    return this.req<{ removed: boolean }>("DELETE", `/tasks/${taskId}/tags/${tagId}`);
+  }
+  getTaskTags(taskId: string) {
+    return this.req<{ data: unknown[] }>("GET", `/tasks/${taskId}/tags`);
+  }
 }

@@ -301,6 +301,86 @@ const get_daily_edition: Tool = {
   handler: (c, a) => c.getDailyEdition(a.date as string | undefined),
 };
 
+
+// ---------- Tags -----------------------------------------------------------
+
+const list_tags: Tool = {
+  name: "list_tags",
+  description:
+    "List all tags (labels) for the user. Tags can be applied to tasks for categorization.",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    additionalProperties: false,
+  },
+  handler: (c) => c.listTags(),
+};
+
+const create_tag: Tool = {
+  name: "create_tag",
+  description:
+    "Create a new tag (label). If the tag already exists (case-insensitive), returns the existing one. Default color is indigo.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Tag name, e.g. 'oqua', 'firstlight', 'work'." },
+      color: { type: "string", description: "Hex color, e.g. '#6366f1'. Optional." },
+    },
+    required: ["name"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.createTag({ name: a.name as string, color: a.color as string | undefined }),
+};
+
+const tag_task: Tool = {
+  name: "tag_task",
+  description:
+    "Add one or more tags to a task. Pass tag IDs (UUIDs). Use list_tags or create_tag first to get IDs.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_id: { type: "string", description: "Task ID." },
+      tag_ids: {
+        type: "array",
+        items: { type: "string" },
+        description: "Array of tag IDs to add.",
+      },
+    },
+    required: ["task_id", "tag_ids"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.addTagsToTask(a.task_id as string, a.tag_ids as string[]),
+};
+
+const untag_task: Tool = {
+  name: "untag_task",
+  description: "Remove a tag from a task.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_id: { type: "string" },
+      tag_id: { type: "string" },
+    },
+    required: ["task_id", "tag_id"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.removeTagFromTask(a.task_id as string, a.tag_id as string),
+};
+
+const get_task_tags: Tool = {
+  name: "get_task_tags",
+  description: "List all tags on a specific task.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_id: { type: "string" },
+    },
+    required: ["task_id"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.getTaskTags(a.task_id as string),
+};
+
 // ---------- Registry ------------------------------------------------------
 
 export const tools: Tool[] = [
@@ -320,6 +400,11 @@ export const tools: Tool[] = [
   link_task_to_note,
   daily_summary,
   get_daily_edition,
+  list_tags,
+  create_tag,
+  tag_task,
+  untag_task,
+  get_task_tags,
 ];
 
 const byName = new Map(tools.map((t) => [t.name, t]));
@@ -332,105 +417,4 @@ export async function dispatch(
   const tool = byName.get(name);
   if (!tool) throw new Error(`Unknown tool: ${name}`);
   return tool.handler(client, args);
-
-
-  // ─── AI Intelligence Tools ──────────────────────────────────────────
-
-  server.tool(
-    "plan_day",
-    "AI-powered day planner: analyzes your tasks and calendar to suggest Eisenhower quadrant placement and priority for today. Pass up to 40 tasks.",
-    {
-      tasks: z.array(z.object({
-        id: z.string().describe("Task ID"),
-        title: z.string().describe("Task title"),
-        due_at: z.string().nullable().optional().describe("Due date ISO 8601"),
-        priority: z.number().int().min(0).max(5).describe("Priority 0-5"),
-        project: z.string().nullable().optional().describe("Project name"),
-      })).min(1).max(40).describe("Tasks to plan"),
-    },
-    async ({ tasks }) => {
-      const result = await fl.planDay(tasks);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "plan_week",
-    "AI-powered week planner: batch-prioritizes up to 30 tasks for the next 7 days with quadrant and priority suggestions.",
-    {
-      tasks: z.array(z.object({
-        id: z.string(),
-        title: z.string(),
-        due_at: z.string().nullable().optional(),
-        priority: z.number().int().min(0).max(5),
-        project: z.string().nullable().optional(),
-      })).min(1).max(30),
-    },
-    async ({ tasks }) => {
-      const result = await fl.planWeek(tasks);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "prep_meeting",
-    "Generate a meeting prep brief: agenda items and questions to ask. Caches results per task.",
-    {
-      task_id: z.string().describe("Task/event ID"),
-      title: z.string().min(1).max(280).describe("Meeting title"),
-      notes: z.string().optional().describe("Additional context or notes"),
-      refresh: z.boolean().optional().describe("Force regenerate, ignoring cache"),
-    },
-    async ({ task_id, title, notes, refresh }) => {
-      const result = await fl.prepMeeting(task_id, title, notes, refresh);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "find_time",
-    "Suggest 3 best time slots in the next 7 days for a task, avoiding busy blocks.",
-    {
-      task_id: z.string().describe("Task ID"),
-      title: z.string().min(1).max(280).describe("Task title"),
-      estimated_minutes: z.number().int().optional().describe("Estimated duration in minutes (default 30)"),
-    },
-    async ({ task_id, title, estimated_minutes }) => {
-      const result = await fl.findTime(task_id, title, estimated_minutes);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "reschedule_overdue",
-    "Find all overdue tasks and suggest new realistic due dates spread across the next 7 days. No input needed.",
-    {},
-    async () => {
-      const result = await fl.rescheduleOverdue();
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "detect_procrastination",
-    "Find stuck tasks (open 14+ days, untouched 7+ days) and recommend: drop, break-down, or schedule. No input needed.",
-    {},
-    async () => {
-      const result = await fl.detectProcrastination();
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
-
-  server.tool(
-    "morning_copilot",
-    "AI morning brief: proactive daily plan with task suggestions, calendar awareness, and energy-optimized scheduling. Cached per day.",
-    {
-      tz: z.string().optional().describe("Timezone e.g. 'Asia/Taipei' (default UTC)"),
-      force: z.boolean().optional().describe("Force regenerate, ignoring today's cache"),
-    },
-    async ({ tz, force }) => {
-      const result = await fl.morningCopilot(tz, force);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
-  );
 }
