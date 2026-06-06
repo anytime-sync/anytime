@@ -9,6 +9,7 @@ export type LandingConfig = {
   pricing?: {
     hero?: { title?: string; subtitle?: string; eyebrow?: string };
     free?: { tagline?: string; features?: string[] };
+    plus?: { tagline?: string; features?: string[] };
     pro?: { tagline?: string; features?: string[]; badge?: string };
     demos?: Array<{ title: string; subtitle?: string; asset: string }>;
     faq?: Array<{ q: string; a: string }>;
@@ -29,6 +30,7 @@ export type LandingConfigResolved = {
   pricing: {
     hero: { title: string; subtitle: string; eyebrow: string };
     free: { tagline: string; features: string[] };
+    plus: { tagline: string; features: string[] };
     pro: { tagline: string; features: string[]; badge: string };
     demos: Array<{ title: string; subtitle?: string; asset: string }>;
     faq: Array<{ q: string; a: string }>;
@@ -46,25 +48,35 @@ export const DEFAULT_LANDING_CONFIG: LandingConfigResolved = {
       eyebrow: "PRICING",
       title: "Built for the way you actually plan.",
       subtitle:
-        "Free covers the full task system, indefinitely. Pro adds the AI co-pilot and two-way calendar — for people who want a daily edition instead of a to-do list.",
+        "Free covers the full task system, indefinitely. Plus unlocks two-way calendar and unlimited daily editions. Pro adds the full AI co-pilot — Plan my day, Voice → Task, and the review suite.",
     },
     free: {
       tagline: "The full task system, forever.",
       features: [
         "Today, Tomorrow, Next 7 / 90 days, Inbox",
         "Calendar with Google Calendar (read)",
-        "Lists, Tags, Groups, Habits, Notes, Focus Timer",
+        "Lists, Tags, Groups, Habits, Notes, Focus",
         "Notes ↔ Task: convert either way",
         "Daily Edition (1 / day)",
         "Email-to-inbox, push, daily digest",
         "Export your data, anytime",
       ],
     },
+    plus: {
+      tagline: "Two-way calendar sync, unlimited Daily Editions, smart reschedule, find time, and end-of-day reflection.",
+      features: [
+        "Everything in Free",
+        "Unlimited Daily Edition",
+        "Two-way Google Calendar sync",
+        "Smart reschedule & Find time",
+        "End-of-day Reflection",
+      ],
+    },
     pro: {
       badge: "Recommended",
       tagline: "Add the AI co-pilot and two-way calendar.",
       features: [
-        "Everything in Free",
+        "Everything in Plus",
         "Unlimited Daily Edition",
         "Plan-my-day & Plan-my-week",
         "Morning Co-pilot (conversational briefing)",
@@ -113,6 +125,11 @@ export function withDefaults(c: LandingConfig | null | undefined): LandingConfig
         ...d.pricing.free,
         ...(cfg.pricing?.free ?? {}),
         features: cfg.pricing?.free?.features ?? d.pricing.free.features,
+      },
+      plus: {
+        ...d.pricing.plus,
+        ...(cfg.pricing?.plus ?? {}),
+        features: cfg.pricing?.plus?.features ?? d.pricing.plus.features,
       },
       pro: {
         ...d.pricing.pro,

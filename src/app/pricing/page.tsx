@@ -129,8 +129,8 @@ export default function PricingPage() {
                 "Everything in Free",
                 "Unlimited Daily Edition",
                 "Two-way Google Calendar sync",
+                "Smart reschedule & Find time",
                 "End-of-day Reflection",
-                "Drag-to-reschedule across views",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
