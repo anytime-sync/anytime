@@ -49,7 +49,7 @@ async function loadPrices(): Promise<{
     }
   }
   return {
-    plusCents: parseInt(process.env.LEMONSQUEEZY_PLUS_PRICE_CENTS ?? "300", 10),
+    plusCents: parseInt(process.env.LEMONSQUEEZY_PLUS_PRICE_CENTS ?? "500", 10),
     proCents: parseInt(process.env.LEMONSQUEEZY_PRO_PRICE_CENTS ?? "900", 10),
     currency: process.env.LEMONSQUEEZY_CURRENCY ?? "usd",
     source: "env",

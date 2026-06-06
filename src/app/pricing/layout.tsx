@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pricing — First Light",
     description:
-      "Free forever. Plus $3/mo. Pro $9/mo. Calm daily productivity with AI briefings, calendar sync, and focus tools.",
+      "Free forever. Plus $5/mo. Pro $9/mo. Calm daily productivity with AI briefings, calendar sync, and focus tools.",
     url: "https://firstlight.to/pricing",
     images: ["/og.png"],
   },
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Pricing — First Light",
     description:
-      "Free forever. Plus $3/mo. Pro $9/mo. Calm daily productivity.",
+      "Free forever. Plus $5/mo. Pro $9/mo. Calm daily productivity.",
     images: ["/og.png"],
   },
 };

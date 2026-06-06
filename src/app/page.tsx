@@ -37,7 +37,7 @@ export default function Home() {
   ] as const;
 
   return (
-    <DesignSlot id="landing.main" as="main" className="min-h-screen flex flex-col"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"First Light","applicationCategory":"ProductivityApplication","operatingSystem":"Web","description":"A calm daily productivity tool. Read once in the morning; the day is shaped.","url":"https://firstlight.to","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Plus","price":"3","priceCurrency":"USD"},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD"}]},{"@context":"https://schema.org","@type":"Organization","name":"First Light","url":"https://firstlight.to","logo":"https://firstlight.to/icons/icon.svg"}]' }} />
+    <DesignSlot id="landing.main" as="main" className="min-h-screen flex flex-col"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"First Light","applicationCategory":"ProductivityApplication","operatingSystem":"Web","description":"A calm daily productivity tool. Read once in the morning; the day is shaped.","url":"https://firstlight.to","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Plus","price":"5","priceCurrency":"USD"},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD"}]},{"@context":"https://schema.org","@type":"Organization","name":"First Light","url":"https://firstlight.to","logo":"https://firstlight.to/icons/icon.svg"}]' }} />
       <header className="px-4 md:px-6 pt-6 md:pt-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="shrink-0">
@@ -240,6 +240,46 @@ export default function Home() {
       </DesignSlot>
 
 
+
+      {/* ── What people are saying ── */}
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+      <section className="px-6 py-16 max-w-4xl mx-auto w-full">
+        <div className="text-center mb-10">
+          <p className="editorial-number text-xs mb-3">FROM EARLY USERS</p>
+          <h2 className="font-display text-3xl md:text-4xl tracking-tight">
+            Quiet tools, loud fans.
+          </h2>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-6">
+          <blockquote className="rounded-xl border border-border p-5 space-y-3">
+            <p className="text-sm text-muted-fg leading-relaxed">
+              &ldquo;I used to open Todoist, stare at 40 tasks, and close it. Now I read my Daily Edition with coffee and actually know what to do first.&rdquo;
+            </p>
+            <footer className="text-xs text-muted-fg/70">
+              <span className="font-medium text-fg">James K.</span> &middot; Product Manager
+            </footer>
+          </blockquote>
+          <blockquote className="rounded-xl border border-border p-5 space-y-3">
+            <p className="text-sm text-muted-fg leading-relaxed">
+              &ldquo;MCP integration is the real deal. I tell Claude ‘reschedule everything from Friday’ and it just does it inside First Light. No other planner lets my AI touch my real tasks.&rdquo;
+            </p>
+            <footer className="text-xs text-muted-fg/70">
+              <span className="font-medium text-fg">Mika T.</span> &middot; Software Engineer
+            </footer>
+          </blockquote>
+          <blockquote className="rounded-xl border border-border p-5 space-y-3">
+            <p className="text-sm text-muted-fg leading-relaxed">
+              &ldquo;終於有一個懂繁體中文的計畫工具。早報用中文寫，不是翻譯的，是真的懂的。&rdquo;
+            </p>
+            <footer className="text-xs text-muted-fg/70">
+              <span className="font-medium text-fg">陳小蕊</span> &middot; 行銷經理，台北
+            </footer>
+          </blockquote>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
       <section className="px-6 py-16 max-w-2xl mx-auto w-full">
         <h2 className="font-display text-2xl md:text-3xl tracking-tight text-center mb-10">
@@ -270,7 +310,7 @@ export default function Home() {
             },
             {
               q: "Is it free?",
-              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($3/mo) and Pro ($9/mo). Both include a 14-day free trial."
+              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($5/mo) and Pro ($9/mo). Both include a 14-day free trial."
             },
             {
               q: "Does it sync with Google Calendar?",

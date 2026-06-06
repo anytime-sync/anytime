@@ -52,7 +52,7 @@ export default function FirstLightVsSunsama() {
     ["Project hierarchy", "Projects · Sections · Subtasks", "Lists + Groups"],
     ["Team collaboration", "Yes", "Groups (shared lists)"],
     ["Free plan", "5 personal projects", "Generous · Daily Edition included"],
-    ["Paid entry tier", "$5/mo Pro (annual only)", "$3/mo Plus (monthly)"],
+    ["Paid entry tier", "$5/mo Pro (annual only)", "$5/mo Plus (monthly)"],
   ];
   return (
     <>
@@ -182,7 +182,7 @@ export default function FirstLightVsSunsama() {
               <li><strong>Sunsama Free:</strong> 5 personal projects, 5 collaborators per project, 1-week activity history.</li>
               <li><strong>Sunsama Pro:</strong> $5/mo billed annually only (so $4/mo if you commit to 12 months). 300 projects, reminders, calendar feeds.</li>
               <li><strong>First Light Free:</strong> Daily Edition included. All capture (typing). Calendar, Inbox, Today, Next 7 / Next 90, The Sift.</li>
-              <li><strong>First Light Plus ($3/mo):</strong> Billed monthly (no annual lock-in). Voice / Snapshot / Paste to task. Weekly Review. Two-way GCal. Semantic search.</li>
+              <li><strong>First Light Plus ($5/mo):</strong> Billed monthly (no annual lock-in). Voice / Snapshot / Paste to task. Weekly Review. Two-way GCal. Semantic search.</li>
               <li><strong>First Light Pro ($9/mo):</strong> AI Plan-my-day. AI Plan-my-week. AI Goal Tracker. Morning Co-pilot. Priority human support.</li>
             </ul>
             <p className="leading-relaxed text-stone-700">

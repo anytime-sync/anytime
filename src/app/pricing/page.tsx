@@ -117,7 +117,7 @@ export default function PricingPage() {
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">Plus</h2>
               <span className="text-2xl font-semibold">
-                {plusLoading ? "—" : plus?.formatted ?? "$3"}
+                {plusLoading ? "—" : plus?.formatted ?? "$5"}
                 <span className="text-sm text-muted-fg font-normal">
                   {" "}/ {plus?.interval ?? "month"}
                 </span>

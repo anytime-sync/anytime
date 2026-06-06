@@ -119,7 +119,7 @@ export default function FeaturesPage() {
                       ? "Redirecting…"
                       : plusLoading
                       ? "Upgrade to Plus"
-                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$3 / month"}`}
+                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$5 / month"}`}
                   </button>
                   <button
                     onClick={() => checkoutPro.mutate()}

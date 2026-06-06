@@ -131,7 +131,7 @@ export function BillingSection() {
                 ? "Starting…"
                 : plusLoading
                 ? "Upgrade to Plus"
-                : `Upgrade to Plus — ${plusPrice?.formattedPerMonth ?? "$3 / month"}`}
+                : `Upgrade to Plus — ${plusPrice?.formattedPerMonth ?? "$5 / month"}`}
             </button>
             <button
               onClick={() => checkoutPro.mutate()}
