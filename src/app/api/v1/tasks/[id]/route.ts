@@ -111,6 +111,32 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
   }
 
+  // Enforce start <= end invariant. When both dates are present in the
+  // patch (or one is being updated against the existing task), clamp
+  // so start never exceeds end.
+  if ("start_at" in patch || "due_at" in patch) {
+    // We need the current row to resolve partial updates.
+    const { data: current } = await ctx.supabase
+      .from("tasks")
+      .select("start_at, due_at")
+      .eq("id", params.id)
+      .maybeSingle();
+    const effectiveStart = "start_at" in patch ? patch.start_at : current?.start_at;
+    const effectiveEnd = "due_at" in patch ? patch.due_at : current?.due_at;
+    if (effectiveStart && effectiveEnd) {
+      const s = new Date(effectiveStart as string).getTime();
+      const e = new Date(effectiveEnd as string).getTime();
+      if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
+        // Whichever field the caller is changing gets clamped to the other.
+        if ("start_at" in patch && !("due_at" in patch)) {
+          patch.due_at = patch.start_at;
+        } else {
+          patch.due_at = patch.start_at ?? effectiveStart;
+        }
+      }
+    }
+  }
+
   const { data, error } = await ctx.supabase
     .from("tasks")
     .update(patch)

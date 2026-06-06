@@ -143,13 +143,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Enforce start <= end invariant: if both dates are set and start > end,
+  // clamp end to start so we never persist an impossible range.
+  let sanitizedStartAt = body.start_at ?? null;
+  let sanitizedDueAt = body.due_at ?? null;
+  if (sanitizedStartAt && sanitizedDueAt) {
+    const s = new Date(sanitizedStartAt).getTime();
+    const e = new Date(sanitizedDueAt).getTime();
+    if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
+      sanitizedDueAt = sanitizedStartAt;
+    }
+  }
+
   const { data, error } = await ctx.supabase
     .from("tasks")
     .insert({
       user_id: ctx.userId,
       title: body.title,
-      due_at: body.due_at ?? null,
-      start_at: body.start_at ?? null,
+      due_at: sanitizedDueAt,
+      start_at: sanitizedStartAt,
       is_all_day: deriveIsAllDay(body),
       priority: normalizePriority(body.priority) ?? 0,
       notes: body.notes ?? null,

@@ -368,6 +368,16 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     }
   }
 
+  // --- enforce start ≤ end invariant ---
+  // If chrono or any parsing path produced start > end, clamp end to start.
+  if (start_at && due_at) {
+    const sMs = new Date(start_at).getTime();
+    const eMs = new Date(due_at).getTime();
+    if (!Number.isNaN(sMs) && !Number.isNaN(eMs) && sMs > eMs) {
+      due_at = start_at;
+    }
+  }
+
   return {
     title,
     start_at,

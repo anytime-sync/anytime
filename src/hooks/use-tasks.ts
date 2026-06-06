@@ -167,6 +167,14 @@ export function useCreateTask() {
       // Strip the synthetic optimistic id (if the caller passed one) before
       // hitting Postgres — the DB assigns the real uuid.
       delete (taskInput as any).id;
+      // Enforce start ≤ end on creation
+      if (taskInput.start_at && taskInput.due_at) {
+        const s = new Date(taskInput.start_at).getTime();
+        const e = new Date(taskInput.due_at).getTime();
+        if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
+          taskInput.due_at = taskInput.start_at;
+        }
+      }
       const { data: task, error } = await supabase
         .from("tasks")
         .insert({ ...taskInput, user_id: u.user.id })
@@ -312,6 +320,27 @@ export function useUpdateTask() {
     mutationFn: async (p: Partial<Task> & { id: string }) => {
       const supabase = createClient();
       const { id, ...rest } = p;
+      // Enforce start ≤ end: if both dates are in the patch, clamp.
+      // If only one is changing, fetch the other from the DB to compare.
+      if ("start_at" in rest || "due_at" in rest) {
+        let effectiveStart = rest.start_at;
+        let effectiveEnd = rest.due_at;
+        if (effectiveStart === undefined || effectiveEnd === undefined) {
+          const { data: cur } = await supabase.from("tasks").select("start_at, due_at").eq("id", id).maybeSingle();
+          if (cur) {
+            if (effectiveStart === undefined) effectiveStart = cur.start_at;
+            if (effectiveEnd === undefined) effectiveEnd = cur.due_at;
+          }
+        }
+        if (effectiveStart && effectiveEnd) {
+          const s = new Date(effectiveStart).getTime();
+          const e = new Date(effectiveEnd).getTime();
+          if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
+            // Clamp: set end = start
+            rest.due_at = effectiveStart;
+          }
+        }
+      }
       const { error } = await supabase.from("tasks").update(rest).eq("id", id);
       if (error) throw error;
     },
