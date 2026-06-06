@@ -5,7 +5,7 @@ import Image from "next/image";
 
 /**
  * AppScreenshot — hero screenshot showcase with light/dark toggle.
- * Shows real screenshots of the Daily Edition and Weekly Review.
+ * Shows real screenshots: Daily Edition, The Sift, Quick Add, and Weekly Review.
  */
 export function AppScreenshot() {
   const [mode, setMode] = useState<"light" | "dark">("light");
@@ -52,6 +52,40 @@ export function AppScreenshot() {
       <p className="text-center text-xs text-muted-fg mt-3">
         The Daily Edition — an AI briefing that reads your calendar, tasks, and patterns to shape your morning.
       </p>
+
+      {/* The Sift — Eisenhower Matrix */}
+      <div className="mt-10">
+        <p className="text-center text-xs editorial-number tracking-[0.22em] text-muted-fg mb-4">THE SIFT</p>
+        <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl shadow-stone-200/40">
+          <Image
+            src="/screenshots/app-sift.png"
+            alt="First Light — The Sift: Eisenhower Matrix view sorting tasks by urgency and importance"
+            width={1440}
+            height={900}
+            className="w-full h-auto"
+          />
+        </div>
+        <p className="text-center text-xs text-muted-fg mt-3">
+          The Sift — drag tasks between quadrants to instantly re-prioritize by urgency × importance.
+        </p>
+      </div>
+
+      {/* Quick Add modal */}
+      <div className="mt-10">
+        <p className="text-center text-xs editorial-number tracking-[0.22em] text-muted-fg mb-4">QUICK ADD</p>
+        <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl shadow-stone-200/40">
+          <Image
+            src="/screenshots/app-quick-add.png"
+            alt="First Light — Quick Add: type or speak a task and AI parses time, tags, priority, and reminders"
+            width={1440}
+            height={900}
+            className="w-full h-auto"
+          />
+        </div>
+        <p className="text-center text-xs text-muted-fg mt-3">
+          Quick Add — type or speak naturally. AI parses the time, list, tags, and reminders for you.
+        </p>
+      </div>
 
       {/* Weekly Review screenshot */}
       <div className="mt-10">
