@@ -114,7 +114,7 @@ export default function Home() {
         <div className="text-center mb-8">
           <p className="editorial-number text-xs mb-3">SEE IT IN MOTION</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Sixteen surfaces, one calm rhythm.
+            Twenty-one surfaces, one calm rhythm.
           </h2>
         </div>
         <DemoCarousel />
@@ -249,7 +249,7 @@ export default function Home() {
             },
             {
               q: "What is MCP integration?",
-              a: "MCP (Model Context Protocol) lets AI assistants like Claude directly read and manage your First Light tasks. Ask Claude to 'plan my day' or 'reschedule overdue tasks' and it actually moves items in your planner. No other task manager has this."
+              a: "MCP (Model Context Protocol) is the open standard that lets AI assistants like Claude and ChatGPT work directly inside an app. Ask your assistant to 'plan my day' or 'reschedule everything overdue,' and it actually moves items in your planner. Other task managers can be reached through community-built MCP bridges; First Light is built MCP-native from the core — first-party, OAuth-secured, and designed for it rather than patched onto it. Your AI doesn’t read a copy of your tasks. It manages the real ones."
             },
             {
               q: "What is the Daily Edition?",
