@@ -165,7 +165,7 @@ export async function POST(req: Request) {
     const known = new Set(flexibleTasks.map((t) => t.id));
     const filtered = parsed.suggestions.filter((s) => known.has(s.id));
 
-    await logAiCall(u.user.id, "plan_week", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "plan_week", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json({ suggestions: filtered, notes: parsed.notes ?? "" });
   } catch (e: any) {
     console.error("[ai] plan-week", "\n", e?.stack || e?.message || e);

@@ -77,7 +77,7 @@ export async function POST() {
     const known = new Set(candidates.map((t) => t.id));
     out.items = out.items.filter((it) => known.has(it.id));
 
-    await logAiCall(u.user.id, "procrastination", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "procrastination", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);
   } catch (e: any) {
     console.error("[ai] procrastination", e?.message ?? e);

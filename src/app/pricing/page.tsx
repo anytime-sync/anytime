@@ -88,10 +88,11 @@ export default function PricingPage() {
               {[
                 "Today, Tomorrow, Next 7 / 90 days, Inbox",
                 "Calendar with Google Calendar (read)",
-                "Lists, Tags, Groups, Habits, Notes, Focus",
+                "Lists, Tags, Habits, Notes, Focus",
                 "Daily Edition (1 / day)",
                 "Email-to-inbox, push, daily digest",
                 "Export your data, anytime",
+                "Groups · free during beta",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />

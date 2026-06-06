@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     const known = new Set((tasks ?? []).map((t) => t.id));
     out.matches = out.matches.filter((m) => known.has(m.id));
 
-    await logAiCall(u.user.id, "search", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "search", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);
   } catch (e: any) {
     console.error("[ai] search", e?.message ?? e);

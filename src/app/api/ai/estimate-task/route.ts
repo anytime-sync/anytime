@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       .eq("id", task_id)
       .eq("user_id", u.user.id);
 
-    await logAiCall(u.user.id, "estimate_task", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "estimate_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);
   } catch (e: any) {
     console.error("[ai] estimate-task", "\n", e?.stack || e?.message || e);

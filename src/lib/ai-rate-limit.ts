@@ -129,19 +129,45 @@ export async function checkAiBudget(userId: string, feature: AiFeature): Promise
   return { ok: true };
 }
 
+
+/**
+ * Approximate per-token cost in USD for cost tracking.
+ * Updated 2026-06. These are estimates — actual billing may differ slightly.
+ */
+const MODEL_COST_PER_TOKEN: Record<string, { input: number; output: number }> = {
+  "claude-haiku-4-5-20251001":  { input: 0.80 / 1_000_000, output: 4.00 / 1_000_000 },
+  "claude-sonnet-4-20250514":   { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000 },
+};
+
+/** Estimate USD cost from model + token counts. Returns null if unknown model. */
+export function estimateCostUsd(
+  model: string | undefined,
+  inputTokens: number | undefined,
+  outputTokens: number | undefined,
+): number | null {
+  if (!model || inputTokens == null || outputTokens == null) return null;
+  const rates = MODEL_COST_PER_TOKEN[model];
+  if (!rates) return null;
+  return rates.input * inputTokens + rates.output * outputTokens;
+}
+
 /** Log a call after we've made it. Best-effort. */
 export async function logAiCall(
   userId: string,
   feature: AiFeature,
-  opts: { model?: string; status?: number } = {}
+  opts: { model?: string; status?: number; inputTokens?: number; outputTokens?: number } = {}
 ): Promise<void> {
   try {
     const supa = admin();
+    const cost = estimateCostUsd(opts.model, opts.inputTokens, opts.outputTokens);
     await supa.from("ai_usage_log").insert({
       user_id: userId,
       feature,
       model: opts.model ?? null,
       status: opts.status ?? null,
+      input_tokens: opts.inputTokens ?? null,
+      output_tokens: opts.outputTokens ?? null,
+      estimated_cost_usd: cost,
     });
   } catch (e) {
     console.error("[ai_rate_limit] log failed", e);

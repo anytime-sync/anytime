@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const json = extractJson(content);
     const out = ResSchema.parse(json);
 
-    await logAiCall(u.user.id, "goal_decompose", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "goal_decompose", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);
   } catch (e: any) {
     console.error("[ai] goal-decompose", e?.message ?? e);

@@ -127,7 +127,7 @@ export function FeatureMatrix({
                     className="grid grid-cols-[1fr_72px_72px_72px] items-center px-4 py-3 text-sm"
                   >
                     <div>
-                      <p className="font-medium">{f.label}</p>
+                      <p className="font-medium">{f.label}{f.beta && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wide">beta</span>}</p>
                       <p className="text-xs text-muted-fg mt-0.5">
                         {f.description}
                       </p>

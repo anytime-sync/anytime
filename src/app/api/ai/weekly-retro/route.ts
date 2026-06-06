@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     const content = res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
     const json = extractJson(content);
     const parsed = WeeklyRetroSchema.parse(json);
-    await logAiCall(u.user.id, "weekly_retro", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "weekly_retro", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
 
     const row = {
       user_id: u.user.id,

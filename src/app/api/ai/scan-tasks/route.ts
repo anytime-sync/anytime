@@ -126,6 +126,8 @@ Read the attached image and extract every actionable task you can see.`;
       // separate vision from text usage in the analytics view later.
       vision: true,
       tasks: parsed.tasks.length,
+      inputTokens: res.usage.input_tokens,
+      outputTokens: res.usage.output_tokens,
     } as any);
     return NextResponse.json(parsed);
   } catch (e: any) {

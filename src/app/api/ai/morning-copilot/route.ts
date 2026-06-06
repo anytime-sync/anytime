@@ -201,6 +201,8 @@ export async function POST(req: Request) {
     await logAiCall(u.user.id, "morning_copilot", {
       model: res.model,
       status: 200,
+      inputTokens: res.usage.input_tokens,
+      outputTokens: res.usage.output_tokens,
     });
 
     const row = {

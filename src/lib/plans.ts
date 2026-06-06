@@ -46,6 +46,8 @@ export interface FeatureSpec {
   freeLimit?: string;
   /** Order within its category for display. Lower = higher up. */
   order: number;
+  /** When true, label renders with a beta badge on /pricing. */
+  beta?: boolean;
 }
 
 export const FEATURES: FeatureSpec[] = [
@@ -57,7 +59,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "tasks_inbox",         label: "Inbox",            description: "Capture-first surface for anything undated.", category: "tasks", minPlan: "free", order: 50 },
   { id: "tasks_lists",         label: "Lists",            description: "Group tasks into projects with their own filters.", category: "tasks", minPlan: "free", order: 60 },
   { id: "tasks_tags",          label: "Tags",             description: "Cross-cutting labels to slice work any way you want.", category: "tasks", minPlan: "free", order: 70 },
-  { id: "tasks_groups",        label: "Groups",           description: "Bundle lists and tags into shared workspaces.", category: "tasks", minPlan: "free", order: 80 },
+  { id: "tasks_groups",        label: "Groups",           description: "Bundle lists and tags into shared workspaces.", category: "tasks", minPlan: "free", order: 80, beta: true },
   { id: "tasks_matrix",        label: "The Sift matrix", description: "Urgent/important quadrants for triage decisions.", category: "tasks", minPlan: "free", order: 90 },
   { id: "tasks_pomodoro",      label: "Focus",            description: "Focus timer wired to your active task.", category: "tasks", minPlan: "free", order: 100 },
   { id: "tasks_habits",        label: "Habits",           description: "Light-touch streak tracking for daily routines.", category: "tasks", minPlan: "free", order: 110 },

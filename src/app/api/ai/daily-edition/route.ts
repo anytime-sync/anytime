@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       .join("");
     const json = extractJson(content);
     const parsed = DailyEditionSchema.parse(json);
-    await logAiCall(u.user.id, "daily_edition", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "daily_edition", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
 
     const row = {
       user_id: u.user.id,

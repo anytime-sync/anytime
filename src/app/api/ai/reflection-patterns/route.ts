@@ -83,6 +83,8 @@ export async function GET() {
     await logAiCall(u.user.id, "reflection", {
       model: res.model,
       status: 200,
+      inputTokens: res.usage.input_tokens,
+      outputTokens: res.usage.output_tokens,
     });
     return NextResponse.json({
       insight: insight === "Too soon to call." ? null : insight,

@@ -58,7 +58,7 @@ INPUT: ${text}`;
     const json = extractJson(content);
     const parsed = ParsedTaskSchema.parse(json);
     const __snapYr = (iso: any): any => { if (!iso) return iso; const d = new Date(iso); if (isNaN(d.getTime())) return iso; const yr = d.getFullYear(); if (yr > now.getFullYear() && text.indexOf(String(yr)) === -1) { d.setFullYear(now.getFullYear()); return d.toISOString(); } return iso; }; parsed.due_at = __snapYr(parsed.due_at); parsed.start_at = __snapYr(parsed.start_at); parsed.reminder_at = __snapYr(parsed.reminder_at);
-    await logAiCall(u.user.id, "parse_task", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "parse_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(parsed);
   } catch (e: any) {
     console.error("[ai]", "\n", e?.stack || e?.message || e);

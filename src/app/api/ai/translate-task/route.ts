@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       { task_id, locale: target_locale, source_title, translated_title: out.translation },
       { onConflict: "task_id,locale" }
     );
-    await logAiCall(u.user.id, "translate_task", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "translate_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json({ translation: out.translation, cached: false });
   } catch (e: any) {
     console.error("[ai] translate-task", e?.message ?? e);

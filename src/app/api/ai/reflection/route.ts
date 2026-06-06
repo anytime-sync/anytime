@@ -135,7 +135,7 @@ export async function GET() {
       { onConflict: "user_id,local_date,language" }
     );
 
-    await logAiCall(u.user.id, "reflection", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "reflection", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json({ ...out, local_date: today });
   } catch (e: any) {
     console.error("[ai] reflection", e?.message ?? e);

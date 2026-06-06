@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       .join("");
     const json = extractJson(content);
     const parsed = QuadrantResultSchema.parse(json);
-    await logAiCall(u.user.id, "quadrant", { model: res.model, status: 200 });
+    await logAiCall(u.user.id, "quadrant", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(parsed);
   } catch (e: any) {
     console.error("[ai]", "\n", e?.stack || e?.message || e);
