@@ -9,7 +9,7 @@ export function SoftwareApplicationJsonLd() {
     "@type": "SoftwareApplication",
     name: "First Light",
     description:
-      "The AI-native daily planner with MCP integration, Telegram bot, AI morning briefings, Google Calendar sync, habits, Pomodoro, and Eisenhower matrix — in 5 languages.",
+      "The AI-native daily planner with MCP integration, Telegram bot, AI morning briefings, Google Calendar sync, habits, focus timer, and Eisenhower matrix — in 5 languages.",
     url: "https://firstlight.to",
     applicationCategory: "ProductivityApplication",
     operatingSystem: "Web",
@@ -50,7 +50,7 @@ export function SoftwareApplicationJsonLd() {
       "Voice-to-task",
       "Screenshot-to-task",
       "Email-to-task",
-      "Pomodoro timer",
+      "Focus timer",
       "Habit tracker",
       "Weekly reviews",
       "Share groups",

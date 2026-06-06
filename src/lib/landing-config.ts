@@ -53,7 +53,7 @@ export const DEFAULT_LANDING_CONFIG: LandingConfigResolved = {
       features: [
         "Today, Tomorrow, Next 7 / 90 days, Inbox",
         "Calendar with Google Calendar (read)",
-        "Lists, Tags, Groups, Habits, Notes, Pomodoro",
+        "Lists, Tags, Groups, Habits, Notes, Focus Timer",
         "Notes ↔ Task: convert either way",
         "Daily Edition (1 / day)",
         "Email-to-inbox, push, daily digest",

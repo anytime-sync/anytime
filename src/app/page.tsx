@@ -122,7 +122,6 @@ export default function Home() {
           </h2>
         </div>
         <DemoCarousel />
-        <FeatureGrid />
       </section>
 
       <div className="max-w-6xl w-full mx-auto px-6">
@@ -164,6 +163,12 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <div className="max-w-6xl w-full mx-auto px-6">
+        <div className="h-px bg-border" />
+      </div>
+
+      <FeatureGrid />
 
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />

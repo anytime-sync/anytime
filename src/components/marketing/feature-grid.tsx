@@ -13,7 +13,7 @@ const features = [
   { emoji: "📸", name: "Paste → Tasks", desc: "⌘V a whiteboard screenshot — get a clean task list." },
   { emoji: "🤖", name: "Telegram Bot", desc: "Capture tasks from Telegram with natural language." },
   { emoji: "✅", name: "Habits", desc: "Weekly grid tracker for daily and recurring habits." },
-  { emoji: "🍅", name: "Pomodoro", desc: "Focus timer with session logging linked to tasks." },
+  { emoji: "🎯", name: "Focus Timer", desc: "Timed focus sessions with logging linked to tasks." },
   { emoji: "📝", name: "Notes → Tasks", desc: "Convert any note into a task in one click." },
   { emoji: "🎯", name: "Goal Tracker", desc: "Outcome-shaped goals with AI-generated sub-trackers." },
   { emoji: "🔍", name: "Semantic Search", desc: "Find tasks by meaning, not just keywords." },
@@ -32,7 +32,7 @@ export function FeatureGrid() {
         <p className="editorial-number text-xs mb-2">AND {features.length} MORE</p>
         <h3 className="font-display text-xl tracking-tight">Everything else, without the noise.</h3>
         <p className="text-muted-fg text-sm mt-1">
-          The full toolkit lives here — habits, Pomodoro, calendar, search, and more.
+          The full toolkit lives here — habits, focus timer, calendar, search, and more.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -59,7 +59,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "tasks_tags",          label: "Tags",             description: "Cross-cutting labels to slice work any way you want.", category: "tasks", minPlan: "free", order: 70 },
   { id: "tasks_groups",        label: "Groups",           description: "Bundle lists and tags into shared workspaces.", category: "tasks", minPlan: "free", order: 80 },
   { id: "tasks_matrix",        label: "The Sift matrix", description: "Urgent/important quadrants for triage decisions.", category: "tasks", minPlan: "free", order: 90 },
-  { id: "tasks_pomodoro",      label: "Focus",            description: "Pomodoro-style timer wired to your active task.", category: "tasks", minPlan: "free", order: 100 },
+  { id: "tasks_pomodoro",      label: "Focus",            description: "Focus timer wired to your active task.", category: "tasks", minPlan: "free", order: 100 },
   { id: "tasks_habits",        label: "Habits",           description: "Light-touch streak tracking for daily routines.", category: "tasks", minPlan: "free", order: 110 },
   { id: "tasks_notes",         label: "Notes",            description: "Free-form notes attached to tasks or standalone.", category: "tasks", minPlan: "free", order: 120 },
   { id: "tasks_notes_to_task", label: "Notes → Task",     description: "One click turns any note into a linked task and vice versa.", category: "tasks", minPlan: "free", order: 125 },

@@ -104,7 +104,7 @@ export default function MembersPage() {
               <Th>Plan</Th>
               <Th align="right">Tasks</Th>
               <Th align="right">Done</Th>
-              <Th align="right">Pomodoros</Th>
+              <Th align="right">Focus</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

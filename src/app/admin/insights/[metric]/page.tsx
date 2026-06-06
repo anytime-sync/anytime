@@ -77,7 +77,7 @@ const METRIC_DEFS: Record<
     extraFilter: { col: "is_completed", eq: true },
   },
   pomodoros: {
-    title: "Pomodoros",
+    title: "Focus Sessions",
     emphasis: ", run.",
     kicker: "All time",
     subtitle: "Focus sessions tallied.",

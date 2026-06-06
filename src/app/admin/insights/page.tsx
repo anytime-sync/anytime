@@ -116,7 +116,7 @@ export default function InsightsPage() {
                     : 0
                 }% of all`}
               />
-              <Pill label="Pomodoros run" value={summary.total_pomodoros} />
+              <Pill label="Focus sessions" value={summary.total_pomodoros} />
               <Pill label="Habits created" value={summary.total_habits} />
             </div>
           </Section>
