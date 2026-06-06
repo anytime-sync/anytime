@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
+import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DesignSlot } from "@/lib/design/slot";
 import { FloatingLayer } from "@/lib/design/floating-layer";
@@ -114,19 +115,16 @@ export default function Home() {
         <div className="text-center mb-8">
           <p className="editorial-number text-xs mb-3">SEE IT IN MOTION</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Twenty-one surfaces, one calm rhythm.
+            Four surfaces, one calm rhythm.
           </h2>
         </div>
         <DemoCarousel />
+        <FeatureGrid />
       </section>
 
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />
       </div>
-
-
-      <div className="max-w-6xl w-full mx-auto px-6">
-        <div className="h-px bg-border" />
       </div>
 
       {/* ── Works with your AI ── */}
