@@ -1,9 +1,18 @@
 /**
  * JSON-LD structured data for SEO.
  * Renders in <head> via Next.js metadata API or as a <script> tag.
+ *
+ * Prices are passed as props from server components that call loadPrices().
+ * This ensures JSON-LD always reflects the admin-configured prices.
  */
 
-export function SoftwareApplicationJsonLd() {
+export function SoftwareApplicationJsonLd({
+  plusPrice,
+  proPrice,
+}: {
+  plusPrice?: string;
+  proPrice?: string;
+}) {
   const data = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -23,14 +32,14 @@ export function SoftwareApplicationJsonLd() {
       {
         "@type": "Offer",
         name: "Plus",
-        price: "3.00",
+        price: plusPrice ?? "5.00",
         priceCurrency: "USD",
         priceValidUntil: "2027-12-31",
       },
       {
         "@type": "Offer",
         name: "Pro",
-        price: "9.00",
+        price: proPrice ?? "9.00",
         priceCurrency: "USD",
         priceValidUntil: "2027-12-31",
       },
@@ -112,3 +121,4 @@ export function BlogPostJsonLd({
     />
   );
 }
+

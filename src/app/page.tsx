@@ -9,6 +9,7 @@ import { AppScreenshot } from "@/components/marketing/app-screenshot";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DesignSlot } from "@/lib/design/slot";
 import { FloatingLayer } from "@/lib/design/floating-layer";
+import { usePlusPrice, useProPrice } from "@/hooks/use-pricing";
 import {
   readStoredLanguage,
   t,
@@ -18,6 +19,8 @@ import {
 export default function Home() {
   const [authMode, setAuthMode] = useState<"signup" | "login" | null>(null);
   const [lang, setLang] = useState<LanguageCode>("en");
+  const { data: plusPrice } = usePlusPrice();
+  const { data: proPrice } = useProPrice();
 
   useEffect(() => {
     setLang(readStoredLanguage());
@@ -37,7 +40,7 @@ export default function Home() {
   ] as const;
 
   return (
-    <DesignSlot id="landing.main" as="main" className="min-h-screen flex flex-col"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"First Light","applicationCategory":"ProductivityApplication","operatingSystem":"Web","description":"A calm daily productivity tool. Read once in the morning; the day is shaped.","url":"https://firstlight.to","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Plus","price":"5","priceCurrency":"USD"},{"@type":"Offer","name":"Pro","price":"9","priceCurrency":"USD"}]},{"@context":"https://schema.org","@type":"Organization","name":"First Light","url":"https://firstlight.to","logo":"https://firstlight.to/icons/icon.svg"}]' }} />
+    <DesignSlot id="landing.main" as="main" className="min-h-screen flex flex-col">{/* JSON-LD structured data rendered by RootLayout */}
       <header className="px-4 md:px-6 pt-6 md:pt-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="shrink-0">
@@ -310,7 +313,7 @@ export default function Home() {
             },
             {
               q: "Is it free?",
-              a: "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus ($5/mo) and Pro ($9/mo). Both include a 14-day free trial."
+              a: `The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus (${plusPrice?.formattedPerMonth ?? '...'}) and Pro (${proPrice?.formattedPerMonth ?? '...'}). Both include a 14-day free trial.`
             },
             {
               q: "Does it sync with Google Calendar?",

@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import { DesignProvider } from "@/lib/design/provider";
 import { DesignEditMode } from "@/lib/design/edit-mode";
 import { SoftwareApplicationJsonLd } from "@/components/json-ld";
+import { loadPrices, formatPriceNumeric } from "@/lib/pricing";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
 import { generateClassOverridesCss } from "@/lib/design/class-css";
 import { fetchSiteOverrides } from "@/lib/i18n-server";
@@ -131,6 +132,9 @@ export default async function RootLayout({
   // window var below so the client i18n module is seeded BEFORE
   // hydration, which kills the flash of hardcoded defaults.
   const i18nOverrides = await fetchSiteOverrides();
+
+  // Load dynamic prices for JSON-LD structured data
+  const prices = await loadPrices();
   for (const code of Object.keys(i18nOverrides) as LanguageCode[]) {
     setI18nOverrides(code, i18nOverrides[code]!);
   }
@@ -179,7 +183,7 @@ export default async function RootLayout({
         )}
       </head>
       <body>
-        <SoftwareApplicationJsonLd />
+        <SoftwareApplicationJsonLd plusPrice={formatPriceNumeric(prices.plusCents)} proPrice={formatPriceNumeric(prices.proCents)} />
         {/* Hand the freshly-fetched i18n overrides to the client BEFORE
             React hydrates. The bootstrap component reads this window
             var on module load and seeds setI18nOverrides synchronously,

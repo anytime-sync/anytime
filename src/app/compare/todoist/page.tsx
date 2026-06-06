@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { loadPrices, formatPrice } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "First Light vs Todoist — Which AI Task Manager Is Right for You?",
@@ -75,7 +76,7 @@ const features = [
   },
   {
     "feature": "Pricing",
-    "fl": "$5/mo",
+    "fl": "DYNAMIC_PLUS_PRICE",
     "comp": "$5/mo"
   },
   {
@@ -85,7 +86,10 @@ const features = [
   }
 ];
 
-export default function CompareTodoistPage() {
+export default async function CompareTodoistPage() {
+  const { plusCents, proCents, currency } = await loadPrices();
+  const displayFeatures = features.map(r => r.fl === "DYNAMIC_PLUS_PRICE" ? { ...r, fl: `${formatPrice(plusCents, currency)}/mo` } : r);
+
   return (
     <main className="min-h-screen bg-background">
       <section className="px-6 pt-24 pb-12 max-w-3xl mx-auto">
@@ -116,7 +120,7 @@ export default function CompareTodoistPage() {
               Todoist
             </div>
           </div>
-          {features.map((row: any, i: number) => (
+          {displayFeatures.map((row: any, i: number) => (
             <div
               key={i}
               className={`grid grid-cols-3 border-b border-border last:border-0 ${

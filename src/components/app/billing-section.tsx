@@ -93,7 +93,7 @@ export function BillingSection() {
                 ? "Starting…"
                 : proLoading
                 ? "Upgrade to Pro"
-                : `Upgrade to Pro — ${proPrice?.formatted ?? "$9 / month"}`}
+                : `Upgrade to Pro — ${proPrice?.formatted ?? "2026"}`}
             </button>
             <button
               onClick={() => portal.mutate()}
@@ -131,7 +131,7 @@ export function BillingSection() {
                 ? "Starting…"
                 : plusLoading
                 ? "Upgrade to Plus"
-                : `Upgrade to Plus — ${plusPrice?.formattedPerMonth ?? "$5 / month"}`}
+                : `Upgrade to Plus — ${plusPrice?.formattedPerMonth ?? "2026"}`}
             </button>
             <button
               onClick={() => checkoutPro.mutate()}
@@ -143,7 +143,7 @@ export function BillingSection() {
                 ? "Starting…"
                 : proLoading
                 ? "Upgrade to Pro"
-                : `Upgrade to Pro — ${proPrice?.formatted ?? "$9 / month"}`}
+                : `Upgrade to Pro — ${proPrice?.formatted ?? "2026"}`}
             </button>
           </div>
         </>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { loadPrices, formatPrice } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "First Light vs TickTick — Which Task Manager Is Right for You?",
@@ -73,7 +74,7 @@ const features = [
   },
   {
     "feature": "Pricing",
-    "fl": "$5/mo",
+    "fl": "DYNAMIC_PLUS_PRICE",
     "comp": "$35.99/yr"
   },
   {
@@ -86,7 +87,10 @@ const features = [
 const whenFirstLight = ["You want your AI assistant to manage tasks via MCP","You want AI to understand context and plan your day intelligently","You prefer adding tasks from Telegram, voice, email, or screenshots","You want a minimalist, focused planning experience"];
 const whenCompetitor = ["You want a built-in calendar view with time blocking","You need native apps on every platform (iOS, Android, Mac, Windows)","You want team collaboration with shared lists","You prefer a free tier with more included features"];
 
-export default function CompareTickTickPage() {
+export default async function CompareTickTickPage() {
+  const { plusCents, proCents, currency } = await loadPrices();
+  const displayFeatures = features.map(r => r.fl === "DYNAMIC_PLUS_PRICE" ? { ...r, fl: `${formatPrice(plusCents, currency)}/mo` } : r);
+
   return (
     <main className="min-h-screen bg-background">
       <section className="px-6 pt-24 pb-12 max-w-3xl mx-auto">
@@ -109,7 +113,7 @@ export default function CompareTickTickPage() {
             <div className="px-4 py-3 text-xs font-medium text-center uppercase tracking-wider">First Light</div>
             <div className="px-4 py-3 text-xs font-medium text-center text-muted-fg uppercase tracking-wider">TickTick</div>
           </div>
-          {features.map((row: any, i: number) => (
+          {displayFeatures.map((row: any, i: number) => (
             <div key={i} className={`grid grid-cols-3 border-b border-border last:border-0 ${i % 2 === 0 ? "" : "bg-stone-50/50"}`}>
               <div className="px-4 py-3 text-sm font-medium">{row.feature}</div>
               <div className="px-4 py-3 text-sm text-center">{row.fl}</div>

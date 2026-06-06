@@ -98,7 +98,7 @@ export default function FeaturesPage() {
                       ? "Redirecting…"
                       : priceLoading
                       ? "Upgrade to Pro"
-                      : `Upgrade to Pro — ${pro?.formatted ?? "$9 / month"}`}
+                      : `Upgrade to Pro — ${pro?.formatted ?? "2026"}`}
                   </button>
                   <button
                     onClick={() => portal.mutate()}
@@ -119,7 +119,7 @@ export default function FeaturesPage() {
                       ? "Redirecting…"
                       : plusLoading
                       ? "Upgrade to Plus"
-                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "$5 / month"}`}
+                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "2026"}`}
                   </button>
                   <button
                     onClick={() => checkoutPro.mutate()}
@@ -129,8 +129,8 @@ export default function FeaturesPage() {
                     {checkoutPro.isPending
                       ? "Redirecting…"
                       : priceLoading
-                      ? "Upgrade to Pro— $9 / month"
-                      : `Upgrade to Pro— ${pro?.formatted ?? "$9 / month"}`}
+                      ? "Upgrade to Pro"
+                      : `Upgrade to Pro— ${pro?.formatted ?? "2026"}`}
                   </button>
                 </>
               )}
