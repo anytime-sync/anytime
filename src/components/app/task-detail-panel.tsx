@@ -83,6 +83,29 @@ export function TaskDetailPanel() {
     }
   }, [task]);
 
+
+  // Auto-fill missing dates on load — ensures existing tasks
+  // created before the "no empty dates" rule get both ends set.
+  useEffect(() => {
+    if (!task) return;
+    const MIN_DURATION = 30 * 60 * 1000;
+    const hasStart = !!task.start_at;
+    const hasDue = !!task.due_at;
+    if (hasStart && hasDue) return;
+    if (!hasStart && !hasDue) return;
+    if (hasStart && !hasDue) {
+      update.mutate({
+        id: task.id,
+        due_at: new Date(new Date(task.start_at!).getTime() + MIN_DURATION).toISOString(),
+      });
+    } else if (!hasStart && hasDue) {
+      update.mutate({
+        id: task.id,
+        start_at: task.due_at!,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, task?.start_at, task?.due_at]);
   if (!id || !task) return null;
 
   const RECURRENCE_PRESETS = recurrencePresets(lang);
@@ -183,33 +206,37 @@ export function TaskDetailPanel() {
               value={task.start_at}
               placeholder={t(lang, "taskPanel.startPlaceholder")}
               onChange={(iso) => {
-                // If the new start lands AFTER the current due, slide
-                // due forward by the same amount so the task keeps its
-                // original span (start <= due always holds).
+                const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
                 const patch: { id: string; start_at: string | null; due_at?: string } = {
                   id: task.id,
                   start_at: iso,
                 };
                 if (iso) {
-                  // Auto-fill empty due with the new start so a single-anchor
-                  // task always has both ends defined.
+                  const newStartMs = new Date(iso).getTime();
                   if (!task.due_at) {
-                    patch.due_at = iso;
-                  } else if (task.start_at) {
-                    // Both ends existed: maintain original time-gap if the new
-                    // start would land after due.
-                    const newStartMs = new Date(iso).getTime();
-                    const oldStartMs = new Date(task.start_at).getTime();
+                    // Auto-fill due = start + 30min
+                    patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
+                  } else {
                     const oldDueMs = new Date(task.due_at).getTime();
                     if (newStartMs > oldDueMs) {
-                      const delta = oldDueMs - oldStartMs;
-                      patch.due_at = new Date(newStartMs + delta).toISOString();
+                      // Start moved past due — push due forward with min duration
+                      patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
+                    } else if (oldDueMs - newStartMs < MIN_DURATION) {
+                      // Gap too small — enforce minimum 30 min
+                      patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
                     }
+                  }
+                } else {
+                  // User tried to clear start — don't allow empty.
+                  // Set start = due (or now if due also missing).
+                  if (task.due_at) {
+                    patch.start_at = task.due_at;
+                    // Enforce min duration
+                    patch.due_at = new Date(new Date(task.due_at).getTime() + MIN_DURATION).toISOString();
                   } else {
-                    // Start was empty: collapse due to new start when start > due.
-                    const newStartMs = new Date(iso).getTime();
-                    const oldDueMs = new Date(task.due_at).getTime();
-                    if (newStartMs > oldDueMs) patch.due_at = iso;
+                    const now = new Date();
+                    patch.start_at = now.toISOString();
+                    patch.due_at = new Date(now.getTime() + MIN_DURATION).toISOString();
                   }
                 }
                 update.mutate(patch);
@@ -221,29 +248,37 @@ export function TaskDetailPanel() {
               value={task.due_at}
               placeholder={t(lang, "taskPanel.duePlaceholder")}
               onChange={(iso) => {
-                // Mirror image: if the new due lands BEFORE the current
-                // start, slide start back by the same delta so the task
-                // keeps its original span.
+                const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
                 const patch: { id: string; due_at: string | null; is_all_day: boolean; start_at?: string } = {
                   id: task.id,
                   due_at: iso,
                   is_all_day: false,
                 };
                 if (iso) {
+                  const newDueMs = new Date(iso).getTime();
                   if (!task.start_at) {
-                    patch.start_at = iso;
-                  } else if (task.due_at) {
-                    const newDueMs = new Date(iso).getTime();
-                    const oldStartMs = new Date(task.start_at).getTime();
-                    const oldDueMs = new Date(task.due_at).getTime();
-                    if (newDueMs < oldStartMs) {
-                      const delta = oldDueMs - oldStartMs;
-                      patch.start_at = new Date(newDueMs - delta).toISOString();
-                    }
+                    // Auto-fill start = due - 30min
+                    patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
                   } else {
-                    const newDueMs = new Date(iso).getTime();
                     const oldStartMs = new Date(task.start_at).getTime();
-                    if (newDueMs < oldStartMs) patch.start_at = iso;
+                    if (newDueMs < oldStartMs) {
+                      // Due moved before start — pull start back with min duration
+                      patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
+                    } else if (newDueMs - oldStartMs < MIN_DURATION) {
+                      // Gap too small — enforce minimum 30 min
+                      patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
+                    }
+                  }
+                } else {
+                  // User tried to clear due — don't allow empty.
+                  // Set due = start + 30min (or now + 30min if start also missing).
+                  if (task.start_at) {
+                    const startMs = new Date(task.start_at).getTime();
+                    patch.due_at = new Date(startMs + MIN_DURATION).toISOString();
+                  } else {
+                    const now = new Date();
+                    patch.start_at = now.toISOString();
+                    patch.due_at = new Date(now.getTime() + MIN_DURATION).toISOString();
                   }
                 }
                 update.mutate(patch);
