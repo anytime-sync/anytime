@@ -84,24 +84,51 @@ export function TaskDetailPanel() {
   }, [task]);
 
 
-  // Auto-fill missing dates on load — ensures existing tasks
-  // created before the "no empty dates" rule get both ends set.
+  // Auto-repair dates on load — fixes existing tasks with:
+  // 1. Only one date set (missing start or end)
+  // 2. End date before start date (inverted)
+  // 3. Gap smaller than 30 minutes
   useEffect(() => {
     if (!task) return;
-    const MIN_DURATION = 30 * 60 * 1000;
+    const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
     const hasStart = !!task.start_at;
     const hasDue = !!task.due_at;
-    if (hasStart && hasDue) return;
+
+    // Case 1: both missing — let user pick, do nothing
     if (!hasStart && !hasDue) return;
+
+    // Case 2: only start set — fill end
     if (hasStart && !hasDue) {
       update.mutate({
         id: task.id,
         due_at: new Date(new Date(task.start_at!).getTime() + MIN_DURATION).toISOString(),
       });
-    } else if (!hasStart && hasDue) {
+      return;
+    }
+
+    // Case 3: only end set — fill start
+    if (!hasStart && hasDue) {
       update.mutate({
         id: task.id,
         start_at: task.due_at!,
+      });
+      return;
+    }
+
+    // Case 4: both set — check for inversion or too-small gap
+    const startMs = new Date(task.start_at!).getTime();
+    const dueMs = new Date(task.due_at!).getTime();
+    if (dueMs < startMs) {
+      // End is before start — fix by setting end = start + 30min
+      update.mutate({
+        id: task.id,
+        due_at: new Date(startMs + MIN_DURATION).toISOString(),
+      });
+    } else if (dueMs - startMs < MIN_DURATION) {
+      // Gap too small — extend end to start + 30min
+      update.mutate({
+        id: task.id,
+        due_at: new Date(startMs + MIN_DURATION).toISOString(),
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
