@@ -175,6 +175,12 @@ export function useCreateTask() {
           taskInput.due_at = taskInput.start_at;
         }
       }
+      // Auto-fill start_at when due_at is set but start_at is missing.
+      // Without this, tasks created from image scan or calendar sync
+      // show an empty "Starts" field in the detail panel.
+      if (!taskInput.start_at && taskInput.due_at) {
+        taskInput.start_at = taskInput.due_at;
+      }
       const { data: task, error } = await supabase
         .from("tasks")
         .insert({ ...taskInput, user_id: u.user.id })
@@ -218,7 +224,7 @@ export function useCreateTask() {
         notes: input.notes ?? null,
         is_completed: false,
         completed_at: null,
-        start_at: input.start_at ?? null,
+        start_at: input.start_at ?? input.due_at ?? null,
         due_at: input.due_at ?? null,
         is_all_day: input.is_all_day ?? false,
         priority: (input.priority ?? 0) as any,
