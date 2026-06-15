@@ -1432,7 +1432,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskDeleted": "removed a task",
     "activity.kind.taskCommented": "commented on a task",
     /* morning copilot — round E */
-    "copilot.kickerSuffix": "",
+    "copilot.kickerSuffix": "-",
     "copilot.askLabel": "A question for you",
     "copilot.askApply": "Apply suggestions",
     "copilot.askSkip": "Skip for now",
@@ -2141,7 +2141,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskDeleted": "移除了一個任務",
     "activity.kind.taskCommented": "在任務中留言",
     /* morning copilot — round E */
-    "copilot.kickerSuffix": "",
+    "copilot.kickerSuffix": "-",
     "copilot.askLabel": "給你的一個提問",
     "copilot.askApply": "採納建議",
     "copilot.askSkip": "先略過",
@@ -2850,7 +2850,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskDeleted": "删除了一个任务",
     "activity.kind.taskCommented": "在任务上发表了评论",
     /* morning copilot — round E */
-    "copilot.kickerSuffix": "",
+    "copilot.kickerSuffix": "-",
     "copilot.askLabel": "给你的一个提问",
     "copilot.askApply": "采纳建议",
     "copilot.askSkip": "先略过",
@@ -3559,7 +3559,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskDeleted": "タスクを削除しました",
     "activity.kind.taskCommented": "タスクにコメントしました",
     /* morning copilot — round E */
-    "copilot.kickerSuffix": "",
+    "copilot.kickerSuffix": "-",
     "copilot.askLabel": "ひとつ問いかけ",
     "copilot.askApply": "提案を採用",
     "copilot.askSkip": "あとで",
@@ -4268,7 +4268,7 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "activity.kind.taskDeleted": "작업을 제거했습니다",
     "activity.kind.taskCommented": "작업에 댓글을 남겼습니다",
     /* morning copilot — round E */
-    "copilot.kickerSuffix": "",
+    "copilot.kickerSuffix": "-",
     "copilot.askLabel": "한 가지 질문",
     "copilot.askApply": "제안 적용",
     "copilot.askSkip": "나중에",
