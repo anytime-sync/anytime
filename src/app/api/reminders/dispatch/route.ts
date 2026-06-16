@@ -55,14 +55,38 @@ async function handle(req: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Max delivery attempts before we give up on a permanently-failing task
+  // (e.g. an undeliverable email domain) so it can't retry forever and
+  // starve the limited per-tick budget.
+  const MAX_ATTEMPTS = 3;
+
+  // The retry-cap columns (reminder_attempts / reminder_failed_at) are added
+  // by migration 20260616_reminder_attempts.sql. If that migration hasn't
+  // been applied yet, we degrade gracefully: still do the atomic claim via
+  // reminder_sent_at (which fixes double-sends), just without the attempt cap.
+  let hasAttemptCols = true;
+
   const nowIso = new Date().toISOString();
-  const { data: due, error } = await supabase
-    .from("tasks")
-    .select("id, user_id, title, due_at, reminder_at, project_id")
-    .lte("reminder_at", nowIso)
-    .is("reminder_sent_at", null)
-    .eq("is_completed", false)
-    .limit(100);
+
+  // Build the due-task query. When the attempt columns exist, also exclude
+  // permanently-failed rows.
+  function dueQuery(withFailGuard: boolean) {
+    let q = supabase
+      .from("tasks")
+      .select("id, user_id, title, due_at, reminder_at, project_id")
+      .lte("reminder_at", nowIso)
+      .is("reminder_sent_at", null)
+      .eq("is_completed", false);
+    if (withFailGuard) q = q.is("reminder_failed_at", null);
+    return q.limit(100);
+  }
+
+  let { data: due, error } = await dueQuery(true);
+  // 42703 = undefined_column -> migration not applied; retry without the guard.
+  if (error && (error as any).code === "42703") {
+    hasAttemptCols = false;
+    ({ data: due, error } = await dueQuery(false));
+  }
   if (error) {
     console.error("[reminders] fetch error", error);
     return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
@@ -110,19 +134,89 @@ async function handle(req: Request) {
     (await getEffectiveFeature("plat_email_reminders")) !== null;
 
   let sent = 0;
+  // Tasks that are permanently resolved (sent or deliberately skipped) and
+  // should get reminder_sent_at stamped. Push uses this same set as the
+  // "we handled this task" signal.
   const handledIds: string[] = [];
+  // Tasks we attempted to email but failed — these get an attempt bump and a
+  // claim release (so the next tick can retry) unless the cap is reached.
+  const claimedTaskIds = new Set<string>();
+
+  /**
+   * Atomically claim a task for this tick by setting reminder_sent_at = now()
+   * ONLY if it is still NULL. Returns true if WE won the claim. This prevents
+   * two overlapping cron ticks from both grabbing (and double-sending) the
+   * same task: the loser's update affects 0 rows.
+   */
+  async function claim(taskId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .update({ reminder_sent_at: nowIso })
+      .eq("id", taskId)
+      .is("reminder_sent_at", null)
+      .select("id");
+    if (error) {
+      console.error("[reminders] claim failed", taskId, error);
+      return false;
+    }
+    return (data?.length ?? 0) > 0;
+  }
+
+  /**
+   * Release a claim after a failed send so the task is retried next tick.
+   * Bumps reminder_attempts; once it reaches MAX_ATTEMPTS we stamp
+   * reminder_failed_at instead of releasing, so the row is permanently
+   * excluded (dead-letter) and can't retry forever. Degrades to a plain
+   * release when the attempt columns are absent.
+   */
+  async function releaseOrFail(taskId: string) {
+    if (!hasAttemptCols) {
+      // No attempt tracking available — just release for retry.
+      await supabase
+        .from("tasks")
+        .update({ reminder_sent_at: null })
+        .eq("id", taskId);
+      return;
+    }
+    // Read current attempt count, then either release+bump or dead-letter.
+    const { data: row } = await supabase
+      .from("tasks")
+      .select("reminder_attempts")
+      .eq("id", taskId)
+      .single();
+    const attempts = ((row as any)?.reminder_attempts ?? 0) + 1;
+    if (attempts >= MAX_ATTEMPTS) {
+      await supabase
+        .from("tasks")
+        .update({ reminder_attempts: attempts, reminder_failed_at: nowIso })
+        .eq("id", taskId);
+      console.error(
+        `[reminders] giving up on ${taskId} after ${attempts} attempts`
+      );
+    } else {
+      await supabase
+        .from("tasks")
+        .update({ reminder_attempts: attempts, reminder_sent_at: null })
+        .eq("id", taskId);
+    }
+  }
 
   for (const task of due) {
     const email = emailByUser.get(task.user_id);
     const pref = prefByUser.get(task.user_id);
     const lang = (pref?.language ?? "en") as LanguageCode;
 
-    // Honor opt-out: still mark as handled so we don't re-check forever.
-    // Check both: feature must be enabled globally AND user must have opted in.
+    // Honor opt-out BEFORE claiming: mark handled so we stamp it once and
+    // never re-check. (Feature must be enabled globally AND user opted in.)
     if (!email || !emailRemindersEnabled || pref?.email_reminders === false) {
       handledIds.push(task.id);
       continue;
     }
+
+    // Atomically claim. If we lose the race, another tick owns it — skip.
+    const won = await claim(task.id);
+    if (!won) continue;
+    claimedTaskIds.add(task.id);
 
     try {
       const subject = t(lang, "email.subject").replace("{title}", task.title);
@@ -145,10 +239,12 @@ async function handle(req: Request) {
         },
       });
       sent++;
-      handledIds.push(task.id);
+      // Already claimed (reminder_sent_at set) — nothing more to stamp.
     } catch (e) {
-      // Don't mark as sent — the next tick will retry.
       console.error("[reminders] send failed", task.id, e);
+      // Release the claim (or dead-letter if over the cap) so it can retry.
+      await releaseOrFail(task.id);
+      claimedTaskIds.delete(task.id);
     }
   }
 
@@ -170,11 +266,14 @@ async function handle(req: Request) {
       arr.push(s);
       subsByUser.set(s.user_id, arr);
     }
-    // pushTasks: only those we just emailed (or tried to) AND whose owner has push enabled.
+    // Push only fires for tasks WE successfully claimed this tick (so push and
+    // email stay in lockstep on the single reminder_sent_at flag, and a task
+    // claimed by an overlapping tick isn't double-pushed here).
     for (const task of due) {
       const pref = prefByUser.get(task.user_id);
-      // Skip if feature is disabled globally or user has opted out of push
+      // Skip if feature is disabled globally or user opted out of push.
       if (!emailRemindersEnabled) continue;
+      if (!claimedTaskIds.has(task.id)) continue;
       const pushFlag = (pref as any)?.push_reminders;
       if (pushFlag === false) continue;
       const list = subsByUser.get(task.user_id) ?? [];
@@ -205,14 +304,24 @@ async function handle(req: Request) {
     }
   }
 
+  // Stamp the opt-out / skipped tasks so we don't re-evaluate them every
+  // tick. Successfully-sent tasks were already stamped at claim time, and
+  // failed tasks were released (or dead-lettered) inside the loop, so they
+  // are intentionally excluded here.
   if (handledIds.length) {
     await supabase
       .from("tasks")
       .update({ reminder_sent_at: nowIso })
-      .in("id", handledIds);
+      .in("id", handledIds)
+      .is("reminder_sent_at", null);
   }
 
-  return NextResponse.json({ sent, attempted: due.length });
+  return NextResponse.json({
+    sent,
+    attempted: due.length,
+    claimed: claimedTaskIds.size,
+    retryCapped: hasAttemptCols,
+  });
 }
 
 /* ------------- Email template ------------- */
