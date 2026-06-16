@@ -180,16 +180,24 @@ export function DayTimeline({ date }: { date: Date }) {
   const timed = dayTasks
     .filter((t) => !t.is_all_day && t.due_at)
     .map((t) => {
-      const due = new Date(t.due_at!);
-      // Default a 30-min block when there is no explicit start, AND when
-      // start === due (zero-duration tasks, e.g. point-in-time meetings).
-      // Without this, startMin === endMin and the chip would be filtered
-      // out by the visEnd>visStart guard below — so timed tasks like a
-      // 1:00 PM Sales Meeting silently vanished from the timeline while
-      // still showing in the list view. (Inconsistency bug, 2026-06-16.)
-      let start = t.start_at ? new Date(t.start_at) : new Date(due.getTime() - 30 * 60_000);
-      if (start.getTime() >= due.getTime()) {
-        start = new Date(due.getTime() - 30 * 60_000);
+      const rawDue = new Date(t.due_at!);
+      // Resolve a start/end pair that always spans a real interval so the
+      // chip is visible AND positioned at its labeled time.
+      //  - Has start_at and start < due  -> use as-is.
+      //  - Has start_at but start >= due (zero-duration / point-in-time)
+      //    OR has only due  -> render a 30-min block STARTING at the
+      //    anchor time (start = anchor, end = anchor + 30), so a task
+      //    labeled "12:00 PM" sits at 12:00, not 11:30. (2026-06-16)
+      const explicitStart = t.start_at ? new Date(t.start_at) : null;
+      let start: Date;
+      let due: Date;
+      if (explicitStart && explicitStart.getTime() < rawDue.getTime()) {
+        start = explicitStart;
+        due = rawDue;
+      } else {
+        const anchor = explicitStart ?? rawDue;
+        start = anchor;
+        due = new Date(anchor.getTime() + 30 * 60_000);
       }
       const startMin = minutesFromRailStart(start);
       const endMin = minutesFromRailStart(due);
@@ -200,14 +208,16 @@ export function DayTimeline({ date }: { date: Date }) {
       // clickable — the chip's own label still shows the true time.
       let visStart = Math.max(0, Math.min(RAIL_MAX_MIN, startMin));
       let visEnd = Math.max(0, Math.min(RAIL_MAX_MIN, endMin));
-      // Guarantee a minimum visible slice (15 min) so zero/!out-of-range
-      // tasks are never invisible.
-      if (visEnd - visStart < 15) {
+      // Guarantee a minimum visible slice (30 min) so zero-duration and
+      // out-of-range tasks are never invisible AND have room to show their
+      // name. 30 min @ 56px/hr = 28px tall.
+      const MIN_SLICE = 30;
+      if (visEnd - visStart < MIN_SLICE) {
         if (visStart >= RAIL_MAX_MIN) {
-          visStart = RAIL_MAX_MIN - 15;
+          visStart = RAIL_MAX_MIN - MIN_SLICE;
           visEnd = RAIL_MAX_MIN;
         } else {
-          visEnd = Math.min(RAIL_MAX_MIN, visStart + 15);
+          visEnd = Math.min(RAIL_MAX_MIN, visStart + MIN_SLICE);
         }
       }
       return { task: t, start, due, startMin, endMin, visStart, visEnd };
@@ -436,6 +446,13 @@ function DraggableCard({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task.id });
 
+  // Short chips (e.g. 15-30 min, or zero-duration tasks pinned to a small
+  // slice) don't have vertical room to stack the time row above the title.
+  // Below this threshold we render a single compact row: title first, with
+  // the time tucked after it, so the task NAME is always visible. Above it
+  // we keep the editorial stacked layout (time over title).
+  const isCompact = height < 44;
+
   const style: React.CSSProperties = {
     top,
     height,
@@ -460,36 +477,62 @@ function DraggableCard({
         onSelect(task.id);
       }}
       style={style}
+      title={`${task.title} · ${format(start, "h:mm a")} – ${format(due, "h:mm a")}`}
       className={cn(
-        "absolute rounded-md text-left px-3 py-2 pointer-events-auto",
+        "absolute rounded-md text-left pointer-events-auto",
+        isCompact ? "px-2 py-0.5" : "px-3 py-2",
         "border bg-bg/75 backdrop-blur-sm hover:shadow-sm transition-shadow",
-        "flex flex-col gap-0.5 overflow-hidden",
+        "overflow-hidden",
         "cursor-grab active:cursor-grabbing select-none",
         isDragging && "opacity-90 shadow-2xl ring-2 ring-accent z-20",
         task.is_completed && "opacity-60"
       )}
     >
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums",
-          tone
-        )}
-      >
-        <Clock className="size-3" />
-        {format(start, "h:mm a")} – {format(due, "h:mm a")}
-      </span>
-      <span
-        className={cn(
-          "text-sm font-medium leading-snug truncate",
-          task.is_completed && "line-through"
-        )}
-      >
-        {task.title}
-      </span>
-      {task.notes && height > 56 && cols === 1 && (
-        <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
-          {task.notes}
-        </span>
+      {isCompact ? (
+        // One-line: NAME (truncated) + time, so the title is never hidden.
+        <div className="flex items-center gap-1.5 leading-tight">
+          <span
+            className={cn(
+              "text-xs font-medium truncate",
+              task.is_completed && "line-through"
+            )}
+          >
+            {task.title}
+          </span>
+          <span
+            className={cn(
+              "shrink-0 text-[9px] uppercase tracking-wider tabular-nums opacity-70",
+              tone
+            )}
+          >
+            {format(start, "h:mm a")}
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider tabular-nums",
+              tone
+            )}
+          >
+            <Clock className="size-3" />
+            {format(start, "h:mm a")} – {format(due, "h:mm a")}
+          </span>
+          <span
+            className={cn(
+              "text-sm font-medium leading-snug truncate",
+              task.is_completed && "line-through"
+            )}
+          >
+            {task.title}
+          </span>
+          {task.notes && height > 56 && cols === 1 && (
+            <span className="text-[11px] text-muted-fg leading-snug line-clamp-2">
+              {task.notes}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
