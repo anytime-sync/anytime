@@ -37,6 +37,8 @@ jobs:
       
       - name: Build
         run: npm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=3072"
 
   build:
     runs-on: ubuntu-latest
@@ -57,6 +59,8 @@ jobs:
       
       - name: Build verification
         run: npm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=3072"
       
       - name: Build summary
         run: echo "✅ Build completed successfully on commit ${{ github.sha }}"
