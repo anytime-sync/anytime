@@ -250,10 +250,13 @@ export async function getUserPlan(userId: string): Promise<Plan> {
 
   const { data } = await sb
     .from("user_plans")
-    .select("plan")
+    .select("plan,override_plan_raw")
     .eq("user_id", userId)
     .maybeSingle();
-  const plan = (data as { plan?: Plan } | null)?.plan ?? "free";
+  
+  // If override_plan_raw is set, use it; otherwise use plan; default to free
+  const row = data as { plan?: Plan; override_plan_raw?: Plan | null } | null;
+  const plan = (row?.override_plan_raw ?? row?.plan ?? "free") as Plan;
   return plan;
 }
 
