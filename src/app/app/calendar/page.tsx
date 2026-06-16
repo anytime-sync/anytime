@@ -24,6 +24,7 @@ import { useUIStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
 import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
+import { DayTimeline, DayViewToggle, useDayViewMode } from "@/components/app/day-timeline";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr, getLanguage } from "@/lib/i18n";
 
@@ -913,6 +914,7 @@ function DayView({
 }) {
   const lang = useLanguage();
   const dfLocale = getLanguage(lang).dateFnsLocale;
+  const [viewMode, setViewMode] = useDayViewMode();
   const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
 
   const dayStart = startOfDay(date);
@@ -964,6 +966,7 @@ function DayView({
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <DayViewToggle mode={viewMode} setMode={setViewMode} />
             <button
               className="btn-ghost size-9 p-0 grid place-items-center"
               onClick={() => onChangeDate(addDays(date, -1))}
@@ -990,6 +993,13 @@ function DayView({
         </div>
       </div>
 
+      {/* Timeline mode: vertical hour rail with Google-Calendar-style
+          side-by-side columns for overlapping/clashing tasks, so two tasks
+          in the same 12:00–12:30 slot render next to each other instead of
+          stacked. Reuses the same DayTimeline as the Today/Tomorrow pages. */}
+      {viewMode === "timeline" ? (
+        <DayTimeline date={date} />
+      ) : (
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
         <InlineTaskInput
           defaultProjectId={null}
@@ -1051,6 +1061,7 @@ function DayView({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
