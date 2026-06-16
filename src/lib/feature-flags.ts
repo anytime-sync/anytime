@@ -135,6 +135,13 @@ export async function canUseFeature(
  * Returns true/false if the admin has explicitly set the column, or null to
  * mean "no override, fall back to minPlan rule".
  *
+ * **TIER CASCADE RULE:** If a lower tier is enabled, all higher tiers are
+ * automatically enabled (unless explicitly disabled):
+ *   - If FREE is ON → PLUS, PRO, VIP are ON
+ *   - If PLUS is ON (and FREE is OFF) → PRO, VIP are ON
+ *   - If PRO is ON (and FREE/PLUS are OFF) → VIP is ON
+ *   - If VIP is the only one ON → only VIP has access
+ *
  * Used by canUseFeature (server-side) and exposed via /api/feature-flags/
  * effective so the client can hide UI without round-tripping to the gate.
  */
@@ -143,12 +150,29 @@ export function isPlanEnabledByOverride(
   flag: FeatureFlagRow | undefined | null
 ): boolean | null {
   if (!flag) return null;
+
+  // Apply tier cascade rule: if a lower tier is enabled, higher tiers inherit
+  const shouldCascade = (targetPlan: Plan): boolean => {
+    // Check if any lower tier is explicitly enabled
+    if (targetPlan === "plus" || targetPlan === "pro" || targetPlan === "vip") {
+      if (flag.enabled_free === true) return true; // FREE enabled → cascade to all
+    }
+    if (targetPlan === "pro" || targetPlan === "vip") {
+      if (flag.enabled_plus === true) return true; // PLUS enabled → cascade to PRO, VIP
+    }
+    if (targetPlan === "vip") {
+      if (flag.enabled_pro === true) return true; // PRO enabled → cascade to VIP
+    }
+    return false;
+  };
+
+  // Resolve the effective value for this plan
   const col = (
     userPlan === "free" ? flag.enabled_free :
-    userPlan === "plus" ? flag.enabled_plus :
-    userPlan === "pro"  ? flag.enabled_pro  :
-    userPlan === "vip"  ? flag.enabled_vip  :
-    /* team */            flag.enabled_pro // team inherits Pro
+    userPlan === "plus" ? (flag.enabled_plus ?? (shouldCascade("plus") ? true : null)) :
+    userPlan === "pro"  ? (flag.enabled_pro ?? (shouldCascade("pro") ? true : null)) :
+    userPlan === "vip"  ? (flag.enabled_vip ?? (shouldCascade("vip") ? true : null)) :
+    /* team */            (flag.enabled_pro ?? (shouldCascade("pro") ? true : null)) // team inherits Pro
   );
   return col === null || col === undefined ? null : col;
 }

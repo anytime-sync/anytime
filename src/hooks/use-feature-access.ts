@@ -42,13 +42,40 @@ function useFlagRows() {
   });
 }
 
+/**
+ * Tier cascade rule: if a lower tier is enabled, higher tiers inherit the enabled status.
+ * FREE -> PLUS -> PRO -> VIP
+ */
 function pickPlanCol(flag: FlagRow, plan: Plan): boolean | null {
-  if (plan === "free") return flag.enabled_free;
-  if (plan === "plus") return flag.enabled_plus;
-  if (plan === "pro") return flag.enabled_pro;
-  if (plan === "vip") return flag.enabled_vip;
+  const free = flag.enabled_free;
+  const plus = flag.enabled_plus;
+  const pro = flag.enabled_pro;
+  const vip = flag.enabled_vip;
+
+  // Apply cascade: if lower tier is ON, higher tiers inherit
+  if (plan === "free") return free;
+  if (plan === "plus") {
+    // If FREE is ON, PLUS inherits (unless explicitly OFF)
+    if (free === true) return plus !== false ? true : false;
+    return plus;
+  }
+  if (plan === "pro") {
+    // If FREE is ON, PRO inherits; if PLUS is ON (and FREE off), PRO inherits
+    if (free === true) return pro !== false ? true : false;
+    if (plus === true) return pro !== false ? true : false;
+    return pro;
+  }
+  if (plan === "vip") {
+    // Cascade from FREE -> PLUS -> PRO -> VIP
+    if (free === true) return vip !== false ? true : false;
+    if (plus === true) return vip !== false ? true : false;
+    if (pro === true) return vip !== false ? true : false;
+    return vip;
+  }
   // team inherits pro
-  return flag.enabled_pro;
+  if (free === true) return pro !== false ? true : false;
+  if (plus === true) return pro !== false ? true : false;
+  return pro;
 }
 
 /**

@@ -57,6 +57,54 @@ export async function GET() {
   }
 }
 
+/**
+ * Apply tier cascade rule: if a lower tier is enabled, higher tiers must also be enabled.
+ * Signature: (enabled_free, enabled_plus, enabled_pro, enabled_vip) => cascaded values
+ */
+function applyCascadeRule(
+  free: boolean | null,
+  plus: boolean | null,
+  pro: boolean | null,
+  vip: boolean | null
+): {
+  enabled_free: boolean | null;
+  enabled_plus: boolean | null;
+  enabled_pro: boolean | null;
+  enabled_vip: boolean | null;
+} {
+  // Tier cascade: if a lower tier is ON, higher tiers inherit unless explicitly OFF
+  // FREE -> PLUS -> PRO -> VIP
+  let cascaded_free = free;
+  let cascaded_plus = plus;
+  let cascaded_pro = pro;
+  let cascaded_vip = vip;
+
+  // If FREE is ON, enable PLUS/PRO/VIP unless explicitly OFF
+  if (free === true) {
+    if (plus !== false) cascaded_plus = true;
+    if (pro !== false) cascaded_pro = true;
+    if (vip !== false) cascaded_vip = true;
+  }
+
+  // If PLUS is ON (and FREE is OFF/null), enable PRO/VIP unless explicitly OFF
+  if (plus === true && free !== true) {
+    if (pro !== false) cascaded_pro = true;
+    if (vip !== false) cascaded_vip = true;
+  }
+
+  // If PRO is ON (and FREE/PLUS are OFF/null), enable VIP unless explicitly OFF
+  if (pro === true && plus !== true && free !== true) {
+    if (vip !== false) cascaded_vip = true;
+  }
+
+  return {
+    enabled_free: cascaded_free,
+    enabled_plus: cascaded_plus,
+    enabled_pro: cascaded_pro,
+    enabled_vip: cascaded_vip,
+  };
+}
+
 export async function PUT(req: Request) {
   const auth = await requireAdmin();
   if ("error" in auth) {
@@ -96,10 +144,17 @@ export async function PUT(req: Request) {
   }
   const disabled = !!body.disabled;
   const note = body.note ?? null;
-  const enabled_free = body.enabled_free === undefined ? null : body.enabled_free;
-  const enabled_plus = body.enabled_plus === undefined ? null : body.enabled_plus;
-  const enabled_pro  = body.enabled_pro  === undefined ? null : body.enabled_pro;
-  const enabled_vip  = body.enabled_vip  === undefined ? null : body.enabled_vip;
+  let enabled_free = body.enabled_free === undefined ? null : body.enabled_free;
+  let enabled_plus = body.enabled_plus === undefined ? null : body.enabled_plus;
+  let enabled_pro  = body.enabled_pro  === undefined ? null : body.enabled_pro;
+  let enabled_vip  = body.enabled_vip  === undefined ? null : body.enabled_vip;
+
+  // Apply tier cascade rule
+  const cascaded = applyCascadeRule(enabled_free, enabled_plus, enabled_pro, enabled_vip);
+  enabled_free = cascaded.enabled_free;
+  enabled_plus = cascaded.enabled_plus;
+  enabled_pro = cascaded.enabled_pro;
+  enabled_vip = cascaded.enabled_vip;
 
   try {
     const sb = supaService();
