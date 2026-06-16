@@ -100,8 +100,14 @@ async function handle(req: Request) {
   const from = getFromAddress();
   const appUrl = process.env.APP_URL ?? "https://firstlight.to";
 
-  // Check if email reminders feature is enabled globally (admin override)
-  const emailRemindersEnabled = getEffectiveFeature("plat_email_reminders", "free").enabled;
+  // Check if email reminders feature is enabled globally (admin "Off" toggle).
+  // getEffectiveFeature returns null when the admin has disabled the feature
+  // in /admin/feature-flags (the `disabled` column). On any resolver error we
+  // fail OPEN is NOT acceptable for an opt-out signal — but the resolver itself
+  // already falls back to the code matrix (feature present) on DB errors, so a
+  // transient DB blip won't accidentally suppress reminders forever.
+  const emailRemindersEnabled =
+    (await getEffectiveFeature("plat_email_reminders")) !== null;
 
   let sent = 0;
   const handledIds: string[] = [];
