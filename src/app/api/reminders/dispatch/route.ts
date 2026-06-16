@@ -6,6 +6,7 @@ import { getLanguage, t, type LanguageCode } from "@/lib/i18n";
 import { makeUnsubToken } from "@/lib/unsub-token";
 import webpush from "web-push";
 import { isAuthorizedCron } from "@/lib/cron-auth";
+import { getEffectiveFeature } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +100,9 @@ async function handle(req: Request) {
   const from = getFromAddress();
   const appUrl = process.env.APP_URL ?? "https://firstlight.to";
 
+  // Check if email reminders feature is enabled globally (admin override)
+  const emailRemindersEnabled = getEffectiveFeature("plat_email_reminders", "free").enabled;
+
   let sent = 0;
   const handledIds: string[] = [];
 
@@ -108,7 +112,8 @@ async function handle(req: Request) {
     const lang = (pref?.language ?? "en") as LanguageCode;
 
     // Honor opt-out: still mark as handled so we don't re-check forever.
-    if (!email || pref?.email_reminders === false) {
+    // Check both: feature must be enabled globally AND user must have opted in.
+    if (!email || !emailRemindersEnabled || pref?.email_reminders === false) {
       handledIds.push(task.id);
       continue;
     }
@@ -162,8 +167,8 @@ async function handle(req: Request) {
     // pushTasks: only those we just emailed (or tried to) AND whose owner has push enabled.
     for (const task of due) {
       const pref = prefByUser.get(task.user_id);
-      if (pref?.email_reminders === false && !(pref as any)?.push_reminders) continue;
-      // honor push_reminders flag if present (defaults to true server-side)
+      // Skip if feature is disabled globally or user has opted out of push
+      if (!emailRemindersEnabled) continue;
       const pushFlag = (pref as any)?.push_reminders;
       if (pushFlag === false) continue;
       const list = subsByUser.get(task.user_id) ?? [];
