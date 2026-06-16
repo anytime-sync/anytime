@@ -12,15 +12,13 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     setupFiles: ["./vitest.setup.ts"],
+    deps: {
+      inline: ["date-fns"],
+    },
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-    },
-  },
-  server: {
-    deps: {
-      inline: ["date-fns"],
     },
   },
 });
