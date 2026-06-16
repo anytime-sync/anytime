@@ -26,7 +26,7 @@ import { TaskItem } from "@/components/app/task-item";
 import { InlineTaskInput } from "@/components/app/inline-task-input";
 import { DayTimeline, DayViewToggle, useDayViewMode } from "@/components/app/day-timeline";
 import { useLanguage } from "@/lib/use-language";
-import { t as tr, getLanguage } from "@/lib/i18n";
+import { t as tr, getLanguage, type LanguageCode } from "@/lib/i18n";
 
 /**
  * Calendar — month grid with click-through to single-day view.
@@ -64,6 +64,73 @@ export default function CalendarPage() {
 }
 
 /* ------------------------ Month view ------------------------ */
+
+/**
+ * Group a day's timed items into clusters of overlapping items so the
+ * month-cell renderer can place overlapping meetings/tasks SIDE BY SIDE
+ * instead of stacking them. Items that don't overlap anything render as
+ * their own single-item cluster (full width).
+ *
+ * An item participates in time-overlap layout only if it has a real
+ * [start, end) interval. All-day items and tasks without a usable time
+ * are returned in `loose` and keep the normal stacked layout.
+ */
+export type CellItem =
+  | { kind: "event"; id: string; event: CalendarEvent; startMs: number; endMs: number; timed: boolean }
+  | { kind: "task"; id: string; task: TaskWithTags; startMs: number; endMs: number; timed: boolean };
+
+function buildCellItems(
+  events: CalendarEvent[],
+  tasks: TaskWithTags[]
+): { clusters: CellItem[][]; loose: CellItem[] } {
+  const timed: CellItem[] = [];
+  const loose: CellItem[] = [];
+
+  for (const ev of events) {
+    if (ev.is_all_day || !ev.start_at) {
+      loose.push({ kind: "event", id: `ev-${ev.id}`, event: ev, startMs: 0, endMs: 0, timed: false });
+      continue;
+    }
+    const startMs = new Date(ev.start_at).getTime();
+    // Default a 30-min window when no end is present so point-in-time
+    // events still cluster correctly.
+    const endMs = ev.end_at ? new Date(ev.end_at).getTime() : startMs + 30 * 60_000;
+    timed.push({ kind: "event", id: `ev-${ev.id}`, event: ev, startMs, endMs: Math.max(endMs, startMs + 1), timed: true });
+  }
+
+  for (const t of tasks) {
+    // A task is "timed" for overlap purposes when it has a due time and
+    // is not all-day. Zero-duration tasks get a synthetic 30-min window.
+    if (t.is_all_day || !t.due_at) {
+      loose.push({ kind: "task", id: t.id, task: t, startMs: 0, endMs: 0, timed: false });
+      continue;
+    }
+    const dueMs = new Date(t.due_at).getTime();
+    const startMs = t.start_at ? new Date(t.start_at).getTime() : dueMs;
+    const s = startMs < dueMs ? startMs : dueMs;
+    const e = startMs < dueMs ? dueMs : startMs + 30 * 60_000;
+    timed.push({ kind: "task", id: t.id, task: t, startMs: s, endMs: Math.max(e, s + 1), timed: true });
+  }
+
+  // Sort timed items by start, then sweep into overlap clusters.
+  timed.sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs);
+  const clusters: CellItem[][] = [];
+  let cur: CellItem[] = [];
+  let curEnd = -Infinity;
+  for (const it of timed) {
+    if (cur.length > 0 && it.startMs >= curEnd) {
+      clusters.push(cur);
+      cur = [];
+      curEnd = -Infinity;
+    }
+    cur.push(it);
+    curEnd = Math.max(curEnd, it.endMs);
+  }
+  if (cur.length > 0) clusters.push(cur);
+
+  return { clusters, loose };
+}
+
 
 function MonthView({
   cursor,
@@ -641,47 +708,116 @@ function DayCell({
           {format(date, "d")}
         </button>
       </div>
-      <div
-        className="flex-1 flex flex-col gap-1 overflow-hidden"
-        style={barLanesAbove > 0 ? { marginTop: `${barLanesAbove * 22}px` } : undefined}
-        data-day-cell-hit="1"
-      >
-        {events.slice(0, 2).map((ev) => (
-          <DraggableEventChip
-            key={`ev-${ev.id}`}
-            event={ev}
-            lang={lang}
-            size="compact"
-            fromKey={dateKey}
-          />
-        ))}
-        {events.length > 2 && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
-            className="text-[10px] text-muted-fg pl-1 hover:text-fg text-left"
-          >
-            + {events.length - 2}
-          </button>
-        )}
-        {tasks.slice(0, 4).map((t) => (
-          <DraggableTask
-            key={t.id}
-            task={t}
-            dayKey={dateKey}
-            dimmed={activeId === `${t.id}::${dateKey}`}
-          />
-        ))}
-        {tasks.length > 4 && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
-            className="text-[10px] text-muted-fg pl-1 hover:text-fg text-left"
-          >
-            + {tasks.length - 4} more
-          </button>
-        )}
+      <DayCellChips
+        date={date}
+        dateKey={dateKey}
+        tasks={tasks}
+        events={events}
+        activeId={activeId}
+        onPickDay={onPickDay}
+        lang={lang}
+        barLanesAbove={barLanesAbove}
+      />
+    </div>
+  );
+}
+
+/**
+ * Renders a day cell's chips with TIME-OVERLAP awareness: timed items
+ * (GCal events + timed tasks) that overlap each other are placed in a
+ * horizontal row (side by side) so a viewer can see the clash at a
+ * glance; everything else stacks vertically as before. All-day items and
+ * timeless tasks always stack.
+ *
+ * To keep the small month cell readable we cap how many rows we show and
+ * fall back to a "+N more" affordance that opens the day view.
+ */
+function DayCellChips({
+  date,
+  dateKey,
+  tasks,
+  events,
+  activeId,
+  onPickDay,
+  lang,
+  barLanesAbove,
+}: {
+  date: Date;
+  dateKey: string;
+  tasks: TaskWithTags[];
+  events: CalendarEvent[];
+  activeId: string | null;
+  onPickDay: (d: Date) => void;
+  lang: LanguageCode;
+  barLanesAbove: number;
+}) {
+  const { clusters, loose } = buildCellItems(events, tasks);
+
+  // Build a flat list of "rows". Each row is either a single full-width
+  // item or a side-by-side group of overlapping items. All-day/timeless
+  // items (loose) render first as their own stacked rows, matching the
+  // previous behavior (events above tasks).
+  type Row = { kind: "single"; item: CellItem } | { kind: "group"; items: CellItem[] };
+  const rows: Row[] = [];
+  // Loose events first, then loose tasks (preserve prior visual order).
+  for (const it of loose.filter((i) => i.kind === "event")) rows.push({ kind: "single", item: it });
+  for (const cl of clusters) {
+    if (cl.length === 1) rows.push({ kind: "single", item: cl[0]! });
+    else rows.push({ kind: "group", items: cl });
+  }
+  for (const it of loose.filter((i) => i.kind === "task")) rows.push({ kind: "single", item: it });
+
+  const MAX_ROWS = 5;
+  const shownRows = rows.slice(0, MAX_ROWS);
+  const hiddenCount =
+    rows.slice(MAX_ROWS).reduce((n, r) => n + (r.kind === "group" ? r.items.length : 1), 0);
+
+  function renderItem(it: CellItem, inGroup: boolean) {
+    const cls = inGroup ? "min-w-0 flex-1" : undefined;
+    if (it.kind === "event") {
+      return (
+        <div key={it.id} className={cls}>
+          <DraggableEventChip event={it.event} lang={lang} size="compact" fromKey={dateKey} />
+        </div>
+      );
+    }
+    return (
+      <div key={it.id} className={cls}>
+        <DraggableTask
+          task={it.task}
+          dayKey={dateKey}
+          dimmed={activeId === `${it.task.id}::${dateKey}`}
+        />
       </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex-1 flex flex-col gap-1 overflow-hidden"
+      style={barLanesAbove > 0 ? { marginTop: `${barLanesAbove * 22}px` } : undefined}
+      data-day-cell-hit="1"
+    >
+      {shownRows.map((r, i) =>
+        r.kind === "single" ? (
+          renderItem(r.item, false)
+        ) : (
+          // Side-by-side row for overlapping items. min-w-0 lets the
+          // chips shrink and truncate instead of overflowing the cell.
+          <div key={`grp-${i}`} className="flex items-stretch gap-1 min-w-0">
+            {r.items.map((it) => renderItem(it, true))}
+          </div>
+        )
+      )}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onPickDay(date); }}
+          className="text-[10px] text-muted-fg pl-1 hover:text-fg text-left"
+        >
+          + {hiddenCount} more
+        </button>
+      )}
     </div>
   );
 }
