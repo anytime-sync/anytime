@@ -424,11 +424,29 @@ function DraggableTask({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task.id });
 
-  const startMin = minutesFromRailStart(start);
+  // Treat start===due (zero-duration) as a 30-min block so the chip has
+  // height; otherwise it would be dropped by the guard below and the task
+  // would vanish from the week timeline while still showing elsewhere.
+  const effStart =
+    start.getTime() >= due.getTime()
+      ? new Date(due.getTime() - 30 * 60_000)
+      : start;
+  const RAIL_MAX_MIN = (RAIL_END_HOUR - RAIL_START_HOUR) * 60;
+  const startMin = minutesFromRailStart(effStart);
   const endMin = minutesFromRailStart(due);
-  const visStart = Math.max(0, startMin);
-  const visEnd = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, endMin);
-  if (visEnd <= visStart) return null;
+  // Clamp into the visible rail and guarantee a minimum slice so tasks
+  // outside 6 AM–11 PM (e.g. 12:30 AM) are pinned to the edge instead of
+  // disappearing. The chip label still shows the true time.
+  let visStart = Math.max(0, Math.min(RAIL_MAX_MIN, startMin));
+  let visEnd = Math.max(0, Math.min(RAIL_MAX_MIN, endMin));
+  if (visEnd - visStart < 15) {
+    if (visStart >= RAIL_MAX_MIN) {
+      visStart = RAIL_MAX_MIN - 15;
+      visEnd = RAIL_MAX_MIN;
+    } else {
+      visEnd = Math.min(RAIL_MAX_MIN, visStart + 15);
+    }
+  }
 
   const top = visStart * PX_PER_MIN;
   const height = Math.max(24, (visEnd - visStart) * PX_PER_MIN - 2);

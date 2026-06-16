@@ -176,18 +176,42 @@ export function DayTimeline({ date }: { date: Date }) {
   );
 
   const allDayTasks = dayTasks.filter((t) => t.is_all_day || (!t.start_at && !t.due_at));
+  const RAIL_MAX_MIN = (RAIL_END_HOUR - RAIL_START_HOUR) * 60;
   const timed = dayTasks
     .filter((t) => !t.is_all_day && t.due_at)
     .map((t) => {
       const due = new Date(t.due_at!);
-      const start = t.start_at ? new Date(t.start_at) : new Date(due.getTime() - 30 * 60_000);
+      // Default a 30-min block when there is no explicit start, AND when
+      // start === due (zero-duration tasks, e.g. point-in-time meetings).
+      // Without this, startMin === endMin and the chip would be filtered
+      // out by the visEnd>visStart guard below — so timed tasks like a
+      // 1:00 PM Sales Meeting silently vanished from the timeline while
+      // still showing in the list view. (Inconsistency bug, 2026-06-16.)
+      let start = t.start_at ? new Date(t.start_at) : new Date(due.getTime() - 30 * 60_000);
+      if (start.getTime() >= due.getTime()) {
+        start = new Date(due.getTime() - 30 * 60_000);
+      }
       const startMin = minutesFromRailStart(start);
       const endMin = minutesFromRailStart(due);
-      const visStart = Math.max(0, startMin);
-      const visEnd = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, endMin);
+      // Clamp the chip into the visible 6 AM–11 PM rail. Tasks that fall
+      // entirely before 6 AM or after 11 PM (e.g. a 12:30 AM "Closing")
+      // used to be dropped silently. Instead, pin them to the nearest
+      // rail edge with a minimum height so they remain visible and
+      // clickable — the chip's own label still shows the true time.
+      let visStart = Math.max(0, Math.min(RAIL_MAX_MIN, startMin));
+      let visEnd = Math.max(0, Math.min(RAIL_MAX_MIN, endMin));
+      // Guarantee a minimum visible slice (15 min) so zero/!out-of-range
+      // tasks are never invisible.
+      if (visEnd - visStart < 15) {
+        if (visStart >= RAIL_MAX_MIN) {
+          visStart = RAIL_MAX_MIN - 15;
+          visEnd = RAIL_MAX_MIN;
+        } else {
+          visEnd = Math.min(RAIL_MAX_MIN, visStart + 15);
+        }
+      }
       return { task: t, start, due, startMin, endMin, visStart, visEnd };
     })
-    .filter((t) => t.visEnd > t.visStart)
     .sort((a, b) => a.startMin - b.startMin);
 
   const dayStartForLayout = startOfDay(date);
