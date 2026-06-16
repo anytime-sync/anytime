@@ -136,6 +136,9 @@ export async function checkAiBudget(userId: string, feature: AiFeature): Promise
  */
 const MODEL_COST_PER_TOKEN: Record<string, { input: number; output: number }> = {
   "claude-haiku-4-5-20251001":  { input: 0.80 / 1_000_000, output: 4.00 / 1_000_000 },
+  // Current Sonnet 4.6 (editorial). Replaces retired claude-sonnet-4-20250514.
+  "claude-sonnet-4-6":          { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000 },
+  // Keep the old id for historical cost lookups on already-logged rows.
   "claude-sonnet-4-20250514":   { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000 },
 };
 

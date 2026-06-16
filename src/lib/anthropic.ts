@@ -19,7 +19,10 @@ export const MODELS = {
   // Dated Haiku 4.5 identifier — the alias `claude-haiku-4-5` is not
   // currently valid against the Messages API.
   fast: "claude-haiku-4-5-20251001",
-  // Stronger reasoning + voice: Daily Edition, Weekly Retro.
-  // Dated Sonnet 4 identifier.
-  editorial: "claude-sonnet-4-20250514",
+  // Stronger reasoning + voice: Daily Edition, Weekly Retro, Morning Co-pilot.
+  // NOTE: the old dated snapshot `claude-sonnet-4-20250514` was RETIRED by
+  // Anthropic (~June 2026) and now returns 404, which surfaced as
+  // "Daily Edition couldn't load" / "Couldn't load this morning's brief".
+  // Use the current Sonnet 4.6 identifier.
+  editorial: "claude-sonnet-4-6",
 } as const;
