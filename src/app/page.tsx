@@ -45,7 +45,9 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="shrink-0">
             <DesignSlot id="landing.wordmark" as="span" className="wordmark text-[21px] flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-black.png" alt="" className="size-9 block dark:hidden" aria-hidden="true" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-white.png" alt="" className="size-9 hidden dark:block" aria-hidden="true" />
               First Light
             </DesignSlot>
