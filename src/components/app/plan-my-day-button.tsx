@@ -209,7 +209,58 @@ export function PlanMyDayButton() {
               </p>
             )}
 
-            {results && results.length > 0 && (
+            {results && results.length > 0 && (() => {
+              // ------------------------------------------------------------------
+              // Conflict detection: find which suggestions land on an already-
+              // occupied time slot (either collide with each other or with an
+              // existing task that is NOT being re-scheduled by this session).
+              // We only need to check Q1/Q3 — Q2/Q4 clear the date (no slot).
+              // ------------------------------------------------------------------
+              const suggestedIds = new Set(results.map((r) => r.id));
+
+              // Slot key: "YYYY-MM-DD|HH:MM" in local time.
+              const slotKey = (iso: string | null): string | null => {
+                if (!iso) return null;
+                const d = new Date(iso);
+                const ymd = format(d, "yyyy-MM-dd");
+                const hm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+                return `${ymd}|${hm}`;
+              };
+
+              // Build a map: slotKey → [taskId] for EXISTING tasks (not in suggestion set)
+              const existingSlots = new Map<string, string[]>();
+              for (const task of allTasks) {
+                if (suggestedIds.has(task.id) || task.is_completed) continue;
+                const key = slotKey(task.start_at ?? task.due_at ?? null);
+                if (!key) continue;
+                if (!existingSlots.has(key)) existingSlots.set(key, []);
+                existingSlots.get(key)!.push(task.id);
+              }
+
+              // Identify which suggestions produce a timed slot, then find collisions.
+              // A suggestion is "conflicting" if its target slot is:
+              //   (a) shared with another suggestion in this session, OR
+              //   (b) already occupied by an existing task.
+              const suggestionSlots = new Map<string, string[]>(); // slotKey → [suggestionId]
+              for (const s of results) {
+                const target = targetForQuadrant(s.quadrant);
+                const key = slotKey(target.start_at ?? target.due_at ?? null);
+                if (!key) continue;
+                if (!suggestionSlots.has(key)) suggestionSlots.set(key, []);
+                suggestionSlots.get(key)!.push(s.id);
+              }
+
+              const conflictSet = new Set<string>();
+              for (const [key, ids] of suggestionSlots) {
+                const existingCount = existingSlots.get(key)?.length ?? 0;
+                if (ids.length > 1 || existingCount > 0) {
+                  // Multiple suggestions share the slot, OR at least one
+                  // existing (non-re-scheduled) task is already there.
+                  ids.forEach((id) => conflictSet.add(id));
+                }
+              }
+
+              return (
               <ul className="space-y-2">
                 {results.map((s) => {
                   const t = allTasks.find((x) => x.id === s.id);
@@ -218,6 +269,7 @@ export function PlanMyDayButton() {
                 const isOverdue = !!t.due_at && isPast(new Date(t.due_at)) && !isToday(new Date(t.due_at));
                 const isImportant = (t.priority ?? 0) >= 3;
                 const currentQ = isUrgent && isImportant ? 1 : !isUrgent && isImportant ? 2 : isUrgent && !isImportant ? 3 : 4;
+                const hasConflict = conflictSet.has(s.id);
                   return (
                     <li
                       key={s.id}
@@ -225,6 +277,8 @@ export function PlanMyDayButton() {
                         "border rounded-md p-3 flex items-start gap-3",
                         isOverdue
                           ? "border-red-400/60 bg-red-500/5 dark:border-red-500/40 dark:bg-red-500/5"
+                          : hasConflict
+                          ? "border-amber-400/60 bg-amber-500/5 dark:border-amber-500/40 dark:bg-amber-500/5"
                           : "border-border"
                       )}
                     >
@@ -233,6 +287,9 @@ export function PlanMyDayButton() {
                           <span className="font-medium text-sm truncate">{t.title}</span>
                           {isOverdue && (
                             <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">overdue</span>
+                          )}
+                          {hasConflict && (
+                            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">overlap</span>
                           )}
                         </div>
                         <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
@@ -294,7 +351,8 @@ export function PlanMyDayButton() {
                   );
                 })}
               </ul>
-            )}
+              );
+            })()}
 
             {results && results.length === 0 && !running && (
               <p className="text-sm text-muted-fg">
