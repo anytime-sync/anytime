@@ -61,12 +61,20 @@ export function PlanMyDayButton() {
     start_at: string | null;
     due_at: string | null;
   } {
-    const today9 = new Date(); today9.setHours(9, 0, 0, 0);
-    const today930 = new Date(); today930.setHours(9, 30, 0, 0);
+    // Each timed quadrant gets a distinct 30-min anchor slot today so:
+    // (a) they don't all overlap each other by default, and
+    // (b) overlap detection can meaningfully fire when two tasks share a slot.
+    // Q1 = 09:00 (fire first thing), Q2 = 10:00 (deep work block),
+    // Q3 = 11:00 (quick admin), Q4 = no slot (defer/drop).
+    const slot = (h: number) => {
+      const s = new Date(); s.setHours(h, 0, 0, 0);
+      const e = new Date(); e.setHours(h, 30, 0, 0);
+      return { s: s.toISOString(), e: e.toISOString() };
+    };
     switch (q) {
-      case 1: return { priority: 5, start_at: today9.toISOString(), due_at: today930.toISOString() };
-      case 2: return { priority: 5, start_at: null, due_at: null };
-      case 3: return { priority: 1, start_at: today9.toISOString(), due_at: today930.toISOString() };
+      case 1: { const t = slot(9);  return { priority: 5, start_at: t.s, due_at: t.e }; }
+      case 2: { const t = slot(10); return { priority: 5, start_at: t.s, due_at: t.e }; }
+      case 3: { const t = slot(11); return { priority: 1, start_at: t.s, due_at: t.e }; }
       case 4: return { priority: 0, start_at: null, due_at: null };
     }
   }

@@ -211,11 +211,13 @@ Output JSON ONLY (no prose, no fences). Schema:
   "notes": string
 }
 
-Eisenhower (today edition):
-- Q1 Do first   — must-ship today (hard deadline this calendar day, blocks others)
-- Q2 Schedule   — important deep work that deserves a real morning block but isn't a fire
-- Q3 Delegate   — interrupts, low-leverage admin: do them quickly or hand off
-- Q4 Eliminate  — not important and not urgent: drop or defer
+Eisenhower (today edition) — each quadrant maps to a fixed anchor slot:
+- Q1 Do first   (09:00) — must-ship today; hard deadline, blocks others
+- Q2 Schedule   (10:00) — important deep work; deserves a focused morning block
+- Q3 Delegate   (11:00) — interrupts, low-leverage admin; do quickly or hand off
+- Q4 Eliminate  (no slot) — not important, not urgent; drop or defer
+
+If multiple tasks share the same quadrant they share the same slot — flag clashes in the reason.
 
 Today rules:
 1. Be ruthless. A good day picks 1-2 Q1, 1-2 Q2, the rest fall away.
