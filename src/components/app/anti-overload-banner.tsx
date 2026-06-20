@@ -46,20 +46,10 @@ export function AntiOverloadBanner() {
     const next = candidate.due_at
       ? addDays(new Date(candidate.due_at), 1)
       : addDays(new Date(), 1);
-    // Shift start_at with due_at, clamped so start never falls before the target day.
-    if (candidate.start_at && candidate.due_at) {
-      const durationMs = new Date(candidate.due_at).getTime() - new Date(candidate.start_at).getTime();
-      const rawStart = new Date(next.getTime() - durationMs);
-      const dayStart = new Date(next); dayStart.setHours(0, 0, 0, 0);
-      const newStart = rawStart < dayStart ? next : rawStart;
-      update.mutate({
-        id: candidate.id,
-        start_at: newStart.toISOString(),
-        due_at: next.toISOString(),
-      } as any);
-    } else {
-      update.mutate({ id: candidate.id, due_at: next.toISOString() } as any);
-    }
+    // Always normalize to 09:00–09:30 on the target day (never inherit a stale 23:59 time).
+    next.setHours(9, 0, 0, 0);
+    const nextEnd = new Date(next); nextEnd.setHours(9, 30, 0, 0);
+    update.mutate({ id: candidate.id, start_at: next.toISOString(), due_at: nextEnd.toISOString() } as any);
   }
 
   return (

@@ -73,18 +73,9 @@ export function ReflectionDialog() {
 
   function carryForward(id: string) {
     const tomorrow = addDays(new Date(), 1);
-    tomorrow.setHours(23, 59, 0, 0);
-    // Shift start_at with due_at, clamped so start never falls before the target day.
-    const task = allTasks.find((t) => t.id === id);
-    if (task?.start_at && task?.due_at) {
-      const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
-      const rawStart = new Date(tomorrow.getTime() - durationMs);
-      const dayStart = new Date(tomorrow); dayStart.setHours(0, 0, 0, 0);
-      const newStart = rawStart < dayStart ? tomorrow : rawStart;
-      update.mutate({ id, start_at: newStart.toISOString(), due_at: tomorrow.toISOString() } as any);
-    } else {
-      update.mutate({ id, due_at: tomorrow.toISOString() } as any);
-    }
+    tomorrow.setHours(9, 0, 0, 0);
+    const tomorrowEnd = new Date(tomorrow); tomorrowEnd.setHours(9, 30, 0, 0);
+    update.mutate({ id, start_at: tomorrow.toISOString(), due_at: tomorrowEnd.toISOString() } as any);
     toast.message(tr(lang, "reflect.toastRolled"));
   }
   function dropTask(id: string) {

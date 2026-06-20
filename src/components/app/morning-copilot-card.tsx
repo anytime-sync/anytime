@@ -131,10 +131,13 @@ export function MorningCopilotCard() {
           const patch: Record<string, unknown> = { is_all_day: false };
 
           if (task?.start_at && task?.due_at) {
-            // Preserve original duration: shift both start and end
-            const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+            // Shift to tomorrow 09:00; cap duration at 2h to avoid cross-day overflow.
+            const durationMs = Math.min(
+              new Date(task.due_at).getTime() - new Date(task.start_at).getTime(),
+              2 * 60 * 60 * 1000,
+            );
             const newStart = tomorrowAt9;
-            const newEnd = new Date(newStart.getTime() + durationMs);
+            const newEnd = new Date(newStart.getTime() + Math.max(durationMs, 30 * 60 * 1000));
             patch.start_at = newStart.toISOString();
             patch.due_at = newEnd.toISOString();
           } else if (task?.start_at && !task?.due_at) {
