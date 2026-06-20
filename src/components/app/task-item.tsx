@@ -136,7 +136,7 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border relative",
         swipeX !== 0 && "bg-bg",
         // Overdue: red left accent border + faint red tint
-        !task.is_completed && task.due_at && !isToday(new Date(task.due_at)) && isPast(new Date(task.due_at))
+        !task.is_completed && task.due_at && isPast(new Date(task.due_at))
           ? isSelected
             ? "border-red-400/50 bg-red-500/8"
             : "border-l-red-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-red-500/5 hover:bg-red-500/10"
@@ -288,7 +288,7 @@ function DurationChip({ task }: { task: TaskWithTags }) {
 
 function DueChip({ due_at, all_day }: { due_at: string; all_day: boolean }) {
   const d = new Date(due_at);
-  const overdue = !isToday(d) && isPast(d);
+  const overdue = isPast(d);
   const label = isToday(d)
     ? all_day
       ? "Today"
