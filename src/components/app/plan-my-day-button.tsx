@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isPast } from "date-fns";
+import { format, isToday, isPast, endOfDay } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
