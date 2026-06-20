@@ -250,14 +250,35 @@ export async function getUserPlan(userId: string): Promise<Plan> {
 
   const { data } = await sb
     .from("user_plans")
-    .select("plan,override_plan_raw")
+    .select("plan,override_plan_raw,status,current_period_end,cancel_at_period_end")
     .eq("user_id", userId)
     .maybeSingle();
-  
-  // If override_plan_raw is set, use it; otherwise use plan; default to free
-  const row = data as { plan?: Plan; override_plan_raw?: Plan | null } | null;
-  const plan = (row?.override_plan_raw ?? row?.plan ?? "free") as Plan;
-  return plan;
+
+  const row = data as {
+    plan?: Plan;
+    override_plan_raw?: Plan | null;
+    status?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean | null;
+  } | null;
+
+  // Override always wins (manual admin grant).
+  if (row?.override_plan_raw) return row.override_plan_raw as Plan;
+
+  // Canceled-but-still-in-period: user paid through current_period_end,
+  // don't drop them to free until the period actually expires.
+  // This prevents AI features being blocked the moment someone cancels
+  // auto-renew — a common and jarring UX failure.
+  if (
+    row?.status === "canceled" &&
+    row?.cancel_at_period_end === true &&
+    row?.current_period_end &&
+    new Date(row.current_period_end) > new Date()
+  ) {
+    return (row.plan ?? "free") as Plan;
+  }
+
+  return (row?.plan ?? "free") as Plan;
 }
 
 /**
