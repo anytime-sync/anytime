@@ -81,6 +81,7 @@ export function TodayAiBar() {
           title: t.title,
           due_at: t.due_at,
           priority: t.priority,
+          estimated_minutes: (t as any).estimated_minutes ?? null,
           days_overdue: Math.max(0, differenceInCalendarDays(new Date(), new Date(t.due_at!))),
         })),
       });
@@ -105,15 +106,11 @@ export function TodayAiBar() {
       // Drop = clear the due date but keep the task. (Soft delete is too aggressive.)
       update.mutate({ id: s.id, due_at: null } as any);
     } else {
-      // For overdue tasks: start_at = new_due_at (normalized to 09:00 by API).
-      // due_at = start + 30min so the block stays on a single day.
-      const newStart = s.new_due_at ? new Date(s.new_due_at) : null;
-      const newEnd = newStart ? new Date(newStart.getTime() + 30 * 60 * 1000) : null;
-      update.mutate({
-        id: s.id,
-        start_at: newStart?.toISOString() ?? s.new_due_at,
-        due_at: newEnd?.toISOString() ?? s.new_due_at,
-      } as any);
+      // AI now returns a real free slot (start_at + due_at).
+      // Fall back to new_due_at (legacy) + 30min if not provided.
+      const newStart = s.start_at ?? s.new_due_at ?? null;
+      const newEnd = s.due_at ?? (newStart ? new Date(new Date(newStart).getTime() + 30 * 60 * 1000).toISOString() : null);
+      update.mutate({ id: s.id, start_at: newStart, due_at: newEnd } as any);
     }
     setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
   }
@@ -203,8 +200,8 @@ export function TodayAiBar() {
                           )}>
                             {s.verdict === "drop" ? tr(lang, "procrastination.verdictDrop") : s.verdict}
                           </span>
-                          {s.new_due_at &&
-                            `→ ${new Date(s.new_due_at).toLocaleString(undefined, {
+                          {(s.start_at ?? s.new_due_at) &&
+                            `→ ${new Date((s.start_at ?? s.new_due_at)!).toLocaleString(undefined, {
                               weekday: "short",
                               month: "short",
                               day: "numeric",

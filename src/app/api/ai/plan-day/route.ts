@@ -7,6 +7,7 @@ import { planDaySystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
 import { safeTimezone, localDayBounds, localNowStr } from "@/lib/ai/tz";
+import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
 
 export const runtime = "nodejs";
 
@@ -102,45 +103,20 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
-  // Round F v4.5: fetch today's Google Calendar events so the AI's day
-  // plan accounts for real meetings, not just tasks. Past meetings are
-  // skipped so we only show what's still ahead today.
+  // Fetch full schedule context for today only (horizonDays=1)
   const now = new Date();
   const { start: startOfToday, end: endOfToday } = localDayBounds(now, tz);
-  const { data: events } = await supabase
-    .from("calendar_events")
-    .select("title,start_at,end_at,is_all_day,location,attendees_count")
-    .eq("cancelled", false)
-    .gte("start_at", startOfToday.toISOString())
-    .lt("start_at", endOfToday.toISOString())
-    .order("start_at", { ascending: true })
-    .limit(20);
-
-  const eventBlock = (events ?? [])
-    .map((e) => {
-      const time = e.is_all_day
-        ? "all-day"
-        : e.start_at && e.end_at
-        ? `${new Date(e.start_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}-${new Date(e.end_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}`
-        : "";
-      const parts = [
-        e.title || "(untitled)",
-        time && `· ${time}`,
-        e.location && `· @${e.location}`,
-        e.attendees_count ? `· ${e.attendees_count} attendees` : "",
-      ];
-      return parts.filter(Boolean).join(" ");
-    })
-    .join("\n");
+  void startOfToday; void endOfToday;
+  const schedCtx = await fetchScheduleContext(supabase, u.user.id, tz, 1);
 
   const userMsg = [
     `NOW: ${localNowStr(now, tz)}`,
     `USER_TIMEZONE: ${tz}`,
-    `WORKING_HORIZON: today (~12 hours)`,
-    eventBlock
-      ? `CALENDAR EVENTS TODAY (${(events ?? []).length}):\n${eventBlock}`
-      : `CALENDAR EVENTS TODAY: (none)`,
-    `TASKS (${tasks.length}):`,
+    `WORKING_HORIZON: today`,
+    "",
+    renderScheduleContext(schedCtx),
+    "",
+    `TASKS TO PLAN (${tasks.length} total, ${flexibleTasks.length} flexible, ${lockedTasks.length} time-locked):`,
     taskBlock,
   ].join("\n");
 

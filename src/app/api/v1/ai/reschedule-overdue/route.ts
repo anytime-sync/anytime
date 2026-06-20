@@ -6,12 +6,15 @@ import { logAiCall } from "@/lib/ai-rate-limit";
 import { MODELS } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
-import { safeTimezone, normalizeToMorning } from "@/lib/ai/tz";
+import { safeTimezone } from "@/lib/ai/tz";
+import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
 
 const ResSchema = z.object({
   items: z.array(z.object({
     id: z.string(),
-    new_due_at: z.string(),
+    start_at: z.string().nullable().optional(),
+    due_at: z.string().nullable().optional(),
+    new_due_at: z.string().optional(), // legacy fallback
     reason: z.string(),
   })),
 });
@@ -46,34 +49,44 @@ export async function POST(req: NextRequest) {
     return jsonOk({ items: [], message: "No overdue tasks." });
   }
 
+  // Fetch schedule context for real slot-finding
+  const schedCtx = await fetchScheduleContext(ctx.supabase, ctx.userId, tz, 14);
+
   const block = overdue.map((t: any) => {
     const daysOverdue = Math.floor((now.getTime() - new Date(t.due_at!).getTime()) / 86400_000);
     return `[${t.id}] ${t.title} · p${t.priority} · ${daysOverdue}d overdue · was due ${t.due_at}`;
   }).join("\n");
 
-  const systemPrompt = `You reschedule overdue tasks. Given tasks that are past due, suggest realistic new due dates.
+  const systemPrompt = `You reschedule overdue tasks by finding real available time slots in the user's calendar.
+Output JSON: { "items": [{ "id": "<task_id>", "start_at": "<ISO 8601>", "due_at": "<ISO 8601>", "reason": "<brief>" }] }
 Rules:
-- Spread tasks across the next 7 days — don't pile everything on tomorrow
-- Higher priority = sooner. Lower priority = can wait.
-- Consider how overdue it is — very overdue items should be done soon or might need to be dropped
-- Return JSON: { "items": [{ "id": "<task_id>", "new_due_at": "<ISO date>", "reason": "<brief reason>" }] }
-- Use ISO 8601 dates with timezone`;
+- Use the SCHEDULE to find free slots — never overlap a busy block.
+- Respect WORKING_HOURS. Place deep tasks in ENERGY_PEAK, admin in afternoon.
+- Start times on :00 or :30 boundaries. Duration = DEFAULT_DURATION unless task title implies longer.
+- Spread across days. Higher priority = sooner.
+- Use correct UTC offset for USER_TIMEZONE in all timestamps.`;
 
   try {
     const res = await ctx.anthropic!.messages.create({
       model: MODELS.fast,
       max_tokens: 1000,
       system: systemPrompt,
-      messages: [{ role: "user", content: `NOW: ${nowLocal} (${tz})\nUSER_TIMEZONE: ${tz}\nOVERDUE TASKS (${overdue.length}):\n${block}` }],
+      messages: [{ role: "user", content: [
+        `NOW: ${nowLocal} (${tz})`,
+        `USER_TIMEZONE: ${tz}`,
+        "",
+        renderScheduleContext(schedCtx),
+        "",
+        `OVERDUE TASKS (${overdue.length}):`,
+        block,
+      ].join("\n") }],
     });
     const content = res.content.map((c: any) => (c.type === "text" ? c.text : "")).join("");
     const json = extractJson(content);
     const out = ResSchema.parse(json);
 
     const known = new Set(overdue.map((t: any) => t.id));
-    out.items = out.items
-      .filter((it) => known.has(it.id))
-      .map((it) => ({ ...it, new_due_at: normalizeToMorning(it.new_due_at, tz) ?? it.new_due_at }));
+    out.items = out.items.filter((it) => known.has(it.id));
 
     await logAiCall(ctx.userId, "reschedule_task", { model: res.model, status: 200 });
     return jsonOk(out);

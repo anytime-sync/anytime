@@ -7,6 +7,7 @@ import { planWeekSystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
 import { safeTimezone, localNowStr } from "@/lib/ai/tz";
+import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
 
 export const runtime = "nodejs";
 
@@ -108,48 +109,18 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
-  // Round F v4.5: fetch the next 7 days of Google Calendar events so the
-  // weekly plan accounts for real meetings + travel + offsites, not just
-  // tasks. Skips past meetings.
+  // Fetch full schedule context for next 7 days
   const now = new Date();
-  const horizonEnd = new Date(now);
-  horizonEnd.setDate(horizonEnd.getDate() + 7);
-  const { data: events } = await supabase
-    .from("calendar_events")
-    .select("title,start_at,end_at,is_all_day,location,attendees_count")
-    .eq("cancelled", false)
-    .gte("start_at", now.toISOString())
-    .lt("start_at", horizonEnd.toISOString())
-    .order("start_at", { ascending: true })
-    .limit(60);
-
-  const eventBlock = (events ?? [])
-    .map((e) => {
-      const day = e.start_at ? new Date(e.start_at).toISOString().slice(0, 10) : "";
-      const time = e.is_all_day
-        ? "all-day"
-        : e.start_at && e.end_at
-        ? `${new Date(e.start_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}-${new Date(e.end_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}`
-        : "";
-      const parts = [
-        day,
-        e.title || "(untitled)",
-        time && `· ${time}`,
-        e.location && `· @${e.location}`,
-        e.attendees_count ? `· ${e.attendees_count} attendees` : "",
-      ];
-      return parts.filter(Boolean).join(" ");
-    })
-    .join("\n");
+  const schedCtx = await fetchScheduleContext(supabase, u.user.id, tz, 7);
 
   const userMsg = [
     `NOW: ${localNowStr(now, tz)}`,
     `USER_TIMEZONE: ${tz}`,
-    `WEEK_HORIZON: 7 days from now`,
-    eventBlock
-      ? `CALENDAR EVENTS THIS WEEK (${(events ?? []).length}):\n${eventBlock}`
-      : `CALENDAR EVENTS THIS WEEK: (none)`,
-    `TASKS (${tasks.length}):`,
+    `WEEK_HORIZON: 7 days`,
+    "",
+    renderScheduleContext(schedCtx),
+    "",
+    `TASKS TO PLAN (${tasks.length} total, ${flexibleTasks.length} flexible, ${lockedTasks.length} time-locked):`,
     taskBlock,
   ].join("\n");
 

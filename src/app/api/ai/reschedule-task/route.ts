@@ -8,7 +8,8 @@ import { extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
-import { safeTimezone, normalizeToMorning } from "@/lib/ai/tz";
+import { safeTimezone } from "@/lib/ai/tz";
+import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
 
 const ReqSchema = z.object({
   tz: z.string().optional(),
@@ -18,13 +19,15 @@ const ReqSchema = z.object({
     due_at: z.string().nullable(),
     priority: z.number().int().min(0).max(5),
     days_overdue: z.number().int().min(0),
+    estimated_minutes: z.number().nullable().optional(),
   })).min(1).max(40),
 });
 
 const ResSchema = z.object({
   suggestions: z.array(z.object({
     id: z.string(),
-    new_due_at: z.string().nullable(),
+    start_at: z.string().nullable(),
+    due_at: z.string().nullable(),
     verdict: z.enum(["reschedule", "defer-far", "drop"]),
     reason: z.string(),
   })),
@@ -58,20 +61,32 @@ export async function POST(req: Request) {
   const { tasks, tz: rawTz } = parsed.data;
   const tz = safeTimezone(rawTz);
 
+  // Fetch schedule context: calendar events + blocked tasks for next 14 days
+  const schedCtx = await fetchScheduleContext(supabase, u.user.id, tz, 14);
+
   const { data: prefs } = await supabase
     .from("user_preferences")
     .select("language")
     .eq("user_id", u.user.id)
     .maybeSingle();
-  const language = (prefs?.language ?? "en") as LanguageCode;
+  const language2 = (prefs?.language ?? "en") as LanguageCode;
 
   const taskBlock = tasks
-    .map((t) => `[${t.id}] ${t.title} · was due ${t.due_at ?? "n/a"} · ${t.days_overdue}d overdue · p${t.priority}`)
+    .map((t) => [
+      `[${t.id}] ${t.title}`,
+      `· was due ${t.due_at ?? "n/a"}`,
+      `· ${t.days_overdue}d overdue`,
+      `· p${t.priority}`,
+      t.estimated_minutes ? `· ~${t.estimated_minutes}min` : "",
+    ].filter(Boolean).join(" "))
     .join("\n");
 
   const userMsg = [
     `NOW: ${new Date().toLocaleString("sv-SE", { timeZone: tz }).replace(" ", "T")} (${tz})`,
     `USER_TIMEZONE: ${tz}`,
+    "",
+    renderScheduleContext(schedCtx),
+    "",
     `OVERDUE TASKS (${tasks.length}):`,
     taskBlock,
   ].join("\n");
@@ -80,7 +95,7 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODELS.fast,
       max_tokens: 1500,
-      system: rescheduleTaskSystem(language),
+      system: rescheduleTaskSystem(language2),
       messages: [{ role: "user", content: userMsg }],
     });
     const content = res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
@@ -88,9 +103,7 @@ export async function POST(req: Request) {
     const out = ResSchema.parse(json);
 
     const known = new Set(tasks.map((t) => t.id));
-    out.suggestions = out.suggestions
-      .filter((s) => known.has(s.id))
-      .map((s) => ({ ...s, new_due_at: normalizeToMorning(s.new_due_at, tz) }));
+    out.suggestions = out.suggestions.filter((s) => known.has(s.id));
 
     await logAiCall(u.user.id, "reschedule_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);

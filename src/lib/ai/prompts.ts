@@ -379,28 +379,39 @@ If the title is too vague to estimate, pick 30 and confidence: "low".`;
 
 export function rescheduleTaskSystem(language: LanguageCode = "en"): string {
   const lang = getLanguage(language);
-  return `You reschedule one or more overdue tasks to realistic future dates. Output JSON only.
+  return `You reschedule overdue tasks by finding real available time slots in the user's calendar. Output JSON only.
 
-Schema:
+You will receive:
+- NOW + USER_TIMEZONE
+- WORKING_HOURS, ENERGY_PEAK, DEFAULT_DURATION
+- SCHEDULE: per-day busy blocks (calendar events + already-blocked tasks) and free minutes
+- OVERDUE TASKS with priority and days overdue
+
+Output schema:
 {
   "suggestions": [
     {
       "id": string,
-      "new_due_at": string | null,    // ISO 8601 in user TZ; null = drop the date entirely (becomes undated)
-      "verdict": "reschedule"|"defer-far"|"drop",
-      "reason": string                // <= 14 words in ${lang.aiName}
+      "start_at": string | null,   // ISO 8601 with correct UTC offset for USER_TIMEZONE; null = drop
+      "due_at": string | null,     // start_at + task duration (estimated_minutes or DEFAULT_DURATION)
+      "verdict": "reschedule" | "defer-far" | "drop",
+      "reason": string             // <= 14 words in ${lang.aiName}
     }
   ]
 }
 
-Decision rules:
-- Days_overdue < 7  AND task feels still relevant → reschedule to within 1-3 days.
-- Days_overdue 7-30 AND not high priority → defer-far: 14-30 days out, with a calm "revisit when fresher" reason.
-- Days_overdue > 30 OR title is vague-aspirational ("learn Spanish") → suggest drop (new_due_at null) with verdict "drop".
-- High-priority items (priority >= 3) NEVER drop — only reschedule.
-- Distribute across days; don't pile everything on tomorrow.
-- Reasons in ${lang.aiName}, terse, no scolding.
-- Time: ALWAYS use 09:00:00 in the USER_TIMEZONE provided (never midnight, never 23:59). Emit the correct UTC offset for that timezone, e.g. "2026-06-21T09:00:00+09:00" for Tokyo, "2026-06-21T09:00:00-05:00" for Chicago.`;
+Slot selection rules:
+- Find a FREE slot that does NOT overlap any busy block on that day.
+- Respect working hours — never schedule outside WORKING_HOURS.
+- Deep/strategic tasks → place in ENERGY_PEAK hours (morning). Admin/quick tasks → afternoon.
+- Start times must be on the :00 or :30 boundary (e.g. 09:00, 09:30, 10:00).
+- If a day has insufficient free time, move to the next available day.
+- Spread tasks — don't pile everything on the same day or same slot.
+- Days_overdue < 7 AND relevant → within 1-3 days.
+- Days_overdue 7-30 AND low priority → defer-far 14-30 days out.
+- Days_overdue > 30 OR vague-aspirational → drop (start_at: null, due_at: null).
+- High-priority (priority >= 3) NEVER drop.
+- Reasons in ${lang.aiName}, terse, no scolding.`;
 }
 
 export function findTimeSystem(language: LanguageCode = "en"): string {

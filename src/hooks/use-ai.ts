@@ -357,11 +357,17 @@ export type RescheduleInput = {
     due_at: string | null;
     priority: number;
     days_overdue: number;
+    estimated_minutes?: number | null;
   }>;
 };
 export type RescheduleSuggestion = {
   id: string;
-  new_due_at: string | null;
+  /** New slot start (replaces new_due_at; AI picks a real free slot). */
+  start_at: string | null;
+  /** New slot end = start + task duration. */
+  due_at: string | null;
+  /** Legacy field — kept for backward compat; prefer start_at/due_at. */
+  new_due_at?: string | null;
   verdict: "reschedule" | "defer-far" | "drop";
   reason: string;
 };
