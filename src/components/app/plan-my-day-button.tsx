@@ -211,52 +211,61 @@ export function PlanMyDayButton() {
 
             {results && results.length > 0 && (() => {
               // ------------------------------------------------------------------
-              // Conflict detection: find which suggestions land on an already-
-              // occupied time slot (either collide with each other or with an
-              // existing task that is NOT being re-scheduled by this session).
-              // We only need to check Q1/Q3 — Q2/Q4 clear the date (no slot).
+              // Conflict detection — true range overlap in ms, not string-key.
+              // Stored timestamps are UTC; we must compare ms values, not format
+              // to local HH:MM strings (that would be off by the UTC+8 offset).
+              //
+              // A suggestion is "conflicting" when its target [start,end] range
+              // overlaps with:
+              //   (a) another suggestion's target range (same quadrant = same
+              //       slot; Q1 and Q3 both go to today 09:00-09:30, so any two
+              //       timed suggestions always collide), OR
+              //   (b) an existing task's [start_at, due_at] that is NOT itself
+              //       in the suggestion set.
+              // Q2/Q4 have null slots so they never conflict.
               // ------------------------------------------------------------------
               const suggestedIds = new Set(results.map((r) => r.id));
 
-              // Slot key: "YYYY-MM-DD|HH:MM" in local time.
-              const slotKey = (iso: string | null): string | null => {
-                if (!iso) return null;
-                const d = new Date(iso);
-                const ymd = format(d, "yyyy-MM-dd");
-                const hm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-                return `${ymd}|${hm}`;
+              // [startMs, endMs] for a task or suggestion target; null = no slot.
+              const rangeOf = (startIso: string | null, endIso: string | null): [number, number] | null => {
+                const s = startIso ? new Date(startIso).getTime() : null;
+                const e = endIso   ? new Date(endIso).getTime()   : null;
+                if (!s || !e || isNaN(s) || isNaN(e)) return null;
+                return [Math.min(s, e), Math.max(s, e)];
               };
 
-              // Build a map: slotKey → [taskId] for EXISTING tasks (not in suggestion set)
-              const existingSlots = new Map<string, string[]>();
+              const overlaps = (a: [number, number], b: [number, number]) =>
+                a[0] < b[1] && b[0] < a[1];
+
+              // Collect ranges of existing (non-suggested, incomplete) tasks.
+              const existingRanges: [number, number][] = [];
               for (const task of allTasks) {
                 if (suggestedIds.has(task.id) || task.is_completed) continue;
-                const key = slotKey(task.start_at ?? task.due_at ?? null);
-                if (!key) continue;
-                if (!existingSlots.has(key)) existingSlots.set(key, []);
-                existingSlots.get(key)!.push(task.id);
+                const r = rangeOf(task.start_at ?? null, task.due_at ?? null);
+                if (r) existingRanges.push(r);
               }
 
-              // Identify which suggestions produce a timed slot, then find collisions.
-              // A suggestion is "conflicting" if its target slot is:
-              //   (a) shared with another suggestion in this session, OR
-              //   (b) already occupied by an existing task.
-              const suggestionSlots = new Map<string, string[]>(); // slotKey → [suggestionId]
-              for (const s of results) {
-                const target = targetForQuadrant(s.quadrant);
-                const key = slotKey(target.start_at ?? target.due_at ?? null);
-                if (!key) continue;
-                if (!suggestionSlots.has(key)) suggestionSlots.set(key, []);
-                suggestionSlots.get(key)!.push(s.id);
-              }
+              // Compute each suggestion's target range.
+              const suggestionRanges = results.map((s) => {
+                const tgt = targetForQuadrant(s.quadrant);
+                return { id: s.id, range: rangeOf(tgt.start_at, tgt.due_at) };
+              });
 
               const conflictSet = new Set<string>();
-              for (const [key, ids] of suggestionSlots) {
-                const existingCount = existingSlots.get(key)?.length ?? 0;
-                if (ids.length > 1 || existingCount > 0) {
-                  // Multiple suggestions share the slot, OR at least one
-                  // existing (non-re-scheduled) task is already there.
-                  ids.forEach((id) => conflictSet.add(id));
+              for (let i = 0; i < suggestionRanges.length; i++) {
+                const { id, range } = suggestionRanges[i];
+                if (!range) continue;
+                // (a) overlaps another suggestion?
+                for (let j = 0; j < suggestionRanges.length; j++) {
+                  if (i === j) continue;
+                  const other = suggestionRanges[j].range;
+                  if (other && overlaps(range, other)) { conflictSet.add(id); break; }
+                }
+                // (b) overlaps an existing task?
+                if (!conflictSet.has(id)) {
+                  for (const er of existingRanges) {
+                    if (overlaps(range, er)) { conflictSet.add(id); break; }
+                  }
                 }
               }
 

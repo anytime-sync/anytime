@@ -437,17 +437,22 @@ function DraggableTask({
   // disappearing. The chip label still shows the true time.
   let visStart = Math.max(0, Math.min(RAIL_MAX_MIN, startMin));
   let visEnd = Math.max(0, Math.min(RAIL_MAX_MIN, endMin));
-  if (visEnd - visStart < 15) {
+  // Enforce a minimum visible span of 30 min (≈28px) so the title is always
+  // readable. Shorter tasks are still rendered accurately via the time label.
+  if (visEnd - visStart < 30) {
     if (visStart >= RAIL_MAX_MIN) {
-      visStart = RAIL_MAX_MIN - 15;
+      visStart = RAIL_MAX_MIN - 30;
       visEnd = RAIL_MAX_MIN;
     } else {
-      visEnd = Math.min(RAIL_MAX_MIN, visStart + 15);
+      visEnd = Math.min(RAIL_MAX_MIN, visStart + 30);
     }
   }
 
   const top = visStart * PX_PER_MIN;
-  const height = Math.max(24, (visEnd - visStart) * PX_PER_MIN - 2);
+  // Minimum 28px (~30 min equivalent) so the title is always readable.
+  const height = Math.max(28, (visEnd - visStart) * PX_PER_MIN - 2);
+  // Show the time label only when there's enough room for both lines.
+  const showTimeLabel = height >= 36;
   const tone = priorityColorClass(task.priority);
 
   const gap = cols > 1 ? 2 : 0;
@@ -483,20 +488,23 @@ function DraggableTask({
         task.is_completed && "opacity-60"
       )}
     >
-      <span
-        className={cn(
-          "inline-flex items-center gap-1 text-[9px] uppercase tracking-wider tabular-nums",
-          tone
-        )}
-      >
-        <Clock className="size-2.5" />
-        {format(start, "h:mm")}
-      </span>
+      {showTimeLabel && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 text-[9px] uppercase tracking-wider tabular-nums shrink-0",
+            tone
+          )}
+        >
+          <Clock className="size-2.5" />
+          {format(start, "h:mm")}
+        </span>
+      )}
       <span
         className={cn(
           "text-xs font-medium leading-snug truncate",
           task.is_completed && "line-through"
         )}
+        title={task.title}
       >
         {task.title}
       </span>
