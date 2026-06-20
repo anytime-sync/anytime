@@ -123,10 +123,13 @@ interface TaskRow {
 async function getTodayTasks(userId: string): Promise<TaskRow[]> {
   const sb = getSupabase();
   const now = new Date();
-  const startOfDay = new Date(now);
-  startOfDay.setUTCHours(0, 0, 0, 0);
-  const endOfDay = new Date(now);
-  endOfDay.setUTCHours(23, 59, 59, 999);
+  // Use the user's local day (Asia/Taipei = UTC+8) not UTC midnight,
+  // otherwise "today" is an 8-hour-shifted UTC window.
+  const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // Taipei UTC+8
+  const localNow = new Date(now.getTime() + TZ_OFFSET_MS);
+  const localDay = localNow.toISOString().slice(0, 10); // YYYY-MM-DD
+  const startOfDay = new Date(`${localDay}T00:00:00+08:00`);
+  const endOfDay = new Date(`${localDay}T23:59:59+08:00`);
 
   const { data } = await sb
     .from("tasks")

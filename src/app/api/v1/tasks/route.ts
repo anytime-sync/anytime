@@ -143,15 +143,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Enforce start <= end invariant: if both dates are set and start > end,
-  // clamp end to start so we never persist an impossible range.
   let sanitizedStartAt = body.start_at ?? null;
   let sanitizedDueAt = body.due_at ?? null;
+  const MIN_DURATION_MS = 30 * 60 * 1000;
+  const isMidnight = (iso: string) => /T00:00:00/.test(iso);
+
+  // Rule 1: timed due_at with no start_at — set start_at = due_at - 30min.
+  // A task with only due_at has no timeline slot and won’t show correctly.
+  if (sanitizedDueAt && !sanitizedStartAt && !isMidnight(sanitizedDueAt)) {
+    sanitizedStartAt = new Date(new Date(sanitizedDueAt).getTime() - MIN_DURATION_MS).toISOString();
+  }
+
+  // Rule 2: timed start_at with no due_at — set due_at = start_at + 30min.
+  if (sanitizedStartAt && !sanitizedDueAt && !isMidnight(sanitizedStartAt)) {
+    sanitizedDueAt = new Date(new Date(sanitizedStartAt).getTime() + MIN_DURATION_MS).toISOString();
+  }
+
+  // Rule 3: start > end — set due_at = start_at + 30min (never zero-duration).
   if (sanitizedStartAt && sanitizedDueAt) {
     const s = new Date(sanitizedStartAt).getTime();
     const e = new Date(sanitizedDueAt).getTime();
-    if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
-      sanitizedDueAt = sanitizedStartAt;
+    if (!Number.isNaN(s) && !Number.isNaN(e) && s >= e) {
+      sanitizedDueAt = new Date(s + MIN_DURATION_MS).toISOString();
     }
   }
 

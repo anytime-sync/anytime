@@ -115,6 +115,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   // patch (or one is being updated against the existing task), clamp
   // so start never exceeds end.
   if ("start_at" in patch || "due_at" in patch) {
+    const MIN_DURATION_MS = 30 * 60 * 1000;
+    const isMidnight = (iso: unknown) => typeof iso === "string" && /T00:00:00/.test(iso);
     // We need the current row to resolve partial updates.
     const { data: current } = await ctx.supabase
       .from("tasks")
@@ -122,17 +124,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .eq("id", params.id)
       .maybeSingle();
     const effectiveStart = "start_at" in patch ? patch.start_at : current?.start_at;
-    const effectiveEnd = "due_at" in patch ? patch.due_at : current?.due_at;
+    const effectiveEnd   = "due_at"   in patch ? patch.due_at   : current?.due_at;
+
+    // Rule 1: timed due_at set, no start_at — derive start_at = due_at - 30min.
+    if ("due_at" in patch && patch.due_at && !isMidnight(patch.due_at) &&
+        !("start_at" in patch) && !current?.start_at) {
+      patch.start_at = new Date(new Date(patch.due_at as string).getTime() - MIN_DURATION_MS).toISOString();
+    }
+    // Rule 2: timed start_at set, no due_at — derive due_at = start_at + 30min.
+    if ("start_at" in patch && patch.start_at && !isMidnight(patch.start_at) &&
+        !("due_at" in patch) && !current?.due_at) {
+      patch.due_at = new Date(new Date(patch.start_at as string).getTime() + MIN_DURATION_MS).toISOString();
+    }
+    // Rule 3: inversion or zero-duration — extend due_at = start + 30min.
     if (effectiveStart && effectiveEnd) {
       const s = new Date(effectiveStart as string).getTime();
-      const e = new Date(effectiveEnd as string).getTime();
-      if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
-        // Whichever field the caller is changing gets clamped to the other.
-        if ("start_at" in patch && !("due_at" in patch)) {
-          patch.due_at = patch.start_at;
-        } else {
-          patch.due_at = patch.start_at ?? effectiveStart;
-        }
+      const e = new Date(effectiveEnd   as string).getTime();
+      if (!Number.isNaN(s) && !Number.isNaN(e) && s >= e) {
+        patch.due_at = new Date(s + MIN_DURATION_MS).toISOString();
       }
     }
   }

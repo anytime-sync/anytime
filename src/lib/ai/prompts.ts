@@ -96,7 +96,7 @@ Output JSON only. No prose. Schema:
 Time-range rules:
 - "10-11am" / "10am-11am" / "10:00-11:00" / "from 9 to 10" / "between 2 and 3pm"
   → start_at = the start side, due_at = the end side, is_all_day = false.
-- A single time ("at 9am", "tomorrow 9am") → start_at = null, due_at = that time.
+- A single time ("at 9am", "tomorrow 9am") → start_at = that time, due_at = that time + 30min, is_all_day = false.
 - An all-day date ("tomorrow") → start_at = null, due_at = midnight of that day, is_all_day = true.
 
 The user may type in any of: English, Traditional Chinese, Simplified
@@ -330,8 +330,8 @@ Rules:
   underlined, marked "!", "!!", "URGENT", "ASAP", "急", "緊急", "急ぎ", "급해".
   Importance cues ("important", "重要", boxed) → priority 3.
   Soft / "if I get to it" notes → priority 1. Otherwise 0.
-- Time ranges → start_at + due_at. Single time → due_at only, is_all_day=false.
-  Date only → due_at = midnight of that day, is_all_day=true.
+- Time ranges → start_at + due_at. Single time → start_at = that time, due_at = time + 30min, is_all_day=false.
+  Date only → start_at = null, due_at = midnight of that day, is_all_day=true.
 - Recognise inline tags (#focus, #shopping, "for work") → tagNames.
 - Recognise list / project markers (~Errands, "Errands:", a header above the
   bullets) → projectName, applied to the items beneath that header until a new

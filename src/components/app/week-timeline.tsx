@@ -188,15 +188,13 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     )
       return;
 
-    if (task.start_at) {
-      update.mutate({
-        id: task.id,
-        start_at: newStart.toISOString(),
-        due_at: newDue.toISOString(),
-      });
-    } else {
-      update.mutate({ id: task.id, due_at: newDue.toISOString() });
-    }
+    // Always write both start_at and due_at on drag — a task with only
+    // due_at has no timeline slot and won't show correctly on the calendar.
+    update.mutate({
+      id: task.id,
+      start_at: newStart.toISOString(),
+      due_at: newDue.toISOString(),
+    });
   }
 
   return (

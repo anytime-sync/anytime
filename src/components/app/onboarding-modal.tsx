@@ -84,8 +84,10 @@ export function OnboardingModal() {
       for (const title of cleaned) {
         await createTask.mutateAsync({
           title,
-          // Default to today so they land on this exact page.
-          due_at: new Date().toISOString(),
+          // Default to 09:00 today — never right-now timestamp which
+          // would immediately show as "overdue" and breaks the timeline.
+          due_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })(),
+          start_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })(),
         });
       }
       toast.success(

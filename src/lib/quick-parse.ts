@@ -288,7 +288,11 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
         start_at = merged.toISOString();
         due_at = mergedEnd.toISOString();
       } else {
-        due_at = merged.toISOString();
+        // Single time — set start_at = that time, due_at = +30min.
+        // A task with only due_at has no timeline slot.
+        start_at = merged.toISOString();
+        const mergedEnd30 = new Date(merged.getTime() + 30 * 60_000);
+        due_at = mergedEnd30.toISOString();
       }
       is_all_day = false;
       const spans = [dateRes, timeRes].sort((a, b) => b.index - a.index);
@@ -305,7 +309,12 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
         if (r.end) {
           start_at = startC.date().toISOString();
           due_at = r.end.date().toISOString();
+        } else if (!is_all_day) {
+          // Single timed expression — start_at = parsed time, due_at = +30min.
+          start_at = startC.date().toISOString();
+          due_at = new Date(startC.date().getTime() + 30 * 60_000).toISOString();
         } else {
+          // All-day: due_at = midnight, no start_at.
           due_at = startC.date().toISOString();
         }
         s = (s.slice(0, r.index) + s.slice(r.index + r.text.length)).replace(/\s+/g, " ").trim();
