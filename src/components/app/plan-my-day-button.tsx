@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isPast, endOfDay, isSameMinute } from "date-fns";
+import { format, isToday, isPast, endOfDay } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
@@ -71,25 +71,41 @@ export function PlanMyDayButton() {
     }
   }
 
-  function fmtSlot(iso: string | null | undefined): string {
+  function fmtDate(iso: string | null | undefined): string {
     if (!iso) return "unscheduled";
     const d = new Date(iso);
-    const isThisYear = d.getFullYear() === new Date().getFullYear();
-    return format(d, isThisYear ? "MMM d, h:mm a" : "MMM d yyyy, h:mm a");
+    // Show date only (no time) — the time is always 09:00 so it adds no info
+    const today = new Date();
+    const isToday2 = d.toDateString() === today.toDateString();
+    if (isToday2) return "Today";
+    const isThisYear = d.getFullYear() === today.getFullYear();
+    return format(d, isThisYear ? "EEE MMM d" : "EEE MMM d yyyy");
   }
 
   function slotChip(task: { start_at?: string | null; due_at?: string | null }, q: 1 | 2 | 3 | 4) {
     const target = targetForQuadrant(q);
-    const currentSlot = task.start_at ?? task.due_at ?? null;
-    const newSlot = target.start_at ?? target.due_at ?? null;
-    // Skip chip when nothing changes or when both are null
-    if (!currentSlot && !newSlot) return null;
-    if (currentSlot && newSlot && isSameMinute(new Date(currentSlot), new Date(newSlot))) return null;
+    // Use whichever slot field is set; prefer start_at
+    const currentDate = task.start_at ?? task.due_at ?? null;
+    const newDate = target.start_at ?? target.due_at ?? null;
+
+    // No chip when both are null (undated → undated)
+    if (!currentDate && !newDate) return null;
+
+    // No chip when moving to same local date
+    // Compare YYYY-MM-DD local strings to ignore time-of-day differences
+    const currentDay = currentDate ? format(new Date(currentDate), "yyyy-MM-dd") : null;
+    const newDay = newDate ? format(new Date(newDate), "yyyy-MM-dd") : null;
+    if (currentDay === newDay) return null;
+
+    // Show from → to only when date actually changes
+    const fromLabel = fmtDate(currentDate);
+    const toLabel = fmtDate(newDate);
+
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[11px] leading-none text-blue-700 dark:text-blue-300">
-        <span className={currentSlot ? "line-through opacity-60" : "opacity-60"}>{fmtSlot(currentSlot)}</span>
-        <span className="opacity-60">→</span>
-        <span className="font-medium">{fmtSlot(newSlot)}</span>
+        {currentDate && <span className="line-through opacity-60">{fromLabel}</span>}
+        {currentDate && <span className="opacity-50">→</span>}
+        <span className="font-medium">{toLabel}</span>
       </span>
     );
   }
@@ -198,16 +214,25 @@ export function PlanMyDayButton() {
                   const t = allTasks.find((x) => x.id === s.id);
                   if (!t) return null;
                 const isUrgent = !!t.due_at && (() => { const d = new Date(t.due_at); return isPast(d) || isToday(d); })();
+                const isOverdue = !!t.due_at && isPast(new Date(t.due_at)) && !isToday(new Date(t.due_at));
                 const isImportant = (t.priority ?? 0) >= 3;
                 const currentQ = isUrgent && isImportant ? 1 : !isUrgent && isImportant ? 2 : isUrgent && !isImportant ? 3 : 4;
                   return (
                     <li
                       key={s.id}
-                      className="border border-border rounded-md p-3 flex items-start gap-3"
+                      className={cn(
+                        "border rounded-md p-3 flex items-start gap-3",
+                        isOverdue
+                          ? "border-red-400/60 bg-red-500/5 dark:border-red-500/40 dark:bg-red-500/5"
+                          : "border-border"
+                      )}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {t.title}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{t.title}</span>
+                          {isOverdue && (
+                            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-red-500 dark:text-red-400">overdue</span>
+                          )}
                         </div>
                         <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-1.5">
