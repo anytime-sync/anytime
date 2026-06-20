@@ -8,20 +8,10 @@ import { extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
-
-/** Normalize an AI-returned due_at to 09:00 on the same calendar date.
- * Prevents midnight/23:59 times from creating cross-day start→end blocks. */
-function normalizeToMorning(isoStr: string | null): string | null {
-  if (!isoStr) return null;
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  // Extract date parts in UTC, then set to 09:00 UTC
-  // (server is UTC; client will display in local TZ)
-  d.setUTCHours(1, 0, 0, 0); // 01:00 UTC ≈ 09:00 UTC+8 (Taipei)
-  return d.toISOString();
-}
+import { safeTimezone, normalizeToMorning } from "@/lib/ai/tz";
 
 const ReqSchema = z.object({
+  tz: z.string().optional(),
   tasks: z.array(z.object({
     id: z.string(),
     title: z.string(),
@@ -65,7 +55,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "bad_request", detail: parsed.error.message }, { status: 400 });
   }
-  const { tasks } = parsed.data;
+  const { tasks, tz: rawTz } = parsed.data;
+  const tz = safeTimezone(rawTz);
 
   const { data: prefs } = await supabase
     .from("user_preferences")
@@ -79,7 +70,8 @@ export async function POST(req: Request) {
     .join("\n");
 
   const userMsg = [
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${new Date().toLocaleString("sv-SE", { timeZone: tz }).replace(" ", "T")} (${tz})`,
+    `USER_TIMEZONE: ${tz}`,
     `OVERDUE TASKS (${tasks.length}):`,
     taskBlock,
   ].join("\n");
@@ -98,7 +90,7 @@ export async function POST(req: Request) {
     const known = new Set(tasks.map((t) => t.id));
     out.suggestions = out.suggestions
       .filter((s) => known.has(s.id))
-      .map((s) => ({ ...s, new_due_at: normalizeToMorning(s.new_due_at) }));
+      .map((s) => ({ ...s, new_due_at: normalizeToMorning(s.new_due_at, tz) }));
 
     await logAiCall(u.user.id, "reschedule_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);

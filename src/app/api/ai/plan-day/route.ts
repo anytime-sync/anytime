@@ -6,6 +6,7 @@ import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { planDaySystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
 import type { LanguageCode } from "@/lib/i18n";
+import { safeTimezone, localDayBounds, localNowStr } from "@/lib/ai/tz";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,7 @@ export const runtime = "nodejs";
  */
 
 const PlanDayRequestSchema = z.object({
+  tz: z.string().optional(),
   tasks: z
     .array(
       z.object({
@@ -66,7 +68,8 @@ export async function POST(req: Request) {
   if (!parsedReq.success) {
     return NextResponse.json({ error: "bad_request", detail: parsedReq.error.message }, { status: 400 });
   }
-  const { tasks } = parsedReq.data;
+  const { tasks, tz: rawTz } = parsedReq.data;
+  const tz = safeTimezone(rawTz);
 
   // Skip time-locked tasks entirely — meetings, calendar events, anniversaries
   // and anything carrying a clock time in the title. Plan-my-Day suggests an order
@@ -103,9 +106,7 @@ export async function POST(req: Request) {
   // plan accounts for real meetings, not just tasks. Past meetings are
   // skipped so we only show what's still ahead today.
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(startOfToday);
-  endOfToday.setDate(endOfToday.getDate() + 1);
+  const { start: startOfToday, end: endOfToday } = localDayBounds(now, tz);
   const { data: events } = await supabase
     .from("calendar_events")
     .select("title,start_at,end_at,is_all_day,location,attendees_count")
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
       const time = e.is_all_day
         ? "all-day"
         : e.start_at && e.end_at
-        ? `${new Date(e.start_at).toISOString().slice(11, 16)}-${new Date(e.end_at).toISOString().slice(11, 16)}`
+        ? `${new Date(e.start_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}-${new Date(e.end_at).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false })}`
         : "";
       const parts = [
         e.title || "(untitled)",
@@ -133,7 +134,8 @@ export async function POST(req: Request) {
     .join("\n");
 
   const userMsg = [
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${localNowStr(now, tz)}`,
+    `USER_TIMEZONE: ${tz}`,
     `WORKING_HORIZON: today (~12 hours)`,
     eventBlock
       ? `CALENDAR EVENTS TODAY (${(events ?? []).length}):\n${eventBlock}`

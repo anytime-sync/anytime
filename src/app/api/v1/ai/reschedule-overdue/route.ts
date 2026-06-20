@@ -6,15 +6,7 @@ import { logAiCall } from "@/lib/ai-rate-limit";
 import { MODELS } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
-
-/** Normalize AI-returned due_at to 09:00 Taipei (01:00 UTC). */
-function normalizeToMorning(isoStr: string | null): string | null {
-  if (!isoStr) return null;
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  d.setUTCHours(1, 0, 0, 0);
-  return d.toISOString();
-}
+import { safeTimezone, normalizeToMorning } from "@/lib/ai/tz";
 
 const ResSchema = z.object({
   items: z.array(z.object({
@@ -30,11 +22,16 @@ const ResSchema = z.object({
  * Returns: { items: [{ id, new_due_at, reason }] }
  */
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+  let bodyJson: Record<string, unknown> = {};
+  try { bodyJson = JSON.parse(rawBody); } catch { /* ok */ }
+  const tz = safeTimezone(bodyJson.tz);
   const resolved = await resolveAiContext(req, "reschedule_task");
   if (!resolved.ok) return resolved.response;
   const { ctx } = resolved;
 
   const now = new Date();
+  const nowLocal = now.toLocaleString("sv-SE", { timeZone: tz }).replace(" ", "T");
   const { data: overdue } = await ctx.supabase
     .from("tasks")
     .select("id, title, priority, due_at, created_at")
@@ -67,7 +64,7 @@ Rules:
       model: MODELS.fast,
       max_tokens: 1000,
       system: systemPrompt,
-      messages: [{ role: "user", content: `NOW: ${now.toISOString()}\nOVERDUE TASKS (${overdue.length}):\n${block}` }],
+      messages: [{ role: "user", content: `NOW: ${nowLocal} (${tz})\nUSER_TIMEZONE: ${tz}\nOVERDUE TASKS (${overdue.length}):\n${block}` }],
     });
     const content = res.content.map((c: any) => (c.type === "text" ? c.text : "")).join("");
     const json = extractJson(content);
@@ -76,7 +73,7 @@ Rules:
     const known = new Set(overdue.map((t: any) => t.id));
     out.items = out.items
       .filter((it) => known.has(it.id))
-      .map((it) => ({ ...it, new_due_at: normalizeToMorning(it.new_due_at) }));
+      .map((it) => ({ ...it, new_due_at: normalizeToMorning(it.new_due_at, tz) ?? it.new_due_at }));
 
     await logAiCall(ctx.userId, "reschedule_task", { model: res.model, status: 200 });
     return jsonOk(out);

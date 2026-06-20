@@ -400,7 +400,7 @@ Decision rules:
 - High-priority items (priority >= 3) NEVER drop — only reschedule.
 - Distribute across days; don't pile everything on tomorrow.
 - Reasons in ${lang.aiName}, terse, no scolding.
-- Time: ALWAYS use 09:00:00 local time (never midnight, never 23:59). Example: "2026-06-21T09:00:00+08:00".`;
+- Time: ALWAYS use 09:00:00 in the USER_TIMEZONE provided (never midnight, never 23:59). Emit the correct UTC offset for that timezone, e.g. "2026-06-21T09:00:00+09:00" for Tokyo, "2026-06-21T09:00:00-05:00" for Chicago.`;
 }
 
 export function findTimeSystem(language: LanguageCode = "en"): string {
