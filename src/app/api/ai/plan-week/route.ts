@@ -109,22 +109,29 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
-  // Fetch full schedule context for next 7 days
   const now = new Date();
-  const schedCtx = await fetchScheduleContext(supabase, u.user.id, tz, 7);
-
-  const userMsg = [
-    `NOW: ${localNowStr(now, tz)}`,
-    `USER_TIMEZONE: ${tz}`,
-    `WEEK_HORIZON: 7 days`,
-    "",
-    renderScheduleContext(schedCtx),
-    "",
-    `TASKS TO PLAN (${tasks.length} total, ${flexibleTasks.length} flexible, ${lockedTasks.length} time-locked):`,
-    taskBlock,
-  ].join("\n");
 
   try {
+    // Fetch schedule context — fail-safe (empty context on error)
+    let schedCtx;
+    try {
+      schedCtx = await fetchScheduleContext(supabase, u.user.id, tz, 7);
+    } catch (ctxErr: any) {
+      console.warn("[ai] plan-week: schedule context fetch failed, continuing without:", ctxErr?.message);
+      schedCtx = null;
+    }
+
+    const userMsg = [
+      `NOW: ${localNowStr(now, tz)}`,
+      `USER_TIMEZONE: ${tz}`,
+      `WEEK_HORIZON: 7 days`,
+      schedCtx ? "" : "",
+      schedCtx ? renderScheduleContext(schedCtx) : "SCHEDULE: unavailable",
+      "",
+      `TASKS TO PLAN (${tasks.length} total, ${flexibleTasks.length} flexible, ${lockedTasks.length} time-locked):`,
+      taskBlock,
+    ].join("\n");
+
     const res = await client.messages.create({
       model: MODELS.fast,
       max_tokens: 2000,
@@ -135,9 +142,24 @@ export async function POST(req: Request) {
       .map((c) => (c.type === "text" ? c.text : ""))
       .join("");
     const json = extractJson(content);
-    const parsed = PlanWeekResultSchema.parse(json);
 
-    const known = new Set(flexibleTasks.map((t) => t.id));
+    // Lenient parse — coerce quadrant/priority to valid values instead of throwing
+    const RawSchema = z.object({
+      suggestions: z.array(z.object({
+        id: z.string(),
+        quadrant: z.coerce.number().int().min(1).max(4).transform((v) => Math.min(4, Math.max(1, Math.round(v))) as 1|2|3|4),
+        suggested_priority: z.coerce.number().int().transform((v) => {
+          const valid = [0, 1, 3, 5];
+          return (valid.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a)) as 0|1|3|5;
+        }),
+        reason: z.string().catch("no reason provided"),
+      })).catch([]),
+      notes: z.string().optional().catch(""),
+    });
+    const parsed = RawSchema.parse(json ?? {});
+
+    // Include all tasks the AI returned (locked or flexible) — user sees everything
+    const known = new Set(tasks.map((t) => t.id));
     const filtered = parsed.suggestions.filter((s) => known.has(s.id));
 
     await logAiCall(u.user.id, "plan_week", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
