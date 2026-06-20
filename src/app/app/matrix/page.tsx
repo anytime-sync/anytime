@@ -5,7 +5,7 @@ import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
 import { usePlanWeek, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { toast } from "sonner";
-import { format, isPast, isToday, addDays } from "date-fns";
+import { format, isPast, isToday, addDays, isSameMinute } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
@@ -180,6 +180,29 @@ function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; start_at:
     case "q3": return { priority: 1, start_at: t9.toISOString(), due_at: t930.toISOString() };
     case "q4": return { priority: 0, start_at: null, due_at: null };
   }
+}
+
+function fmtSlot(iso: string | null | undefined): string {
+  if (!iso) return "unscheduled";
+  const d = new Date(iso);
+  const isThisYear = d.getFullYear() === new Date().getFullYear();
+  return format(d, isThisYear ? "MMM d, h:mm a" : "MMM d yyyy, h:mm a");
+}
+
+function SlotChip({ task, quadrant }: { task: { start_at?: string | null; due_at?: string | null }; quadrant: 1 | 2 | 3 | 4 }) {
+  const q = (`q${quadrant}`) as QuadrantKey;
+  const target = targetForQuadrant(q);
+  const currentSlot = task.start_at ?? task.due_at ?? null;
+  const newSlot = target.start_at ?? target.due_at ?? null;
+  if (!currentSlot && !newSlot) return null;
+  if (currentSlot && newSlot && isSameMinute(new Date(currentSlot), new Date(newSlot))) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[11px] leading-none text-blue-700 dark:text-blue-300">
+      <span className={currentSlot ? "line-through opacity-60" : "opacity-60"}>{fmtSlot(currentSlot)}</span>
+      <span className="opacity-60">→</span>
+      <span className="font-medium">{fmtSlot(newSlot)}</span>
+    </span>
+  );
 }
 
 const Q_LABEL: Record<number, string> = {
@@ -495,11 +518,7 @@ function PlanMyWeekButton({
                                 {P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}
                               </span>
                             )}
-                            {t.due_at && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
-                                {format(new Date(t.due_at), "MMM d, h:mm a")}
-                              </span>
-                            )}
+                            <SlotChip task={t as any} quadrant={s.quadrant} />
                             {currentQ === s.quadrant && (t.priority ?? 0) === s.suggested_priority && (
                               <span className="text-muted-fg/50 italic text-[11px]">already on target</span>
                             )}

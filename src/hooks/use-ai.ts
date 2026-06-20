@@ -131,7 +131,7 @@ export function usePlanWeek() {
       const r = await fetch("/api/ai/plan-week", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks }),
+        body: JSON.stringify({ tasks, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
       });
       if (r.status === 503) return null;
       if (!r.ok) throw new Error(`plan_week_failed ${r.status}`);

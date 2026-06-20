@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isPast, endOfDay } from "date-fns";
+import { format, isToday, isPast, endOfDay, isSameMinute } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
@@ -61,19 +61,37 @@ export function PlanMyDayButton() {
     start_at: string | null;
     due_at: string | null;
   } {
-    // Use 09:00–09:30 today instead of end-of-day (23:59 caused cross-day display bugs)
     const today9 = new Date(); today9.setHours(9, 0, 0, 0);
     const today930 = new Date(); today930.setHours(9, 30, 0, 0);
     switch (q) {
-      case 1: // Do first — schedule today 09:00
-        return { priority: 5, start_at: today9.toISOString(), due_at: today930.toISOString() };
-      case 2: // Schedule — undated, let user pick
-        return { priority: 5, start_at: null, due_at: null };
-      case 3: // Delegate — low priority, today
-        return { priority: 1, start_at: today9.toISOString(), due_at: today930.toISOString() };
-      case 4: // Eliminate — clear date
-        return { priority: 0, start_at: null, due_at: null };
+      case 1: return { priority: 5, start_at: today9.toISOString(), due_at: today930.toISOString() };
+      case 2: return { priority: 5, start_at: null, due_at: null };
+      case 3: return { priority: 1, start_at: today9.toISOString(), due_at: today930.toISOString() };
+      case 4: return { priority: 0, start_at: null, due_at: null };
     }
+  }
+
+  function fmtSlot(iso: string | null | undefined): string {
+    if (!iso) return "unscheduled";
+    const d = new Date(iso);
+    const isThisYear = d.getFullYear() === new Date().getFullYear();
+    return format(d, isThisYear ? "MMM d, h:mm a" : "MMM d yyyy, h:mm a");
+  }
+
+  function slotChip(task: { start_at?: string | null; due_at?: string | null }, q: 1 | 2 | 3 | 4) {
+    const target = targetForQuadrant(q);
+    const currentSlot = task.start_at ?? task.due_at ?? null;
+    const newSlot = target.start_at ?? target.due_at ?? null;
+    // Skip chip when nothing changes or when both are null
+    if (!currentSlot && !newSlot) return null;
+    if (currentSlot && newSlot && isSameMinute(new Date(currentSlot), new Date(newSlot))) return null;
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[11px] leading-none text-blue-700 dark:text-blue-300">
+        <span className={currentSlot ? "line-through opacity-60" : "opacity-60"}>{fmtSlot(currentSlot)}</span>
+        <span className="opacity-60">→</span>
+        <span className="font-medium">{fmtSlot(newSlot)}</span>
+      </span>
+    );
   }
 
   async function run() {
@@ -215,11 +233,7 @@ export function PlanMyDayButton() {
                                 {P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}
                               </span>
                             )}
-                            {t.due_at && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
-                                {format(new Date(t.due_at), "MMM d, h:mm a")}
-                              </span>
-                            )}
+                            {slotChip(t as any, s.quadrant)}
                             {currentQ === s.quadrant && (t.priority ?? 0) === s.suggested_priority && (
                               <span className="text-muted-fg/50 italic text-[11px]">already on target</span>
                             )}
