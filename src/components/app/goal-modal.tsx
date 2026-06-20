@@ -64,7 +64,7 @@ export function GoalModal() {
       for (const t of plan.tasks) {
         const due = addDays(new Date(), t.due_offset_days);
         // Treat all-day for clarity; user can refine after.
-        due.setHours(23, 59, 0, 0);
+        due.setHours(9, 0, 0, 0);
         await createTask.mutateAsync({
           title: t.title,
           due_at: due.toISOString(),

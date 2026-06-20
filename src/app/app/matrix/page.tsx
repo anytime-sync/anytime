@@ -5,7 +5,7 @@ import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { TaskItem } from "@/components/app/task-item";
 import { usePlanWeek, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { toast } from "sonner";
-import { format, isPast, isToday, addDays, endOfDay } from "date-fns";
+import { format, isPast, isToday, addDays } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
@@ -171,13 +171,14 @@ function useQuadrantConfig(): Record<QuadrantKey, QuadMeta> {
   return merged;
 }
 
-function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; due_at: string | null } {
-  const eod = endOfDay(new Date()).toISOString();
+function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; start_at: string | null; due_at: string | null } {
+  const t9 = new Date(); t9.setHours(9, 0, 0, 0);
+  const t930 = new Date(); t930.setHours(9, 30, 0, 0);
   switch (q) {
-    case "q1": return { priority: 5, due_at: eod };
-    case "q2": return { priority: 5, due_at: null };
-    case "q3": return { priority: 1, due_at: eod };
-    case "q4": return { priority: 0, due_at: null };
+    case "q1": return { priority: 5, start_at: t9.toISOString(), due_at: t930.toISOString() };
+    case "q2": return { priority: 5, start_at: null, due_at: null };
+    case "q3": return { priority: 1, start_at: t9.toISOString(), due_at: t930.toISOString() };
+    case "q4": return { priority: 0, start_at: null, due_at: null };
   }
 }
 
@@ -231,6 +232,7 @@ export default function MatrixPage() {
     update.mutate({
       id: t.id,
       priority: target.priority,
+      start_at: target.start_at,
       due_at: target.due_at,
       is_all_day: target.due_at ? false : t.is_all_day,
     });
@@ -246,7 +248,7 @@ export default function MatrixPage() {
         <div className="flex items-center gap-2 shrink-0">
           <PlanMyWeekButton lang={lang} tasks={tasks} onApply={(id, q, p) => {
             const target = targetForQuadrant(q);
-            update.mutate({ id, priority: p, due_at: target.due_at });
+            update.mutate({ id, priority: p, start_at: target.start_at, due_at: target.due_at });
           }} />
         </div>
       </div>

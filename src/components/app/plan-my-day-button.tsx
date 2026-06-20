@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isPast, endOfDay } from "date-fns";
+import { format, isToday, isPast } from "date-fns";
 import { useTasks, useUpdateTask, type TaskWithTags } from "@/hooks/use-tasks";
 import { usePlanDay, type PlanWeekSuggestion } from "@/hooks/use-ai";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
@@ -58,18 +58,21 @@ export function PlanMyDayButton() {
 
   function targetForQuadrant(q: 1 | 2 | 3 | 4): {
     priority: 0 | 1 | 3 | 5;
+    start_at: string | null;
     due_at: string | null;
   } {
-    const eod = endOfDay(new Date()).toISOString();
+    // Use 09:00–09:30 today instead of end-of-day (23:59 caused cross-day display bugs)
+    const today9 = new Date(); today9.setHours(9, 0, 0, 0);
+    const today930 = new Date(); today930.setHours(9, 30, 0, 0);
     switch (q) {
-      case 1:
-        return { priority: 5, due_at: eod };
-      case 2:
-        return { priority: 5, due_at: null };
-      case 3:
-        return { priority: 1, due_at: eod };
-      case 4:
-        return { priority: 0, due_at: null };
+      case 1: // Do first — schedule today 09:00
+        return { priority: 5, start_at: today9.toISOString(), due_at: today930.toISOString() };
+      case 2: // Schedule — undated, let user pick
+        return { priority: 5, start_at: null, due_at: null };
+      case 3: // Delegate — low priority, today
+        return { priority: 1, start_at: today9.toISOString(), due_at: today930.toISOString() };
+      case 4: // Eliminate — clear date
+        return { priority: 0, start_at: null, due_at: null };
     }
   }
 
@@ -117,6 +120,7 @@ export function PlanMyDayButton() {
     update.mutate({
       id: s.id,
       priority: s.suggested_priority,
+      start_at: target.start_at,
       due_at: target.due_at,
     } as any);
   }
