@@ -133,12 +133,14 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
         touchAction: "pan-y",
       }}
       className={cn(
-        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border border-transparent relative",
-        // Opaque only while a swipe is in progress so the red delete
-        // background doesn't bleed through the row's content. At rest
-        // (swipeX === 0) the row is fully transparent.
+        "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border relative",
         swipeX !== 0 && "bg-bg",
-        isSelected ? "bg-muted border-border" : "hover:bg-muted/60"
+        // Overdue: red left accent border + faint red tint
+        !task.is_completed && task.due_at && !isToday(new Date(task.due_at)) && isPast(new Date(task.due_at))
+          ? isSelected
+            ? "border-red-400/50 bg-red-500/8"
+            : "border-l-red-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-red-500/5 hover:bg-red-500/10"
+          : isSelected ? "bg-muted border-border" : "border-transparent hover:bg-muted/60"
       )}
     >
       <button
