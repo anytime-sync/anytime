@@ -9,6 +9,18 @@ import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
+/** Normalize an AI-returned due_at to 09:00 on the same calendar date.
+ * Prevents midnight/23:59 times from creating cross-day start→end blocks. */
+function normalizeToMorning(isoStr: string | null): string | null {
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  // Extract date parts in UTC, then set to 09:00 UTC
+  // (server is UTC; client will display in local TZ)
+  d.setUTCHours(1, 0, 0, 0); // 01:00 UTC ≈ 09:00 UTC+8 (Taipei)
+  return d.toISOString();
+}
+
 const ReqSchema = z.object({
   tasks: z.array(z.object({
     id: z.string(),
@@ -84,7 +96,9 @@ export async function POST(req: Request) {
     const out = ResSchema.parse(json);
 
     const known = new Set(tasks.map((t) => t.id));
-    out.suggestions = out.suggestions.filter((s) => known.has(s.id));
+    out.suggestions = out.suggestions
+      .filter((s) => known.has(s.id))
+      .map((s) => ({ ...s, new_due_at: normalizeToMorning(s.new_due_at) }));
 
     await logAiCall(u.user.id, "reschedule_task", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
     return NextResponse.json(out);

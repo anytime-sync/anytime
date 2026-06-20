@@ -394,12 +394,13 @@ Schema:
 }
 
 Decision rules:
-- Days_overdue < 7  AND task feels still relevant → reschedule to within 1-3 days, ideally a morning slot.
+- Days_overdue < 7  AND task feels still relevant → reschedule to within 1-3 days.
 - Days_overdue 7-30 AND not high priority → defer-far: 14-30 days out, with a calm "revisit when fresher" reason.
 - Days_overdue > 30 OR title is vague-aspirational ("learn Spanish") → suggest drop (new_due_at null) with verdict "drop".
 - High-priority items (priority >= 3) NEVER drop — only reschedule.
 - Distribute across days; don't pile everything on tomorrow.
-- Reasons in ${lang.aiName}, terse, no scolding.`;
+- Reasons in ${lang.aiName}, terse, no scolding.
+- Time: ALWAYS use 09:00:00 local time (never midnight, never 23:59). Example: "2026-06-21T09:00:00+08:00".`;
 }
 
 export function findTimeSystem(language: LanguageCode = "en"): string {

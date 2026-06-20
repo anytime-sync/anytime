@@ -7,6 +7,15 @@ import { MODELS } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
 
+/** Normalize AI-returned due_at to 09:00 Taipei (01:00 UTC). */
+function normalizeToMorning(isoStr: string | null): string | null {
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  d.setUTCHours(1, 0, 0, 0);
+  return d.toISOString();
+}
+
 const ResSchema = z.object({
   items: z.array(z.object({
     id: z.string(),
@@ -65,7 +74,9 @@ Rules:
     const out = ResSchema.parse(json);
 
     const known = new Set(overdue.map((t: any) => t.id));
-    out.items = out.items.filter((it) => known.has(it.id));
+    out.items = out.items
+      .filter((it) => known.has(it.id))
+      .map((it) => ({ ...it, new_due_at: normalizeToMorning(it.new_due_at) }));
 
     await logAiCall(ctx.userId, "reschedule_task", { model: res.model, status: 200 });
     return jsonOk(out);

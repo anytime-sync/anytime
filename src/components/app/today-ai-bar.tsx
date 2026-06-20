@@ -105,13 +105,14 @@ export function TodayAiBar() {
       // Drop = clear the due date but keep the task. (Soft delete is too aggressive.)
       update.mutate({ id: s.id, due_at: null } as any);
     } else {
-      // For overdue tasks, always set start_at = new_due_at.
-      // Do NOT preserve the old duration — the original window is stale/meaningless
-      // once a task is past due. Carrying it forward drags start_at into the past.
+      // For overdue tasks: start_at = new_due_at (normalized to 09:00 by API).
+      // due_at = start + 30min so the block stays on a single day.
+      const newStart = s.new_due_at ? new Date(s.new_due_at) : null;
+      const newEnd = newStart ? new Date(newStart.getTime() + 30 * 60 * 1000) : null;
       update.mutate({
         id: s.id,
-        start_at: s.new_due_at,
-        due_at: s.new_due_at,
+        start_at: newStart?.toISOString() ?? s.new_due_at,
+        due_at: newEnd?.toISOString() ?? s.new_due_at,
       } as any);
     }
     setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
