@@ -537,7 +537,8 @@ export type Reflection = {
 export function useReflection() {
   return useMutation({
     mutationFn: async (): Promise<Reflection | null> => {
-      const r = await fetch("/api/ai/reflection");
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const r = await fetch(`/api/ai/reflection?tz=${encodeURIComponent(tz)}`);
       if (r.status === 503) return null;
       if (!r.ok) throw new Error(`reflection ${r.status}`);
       return await r.json();
@@ -548,10 +549,11 @@ export function useReflection() {
 export function useSaveReflectionJournal() {
   return useMutation({
     mutationFn: async (journal: string) => {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const r = await fetch("/api/ai/reflection", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ journal }),
+        body: JSON.stringify({ journal, tz }),
       });
       if (!r.ok) throw new Error(`save-journal ${r.status}`);
     },

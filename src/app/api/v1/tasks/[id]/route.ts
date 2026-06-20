@@ -41,6 +41,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     .from("tasks")
     .select("*")
     .eq("id", params.id)
+    .eq("user_id", ctx.userId)
     .maybeSingle();
 
   if (error) return jsonError(500, "db_error", error.message);
@@ -122,9 +123,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .from("tasks")
       .select("start_at, due_at")
       .eq("id", params.id)
+      .eq("user_id", ctx.userId)
       .maybeSingle();
     const effectiveStart = "start_at" in patch ? patch.start_at : current?.start_at;
     const effectiveEnd   = "due_at"   in patch ? patch.due_at   : current?.due_at;
+
+    // Validate any caller-supplied dates up front — NaN would throw
+    // RangeError below on .toISOString().
+    const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
+    if ("start_at" in patch && patch.start_at != null && !isValidIso(patch.start_at)) {
+      return jsonError(400, "bad_request", "start_at is not a valid ISO-8601 date.");
+    }
+    if ("due_at" in patch && patch.due_at != null && !isValidIso(patch.due_at)) {
+      return jsonError(400, "bad_request", "due_at is not a valid ISO-8601 date.");
+    }
 
     // Rule 1: timed due_at set, no start_at — derive start_at = due_at - 30min.
     if ("due_at" in patch && patch.due_at && !isMidnight(patch.due_at) &&
@@ -150,8 +162,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     .from("tasks")
     .update(patch)
     .eq("id", params.id)
+    .eq("user_id", ctx.userId)
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (error) return jsonError(500, "db_error", error.message);
   if (!data) return jsonError(404, "not_found", "Task not found.");

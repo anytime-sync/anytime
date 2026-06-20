@@ -56,6 +56,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   for (const k of ALLOWED) {
     if (k in body) patch[k] = (body as Record<string, unknown>)[k];
   }
+  // `all_day` is a generated column (alias of is_all_day) and is immutable —
+  // writing it throws "cannot insert into generated column". Map it to the
+  // real column and drop the alias from the patch.
+  if ("all_day" in patch) {
+    patch.is_all_day = Boolean(patch.all_day);
+    delete patch.all_day;
+  }
+  // Validate dates if present.
+  const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
+  for (const k of ["start_at", "end_at"] as const) {
+    if (k in patch && patch[k] != null && !isValidIso(patch[k])) {
+      return jsonError(400, "bad_request", `${k} must be a valid ISO-8601 date.`);
+    }
+  }
   if (Object.keys(patch).length === 0) {
     return jsonError(400, "no_fields", "At least one updatable field is required.");
   }

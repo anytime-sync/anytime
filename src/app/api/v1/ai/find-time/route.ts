@@ -5,6 +5,7 @@ import { findTimeSystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
 import { logAiCall } from "@/lib/ai-rate-limit";
 import { MODELS } from "@/lib/anthropic";
+import { safeTimezone, localNowStr } from "@/lib/ai/tz";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,7 @@ const ReqSchema = z.object({
   task_id: z.string(),
   title: z.string().min(1).max(280),
   estimated_minutes: z.number().int().nullable().optional(),
+  tz: z.string().optional(),
 });
 
 const ResSchema = z.object({
@@ -47,8 +49,10 @@ export async function POST(req: NextRequest) {
     .map((t: any) => `${t.start_at} → ${t.due_at} (${t.title})`)
     .join("\n");
 
+  const tz = safeTimezone(parsed.data.tz);
   const userMsg = [
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${localNowStr(new Date(), tz)}`,
+    `USER_TIMEZONE: ${tz}`,
     `TASK: ${title}`,
     `DURATION: ${estimated_minutes ?? 30} minutes`,
     `BUSY_BLOCKS (next 7d):`,

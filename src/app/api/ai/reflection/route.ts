@@ -5,6 +5,7 @@ import { getAnthropic, MODELS } from "@/lib/anthropic";
 import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { reflectionSystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
+import { safeTimezone, localDateStr, localDayBounds } from "@/lib/ai/tz";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
@@ -23,12 +24,13 @@ const ResSchema = z.object({
  * POST /api/ai/reflection { journal: string } — saves the user's
  * journal entry to today's reflection row.
  */
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = createClient();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const tz = safeTimezone(new URL(req.url).searchParams.get("tz"));
+  const today = localDateStr(new Date(), tz);
 
   // Read user language first so the cache hit can be gated on it —
   // otherwise switching language never refreshes today's reflection.
@@ -58,8 +60,9 @@ export async function GET() {
   if (!client) return NextResponse.json({ error: "ai_disabled" }, { status: 503 });
 
   // Today's surface: completed today + still-open due today/overdue.
-  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-  const isoStart = startOfDay.toISOString();
+  // Use the user's local day boundary, not server-UTC midnight.
+  const { start: dayStart } = localDayBounds(new Date(), tz);
+  const isoStart = dayStart.toISOString();
   const { data: doneToday } = await supabase
     .from("tasks")
     .select("id, title, completed_at")
@@ -79,7 +82,7 @@ export async function GET() {
   // Round F v4.5: include today's Google Calendar events so the
   // reflection can speak honestly about meetings that happened, not
   // just task throughput.
-  const endOfDayIso = new Date(startOfDay.getTime() + 86400000).toISOString();
+  const endOfDayIso = new Date(dayStart.getTime() + 86400000).toISOString();
   const { data: meetingsToday } = await supabase
     .from("calendar_events")
     .select("title,start_at,end_at,is_all_day,location,attendees_count")
@@ -148,11 +151,12 @@ export async function POST(req: Request) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { journal?: string };
+  let body: { journal?: string; tz?: string };
   try { body = await req.json(); } catch { body = {}; }
   const journal = (body.journal ?? "").trim().slice(0, 4000);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const tz = safeTimezone(body.tz);
+  const today = localDateStr(new Date(), tz);
   const { error } = await supabase
     .from("daily_reflections")
     .update({ user_journal: journal || null })

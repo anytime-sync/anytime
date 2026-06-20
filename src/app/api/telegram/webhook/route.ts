@@ -184,11 +184,13 @@ async function createTask(
   startAt?: string,
 ): Promise<TaskRow> {
   const sb = getSupabase();
+  // Cap title length to match other creation paths (DB/UX limit 500).
+  const safeTitle = (title ?? "").trim().slice(0, 500);
   const { data, error } = await sb
     .from("tasks")
     .insert({
       user_id: userId,
-      title,
+      title: safeTitle,
       due_at: dueAt ?? null,
       start_at: startAt ?? null,
       status: "open",

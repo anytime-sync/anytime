@@ -65,6 +65,13 @@ export async function POST(req: NextRequest) {
       "`title`, `start_at`, and `end_at` are required.",
     );
   }
+  const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
+  if (!isValidIso(body.start_at) || !isValidIso(body.end_at)) {
+    return jsonError(400, "bad_request", "`start_at` and `end_at` must be valid ISO-8601 dates.");
+  }
+  if (new Date(body.end_at).getTime() < new Date(body.start_at).getTime()) {
+    return jsonError(400, "bad_request", "`end_at` must not be before `start_at`.");
+  }
 
   const { data, error } = await ctx.supabase
     .from("calendar_events")

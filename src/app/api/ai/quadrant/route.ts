@@ -4,6 +4,7 @@ import { getAnthropic, MODELS } from "@/lib/anthropic";
 import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { quadrantSystem } from "@/lib/ai/prompts";
 import { QuadrantResultSchema, extractJson } from "@/lib/ai/types";
+import { safeTimezone, localNowStr } from "@/lib/ai/tz";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
@@ -36,12 +37,14 @@ export async function POST(req: Request) {
     .maybeSingle();
   const language = (prefs?.language ?? "en") as LanguageCode;
 
+  const tz = safeTimezone(body.tz);
   const lines = [
     `TITLE: ${title}`,
     body.due_at ? `DUE: ${body.due_at}` : "DUE: (none)",
     `PRIORITY: ${body.priority ?? 0}`,
     body.project ? `PROJECT: ${body.project}` : "",
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${localNowStr(new Date(), tz)}`,
+    `USER_TIMEZONE: ${tz}`,
   ].filter(Boolean);
 
   try {

@@ -148,6 +148,16 @@ export async function POST(req: NextRequest) {
   const MIN_DURATION_MS = 30 * 60 * 1000;
   const isMidnight = (iso: string) => /T00:00:00/.test(iso);
 
+  // Validate caller-supplied dates up front — an unparseable string
+  // becomes NaN and throws RangeError on .toISOString() below.
+  const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
+  if (sanitizedStartAt != null && !isValidIso(sanitizedStartAt)) {
+    return jsonError(400, "invalid_start_at", "`start_at` must be a valid ISO-8601 date.");
+  }
+  if (sanitizedDueAt != null && !isValidIso(sanitizedDueAt)) {
+    return jsonError(400, "invalid_due_at", "`due_at` must be a valid ISO-8601 date.");
+  }
+
   // Rule 1: timed due_at with no start_at — set start_at = due_at - 30min.
   // A task with only due_at has no timeline slot and won’t show correctly.
   if (sanitizedDueAt && !sanitizedStartAt && !isMidnight(sanitizedDueAt)) {

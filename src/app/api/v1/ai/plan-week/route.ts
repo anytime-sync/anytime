@@ -5,6 +5,7 @@ import { planWeekSystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
 import { logAiCall } from "@/lib/ai-rate-limit";
 import { MODELS } from "@/lib/anthropic";
+import { safeTimezone, localNowStr } from "@/lib/ai/tz";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ const ReqSchema = z.object({
     priority: z.number().int().min(0).max(5),
     project: z.string().nullable().optional(),
   })).min(1).max(30),
+  tz: z.string().optional(),
 });
 
 const ResSchema = z.object({
@@ -48,8 +50,10 @@ export async function POST(req: NextRequest) {
     .map((t) => [`[${t.id}]`, t.title, t.due_at ? `· due ${t.due_at}` : "· undated", `· p${t.priority}`, t.project ? `· ${t.project}` : ""].filter(Boolean).join(" "))
     .join("\n");
 
+  const tz = safeTimezone(parsed.data.tz);
   const userMsg = [
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${localNowStr(new Date(), tz)}`,
+    `USER_TIMEZONE: ${tz}`,
     `WORKING_HORIZON: next 7 days`,
     `TASKS (${tasks.length}):`,
     taskBlock,

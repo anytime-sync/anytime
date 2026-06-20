@@ -5,6 +5,7 @@ import { getAnthropic, MODELS } from "@/lib/anthropic";
 import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
 import { findTimeSystem } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/types";
+import { safeTimezone, localNowStr } from "@/lib/ai/tz";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
@@ -13,6 +14,7 @@ const ReqSchema = z.object({
   task_id: z.string(),
   title: z.string().min(1).max(280),
   estimated_minutes: z.number().int().nullable().optional(),
+  tz: z.string().optional(),
 });
 
 const ResSchema = z.object({
@@ -73,8 +75,10 @@ export async function POST(req: Request) {
     .map((t) => `${t.start_at} → ${t.due_at} (${t.title})`)
     .join("\n");
 
+  const tz = safeTimezone(parsed.data.tz);
   const userMsg = [
-    `NOW: ${new Date().toISOString()}`,
+    `NOW: ${localNowStr(new Date(), tz)}`,
+    `USER_TIMEZONE: ${tz}`,
     `TASK: ${title}`,
     `DURATION: ${estimated_minutes ?? 30} minutes`,
     `BUSY_BLOCKS (next 7d):`,
