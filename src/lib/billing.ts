@@ -248,13 +248,24 @@ export async function getUserPlan(userId: string): Promise<Plan> {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data } = await sb
-    .from("user_plans")
-    .select("plan,override_plan_raw,status,current_period_end,cancel_at_period_end")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Query user_plans view (has override) AND subscriptions table (has real plan)
+  // in parallel. The view's `plan` column may return 'free' for canceled subs
+  // even when the user is still in their paid period — we need subscriptions
+  // directly for the grace-period path.
+  const [{ data: viewData }, { data: subData }] = await Promise.all([
+    sb
+      .from("user_plans")
+      .select("plan,override_plan_raw,status,current_period_end,cancel_at_period_end")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    sb
+      .from("subscriptions")
+      .select("plan,status,current_period_end,cancel_at_period_end")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
-  const row = data as {
+  const row = viewData as {
     plan?: Plan;
     override_plan_raw?: Plan | null;
     status?: string | null;
@@ -262,23 +273,34 @@ export async function getUserPlan(userId: string): Promise<Plan> {
     cancel_at_period_end?: boolean | null;
   } | null;
 
-  // Override always wins (manual admin grant).
+  const sub = subData as {
+    plan?: Plan;
+    status?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean | null;
+  } | null;
+
+  // 1. Admin override always wins (VIP, forced free, etc.)
   if (row?.override_plan_raw) return row.override_plan_raw as Plan;
 
-  // Canceled-but-still-in-period: user paid through current_period_end,
-  // don't drop them to free until the period actually expires.
-  // This prevents AI features being blocked the moment someone cancels
-  // auto-renew — a common and jarring UX failure.
-  if (
-    row?.status === "canceled" &&
-    row?.cancel_at_period_end === true &&
-    row?.current_period_end &&
-    new Date(row.current_period_end) > new Date()
-  ) {
-    return (row.plan ?? "free") as Plan;
+  // 2. Active / trialing subscription → trust the view's plan.
+  if (sub?.status === "active" || sub?.status === "trialing") {
+    return (sub.plan ?? row?.plan ?? "free") as Plan;
   }
 
-  return (row?.plan ?? "free") as Plan;
+  // 3. Canceled but still in paid period → use subscriptions.plan directly
+  // (the view often returns 'free' for canceled rows even mid-period).
+  if (
+    sub?.status === "canceled" &&
+    sub?.cancel_at_period_end === true &&
+    sub?.current_period_end &&
+    new Date(sub.current_period_end) > new Date()
+  ) {
+    return (sub.plan ?? "free") as Plan;
+  }
+
+  // 4. No active sub → free.
+  return "free";
 }
 
 /**
