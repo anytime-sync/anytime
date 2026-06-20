@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -56,6 +56,29 @@ export function SortableMixedList({
   // Only tasks participate in the sortable list. Events are skipped over
   // when reordering so dragging never tries to "move" a calendar event.
   const taskItems = items.filter((it) => it.kind === "task");
+
+  // Overlap detection: find tasks whose [start_at, due_at] ranges intersect
+  // with at least one other timed task in this section.
+  const overlapIds = useMemo(() => {
+    const timed = taskItems
+      .filter((it) => it.task.start_at && it.task.due_at && !it.task.is_all_day && !it.task.is_completed)
+      .map((it) => ({
+        id: it.id,
+        s: new Date(it.task.start_at!).getTime(),
+        e: new Date(it.task.due_at!).getTime(),
+      }))
+      .filter((t) => !isNaN(t.s) && !isNaN(t.e) && t.s < t.e);
+    const set = new Set<string>();
+    for (let i = 0; i < timed.length; i++) {
+      for (let j = i + 1; j < timed.length; j++) {
+        if (timed[i].s < timed[j].e && timed[j].s < timed[i].e) {
+          set.add(timed[i].id);
+          set.add(timed[j].id);
+        }
+      }
+    }
+    return set;
+  }, [taskItems]);
   const taskIds = taskItems.map((it) => it.id);
   const activeItem = activeId ? items.find((it) => it.id === activeId) ?? null : null;
 
@@ -96,6 +119,7 @@ export function SortableMixedList({
                 taskId={it.id}
                 task={it.task}
                 dimmed={activeId === it.id}
+                isOverlapping={overlapIds.has(it.id)}
               />
             ) : (
               <div key={it.id} className="rounded-md">
@@ -120,10 +144,12 @@ function SortableTaskRow({
   taskId,
   task,
   dimmed,
+  isOverlapping,
 }: {
   taskId: string;
   task: import("@/hooks/use-tasks").TaskWithTags;
   dimmed: boolean;
+  isOverlapping?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: taskId });
@@ -142,7 +168,7 @@ function SortableTaskRow({
         (dimmed || isDragging) && "opacity-30"
       )}
     >
-      <TaskItem task={task} />
+      <TaskItem task={task} isOverlapping={isOverlapping} />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { cn, priorityColorClass } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
 
-export function TaskItem({ task }: { task: TaskWithTags }) {
+export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverlapping?: boolean }) {
   const lang = useLanguage();
   const toggle = useToggleTask();
   const selectedId = useUIStore((s) => s.selectedTaskId);
@@ -135,11 +135,16 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
       className={cn(
         "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border relative",
         swipeX !== 0 && "bg-bg",
-        // Overdue: red left accent border + faint red tint
+        // Overdue: red left accent border + faint red tint (highest priority)
         !task.is_completed && task.due_at && isPast(new Date(task.due_at))
           ? isSelected
             ? "border-red-400/50 bg-red-500/8"
             : "border-l-red-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-red-500/5 hover:bg-red-500/10"
+          // Overlapping slot: amber left accent border + faint amber tint
+          : !task.is_completed && isOverlapping
+          ? isSelected
+            ? "border-amber-400/50 bg-amber-500/8"
+            : "border-l-amber-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-amber-500/5 hover:bg-amber-500/10"
           : isSelected ? "bg-muted border-border" : "border-transparent hover:bg-muted/60"
       )}
     >
@@ -176,6 +181,11 @@ export function TaskItem({ task }: { task: TaskWithTags }) {
           )}
         >
           {task.title}
+          {!task.is_completed && isOverlapping && (
+            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-semibold uppercase tracking-wide align-middle leading-none">
+              overlap
+            </span>
+          )}
           {shareGroupName && (
             <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-medium align-middle leading-none">
               <Users className="size-2.5" aria-hidden="true" />
