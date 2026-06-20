@@ -44,7 +44,9 @@ export default function Home() {
       <header className="px-4 md:px-6 pt-6 md:pt-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="shrink-0">
-            <DesignSlot id="landing.wordmark" as="span" className="wordmark text-[13px] md:text-base">
+            <DesignSlot id="landing.wordmark" as="span" className="wordmark text-[13px] md:text-base flex items-center gap-2">
+              <img src="/logo-black.png" alt="" className="size-5 md:size-6 block dark:hidden" aria-hidden="true" />
+              <img src="/logo-white.png" alt="" className="size-5 md:size-6 hidden dark:block" aria-hidden="true" />
               First Light
             </DesignSlot>
           </Link>
