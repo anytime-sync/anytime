@@ -25,6 +25,7 @@ import {
   isBotConfigured,
   verifyWebhookSecret,
 } from "@/lib/telegram";
+import { parseQuickInput } from "@/lib/quick-parse";
 
 // Service-role client for DB access
 function getSupabase() {
@@ -182,10 +183,15 @@ async function createTask(
   title: string,
   dueAt?: string,
   startAt?: string,
+  opts?: { priority?: 0 | 1 | 3 | 5; isAllDay?: boolean; rrule?: string | null },
 ): Promise<TaskRow> {
   const sb = getSupabase();
   // Cap title length to match other creation paths (DB/UX limit 500).
   const safeTitle = (title ?? "").trim().slice(0, 500);
+  // is_all_day: trust the parser when it told us; otherwise infer from
+  // the absence of any timed value (date-only due_at has no "T" time).
+  const isAllDay =
+    opts?.isAllDay ?? (!startAt && !dueAt?.includes("T"));
   const { data, error } = await sb
     .from("tasks")
     .insert({
@@ -194,8 +200,9 @@ async function createTask(
       due_at: dueAt ?? null,
       start_at: startAt ?? null,
       status: "open",
-      priority: 0,
-      is_all_day: !startAt && !dueAt?.includes("T"),
+      priority: opts?.priority ?? 0,
+      is_all_day: isAllDay,
+      rrule: opts?.rrule ?? null,
     })
     .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
     .single();
@@ -255,11 +262,80 @@ function formatTaskList(tasks: TaskRow[], title: string): string {
 // Natural language parsing (simple, no AI call needed for basic patterns)
 // ---------------------------------------------------------------------------
 
-function parseTaskInput(text: string): { title: string; dueAt?: string } {
-  // For now, just pass through. chrono-node parsing happens server-side
-  // via the existing /api/ai/parse-task route if needed.
-  // Basic: if the text has "tomorrow", "today", etc. we can handle simply.
-  return { title: text.trim() };
+/**
+ * Telegram task parsing. Delegates to the shared `parseQuickInput`
+ * (chrono-node based) used by the web quick-add, so "buy milk tomorrow
+ * 3pm urgent" produces the same title/due/priority everywhere.
+ *
+ * Timezone: this bot standardizes on Asia/Taipei (UTC+8), matching the
+ * rest of this webhook (getTodayTasks, /today formatting). chrono parses
+ * relative phrases against the *server* clock (UTC on Vercel), so we feed
+ * it a reference time shifted into Taipei wall-clock and then shift the
+ * parsed result back to a true UTC instant. This makes "tomorrow 3pm"
+ * mean 3pm Taipei, not 3pm UTC.
+ */
+const TELEGRAM_TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Taipei UTC+8
+
+function shiftIsoFromTaipeiWallClock(iso: string | null): string | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  // chrono produced a Date whose wall-clock fields we want to treat as
+  // Taipei local; subtract the offset to get the real UTC instant.
+  return new Date(t - TELEGRAM_TZ_OFFSET_MS).toISOString();
+}
+
+function parseTaskInput(text: string): {
+  title: string;
+  dueAt?: string;
+  startAt?: string;
+  isAllDay?: boolean;
+  priority?: 0 | 1 | 3 | 5;
+  rrule?: string | null;
+} {
+  const raw = (text ?? "").trim();
+  if (!raw) return { title: "" };
+
+  try {
+    const p = parseQuickInput(raw);
+    return {
+      title: (p.title || raw).slice(0, 500),
+      // Only shift TIMED values. All-day due_at is a date-only midnight
+      // marker that should NOT be offset (chrono emits local midnight,
+      // which we keep as the day boundary the app expects).
+      dueAt: p.is_all_day ? (p.due_at ?? undefined) : (shiftIsoFromTaipeiWallClock(p.due_at) ?? undefined),
+      startAt: p.is_all_day ? undefined : (shiftIsoFromTaipeiWallClock(p.start_at) ?? undefined),
+      isAllDay: p.is_all_day,
+      priority: p.priority,
+      rrule: p.rrule,
+    };
+  } catch {
+    // Never let a parse error drop the task — fall back to a plain title.
+    return { title: raw.slice(0, 500) };
+  }
+}
+
+/**
+ * Confirmation line shown after creating a task. Echoes the parsed
+ * schedule in Taipei time so the user can immediately see whether
+ * "tomorrow 3pm" was understood correctly.
+ */
+function formatCreated(task: TaskRow): string {
+  let when = "";
+  if (task.due_at) {
+    if (task.is_all_day) {
+      when = " · " + new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Taipei", weekday: "short", month: "short", day: "numeric",
+      }).format(new Date(task.due_at));
+    } else {
+      when = " · " + new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Taipei", weekday: "short", month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit", hour12: false,
+      }).format(new Date(task.due_at));
+    }
+  }
+  const pri = task.priority === 5 ? " · 🔴" : task.priority === 3 ? " · 🟠" : "";
+  return `✨ Created: ${task.title}${when}${pri}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,8 +426,12 @@ async function handleCommand(
     case "/add": {
       if (!args) return "Usage: /add <task description>";
       const parsed = parseTaskInput(args);
-      const task = await createTask(userId, parsed.title, parsed.dueAt);
-      return `✨ Created: ${task.title}`;
+      const task = await createTask(userId, parsed.title, parsed.dueAt, parsed.startAt, {
+        priority: parsed.priority,
+        isAllDay: parsed.isAllDay,
+        rrule: parsed.rrule,
+      });
+      return formatCreated(task);
     }
 
     default: {
@@ -368,8 +448,12 @@ async function handleCommand(
       // Treat free text as a new task
       if (text.trim().length > 0 && !text.startsWith("/")) {
         const parsed = parseTaskInput(text);
-        const task = await createTask(userId, parsed.title, parsed.dueAt);
-        return `✨ Created: ${task.title}`;
+        const task = await createTask(userId, parsed.title, parsed.dueAt, parsed.startAt, {
+          priority: parsed.priority,
+          isAllDay: parsed.isAllDay,
+          rrule: parsed.rrule,
+        });
+        return formatCreated(task);
       }
       return (
         "First Light Bot\n\n" +
