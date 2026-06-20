@@ -281,11 +281,11 @@ export function Sidebar({ user }: { user: { email: string; name: string | null }
     <aside className="h-screen border-r border-border surface flex flex-col">
       <div className="relative flex items-center justify-center px-3 h-24 md:h-28 border-b border-border">
         {!collapsed && (
-          <div className="wordmark text-[15px] flex items-center gap-2">
+          <div className="wordmark text-[18px] flex items-center justify-center gap-2.5">
             <img
               src={resolvedTheme === "dark" ? "/logo-white.png" : "/logo-black.png"}
               alt=""
-              className="size-6"
+              className="size-8"
               aria-hidden="true"
             />
             First Light
