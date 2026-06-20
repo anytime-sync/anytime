@@ -29,9 +29,9 @@ export function BlogNav({
     <header className="px-4 md:px-6 pt-6 md:pt-8">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
         <Link href="/" className="shrink-0">
-          <span className="wordmark text-[18px] flex items-center gap-2.5">
-            <img src="/logo-black.png" alt="" className="size-8 block dark:hidden" aria-hidden="true" />
-            <img src="/logo-white.png" alt="" className="size-8 hidden dark:block" aria-hidden="true" />
+          <span className="wordmark text-[21px] flex items-center gap-3">
+            <img src="/logo-black.png" alt="" className="size-9 block dark:hidden" aria-hidden="true" />
+            <img src="/logo-white.png" alt="" className="size-9 hidden dark:block" aria-hidden="true" />
             First Light
           </span>
         </Link>
