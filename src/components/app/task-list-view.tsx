@@ -274,7 +274,8 @@ function GroupedSections({
   const tomorrow: ViewItem[] = [];
   const next7: ViewItem[] = [];
   const next90: ViewItem[] = [];
-  const noDate: ViewItem[] = [];
+  const later: ViewItem[] = [];   // beyond 90 days but HAS a date
+  const noDate: ViewItem[] = [];  // truly undated
 
   for (const it of items) {
     const stamp = it.sortAt;
@@ -287,13 +288,14 @@ function GroupedSections({
     else if (d < startDayAfter) tomorrow.push(it);
     else if (d < startIn7) next7.push(it);
     else if (d < startIn90) next90.push(it);
-    else noDate.push(it);
+    else later.push(it);  // has a date, just far out
   }
 
   today.sort(byTimeAsc);
   tomorrow.sort(byTimeAsc);
   next7.sort(byTimeAsc);
   next90.sort(byTimeAsc);
+  later.sort(byTimeAsc);
 
   return (
     <div className="space-y-4">
@@ -301,6 +303,7 @@ function GroupedSections({
       <Section title={tr(lang as any, "sidebar.tomorrow")} items={tomorrow} lang={lang} onManualReorder={onManualReorder} />
       <Section title={tr(lang as any, "sidebar.next7")} items={next7} lang={lang} onManualReorder={onManualReorder} />
       <Section title={tr(lang as any, "sidebar.next90")} items={next90} lang={lang} onManualReorder={onManualReorder} />
+      <Section title={tr(lang as any, "view.bucket.later")} items={later} lang={lang} onManualReorder={onManualReorder} />
       <Section title={tr(lang as any, "view.bucket.noDate")} items={noDate} lang={lang} onManualReorder={onManualReorder} />
     </div>
   );
