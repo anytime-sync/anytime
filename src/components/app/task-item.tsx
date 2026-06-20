@@ -138,12 +138,12 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
         // Overdue: red left accent border + faint red tint (highest priority)
         !task.is_completed && task.due_at && isPast(new Date(task.due_at))
           ? isSelected
-            ? "border-red-400/50 bg-red-500/8"
+            ? "border-red-400/50 bg-red-500/10"
             : "border-l-red-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-red-500/5 hover:bg-red-500/10"
           // Overlapping slot: amber left accent border + faint amber tint
           : !task.is_completed && isOverlapping
           ? isSelected
-            ? "border-amber-400/50 bg-amber-500/8"
+            ? "border-amber-400/50 bg-amber-500/10"
             : "border-l-amber-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-amber-500/5 hover:bg-amber-500/10"
           : isSelected ? "bg-muted border-border" : "border-transparent hover:bg-muted/60"
       )}
@@ -181,6 +181,11 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
           )}
         >
           {task.title}
+          {!task.is_completed && task.due_at && isPast(new Date(task.due_at)) && (
+            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 text-[10px] font-semibold uppercase tracking-wide align-middle leading-none">
+              overdue
+            </span>
+          )}
           {!task.is_completed && isOverlapping && (
             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-semibold uppercase tracking-wide align-middle leading-none">
               overlap
