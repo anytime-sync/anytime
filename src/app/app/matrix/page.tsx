@@ -183,7 +183,7 @@ function targetForQuadrant(q: QuadrantKey): { priority: 0 | 1 | 3 | 5; start_at:
 }
 
 function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return "unscheduled";
+  if (!iso) return "No date";
   const d = new Date(iso);
   const today = new Date();
   if (d.toDateString() === today.toDateString()) return "Today";
@@ -196,15 +196,17 @@ function SlotChip({ task, quadrant }: { task: { start_at?: string | null; due_at
   const target = targetForQuadrant(q);
   const currentDate = task.start_at ?? task.due_at ?? null;
   const newDate = target.start_at ?? target.due_at ?? null;
-  if (!currentDate && !newDate) return null;
-  // Compare local date strings — hide chip when same day (time-only changes don't matter)
+  // Compare local date strings; null = "No date" is a meaningful state, so a
+  // transition to/from null is always shown. Hide ONLY when truly unchanged.
   const currentDay = currentDate ? format(new Date(currentDate), "yyyy-MM-dd") : null;
   const newDay = newDate ? format(new Date(newDate), "yyyy-MM-dd") : null;
   if (currentDay === newDay) return null;
+  // Always show BOTH sides so the reschedule is evaluable: "No date → Today",
+  // "Today → No date", "Sat Jun 14 → Today".
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[11px] leading-none text-blue-700 dark:text-blue-300">
-      {currentDate && <span className="line-through opacity-60">{fmtDate(currentDate)}</span>}
-      {currentDate && <span className="opacity-50">→</span>}
+      <span className={cn("opacity-70", currentDate && "line-through opacity-60")}>{fmtDate(currentDate)}</span>
+      <span className="opacity-50">→</span>
       <span className="font-medium">{fmtDate(newDate)}</span>
     </span>
   );
