@@ -64,11 +64,13 @@ export function ProcrastinationPanel() {
       const daysUntilNextMon = day === 1 ? 7 : 8 - day;
       const next = addDays(now, daysUntilNextMon);
       next.setHours(23, 59, 0, 0);
-      // Preserve duration: shift start_at by the same offset
+      // Shift start_at with due_at, clamped so start never falls before the target day.
       const task = tasks.find((t) => t.id === it.id);
       if (task?.start_at && task?.due_at) {
         const durationMs = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
-        const newStart = new Date(next.getTime() - durationMs);
+        const rawStart = new Date(next.getTime() - durationMs);
+        const dayStart = new Date(next); dayStart.setHours(0, 0, 0, 0);
+        const newStart = rawStart < dayStart ? next : rawStart;
         update.mutate({ id: it.id, start_at: newStart.toISOString(), due_at: next.toISOString() } as any);
       } else {
         update.mutate({ id: it.id, due_at: next.toISOString() } as any);
