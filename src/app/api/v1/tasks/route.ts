@@ -98,6 +98,7 @@ interface CreateTaskBody {
   notes?: string | null;
   project_id?: string | null;
   status?: "open" | "done" | "archived";
+  rrule?: string | null;
 }
 
 /**
@@ -190,6 +191,7 @@ export async function POST(req: NextRequest) {
       notes: body.notes ?? null,
       project_id: body.project_id ?? null,
       status: body.status ?? "open",
+      rrule: body.rrule ?? null,
     })
     .select("*")
     .single();

@@ -58,6 +58,7 @@ interface PatchBody {
   notes?: string | null;
   status?: "open" | "done" | "archived";
   project_id?: string | null;
+  rrule?: string | null;
 }
 
 const ALLOWED: (keyof PatchBody)[] = [
@@ -69,6 +70,7 @@ const ALLOWED: (keyof PatchBody)[] = [
   "notes",
   "status",
   "project_id",
+  "rrule",
 ];
 
 export async function PATCH(req: NextRequest, { params }: Params) {
