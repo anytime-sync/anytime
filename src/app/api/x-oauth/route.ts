@@ -103,3 +103,4 @@ export async function GET(req: NextRequest) {
     { headers: { "content-type": "text/html" } }
   );
 }
+// env: X_CLIENT_ID, X_CLIENT_SECRET, X_OAUTH_STATE, X_CODE_VERIFIER
