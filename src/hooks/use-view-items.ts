@@ -85,8 +85,8 @@ export function useViewItems(filter: TasksFilter): {
     const taskItems: ViewItem[] = tasks.map((task) => ({
       kind: "task",
       id: task.id,
-      sortAt: task.due_at
-        ? new Date(task.due_at).getTime()
+      sortAt: (task.start_at ?? task.due_at)
+        ? new Date((task.start_at ?? task.due_at)!).getTime()
         : Number.POSITIVE_INFINITY,
       task,
     }));
