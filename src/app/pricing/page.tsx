@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
-import { createClient } from "@/lib/supabase/client";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { useStartCheckout } from "@/hooks/use-billing";
 import { PLANS } from "@/lib/plans";
+import { MarketingNav } from "@/components/marketing/marketing-nav";
+import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Public /pricing one-pager.
@@ -21,12 +22,21 @@ import { PLANS } from "@/lib/plans";
  *   - signed in (pro)  → "Manage billing" routes to Stripe Portal (via app)
  */
 export default function PricingPage() {
-  const router = useRouter();
   const { data: pro, isLoading: priceLoading } = useProPrice();
   const { data: plus, isLoading: plusLoading } = usePlusPrice();
   const checkoutPlus = useStartCheckout("plus");
   const checkoutPro = useStartCheckout("pro");
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
+  const [lang, setLang] = useState<LanguageCode>("en");
+
+  useEffect(() => {
+    setLang(readStoredLanguage());
+    const handler = (e: StorageEvent) => {
+      if (e.key === "fl.language") setLang(readStoredLanguage());
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
 
   useEffect(() => {
     const sb = createClient();
@@ -36,42 +46,22 @@ export default function PricingPage() {
   }, []);
 
   const proLabel = priceLoading
-    ? "Pro"
-    : `Pro — ${pro?.formattedPerMonth ?? "2026"}`;
+    ? t(lang, "pricing.plan.pro.name")
+    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? "2026"}`;
 
   return (
     <div className="min-h-screen bg-bg">
-      {/* Top bar */}
-      <header className="border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="wordmark text-base">
-            First Light
-          </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/pricing" className="font-medium">Pricing</Link>
-            {authState === "in" ? (
-              <Link href="/app/today" className="btn-ghost h-8 px-3">Open app</Link>
-            ) : (
-              <>
-                <Link href="/login" className="text-muted-fg hover:text-fg">Sign in</Link>
-                <Link href="/signup" className="btn-primary h-8 px-3">Start free</Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <MarketingNav lang={lang} onLangChange={setLang} activePage="pricing" />
 
       <main className="max-w-5xl mx-auto px-6 py-16">
         {/* Hero */}
         <section className="text-center max-w-2xl mx-auto mb-16">
-          <p className="editorial-number text-[11px] mb-4">PRICING</p>
+          <p className="editorial-number text-[11px] mb-4">{t(lang, "pricing.kicker")}</p>
           <h1 className="font-display text-4xl md:text-5xl tracking-tight leading-tight mb-4">
-            Built for the way you actually plan.
+            {t(lang, "pricing.hero.heading")}
           </h1>
           <p className="text-lg text-muted-fg leading-relaxed">
-            Free covers the full task system, indefinitely. Plus unlocks
-            two-way calendar and unlimited daily editions. Pro adds the full
-            AI co-pilot — Plan my day, Voice → Task, and the review suite.
+            {t(lang, "pricing.hero.body")}
           </p>
         </section>
 
@@ -80,7 +70,7 @@ export default function PricingPage() {
           {/* Free */}
           <div className="border border-border rounded-2xl p-6 flex flex-col">
             <div className="flex items-baseline justify-between mb-2">
-              <h2 className="font-display text-2xl tracking-tight">Free</h2>
+              <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.free.name")}</h2>
               <span className="text-2xl font-semibold">$0</span>
             </div>
             <p className="text-sm text-muted-fg mb-6">{PLANS[0].tagline}</p>
@@ -103,11 +93,11 @@ export default function PricingPage() {
             <div className="mt-6">
               {authState === "in" ? (
                 <Link href="/app/today" className="btn-ghost h-10 w-full justify-center">
-                  Open the app <ArrowRight className="size-4 ml-1" />
+                  {t(lang, "pricing.cta.openApp")} <ArrowRight className="size-4 ml-1" />
                 </Link>
               ) : (
                 <Link href="/signup" className="btn-ghost h-10 w-full justify-center">
-                  Start free <ArrowRight className="size-4 ml-1" />
+                  {t(lang, "pricing.cta.startFree")} <ArrowRight className="size-4 ml-1" />
                 </Link>
               )}
             </div>
@@ -116,9 +106,9 @@ export default function PricingPage() {
           {/* Plus — calendar + unlimited Daily Edition. Most-popular middle tier. */}
           <div className="border border-border rounded-2xl p-6 flex flex-col">
             <div className="flex items-baseline justify-between mb-2">
-              <h2 className="font-display text-2xl tracking-tight">Plus</h2>
+              <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.plus.name")}</h2>
               <span className="text-2xl font-semibold">
-                {plusLoading ? "—" : plus?.formatted ?? "2026"}
+                {plusLoading ? "-" : plus?.formatted ?? "2026"}
                 <span className="text-sm text-muted-fg font-normal">
                   {" "}/ {plus?.interval ?? "month"}
                 </span>
@@ -146,7 +136,7 @@ export default function PricingPage() {
                   disabled={checkoutPlus.isPending}
                   className="btn-primary h-10 w-full justify-center"
                 >
-                  {checkoutPlus.isPending ? "Opening checkout…" : "Upgrade to Plus"}{" "}
+                  {checkoutPlus.isPending ? t(lang, "pricing.cta.openingCheckout") : t(lang, "pricing.cta.upgradePlus")}{" "}
                   {!checkoutPlus.isPending && <ArrowRight className="size-4 ml-1" />}
                 </button>
               ) : (
@@ -154,7 +144,7 @@ export default function PricingPage() {
                   href="/signup?next=/pricing&plan=plus"
                   className="btn-primary h-10 w-full justify-center"
                 >
-                  Upgrade to Plus <ArrowRight className="size-4 ml-1" />
+                  {t(lang, "pricing.cta.upgradePlus")} <ArrowRight className="size-4 ml-1" />
                 </Link>
               )}
             </div>
@@ -163,14 +153,14 @@ export default function PricingPage() {
           {/* Pro */}
           <div className="border-2 border-accent rounded-2xl p-6 flex flex-col relative">
             <span className="absolute -top-3 left-6 bg-accent text-white text-[11px] px-2 py-0.5 rounded-full uppercase tracking-wide">
-              Recommended
+              {t(lang, "pricing.plan.pro.badge")}
             </span>
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight flex items-center gap-2">
-                Pro <Sparkles className="size-5 text-accent" />
+                {t(lang, "pricing.plan.pro.name")} <Sparkles className="size-5 text-accent" />
               </h2>
               <span className="text-2xl font-semibold">
-                {priceLoading ? "—" : pro?.formatted ?? "2026"}
+                {priceLoading ? "-" : pro?.formatted ?? "2026"}
                 <span className="text-sm text-muted-fg font-normal">
                   {" "}/ {pro?.interval ?? "month"}
                 </span>
@@ -201,11 +191,11 @@ export default function PricingPage() {
                   disabled={checkoutPro.isPending}
                   className="btn-primary h-10 w-full justify-center"
                 >
-                  {checkoutPro.isPending ? "Opening checkout…" : "Upgrade to Pro"}
+                  {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : t(lang, "pricing.cta.upgradePro")}
                 </button>
               ) : (
                 <Link href="/signup?next=/pricing" className="btn-primary h-10 w-full justify-center">
-                  Start with Pro <ArrowRight className="size-4 ml-1" />
+                  {t(lang, "pricing.cta.startWithPro")} <ArrowRight className="size-4 ml-1" />
                 </Link>
               )}
             </div>
@@ -213,50 +203,36 @@ export default function PricingPage() {
         </section>
 
         <section className="mb-16">
-          <DemoCarousel />
+          <DemoCarousel lang={lang} />
         </section>
 
                 {/* Full feature matrix */}
         <section className="mb-20">
-          <h2 className="font-display text-3xl tracking-tight mb-2 text-center">Everything, side by side</h2>
+          <h2 className="font-display text-3xl tracking-tight mb-2 text-center">{t(lang, "pricing.matrix.heading")}</h2>
           <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
-            The complete list of what's included in each plan.
+            {t(lang, "pricing.matrix.subheading")}
           </p>
           <FeatureMatrix />
         </section>
 
         {/* FAQ — expanded for SEO rich snippets */}
         <section className="max-w-2xl mx-auto mb-20">
-          <h2 className="font-display text-3xl tracking-tight mb-6 text-center">Common questions</h2>
+          <h2 className="font-display text-3xl tracking-tight mb-6 text-center">{t(lang, "pricing.faq.heading")}</h2>
           <dl className="space-y-6 text-sm">
-            <div>
-              <dt className="font-medium mb-1">Can I cancel anytime?</dt>
-              <dd className="text-muted-fg">Yes. Use the customer portal in Settings → Billing. Your subscription stays active until the end of the period you’ve already paid for.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">What happens to my data if I downgrade?</dt>
-              <dd className="text-muted-fg">Your data is yours. Tasks, notes, and calendar links keep working on Free; only the Pro-only AI features stop running.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">Is there a team plan?</dt>
-              <dd className="text-muted-fg">Not yet. We’re focused on making the single-player experience excellent first.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">What languages does First Light support?</dt>
-              <dd className="text-muted-fg">English, Traditional Chinese, Simplified Chinese, Japanese, and Korean — with native CJK typography tuned per language.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">Does First Light work on mobile?</dt>
-              <dd className="text-muted-fg">Yes. First Light is a progressive web app that works on any device — phone, tablet, or desktop. Install it from your browser for an app-like experience.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">How does the AI Daily Edition work?</dt>
-              <dd className="text-muted-fg">Every morning, First Light reads your calendar, tasks, and deadlines, then writes you a short editorial briefing — like a personal newspaper for your day. Free gets 1 per day; Plus and Pro get unlimited.</dd>
-            </div>
-            <div>
-              <dt className="font-medium mb-1">Is my data secure?</dt>
-              <dd className="text-muted-fg">Yes. First Light uses Supabase (built on PostgreSQL) with row-level security. Your data is encrypted in transit and at rest. We never sell your data.</dd>
-            </div>
+            {([
+              ["pricing.faq.q1", "pricing.faq.a1"],
+              ["pricing.faq.q2", "pricing.faq.a2"],
+              ["pricing.faq.q3", "pricing.faq.a3"],
+              ["pricing.faq.q4", "pricing.faq.a4"],
+              ["pricing.faq.q5", "pricing.faq.a5"],
+              ["pricing.faq.q6", "pricing.faq.a6"],
+              ["pricing.faq.q7", "pricing.faq.a7"],
+            ] as [Parameters<typeof t>[1], Parameters<typeof t>[1]][]).map(([qk, ak]) => (
+              <div key={qk}>
+                <dt className="font-medium mb-1">{t(lang, qk)}</dt>
+                <dd className="text-muted-fg">{t(lang, ak)}</dd>
+              </div>
+            ))}
           </dl>
         </section>
 
@@ -268,15 +244,15 @@ export default function PricingPage() {
               disabled={checkoutPro.isPending}
               className="btn-primary h-11 px-6"
             >
-              {checkoutPro.isPending ? "Opening checkout…" : `Upgrade to ${proLabel}`}
+              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? "2026"}`}
             </button>
           ) : (
             <Link href="/signup" className="btn-primary h-11 px-6">
-              Start free — no card needed
+              {t(lang, "pricing.final.ctaFree")}
             </Link>
           )}
           <p className="text-xs text-muted-fg mt-3">
-            Free forever for the core task system. Cancel Pro anytime.
+            {t(lang, "pricing.final.note")}
           </p>
         </section>
       </main>

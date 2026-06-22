@@ -1,203 +1,103 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
-import { loadPrices, formatPrice } from "@/lib/pricing";
+import { useEffect, useState } from "react";
+import { MarketingNav } from "@/components/marketing/marketing-nav";
+import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
+import { usePlusPrice } from "@/hooks/use-pricing";
 
-export const metadata: Metadata = {
-  title: "First Light vs Todoist — Which AI Task Manager Is Right for You?",
-  description:
-    "Honest comparison of First Light and Todoist. See how they differ on AI integration, MCP support, Telegram, pricing, and daily planning features.",
-  keywords: [
-    "first light vs todoist",
-    "todoist alternative",
-    "todoist vs first light",
-    "best ai task manager",
-    "ai task manager comparison",
-    "todoist ai features",
-  ],
-  openGraph: {
-    title: "First Light vs Todoist — Comparison",
-    description:
-      "Side-by-side comparison of First Light and Todoist for AI-native task management.",
-    url: "https://firstlight.to/compare/todoist",
-  },
-  alternates: { canonical: "/compare/todoist" },
-};
-
-const features = [
-  {
-    "feature": "AI task planning",
-    "fl": "✅ Built-in",
-    "comp": "⚠️ Basic AI"
-  },
-  {
-    "feature": "MCP integration",
-    "fl": "✅ Native",
-    "comp": "❌ None"
-  },
-  {
-    "feature": "Telegram bot",
-    "fl": "✅ Yes",
-    "comp": "❌ No"
-  },
-  {
-    "feature": "Eisenhower matrix",
-    "fl": "✅ Built-in",
-    "comp": "❌ No"
-  },
-  {
-    "feature": "Focus timer",
-    "fl": "✅ Built-in",
-    "comp": "❌ No"
-  },
-  {
-    "feature": "Habit tracking",
-    "fl": "✅ Built-in",
-    "comp": "❌ No"
-  },
-  {
-    "feature": "Calendar view",
-    "fl": "✅ Built-in",
-    "comp": "❌ No"
-  },
-  {
-    "feature": "Team collaboration",
-    "fl": "✅ Groups",
-    "comp": "✅ Full"
-  },
-  {
-    "feature": "Integrations",
-    "fl": "✅ MCP + API",
-    "comp": "✅ 100+"
-  },
-  {
-    "feature": "Natural language input",
-    "fl": "✅ AI-powered",
-    "comp": "✅ Built-in"
-  },
-  {
-    "feature": "Free tier",
-    "fl": "✅ Generous",
-    "comp": "✅ Limited"
-  },
-  {
-    "feature": "Pricing",
-    "fl": "DYNAMIC_PLUS_PRICE",
-    "comp": "$5/mo"
-  },
-  {
-    "feature": "Platforms",
-    "fl": "Web, PWA",
-    "comp": "Web, iOS, Android, Desktop"
-  }
+const featureRows = [
+  { feature: "AI task planning", fl: "✅ Built-in", comp: "⚠️ Basic AI" },
+  { feature: "MCP integration", fl: "✅ Native", comp: "❌ None" },
+  { feature: "Telegram bot", fl: "✅ Yes", comp: "❌ No" },
+  { feature: "Eisenhower matrix", fl: "✅ Built-in", comp: "❌ No" },
+  { feature: "Focus timer", fl: "✅ Built-in", comp: "❌ No" },
+  { feature: "Habit tracking", fl: "✅ Built-in", comp: "❌ No" },
+  { feature: "Calendar view", fl: "✅ Built-in", comp: "❌ No" },
+  { feature: "Team collaboration", fl: "✅ Groups", comp: "✅ Full" },
+  { feature: "Integrations", fl: "✅ MCP + API", comp: "✅ 100+" },
+  { feature: "Natural language input", fl: "✅ AI-powered", comp: "✅ Built-in" },
+  { feature: "Free tier", fl: "✅ Generous", comp: "✅ Limited" },
+  { feature: "Pricing", fl: "DYNAMIC", comp: "$5/mo" },
+  { feature: "Platforms", fl: "Web, PWA", comp: "Web, iOS, Android, Desktop" },
 ];
 
-export default async function CompareTodoistPage() {
-  const { plusCents, proCents, currency } = await loadPrices();
-  const displayFeatures = features.map(r => r.fl === "DYNAMIC_PLUS_PRICE" ? { ...r, fl: `${formatPrice(plusCents, currency)}/mo` } : r);
+const whenFL = ["compare.todoist.whenFL.1","compare.todoist.whenFL.2","compare.todoist.whenFL.3","compare.todoist.whenFL.4"] as const;
+const whenComp = ["compare.todoist.whenComp.1","compare.todoist.whenComp.2","compare.todoist.whenComp.3"] as const;
+
+export default function CompareTodoistPage() {
+  const [lang, setLang] = useState<LanguageCode>("en");
+  const { data: plus } = usePlusPrice();
+
+  useEffect(() => {
+    setLang(readStoredLanguage());
+    const handler = (e: StorageEvent) => {
+      if (e.key === "fl.language") setLang(readStoredLanguage());
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
+
+  const rows = featureRows.map((r) =>
+    r.fl === "DYNAMIC" ? { ...r, fl: plus?.formattedPerMonth ? `${plus.formattedPerMonth}/mo` : "—/mo" } : r
+  );
 
   return (
-    <main className="min-h-screen bg-background">
-      <section className="px-6 pt-24 pb-12 max-w-3xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <MarketingNav lang={lang} onLangChange={setLang} activePage="compare" />
+
+      <section className="px-6 pt-16 pb-12 max-w-3xl mx-auto">
         <p className="text-xs tracking-[0.22em] uppercase text-muted-fg mb-4">
-          Comparison
+          {t(lang, "compare.kicker.detail")}
         </p>
         <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-[1.15] mb-4">
-          First Light vs Todoist
+          {t(lang, "compare.todoist.heading")}
         </h1>
         <p className="text-muted-fg text-base leading-relaxed mb-2">
-          Both First Light and Todoist help you organize tasks and plan your day. But they take fundamentally different approaches — Todoist is a proven productivity platform with deep integrations, while First Light is built AI-first with native MCP support, letting your AI assistant manage your tasks directly.
+          {t(lang, "compare.todoist.body")}
         </p>
-        <p className="text-muted-fg text-sm">
-          Last updated: June 2026
-        </p>
+        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")}</p>
       </section>
 
       <section className="px-6 pb-16 max-w-3xl mx-auto">
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="grid grid-cols-3 bg-stone-50 border-b border-border">
-            <div className="px-4 py-3 text-xs font-medium text-muted-fg uppercase tracking-wider">
-              Feature
-            </div>
-            <div className="px-4 py-3 text-xs font-medium text-center uppercase tracking-wider">
-              First Light
-            </div>
-            <div className="px-4 py-3 text-xs font-medium text-center text-muted-fg uppercase tracking-wider">
-              Todoist
-            </div>
+            <div className="px-4 py-3 text-xs font-medium text-muted-fg uppercase tracking-wider">{t(lang, "compare.table.feature")}</div>
+            <div className="px-4 py-3 text-xs font-medium text-center uppercase tracking-wider">{t(lang, "compare.table.fl")}</div>
+            <div className="px-4 py-3 text-xs font-medium text-center text-muted-fg uppercase tracking-wider">Todoist</div>
           </div>
-          {displayFeatures.map((row: any, i: number) => (
-            <div
-              key={i}
-              className={`grid grid-cols-3 border-b border-border last:border-0 ${
-                i % 2 === 0 ? "" : "bg-stone-50/50"
-              }`}
-            >
+          {rows.map((row, i) => (
+            <div key={i} className={`grid grid-cols-3 border-b border-border last:border-0 ${i % 2 === 0 ? "" : "bg-stone-50/50"}`}>
               <div className="px-4 py-3 text-sm font-medium">{row.feature}</div>
               <div className="px-4 py-3 text-sm text-center">{row.fl}</div>
-              <div className="px-4 py-3 text-sm text-center text-muted-fg">
-                {row.comp}
-              </div>
+              <div className="px-4 py-3 text-sm text-center text-muted-fg">{row.comp}</div>
             </div>
           ))}
         </div>
       </section>
 
       <section className="px-6 pb-16 max-w-3xl mx-auto space-y-6">
-        <h2 className="font-display text-2xl tracking-tight">
-          When to choose First Light
-        </h2>
+        <h2 className="font-display text-2xl tracking-tight">{t(lang, "compare.whenFL")}</h2>
         <ul className="space-y-2 text-sm text-muted-fg">
-          <li className="flex gap-2">
-            <span className="text-green-600 shrink-0">✓</span>
-            You want your AI assistant (Claude, ChatGPT) to manage your tasks directly via MCP
-          </li>
-          <li className="flex gap-2">
-            <span className="text-green-600 shrink-0">✓</span>
-            You prefer adding tasks from Telegram, voice, email, or screenshots
-          </li>
-          <li className="flex gap-2">
-            <span className="text-green-600 shrink-0">✓</span>
-            You want an Eisenhower matrix + focus timer + habit tracking in one app
-          </li>
-          <li className="flex gap-2">
-            <span className="text-green-600 shrink-0">✓</span>
-            You want AI to plan your day around energy levels and priorities
-          </li>
+          {whenFL.map((k) => (
+            <li key={k} className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>{t(lang, k)}</li>
+          ))}
         </ul>
-
-        <h2 className="font-display text-2xl tracking-tight">
-          When to choose Todoist
-        </h2>
+        <h2 className="font-display text-2xl tracking-tight">{t(lang, "compare.whenComp")} Todoist</h2>
         <ul className="space-y-2 text-sm text-muted-fg">
-          <li className="flex gap-2">
-            <span className="text-blue-600 shrink-0">✓</span>
-            You need deep team collaboration with shared projects and comments
-          </li>
-          <li className="flex gap-2">
-            <span className="text-blue-600 shrink-0">✓</span>
-            You rely on 100+ third-party integrations (Zapier, Slack, etc.)
-          </li>
-          <li className="flex gap-2">
-            <span className="text-blue-600 shrink-0">✓</span>
-            You want a mature ecosystem with desktop, mobile, and browser extensions
-          </li>
+          {whenComp.map((k) => (
+            <li key={k} className="flex gap-2"><span className="text-blue-600 shrink-0">✓</span>{t(lang, k)}</li>
+          ))}
         </ul>
       </section>
 
       <section className="px-6 py-16 text-center">
-        <h2 className="font-display text-2xl tracking-tight mb-4">
-          Try First Light free
-        </h2>
-        <p className="text-muted-fg text-sm mb-8 max-w-md mx-auto">
-          AI-native task management with MCP, Telegram, and smart daily planning.
-        </p>
-        <Link
-          href="/signup"
-          className="px-8 py-3 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition"
-        >
-          Get started free
+        <h2 className="font-display text-2xl tracking-tight mb-4">{t(lang, "compare.cta.heading")}</h2>
+        <p className="text-muted-fg text-sm mb-8 max-w-md mx-auto">{t(lang, "compare.cta.subheading")}</p>
+        <Link href="/signup" className="px-8 py-3 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition">
+          {t(lang, "compare.cta.button")}
         </Link>
       </section>
-    </main>
+    </div>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useUserPlan, useStartCheckout, useOpenBillingPortal } from "@/hooks/use-billing";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { DemoCarousel } from "@/components/marketing/demo-carousel";
+import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 
 /**
  * In-app /app/features page.
@@ -20,6 +22,16 @@ export default function FeaturesPage() {
   const checkoutPlus = useStartCheckout("plus");
   const checkoutPro = useStartCheckout("pro");
   const portal = useOpenBillingPortal();
+  const [lang, setLang] = useState<LanguageCode>("en");
+
+  useEffect(() => {
+    setLang(readStoredLanguage());
+    const handler = (e: StorageEvent) => {
+      if (e.key === "fl.language") setLang(readStoredLanguage());
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
 
   // Treat plus + pro + vip as "paid" for surfaces that just need to swap
   // Upgrade → Manage billing. The plan label still shows the precise tier.
@@ -32,10 +44,10 @@ export default function FeaturesPage() {
       {/* Header */}
       <div className="px-4 md:px-6 h-24 md:h-28 border-b border-border flex flex-col justify-center">
         <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">
-          Features
+          {t(lang, "features.heading")}
         </h1>
         <p className="text-sm text-muted-fg mt-1">
-          What's available on each plan, and what you have access to right now.
+          {t(lang, "features.subheading")}
         </p>
       </div>
 
@@ -44,20 +56,20 @@ export default function FeaturesPage() {
           {/* Current plan badge + CTA */}
           <section className="border border-border rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="editorial-number text-[11px] mb-1">YOUR PLAN</p>
+              <p className="editorial-number text-[11px] mb-1">{t(lang, "features.yourPlan")}</p>
               <p className="font-display text-2xl tracking-tight flex items-center gap-2">
                 {isPro ? (
-                  <>Pro <Sparkles className="size-5 text-accent" /></>
+                  <>{t(lang, "features.plan.pro")} <Sparkles className="size-5 text-accent" /></>
                 ) : isPlus ? (
-                  <>Plus <Sparkles className="size-5 text-accent/70" /></>
+                  <>{t(lang, "features.plan.plus")} <Sparkles className="size-5 text-accent/70" /></>
                 ) : (
-                  "Free"
+                  t(lang, "features.plan.free")
                 )}
               </p>
               {isPaid ? (
                 plan?.cancelAtPeriodEnd ? (
                   <p className="text-xs text-muted-fg mt-1">
-                    Cancels at the end of the current period
+                    {t(lang, "features.cancels")}
                     {plan.currentPeriodEnd
                       ? ` (${new Date(plan.currentPeriodEnd).toLocaleDateString()})`
                       : null}
@@ -65,16 +77,16 @@ export default function FeaturesPage() {
                   </p>
                 ) : (
                   <p className="text-xs text-muted-fg mt-1">
-                    Renews automatically
+                    {t(lang, "features.renews")}
                     {plan.currentPeriodEnd
-                      ? ` on ${new Date(plan.currentPeriodEnd).toLocaleDateString()}`
+                      ? ` ${new Date(plan.currentPeriodEnd).toLocaleDateString()}`
                       : null}
                     .
                   </p>
                 )
               ) : (
                 <p className="text-xs text-muted-fg mt-1">
-                  The full task system. Add the AI co-pilot anytime.
+                  {t(lang, "features.freeTip")}
                 </p>
               )}
             </div>
@@ -85,7 +97,7 @@ export default function FeaturesPage() {
                   disabled={portal.isPending}
                   className="btn-ghost h-10 px-4"
                 >
-                  {portal.isPending ? "Opening portal…" : "Manage billing"}
+                  {portal.isPending ? t(lang, "features.openingPortal") : t(lang, "features.manageBilling")}
                 </button>
               ) : isPlus ? (
                 <>
@@ -95,17 +107,17 @@ export default function FeaturesPage() {
                     className="btn-primary h-10 px-4"
                   >
                     {checkoutPro.isPending
-                      ? "Redirecting…"
+                      ? t(lang, "features.redirecting")
                       : priceLoading
-                      ? "Upgrade to Pro"
-                      : `Upgrade to Pro — ${pro?.formatted ?? "2026"}`}
+                      ? t(lang, "features.upgradePro")
+                      : `${t(lang, "features.upgradePro")} — ${pro?.formatted ?? "2026"}`}
                   </button>
                   <button
                     onClick={() => portal.mutate()}
                     disabled={portal.isPending}
                     className="btn-ghost h-10 px-4"
                   >
-                    {portal.isPending ? "Opening portal…" : "Manage billing"}
+                    {portal.isPending ? t(lang, "features.openingPortal") : t(lang, "features.manageBilling")}
                   </button>
                 </>
               ) : (
@@ -116,10 +128,10 @@ export default function FeaturesPage() {
                     className="btn-primary h-10 px-4 inline-flex items-center opacity-90"
                   >
                     {checkoutPlus.isPending
-                      ? "Redirecting…"
+                      ? t(lang, "features.redirecting")
                       : plusLoading
-                      ? "Upgrade to Plus"
-                      : `Upgrade to Plus — ${plus?.formattedPerMonth ?? "2026"}`}
+                      ? t(lang, "features.upgradePlus")
+                      : `${t(lang, "features.upgradePlus")} — ${plus?.formattedPerMonth ?? "2026"}`}
                   </button>
                   <button
                     onClick={() => checkoutPro.mutate()}
@@ -127,10 +139,10 @@ export default function FeaturesPage() {
                     className="btn-primary h-10 px-4"
                   >
                     {checkoutPro.isPending
-                      ? "Redirecting…"
+                      ? t(lang, "features.redirecting")
                       : priceLoading
-                      ? "Upgrade to Pro"
-                      : `Upgrade to Pro— ${pro?.formatted ?? "2026"}`}
+                      ? t(lang, "features.upgradePro")
+                      : `${t(lang, "features.upgradePro")} — ${pro?.formatted ?? "2026"}`}
                   </button>
                 </>
               )}
@@ -140,7 +152,7 @@ export default function FeaturesPage() {
           {/* What's new in Pro (only for Free users) */}
           {!isPaid ? (
             <section className="border border-accent/40 bg-accent/5 rounded-2xl p-5">
-              <p className="editorial-number text-[11px] mb-3">WHAT YOU UNLOCK</p>
+              <p className="editorial-number text-[11px] mb-3">{t(lang, "features.unlockHeading")}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {[
                   { title: "Daily Edition", body: "Unlimited briefings; today, not just one a day." },
@@ -161,27 +173,27 @@ export default function FeaturesPage() {
 
           {/* Visual demo — same carousel as /pricing */}
           <section>
-            <DemoCarousel />
+            <DemoCarousel lang={lang} />
           </section>
 
           {/* Full matrix */}
           <section>
-            <h2 className="font-display text-2xl tracking-tight mb-2">Side by side</h2>
+            <h2 className="font-display text-2xl tracking-tight mb-2">{t(lang, "features.matrixHeading")}</h2>
             <p className="text-sm text-muted-fg mb-6">
               {isPro
-                ? "You have access to everything below."
+                ? t(lang, "features.matrixSubPro")
                 : isPlus
-                  ? "You have everything in Plus. Pro adds the full AI co-pilot."
-                  : "Lock icons mark features that aren't included in your tier."}
+                  ? t(lang, "features.matrixSubPlus")
+                  : t(lang, "features.matrixSubFree")}
             </p>
             <FeatureMatrix currentPlan={(plan?.plan as any) ?? "free"} />
           </section>
 
           {/* Footer link to public pricing for sharing */}
           <section className="border-t border-border pt-6 text-sm text-muted-fg">
-            Want to share this with someone?{" "}
+            {t(lang, "features.shareLink")}{" "}
             <Link href="/pricing" className="text-accent hover:underline inline-flex items-center gap-1">
-              The public pricing page <ArrowRight className="size-3.5" />
+              {t(lang, "features.publicPricing")} <ArrowRight className="size-3.5" />
             </Link>
           </section>
         </div>
