@@ -94,6 +94,100 @@ export type StringKey =
   | "landing.principle5Body"
   | "landing.footerCredit"
   | "landing.footerSource"
+  /* landing — nav */
+  | "landing.nav.pricing"
+  | "landing.nav.compare"
+  | "landing.nav.blog"
+  /* landing — demo carousel section */
+  | "landing.demo.kicker"
+  | "landing.demo.heading"
+  | "landing.demo.subheading"
+  | "landing.demo.card1.kicker"
+  | "landing.demo.card1.title"
+  | "landing.demo.card1.body1"
+  | "landing.demo.card1.body2"
+  | "landing.demo.card1.closing"
+  | "landing.demo.card1.name"
+  | "landing.demo.card1.desc"
+  | "landing.demo.card2.kicker"
+  | "landing.demo.card2.name"
+  | "landing.demo.card2.desc"
+  | "landing.demo.card3.kicker"
+  | "landing.demo.card3.name"
+  | "landing.demo.card3.desc"
+  | "landing.demo.card4.kicker"
+  | "landing.demo.card4.title"
+  | "landing.demo.card4.name"
+  | "landing.demo.card4.desc"
+  | "landing.demo.rhythm.morning"
+  | "landing.demo.rhythm.morningDesc"
+  | "landing.demo.rhythm.midday"
+  | "landing.demo.rhythm.middayDesc"
+  | "landing.demo.rhythm.evening"
+  | "landing.demo.rhythm.eveningDesc"
+  /* landing — AI section */
+  | "landing.ai.kicker"
+  | "landing.ai.heading"
+  | "landing.ai.subheading"
+  | "landing.ai.item1.title"
+  | "landing.ai.item1.desc"
+  | "landing.ai.item2.title"
+  | "landing.ai.item2.desc"
+  | "landing.ai.item3.title"
+  | "landing.ai.item3.desc"
+  /* landing — capture section */
+  | "landing.capture.kicker"
+  | "landing.capture.heading"
+  | "landing.capture.telegram.title"
+  | "landing.capture.telegram.desc"
+  | "landing.capture.voice.title"
+  | "landing.capture.voice.desc"
+  | "landing.capture.email.title"
+  | "landing.capture.email.desc"
+  | "landing.capture.screenshot.title"
+  | "landing.capture.screenshot.desc"
+  /* landing — feature grid */
+  | "landing.features.kicker"
+  | "landing.features.heading"
+  | "landing.features.subheading"
+  | "landing.features.f1.name" | "landing.features.f1.desc"
+  | "landing.features.f2.name" | "landing.features.f2.desc"
+  | "landing.features.f3.name" | "landing.features.f3.desc"
+  | "landing.features.f4.name" | "landing.features.f4.desc"
+  | "landing.features.f5.name" | "landing.features.f5.desc"
+  | "landing.features.f6.name" | "landing.features.f6.desc"
+  | "landing.features.f7.name" | "landing.features.f7.desc"
+  | "landing.features.f8.name" | "landing.features.f8.desc"
+  | "landing.features.f9.name" | "landing.features.f9.desc"
+  | "landing.features.f10.name" | "landing.features.f10.desc"
+  | "landing.features.f11.name" | "landing.features.f11.desc"
+  | "landing.features.f12.name" | "landing.features.f12.desc"
+  | "landing.features.f13.name" | "landing.features.f13.desc"
+  | "landing.features.f14.name" | "landing.features.f14.desc"
+  | "landing.features.f15.name" | "landing.features.f15.desc"
+  | "landing.features.f16.name" | "landing.features.f16.desc"
+  | "landing.features.f17.name" | "landing.features.f17.desc"
+  /* landing — testimonials */
+  | "landing.testimonials.kicker"
+  | "landing.testimonials.heading"
+  /* landing — FAQ */
+  | "landing.faq.heading"
+  | "landing.faq.q1"
+  | "landing.faq.a1"
+  | "landing.faq.q2"
+  | "landing.faq.a2"
+  | "landing.faq.q3"
+  | "landing.faq.a3"
+  | "landing.faq.q4"
+  | "landing.faq.a4"
+  | "landing.faq.q5"
+  | "landing.faq.a5"
+  | "landing.faq.q6"
+  | "landing.faq.a6"
+  | "landing.faq.q7"
+  | "landing.faq.a7"
+  | "landing.faq.q8"
+  | "landing.faq.a8"
   | "sidebar.addTask"
   | "sidebar.search"
   | "sidebar.today"
@@ -807,6 +901,100 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "The moment possibility becomes visible.",
     "landing.footerCredit": "© 2026 First Light. All rights reserved.",
     "landing.footerSource": "Source on GitHub →",
+    /* landing — nav */
+    "landing.nav.pricing": "Pricing",
+    "landing.nav.compare": "Compare",
+    "landing.nav.blog": "Blog",
+    /* landing — demo carousel */
+    "landing.demo.kicker": "SEE IT IN MOTION",
+    "landing.demo.heading": "Four surfaces, one calm rhythm.",
+    "landing.demo.subheading": "Four surfaces that show what makes First Light different.",
+    "landing.demo.card1.kicker": "TUESDAY · OPEN DAY",
+    "landing.demo.card1.title": "An open day asks its own kind of question.",
+    "landing.demo.card1.body1": "Nothing is scheduled. Nothing is due. The morning is yours to shape — start with the Q4 doc while the room is still quiet.",
+    "landing.demo.card1.body2": "Two windows of deep work fit cleanly before the 3pm review. Maya\u2019s note on cross-team framing is worth a second read first.",
+    "landing.demo.card1.closing": "Three of your last five wins started in mornings exactly like this one.",
+    "landing.demo.card1.name": "Daily Edition",
+    "landing.demo.card1.desc": "A morning briefing — never a to-do list.",
+    "landing.demo.card2.kicker": "MCP · YOUR AI KNOWS YOUR TASKS",
+    "landing.demo.card2.name": "Works with your AI",
+    "landing.demo.card2.desc": "Claude, ChatGPT, or any MCP client can read and manage your tasks natively.",
+    "landing.demo.card3.kicker": "SAY IT · SHOOT IT",
+    "landing.demo.card3.name": "Voice · Snapshot · Paste → Task",
+    "landing.demo.card3.desc": "Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.",
+    "landing.demo.card4.kicker": "FRIDAY · WEEKLY REVIEW",
+    "landing.demo.card4.title": "Look back, then forward.",
+    "landing.demo.card4.name": "Weekly Review + Next-week Preview",
+    "landing.demo.card4.desc": "Close last week. Pre-stage the next one.",
+    "landing.demo.rhythm.morning": "MORNING",
+    "landing.demo.rhythm.morningDesc": "A briefing you read once, not a backlog you scroll past.",
+    "landing.demo.rhythm.midday": "MIDDAY",
+    "landing.demo.rhythm.middayDesc": "Plan-my-day pre-arranges deep work around your peaks.",
+    "landing.demo.rhythm.evening": "EVENING",
+    "landing.demo.rhythm.eveningDesc": "Reflect, learn one thing, close the day clean.",
+    /* landing — AI section */
+    "landing.ai.kicker": "WORKS WITH YOUR AI",
+    "landing.ai.heading": "Your AI assistant already knows your tasks.",
+    "landing.ai.subheading": "First Light speaks MCP — the open protocol that lets Claude, ChatGPT, and any AI assistant read, create, and reorganize your tasks natively. No copy-pasting. No screenshots.",
+    "landing.ai.item1.title": "Plan my day",
+    "landing.ai.item1.desc": "AI reorganizes today\u2019s tasks around your calendar and energy peaks.",
+    "landing.ai.item2.title": "Prep my meeting",
+    "landing.ai.item2.desc": "Ask your AI to pull context, create an agenda, and stage follow-up tasks.",
+    "landing.ai.item3.title": "Find patterns",
+    "landing.ai.item3.desc": "Detect procrastination, suggest reschedules, spot what keeps slipping.",
+    /* landing — capture section */
+    "landing.capture.kicker": "TASK FROM ANYWHERE",
+    "landing.capture.heading": "Capture without context-switching.",
+    "landing.capture.telegram.title": "Telegram",
+    "landing.capture.telegram.desc": "Type a task in chat. Done.",
+    "landing.capture.voice.title": "Voice",
+    "landing.capture.voice.desc": "Say it. AI parses the date, priority, title.",
+    "landing.capture.email.title": "Email",
+    "landing.capture.email.desc": "Forward to your inbox alias. It becomes a task.",
+    "landing.capture.screenshot.title": "Screenshot",
+    "landing.capture.screenshot.desc": "Paste a whiteboard photo. Get a task list.",
+    /* landing — feature grid */
+    "landing.features.kicker": "AND MORE",
+    "landing.features.heading": "Everything else, without the noise.",
+    "landing.features.subheading": "The full toolkit lives here — habits, focus timer, calendar, search, and more.",
+    "landing.features.f1.name": "Plan my day", "landing.features.f1.desc": "AI re-sorts today\u2019s work into four Eisenhower quadrants.",
+    "landing.features.f2.name": "Morning Co-pilot", "landing.features.f2.desc": "Proactive nudges — defer, drop, batch, reschedule.",
+    "landing.features.f3.name": "Calendar", "landing.features.f3.desc": "Two-way Google Calendar sync with drag-to-reschedule.",
+    "landing.features.f4.name": "Share Groups", "landing.features.f4.desc": "Shared task lists with real-time sync for teams or family.",
+    "landing.features.f5.name": "Paste \u2192 Tasks", "landing.features.f5.desc": "\u2318V a whiteboard screenshot — get a clean task list.",
+    "landing.features.f6.name": "Telegram Bot", "landing.features.f6.desc": "Capture tasks from Telegram with natural language.",
+    "landing.features.f7.name": "Habits", "landing.features.f7.desc": "Weekly grid tracker for daily and recurring habits.",
+    "landing.features.f8.name": "Focus Timer", "landing.features.f8.desc": "Timed focus sessions with logging linked to tasks.",
+    "landing.features.f9.name": "Notes \u2192 Tasks", "landing.features.f9.desc": "Convert any note into a task in one click.",
+    "landing.features.f10.name": "Goal Tracker", "landing.features.f10.desc": "Outcome-shaped goals with AI-generated sub-trackers.",
+    "landing.features.f11.name": "Semantic Search", "landing.features.f11.desc": "Find tasks by meaning, not just keywords.",
+    "landing.features.f12.name": "Push Notifications", "landing.features.f12.desc": "Native push for due tasks and calendar events.",
+    "landing.features.f13.name": "Email Digest", "landing.features.f13.desc": "Morning summary delivered to your inbox.",
+    "landing.features.f14.name": "Email Reminders", "landing.features.f14.desc": "Per-task email reminders at the time you choose.",
+    "landing.features.f15.name": "Reflection", "landing.features.f15.desc": "Evening prompt — what went well, what to carry forward.",
+    "landing.features.f16.name": "Priority Support", "landing.features.f16.desc": "Real human, replies within one business day.",
+    "landing.features.f17.name": "Weekly Review", "landing.features.f17.desc": "AI-written retro on what shipped, what slipped, and what\u2019s next.",
+    /* landing — testimonials */
+    "landing.testimonials.kicker": "FROM EARLY USERS",
+    "landing.testimonials.heading": "Quiet tools, loud fans.",
+    /* landing — FAQ */
+    "landing.faq.heading": "Questions",
+    "landing.faq.q1": "Can I manage tasks from Telegram?",
+    "landing.faq.a1": "Yes! Our Telegram bot (@Firstlightapp_bot) lets you add tasks, check your day, mark things done, and review your week — all from a chat. Just type naturally: \u2018Buy groceries tomorrow 3pm\u2019 and it creates the task with the right date and priority.",
+    "landing.faq.q2": "What is MCP integration?",
+    "landing.faq.a2": "MCP (Model Context Protocol) is the open standard that lets AI assistants like Claude and ChatGPT work directly inside an app. Ask your assistant to \u2018plan my day\u2019 or \u2018reschedule everything overdue,\u2019 and it actually moves items in your planner. First Light is built MCP-native from the core — first-party, OAuth-secured, and designed for it rather than patched onto it.",
+    "landing.faq.q3": "What is the Daily Edition?",
+    "landing.faq.a3": "Every morning, First Light writes you a personal briefing about your day. It looks at your tasks, calendar, and patterns, then composes a short editorial — not bullet points, but a readable narrative that helps you see what matters.",
+    "landing.faq.q4": "Is First Light a task manager?",
+    "landing.faq.a4": "It has tasks, calendar sync, habits, and focus modes — the essentials. But the core experience is the Daily Edition: an AI-written morning briefing that reads like a newspaper column about your day.",
+    "landing.faq.q5": "Which languages are supported?",
+    "landing.faq.a5": "English, Traditional Chinese (繁體中文), Simplified Chinese (简体中文), Japanese (日本語), and Korean (한국어) — with native typography for each.",
+    "landing.faq.q6": "Is it free?",
+    "landing.faq.a6": "The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus and Pro plans. Both include a 14-day free trial.",
+    "landing.faq.q7": "Does it sync with Google Calendar?",
+    "landing.faq.a7": "Yes. Your Google Calendar events appear alongside your tasks, so the Daily Edition can plan around your meetings.",
+    "landing.faq.q8": "Can I use it on my phone?",
+    "landing.faq.a8": "First Light is a PWA (Progressive Web App). Add it to your home screen on iOS or Android and it works like a native app — with offline support and push notifications.",
     "sidebar.addTask": "Add task",
     "sidebar.search": "Search…",
     "sidebar.today": "Today",
@@ -1517,6 +1705,100 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "光，讓一切慢慢顯現。",
     "landing.footerCredit": "© 2026 First Light · 保留所有權利",
     "landing.footerSource": "GitHub 原始碼 →",
+    /* landing — nav */
+    "landing.nav.pricing": "價格",
+    "landing.nav.compare": "比較",
+    "landing.nav.blog": "部落格",
+    /* landing — demo carousel */
+    "landing.demo.kicker": "看看實際效果",
+    "landing.demo.heading": "四個表面，一種巧妙的節奏。",
+    "landing.demo.subheading": "四個表面，展示 First Light 的獨特之處。",
+    "landing.demo.card1.kicker": "星期二 · 自由日",
+    "landing.demo.card1.title": "自由日有屬於自己的問題。",
+    "landing.demo.card1.body1": "沒有行程。沒有截止日。早晨屬於你自己 — 先從 Q4 文件開始，著據還很寧靜。",
+    "landing.demo.card1.body2": "在下午三點進度檢魔前，還有兩個深度工作窗口。建議先再看一遍 Maya 關於跨團随架構的筆記。",
+    "landing.demo.card1.closing": "你最近五次成功中，有三次正是從這様的早晨開始的。",
+    "landing.demo.card1.name": "日報",
+    "landing.demo.card1.desc": "一份早晨簡報 — 而不是待辦清單。",
+    "landing.demo.card2.kicker": "MCP · AI 已知道你的任務",
+    "landing.demo.card2.name": "與 AI 協作",
+    "landing.demo.card2.desc": "Claude、ChatGPT 或任何 MCP 客戶端都能原生讀取和管理你的任務。",
+    "landing.demo.card3.kicker": "說出來 · 拍下來",
+    "landing.demo.card3.name": "語音 · 截圖 · 貼上 → 任務",
+    "landing.demo.card3.desc": "說出、拍照或貼上截圖，AI 自動提取每項任務並設定正確的日期與優先級。",
+    "landing.demo.card4.kicker": "星期五 · 週回顧",
+    "landing.demo.card4.title": "回小，再展望。",
+    "landing.demo.card4.name": "週回顧 + 下週預覽",
+    "landing.demo.card4.desc": "封集上週，預備下週。",
+    "landing.demo.rhythm.morning": "早晨",
+    "landing.demo.rhythm.morningDesc": "一份讀一次就夠的簡報，而不是滘不完的待辦清單。",
+    "landing.demo.rhythm.midday": "中午",
+    "landing.demo.rhythm.middayDesc": "規劃我的一天，在你的高效時段安排深度工作。",
+    "landing.demo.rhythm.evening": "奈晏",
+    "landing.demo.rhythm.eveningDesc": "回顾、學到一件事，丶清收部。",
+    /* landing — AI section */
+    "landing.ai.kicker": "與你的 AI 協作",
+    "landing.ai.heading": "你的 AI 助理已經了解你的任務。",
+    "landing.ai.subheading": "First Light 支援 MCP — 讓 Claude、ChatGPT 以及任何 AI 助理都能原生讀取、建立和重新整理你的任務。不用複製貼上，不用切換應用程式。",
+    "landing.ai.item1.title": "幫我規劃一天",
+    "landing.ai.item1.desc": "AI 根據你的行事曆和精力高峰重新安排今天的任務。",
+    "landing.ai.item2.title": "準備我的會議",
+    "landing.ai.item2.desc": "請 AI 拉取脈絡、建立議程，並準備後續任務。",
+    "landing.ai.item3.title": "找到規律",
+    "landing.ai.item3.desc": "偵測拖延模式、建議重新排程、找出反覆跨次的任務。",
+    /* landing — capture section */
+    "landing.capture.kicker": "隨時隨地建立任務",
+    "landing.capture.heading": "捕捉靈感，不用切換應用程式。",
+    "landing.capture.telegram.title": "Telegram",
+    "landing.capture.telegram.desc": "在聊天中輸入任務。就這樣。",
+    "landing.capture.voice.title": "語音",
+    "landing.capture.voice.desc": "說出來。AI 解析日期、優先級、標題。",
+    "landing.capture.email.title": "電子郵件",
+    "landing.capture.email.desc": "轉寄到你的專屬地址，就能變成任務。",
+    "landing.capture.screenshot.title": "截圖",
+    "landing.capture.screenshot.desc": "貼上白板照片，取得任務清單。",
+    /* landing — feature grid */
+    "landing.features.kicker": "還有更多",
+    "landing.features.heading": "全套功能，不多一件干擾。",
+    "landing.features.subheading": "所有工具就在這裡 — 習慣、專注計時器、行事曆、搜尋等。",
+    "landing.features.f1.name": "Plan my day", "landing.features.f1.desc": "AI re-sorts today\u2019s work into four Eisenhower quadrants.",
+    "landing.features.f2.name": "Morning Co-pilot", "landing.features.f2.desc": "Proactive nudges — defer, drop, batch, reschedule.",
+    "landing.features.f3.name": "Calendar", "landing.features.f3.desc": "Two-way Google Calendar sync with drag-to-reschedule.",
+    "landing.features.f4.name": "Share Groups", "landing.features.f4.desc": "Shared task lists with real-time sync for teams or family.",
+    "landing.features.f5.name": "Paste \u2192 Tasks", "landing.features.f5.desc": "\u2318V a whiteboard screenshot — get a clean task list.",
+    "landing.features.f6.name": "Telegram Bot", "landing.features.f6.desc": "Capture tasks from Telegram with natural language.",
+    "landing.features.f7.name": "Habits", "landing.features.f7.desc": "Weekly grid tracker for daily and recurring habits.",
+    "landing.features.f8.name": "Focus Timer", "landing.features.f8.desc": "Timed focus sessions with logging linked to tasks.",
+    "landing.features.f9.name": "Notes \u2192 Tasks", "landing.features.f9.desc": "Convert any note into a task in one click.",
+    "landing.features.f10.name": "Goal Tracker", "landing.features.f10.desc": "Outcome-shaped goals with AI-generated sub-trackers.",
+    "landing.features.f11.name": "Semantic Search", "landing.features.f11.desc": "Find tasks by meaning, not just keywords.",
+    "landing.features.f12.name": "Push Notifications", "landing.features.f12.desc": "Native push for due tasks and calendar events.",
+    "landing.features.f13.name": "Email Digest", "landing.features.f13.desc": "Morning summary delivered to your inbox.",
+    "landing.features.f14.name": "Email Reminders", "landing.features.f14.desc": "Per-task email reminders at the time you choose.",
+    "landing.features.f15.name": "Reflection", "landing.features.f15.desc": "Evening prompt — what went well, what to carry forward.",
+    "landing.features.f16.name": "Priority Support", "landing.features.f16.desc": "Real human, replies within one business day.",
+    "landing.features.f17.name": "Weekly Review", "landing.features.f17.desc": "AI-written retro on what shipped, what slipped, and what\u2019s next.",
+    /* landing — testimonials */
+    "landing.testimonials.kicker": "早期用戶回馔",
+    "landing.testimonials.heading": "工具寧靜，粉絲熱情。",
+    /* landing — FAQ */
+    "landing.faq.heading": "常見問題",
+    "landing.faq.q1": "可以用 Telegram 管理任務嗎？",
+    "landing.faq.a1": "可以！我們的 Telegram Bot（@Firstlightapp_bot）讓你在聊天中新增任務、查看今天行程、標記完成，以及回顧本週 — 直接自然語輸入即可。",
+    "landing.faq.q2": "什麼是 MCP 整合？",
+    "landing.faq.a2": "MCP（Model Context Protocol）是讓 Claude、ChatGPT 等 AI 助理能直接在應用程式內部運作的開放標準。請不必複製貼上，直接請 AI 幫你在規劃工具中移動任務。",
+    "landing.faq.q3": "什麼是日報？",
+    "landing.faq.a3": "每天早晨，First Light 會寫一份屬於你的個人簡報。分析你的任務、行事曆和規律，撰寫一篇短小的社論文章 — 不是條列討論，而是幫助你看清什麼才重要。",
+    "landing.faq.q4": "First Light 是任務管理工具嗎？",
+    "landing.faq.a4": "它具備任務、行事曆同步、習慣和專注模式 — 基本工具齊全。但核心體驗是日報：一份讀起來像報紙專欄的 AI 早晨簡報。",
+    "landing.faq.q5": "支援哪些語言？",
+    "landing.faq.a5": "英文、繁體中文、簡體中文、日文和韓文 — 並為每種語言優化了排版。",
+    "landing.faq.q6": "免費嗎？",
+    "landing.faq.a6": "核心規劃工具永遠免費。AI 功能 — 日報、智慧規劃、週回顧 — 需要 Plus 或 Pro 方案。兩者都提供 14 天免費試用。",
+    "landing.faq.q7": "支援與 Google 行事曆同步嗎？",
+    "landing.faq.a7": "支援。你的 Google 行事曆活動會與任務並列顯示，日報就能围繞會議安排行程。",
+    "landing.faq.q8": "可以在手機上使用嗎？",
+    "landing.faq.a8": "First Light 是 PWA（漸進式網頁應用）。在 iOS 或 Android 上加入主畫面，就像原生應用一樣 — 支援離線與推指通知。",
     "sidebar.addTask": "新增任務",
     "sidebar.search": "搜尋…",
     "sidebar.today": "今日",
@@ -2227,6 +2509,93 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "照亮前方，持续前进。",
     "landing.footerCredit": "© 2026 First Light · 保留所有权利",
     "landing.footerSource": "GitHub 源码 →",
+    "landing.nav.pricing": "价格",
+    "landing.nav.compare": "对比",
+    "landing.nav.blog": "博客",
+    "landing.demo.kicker": "看看实际效果",
+    "landing.demo.heading": "四个界面，一种优雅节奏。",
+    "landing.demo.subheading": "四个界面，展现 First Light 的独特之处。",
+    "landing.demo.card1.kicker": "周二 · 自由日",
+    "landing.demo.card1.title": "自由日有属于自己的问题。",
+    "landing.demo.card1.body1": "没有日程。没有截止日。清晨属于你自己 — 先从 Q4 文档开始，居室还很安静。",
+    "landing.demo.card1.body2": "在下午三点回顾之前，还有两个深度工作窗口。建议先再看一遍 Maya 关于跨团队架构的笔记。",
+    "landing.demo.card1.closing": "你最近五次成功中，有三次正是从这样的清晨开始的。",
+    "landing.demo.card1.name": "日报",
+    "landing.demo.card1.desc": "一份清晨简报 — 而不是待办清单。",
+    "landing.demo.card2.kicker": "MCP · AI 已知道你的任务",
+    "landing.demo.card2.name": "与 AI 协作",
+    "landing.demo.card2.desc": "Claude、ChatGPT 或任何 MCP 客户端都能原生读取和管理你的任务。",
+    "landing.demo.card3.kicker": "说出来 · 拍下来",
+    "landing.demo.card3.name": "语音 · 截图 · 粘贴 → 任务",
+    "landing.demo.card3.desc": "说出、拍照或粘贴截图，AI 自动提取每项任务并设置正确的日期与优先级。",
+    "landing.demo.card4.kicker": "周五 · 周回顾",
+    "landing.demo.card4.title": "回顾，再展望。",
+    "landing.demo.card4.name": "周回顾 + 下周预览",
+    "landing.demo.card4.desc": "封次上周，预备下周。",
+    "landing.demo.rhythm.morning": "早晨",
+    "landing.demo.rhythm.morningDesc": "一份读一遍就够的简报，而不是滚不完的待办清单。",
+    "landing.demo.rhythm.midday": "中午",
+    "landing.demo.rhythm.middayDesc": "规划我的一天，在你的高效时段安排深度工作。",
+    "landing.demo.rhythm.evening": "晚间",
+    "landing.demo.rhythm.eveningDesc": "回顾、学到一件事，乲清收尾。",
+    "landing.ai.kicker": "与你的 AI 协作",
+    "landing.ai.heading": "你的 AI 助手已经了解你的任务。",
+    "landing.ai.subheading": "First Light 支持 MCP — 让 Claude、ChatGPT 以及任何 AI 助手都能原生读取、创建和重新整理你的任务。不用复制粘贴，不用切换应用。",
+    "landing.ai.item1.title": "帮我规划一天",
+    "landing.ai.item1.desc": "AI 根据你的日程和精力高峰重新排序今天的任务。",
+    "landing.ai.item2.title": "准备我的会议",
+    "landing.ai.item2.desc": "请 AI 拉取背景、创建议程，并准备后续任务。",
+    "landing.ai.item3.title": "发现规律",
+    "landing.ai.item3.desc": "检测拖延模式、建议重新排期、找出反复滚出的任务。",
+    "landing.capture.kicker": "随时随地创建任务",
+    "landing.capture.heading": "捕捉灵感，无需切换应用。",
+    "landing.capture.telegram.title": "Telegram",
+    "landing.capture.telegram.desc": "在聊天中输入任务。就这样。",
+    "landing.capture.voice.title": "语音",
+    "landing.capture.voice.desc": "说出来。AI 解析日期、优先级、标题。",
+    "landing.capture.email.title": "邮件",
+    "landing.capture.email.desc": "转发到你的专属地址，就能变成任务。",
+    "landing.capture.screenshot.title": "截图",
+    "landing.capture.screenshot.desc": "粘贴白板照片，获得任务清单。",
+    "landing.features.kicker": "还有更多",
+    "landing.features.heading": "全套功能，不多一件干扰。",
+    "landing.features.subheading": "所有工具在这里 — 习惯、专注计时器、日历、搜索等。",
+    "landing.features.f1.name": "Plan my day", "landing.features.f1.desc": "AI re-sorts today\u2019s work into four Eisenhower quadrants.",
+    "landing.features.f2.name": "Morning Co-pilot", "landing.features.f2.desc": "Proactive nudges — defer, drop, batch, reschedule.",
+    "landing.features.f3.name": "Calendar", "landing.features.f3.desc": "Two-way Google Calendar sync with drag-to-reschedule.",
+    "landing.features.f4.name": "Share Groups", "landing.features.f4.desc": "Shared task lists with real-time sync for teams or family.",
+    "landing.features.f5.name": "Paste \u2192 Tasks", "landing.features.f5.desc": "\u2318V a whiteboard screenshot — get a clean task list.",
+    "landing.features.f6.name": "Telegram Bot", "landing.features.f6.desc": "Capture tasks from Telegram with natural language.",
+    "landing.features.f7.name": "Habits", "landing.features.f7.desc": "Weekly grid tracker for daily and recurring habits.",
+    "landing.features.f8.name": "Focus Timer", "landing.features.f8.desc": "Timed focus sessions with logging linked to tasks.",
+    "landing.features.f9.name": "Notes \u2192 Tasks", "landing.features.f9.desc": "Convert any note into a task in one click.",
+    "landing.features.f10.name": "Goal Tracker", "landing.features.f10.desc": "Outcome-shaped goals with AI-generated sub-trackers.",
+    "landing.features.f11.name": "Semantic Search", "landing.features.f11.desc": "Find tasks by meaning, not just keywords.",
+    "landing.features.f12.name": "Push Notifications", "landing.features.f12.desc": "Native push for due tasks and calendar events.",
+    "landing.features.f13.name": "Email Digest", "landing.features.f13.desc": "Morning summary delivered to your inbox.",
+    "landing.features.f14.name": "Email Reminders", "landing.features.f14.desc": "Per-task email reminders at the time you choose.",
+    "landing.features.f15.name": "Reflection", "landing.features.f15.desc": "Evening prompt — what went well, what to carry forward.",
+    "landing.features.f16.name": "Priority Support", "landing.features.f16.desc": "Real human, replies within one business day.",
+    "landing.features.f17.name": "Weekly Review", "landing.features.f17.desc": "AI-written retro on what shipped, what slipped, and what\u2019s next.",
+    "landing.testimonials.kicker": "早期用户反馈",
+    "landing.testimonials.heading": "工具宁静，粉丝热情。",
+    "landing.faq.heading": "常见问题",
+    "landing.faq.q1": "可以用 Telegram 管理任务吗？",
+    "landing.faq.a1": "可以！我们的 Telegram Bot（@Firstlightapp_bot）让你在聊天中新增任务、查看今天行程、标记完成，以及回顾本周 — 直接自然语言输入即可。",
+    "landing.faq.q2": "什么是 MCP 集成？",
+    "landing.faq.a2": "MCP（模型上下文协议）是让 Claude、ChatGPT 等 AI 助手能直接在应用内部操作的开放标准。无需复制粘贴，直接请 AI 帮你在规划工具中移动任务。",
+    "landing.faq.q3": "什么是日报？",
+    "landing.faq.a3": "每天早晨，First Light 会为你撰写一份个人简报。分析你的任务、日程和规律，撰写一篇短小社论 — 不是条列论述，而是帮助你看清什么才重要。",
+    "landing.faq.q4": "First Light 是任务管理工具吗？",
+    "landing.faq.a4": "它具备任务、日历同步、习惯和专注模式 — 基本工具齐全。但核心体验是日报：一份读起来像报纸专栏的 AI 清晨简报。",
+    "landing.faq.q5": "支持哪些语言？",
+    "landing.faq.a5": "英文、繁体中文、简体中文、日语和韩语 — 并为每种语言优化了排版。",
+    "landing.faq.q6": "免费吗？",
+    "landing.faq.a6": "核心规划工具永久免费。AI 功能 — 日报、智能规划、周回顾 — 需要 Plus 或 Pro 方案。两者都提供 14 天免费试用。",
+    "landing.faq.q7": "支持与 Google 日历同步吗？",
+    "landing.faq.a7": "支持。你的 Google 日历活动会与任务并列显示，日报就能围绕会议安排行程。",
+    "landing.faq.q8": "可以在手机上使用吗？",
+    "landing.faq.a8": "First Light 是 PWA（渐进式网页应用）。在 iOS 或 Android 上添加到主屏，就像原生应用一样 — 支持离线与推送通知。",
     "sidebar.addTask": "新增任务",
     "sidebar.search": "搜索…",
     "sidebar.today": "今日",
@@ -2937,6 +3306,93 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "光が、すべてをゆっくりと照らしだす。",
     "landing.footerCredit": "© 2026 First Light · 無断複写・転載を禁じます",
     "landing.footerSource": "GitHub のソース →",
+    "landing.nav.pricing": "料金",
+    "landing.nav.compare": "比較",
+    "landing.nav.blog": "ブログ",
+    "landing.demo.kicker": "実際の動きを見る",
+    "landing.demo.heading": "四つの画面、一つの穏やかなリズム。",
+    "landing.demo.subheading": "First Light の独自性を示す四つの画面。",
+    "landing.demo.card1.kicker": "火曜日 · 自由な一日",
+    "landing.demo.card1.title": "自由な日には、独自の問いがある。",
+    "landing.demo.card1.body1": "予定はない。期限もない。朝は自分のもの — まず Q4 ドキュメントから始めよう。",
+    "landing.demo.card1.body2": "午後３時のレビュー前に、集中作業のウィンドウが２つある。Maya のメモを先に読み返すことをおすすめする。",
+    "landing.demo.card1.closing": "直近５回の成功のうち３回は、まさにこんな朗らかな朝から始まった。",
+    "landing.demo.card1.name": "デイリーエディション",
+    "landing.demo.card1.desc": "朝のブリーフィング — To-Doリストではない。",
+    "landing.demo.card2.kicker": "MCP · AI がタスクを知っている",
+    "landing.demo.card2.name": "AI と連携する",
+    "landing.demo.card2.desc": "Claude、ChatGPT または任意の MCP クライアントがタスクをネイティブに読み取り・管理できる。",
+    "landing.demo.card3.kicker": "言う · 撮る",
+    "landing.demo.card3.name": "音声 · スナップ · 貼り付け → タスク",
+    "landing.demo.card3.desc": "話す、撮影する、またはスクリーンショットを貼り付けると、AI が正しい日時と優先度でタスクを抽出する。",
+    "landing.demo.card4.kicker": "金曜日 · 週次レビュー",
+    "landing.demo.card4.title": "振り返り、そして見通す。",
+    "landing.demo.card4.name": "週次レビュー + 来週プレビュー",
+    "landing.demo.card4.desc": "予定行動を閉じ、来週を準備する。",
+    "landing.demo.rhythm.morning": "朝",
+    "landing.demo.rhythm.morningDesc": "一度読むだけで十分なブリーフィング。",
+    "landing.demo.rhythm.midday": "昼",
+    "landing.demo.rhythm.middayDesc": "集中力のピークに深井作業を配置する。",
+    "landing.demo.rhythm.evening": "夕方",
+    "landing.demo.rhythm.eveningDesc": "振り返り、一つ学び、一日をきれいに閉じる。",
+    "landing.ai.kicker": "AI と連携する",
+    "landing.ai.heading": "AI アシスタントはすでにタスクを知っている。",
+    "landing.ai.subheading": "First Light は MCP 対応 — Claude、ChatGPT などの AI アシスタントがタスクをネイティブに読み取り・作成・再整理できる。コピペ、スクリーンショット不要。",
+    "landing.ai.item1.title": "一日を計画する",
+    "landing.ai.item1.desc": "AI がカレンダーとエネルギーのピークに合わせてタスクを再整理する。",
+    "landing.ai.item2.title": "会議の準備",
+    "landing.ai.item2.desc": "AI に資料の取得、アジェンダ作成、フォローアップタスクの準備を依頼する。",
+    "landing.ai.item3.title": "パターンを見つける",
+    "landing.ai.item3.desc": "後回し偉向を検知し、リスケジュールを提案し、繰り返すスリップを発見する。",
+    "landing.capture.kicker": "どこからでもタスク登録",
+    "landing.capture.heading": "コンテキストを切り替えずにキャプチャ。",
+    "landing.capture.telegram.title": "Telegram",
+    "landing.capture.telegram.desc": "チャットでタスクを入力。それだけ。",
+    "landing.capture.voice.title": "音声",
+    "landing.capture.voice.desc": "言うだけ。AI が日時、優先度、タイトルを解析する。",
+    "landing.capture.email.title": "メール",
+    "landing.capture.email.desc": "専用アドレスに転送するだけでタスクになる。",
+    "landing.capture.screenshot.title": "スクリーンショット",
+    "landing.capture.screenshot.desc": "ホワイトボードを貼り付けるだけでタスクリストが得られる。",
+    "landing.features.kicker": "他にも多数",
+    "landing.features.heading": "全ての機能、ノイズはなし。",
+    "landing.features.subheading": "ハビット、集中タイマー、カレンダー、検索など全ツールがここに。",
+    "landing.features.f1.name": "Plan my day", "landing.features.f1.desc": "AI re-sorts today\u2019s work into four Eisenhower quadrants.",
+    "landing.features.f2.name": "Morning Co-pilot", "landing.features.f2.desc": "Proactive nudges — defer, drop, batch, reschedule.",
+    "landing.features.f3.name": "Calendar", "landing.features.f3.desc": "Two-way Google Calendar sync with drag-to-reschedule.",
+    "landing.features.f4.name": "Share Groups", "landing.features.f4.desc": "Shared task lists with real-time sync for teams or family.",
+    "landing.features.f5.name": "Paste \u2192 Tasks", "landing.features.f5.desc": "\u2318V a whiteboard screenshot — get a clean task list.",
+    "landing.features.f6.name": "Telegram Bot", "landing.features.f6.desc": "Capture tasks from Telegram with natural language.",
+    "landing.features.f7.name": "Habits", "landing.features.f7.desc": "Weekly grid tracker for daily and recurring habits.",
+    "landing.features.f8.name": "Focus Timer", "landing.features.f8.desc": "Timed focus sessions with logging linked to tasks.",
+    "landing.features.f9.name": "Notes \u2192 Tasks", "landing.features.f9.desc": "Convert any note into a task in one click.",
+    "landing.features.f10.name": "Goal Tracker", "landing.features.f10.desc": "Outcome-shaped goals with AI-generated sub-trackers.",
+    "landing.features.f11.name": "Semantic Search", "landing.features.f11.desc": "Find tasks by meaning, not just keywords.",
+    "landing.features.f12.name": "Push Notifications", "landing.features.f12.desc": "Native push for due tasks and calendar events.",
+    "landing.features.f13.name": "Email Digest", "landing.features.f13.desc": "Morning summary delivered to your inbox.",
+    "landing.features.f14.name": "Email Reminders", "landing.features.f14.desc": "Per-task email reminders at the time you choose.",
+    "landing.features.f15.name": "Reflection", "landing.features.f15.desc": "Evening prompt — what went well, what to carry forward.",
+    "landing.features.f16.name": "Priority Support", "landing.features.f16.desc": "Real human, replies within one business day.",
+    "landing.features.f17.name": "Weekly Review", "landing.features.f17.desc": "AI-written retro on what shipped, what slipped, and what\u2019s next.",
+    "landing.testimonials.kicker": "早期ユーザーの声",
+    "landing.testimonials.heading": "非小なツール、熱いファン。",
+    "landing.faq.heading": "よくある質問",
+    "landing.faq.q1": "Telegram でタスクを管理できますか？",
+    "landing.faq.a1": "はい！Telegram Bot（@Firstlightapp_bot）でタスクの追加、一日の確認、完了済みとのマーク、週次レビューがすべてチャットからできます。",
+    "landing.faq.q2": "MCP 連携とは？",
+    "landing.faq.a2": "MCP（Model Context Protocol）は、Claudeや ChatGPT などの AI アシスタントがアプリ内部で直接動作できるオープンスタンダードです。First Light はネイティブ対応で構築されています。",
+    "landing.faq.q3": "デイリーエディションとは？",
+    "landing.faq.a3": "毎朝、First Light が一日の個人ブリーフィングを作成します。箇条書きではなく、何が重要かを伝える短い社説です。",
+    "landing.faq.q4": "First Light はタスク管理ツールですか？",
+    "landing.faq.a4": "タスク、カレンダー同期、ハビット、集中モードを備えています。しかしコア体験はデイリーエディション— AI が書く朝のコラムです。",
+    "landing.faq.q5": "対応言語は？",
+    "landing.faq.a5": "英語、繁体字中国語、簡体字中国語、日本語、韓国語 — 各言語に最適化されたタイポグラフィで。",
+    "landing.faq.q6": "無料ですか？",
+    "landing.faq.a6": "コアプランナーは永遠無料。AI 機能は Plus または Pro プランで利用可能。両方に 14 日間の無料トライアル付き。",
+    "landing.faq.q7": "Google カレンダーと同期できますか？",
+    "landing.faq.a7": "はい。Google カレンダーのイベントがタスクと並んで表示され、会議の周りを効率よく計画できます。",
+    "landing.faq.q8": "スマホで使えますか？",
+    "landing.faq.a8": "First Light は PWA。iOS または Android のホーム画面に追加すると、オフライン対応とプッシュ通知付きのネイティブアプリのように使えます。",
     "sidebar.addTask": "タスクを追加",
     "sidebar.search": "検索…",
     "sidebar.today": "今日",
@@ -3647,6 +4103,93 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "landing.principle5Body": "빛은 천천히, 모든 것을 드러낸다.",
     "landing.footerCredit": "© 2026 First Light · 모든 권리 보유",
     "landing.footerSource": "GitHub 소스 →",
+    "landing.nav.pricing": "가격",
+    "landing.nav.compare": "비교",
+    "landing.nav.blog": "블로그",
+    "landing.demo.kicker": "실제 동작 보기",
+    "landing.demo.heading": "네 가지 화면, 하나의 조용한 리듬。",
+    "landing.demo.subheading": "First Light의 특별함을 보여주는 네 가지 화면。",
+    "landing.demo.card1.kicker": "화요일 · 자유로운 하루",
+    "landing.demo.card1.title": "자유로운 날은 자신만의 질문을 던질다。",
+    "landing.demo.card1.body1": "일정이 없다. 마감도 없다. 아침은 나의 것 — Q4 문서부터 시작하자.",
+    "landing.demo.card1.body2": "오후 3시 리븷 전, 깊은 작업 시간이 두 단위 있다. Maya의 메모를 먼저 읽는 것을 권한다.",
+    "landing.demo.card1.closing": "최근 5번의 성공 중 3번은 바로 이런 아침에 시작되었다.",
+    "landing.demo.card1.name": "데일리 에디션",
+    "landing.demo.card1.desc": "아침 브리핑 — 할 일 목록이 아니다.",
+    "landing.demo.card2.kicker": "MCP · AI가 당신의 작업을 안다",
+    "landing.demo.card2.name": "AI와 함께",
+    "landing.demo.card2.desc": "Claude, ChatGPT 또는 모든 MCP 클라이언트가 작업을 네이티브로 읽고 관리할 수 있다.",
+    "landing.demo.card3.kicker": "말하기 · 찍기",
+    "landing.demo.card3.name": "음성 · 스냅샷 · 붙여넣기 → 작업",
+    "landing.demo.card3.desc": "말하거나, 사진을 사용하거나, 스크린샷을 붙여넣으면 AI가 올바른 날짜와 우선순위로 작업을 추출한다.",
+    "landing.demo.card4.kicker": "금요일 · 주간 리뷰",
+    "landing.demo.card4.title": "돌아보고, 앞을 내다보다.",
+    "landing.demo.card4.name": "주간 리뷰 + 다음 주 프리뷰",
+    "landing.demo.card4.desc": "지난 주를 닫고, 다음 주를 준비한다.",
+    "landing.demo.rhythm.morning": "아침",
+    "landing.demo.rhythm.morningDesc": "한 번 읽으면 충분한 브리핑.",
+    "landing.demo.rhythm.midday": "주중",
+    "landing.demo.rhythm.middayDesc": "에너지 피크에 심층 작업을 배치한다.",
+    "landing.demo.rhythm.evening": "저녁",
+    "landing.demo.rhythm.eveningDesc": "돌아보고, 하나를 배우고, 하루를 꺔땋하게 닫는다.",
+    "landing.ai.kicker": "AI와 함께",
+    "landing.ai.heading": "AI 어시스턴트가 이미 당신의 작업을 알고 있다.",
+    "landing.ai.subheading": "First Light는 MCP를 지원합니다 — Claude, ChatGPT 등 AI 어시스턴트가 작업을 네이티브로 읽고 생성하고 재정리할 수 있습니다.",
+    "landing.ai.item1.title": "하루 계획",
+    "landing.ai.item1.desc": "AI가 캘린더와 에너지 피크에 맞춰 오늘 작업을 재정렬한다.",
+    "landing.ai.item2.title": "회의 준비",
+    "landing.ai.item2.desc": "AI에게 컨텍스트 가져오기, 어젤다 작성, 후속 작업 준비를 맡기세요.",
+    "landing.ai.item3.title": "패턴 발견",
+    "landing.ai.item3.desc": "미루는 패턴 감지, 일정 재조정 제안, 반복 누락된 작업 파악.",
+    "landing.capture.kicker": "어디서나 작업 등록",
+    "landing.capture.heading": "컴텍스트 전환 없이 캡쳐하세요.",
+    "landing.capture.telegram.title": "Telegram",
+    "landing.capture.telegram.desc": "채팅에서 작업 입력. 끝.",
+    "landing.capture.voice.title": "음성",
+    "landing.capture.voice.desc": "말하세요. AI가 날짜, 우선순위, 제목을 파악합니다.",
+    "landing.capture.email.title": "이메일",
+    "landing.capture.email.desc": "전용 주소로 전달하면 작업이 됩니다.",
+    "landing.capture.screenshot.title": "스크린샷",
+    "landing.capture.screenshot.desc": "화이트보드 사진을 붙여넣으면 작업 목록이 난다.",
+    "landing.features.kicker": "그 외에도",
+    "landing.features.heading": "소음 없는 완전한 도구 세트.",
+    "landing.features.subheading": "하빗, 집중 타이머, 캘린더, 검색 등 모든 도구가 여기에.",
+    "landing.features.f1.name": "Plan my day", "landing.features.f1.desc": "AI re-sorts today\u2019s work into four Eisenhower quadrants.",
+    "landing.features.f2.name": "Morning Co-pilot", "landing.features.f2.desc": "Proactive nudges — defer, drop, batch, reschedule.",
+    "landing.features.f3.name": "Calendar", "landing.features.f3.desc": "Two-way Google Calendar sync with drag-to-reschedule.",
+    "landing.features.f4.name": "Share Groups", "landing.features.f4.desc": "Shared task lists with real-time sync for teams or family.",
+    "landing.features.f5.name": "Paste \u2192 Tasks", "landing.features.f5.desc": "\u2318V a whiteboard screenshot — get a clean task list.",
+    "landing.features.f6.name": "Telegram Bot", "landing.features.f6.desc": "Capture tasks from Telegram with natural language.",
+    "landing.features.f7.name": "Habits", "landing.features.f7.desc": "Weekly grid tracker for daily and recurring habits.",
+    "landing.features.f8.name": "Focus Timer", "landing.features.f8.desc": "Timed focus sessions with logging linked to tasks.",
+    "landing.features.f9.name": "Notes \u2192 Tasks", "landing.features.f9.desc": "Convert any note into a task in one click.",
+    "landing.features.f10.name": "Goal Tracker", "landing.features.f10.desc": "Outcome-shaped goals with AI-generated sub-trackers.",
+    "landing.features.f11.name": "Semantic Search", "landing.features.f11.desc": "Find tasks by meaning, not just keywords.",
+    "landing.features.f12.name": "Push Notifications", "landing.features.f12.desc": "Native push for due tasks and calendar events.",
+    "landing.features.f13.name": "Email Digest", "landing.features.f13.desc": "Morning summary delivered to your inbox.",
+    "landing.features.f14.name": "Email Reminders", "landing.features.f14.desc": "Per-task email reminders at the time you choose.",
+    "landing.features.f15.name": "Reflection", "landing.features.f15.desc": "Evening prompt — what went well, what to carry forward.",
+    "landing.features.f16.name": "Priority Support", "landing.features.f16.desc": "Real human, replies within one business day.",
+    "landing.features.f17.name": "Weekly Review", "landing.features.f17.desc": "AI-written retro on what shipped, what slipped, and what\u2019s next.",
+    "landing.testimonials.kicker": "초기 사용자 후기",
+    "landing.testimonials.heading": "조용한 도구, 열맹하는 팬들.",
+    "landing.faq.heading": "자주 묻는 질문",
+    "landing.faq.q1": "Telegram으로 작업을 관리할 수 있나요?",
+    "landing.faq.a1": "네! Telegram Bot(@Firstlightapp_bot)으로 작업 추가, 하루 확인, 완료 표시, 주간 리뷰를 모두 채팅에서 할 수 있습니다.",
+    "landing.faq.q2": "MCP 연동이란?",
+    "landing.faq.a2": "MCP(Model Context Protocol)는 Claude, ChatGPT 같은 AI 어시스턴트가 앱 내부에서 직접 작동할 수 있는 개방형 표준입니다. First Light는 네이티브 MCP로 구축되었습니다.",
+    "landing.faq.q3": "데일리 에디션이란?",
+    "landing.faq.a3": "매일 아침, First Light가 하루의 개인 브리핑을 작성합니다. 간단한 쿠레터가 아니라 무엇이 중요한지 전달하는 읽기 쉽은 이야기입니다.",
+    "landing.faq.q4": "First Light는 작업 관리 툴인가요?",
+    "landing.faq.a4": "작업, 캘린더 동기화, 하빗, 집중 모드를 갖춰고 있습니다. 하지만 핵심 경험은 데일리 에디션— AI가 쓴 아침 컷럼 브리핑입니다.",
+    "landing.faq.q5": "어떤 언어가 지원되나요?",
+    "landing.faq.a5": "영어, 번체자 중국어, 간체자 중국어, 일본어, 한국어 — 각 언어에 최적화된 타이포그래피로.",
+    "landing.faq.q6": "무료인가요?",
+    "landing.faq.a6": "코어 플래너는 영원히 무료입니다. AI 기능은 Plus 또는 Pro 플랜에서 이용할 수 있으며, 둘 다 14일 무료 체험판이 있습니다.",
+    "landing.faq.q7": "Google 캘린더와 동기화되나요?",
+    "landing.faq.a7": "네. Google 캘린더 이벤트가 작업과 함께 표시되어 회의 주변 일정을 효율적으로 계획할 수 있습니다.",
+    "landing.faq.q8": "휴대폰에서 사용할 수 있나요?",
+    "landing.faq.a8": "First Light는 PWA입니다. iOS 또는 Android 홈 화면에 추가하면 오프라인 지원과 푸시 알림을 갖춘 네이티브 앱처럼 사용할 수 있습니다.",
     "sidebar.addTask": "작업 추가",
     "sidebar.search": "검색…",
     "sidebar.today": "오늘",

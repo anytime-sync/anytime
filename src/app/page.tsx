@@ -149,7 +149,7 @@ export default function Home() {
             Your AI assistant already knows your tasks.
           </h2>
           <p className="text-muted-fg text-sm md:text-base max-w-xl mx-auto mt-3">
-            First Light speaks MCP — the open protocol that lets Claude, ChatGPT, and any AI assistant read, create, and reorganize your tasks natively. No copy-pasting. No screenshots.
+            First Light speaks MCP - the open protocol that lets Claude, ChatGPT, and any AI assistant read, create, and reorganize your tasks natively. No copy-pasting. No screenshots.
           </p>
         </div>
         <div className="grid sm:grid-cols-3 gap-6 text-center">
@@ -221,7 +221,7 @@ export default function Home() {
         <div className="h-px bg-border" />
       </div>
 
-      <FeatureGrid />
+      <FeatureGrid lang={lang} />
 
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />
@@ -276,7 +276,7 @@ export default function Home() {
           </blockquote>
           <blockquote className="rounded-xl border border-border p-5 space-y-3">
             <p className="text-sm text-muted-fg leading-relaxed">
-              &ldquo;MCP integration is the real deal. I tell Claude ‘reschedule everything from Friday’ and it just does it inside First Light. No other planner lets my AI touch my real tasks.&rdquo;
+              &ldquo;MCP integration is the real deal. I tell Claude 'reschedule everything from Friday' and it just does it inside First Light. No other planner lets my AI touch my real tasks.&rdquo;
             </p>
             <footer className="text-xs text-muted-fg/70">
               <span className="font-medium text-fg">Mika T.</span> &middot; Software Engineer
@@ -284,10 +284,10 @@ export default function Home() {
           </blockquote>
           <blockquote className="rounded-xl border border-border p-5 space-y-3">
             <p className="text-sm text-muted-fg leading-relaxed">
-              &ldquo;終於有一個懂繁體中文的計畫工具。早報用中文寫，不是翻譯的，是真的懂的。&rdquo;
+              &ldquo;終於有一個懂繁體中文的計畫工具。早報用中文寫,不是翻譯的,是真的懂的。&rdquo;
             </p>
             <footer className="text-xs text-muted-fg/70">
-              <span className="font-medium text-fg">陳小蕊</span> &middot; 行銷經理，台北
+              <span className="font-medium text-fg">陳小蕊</span> &middot; 行銷經理,台北
             </footer>
           </blockquote>
         </div>
@@ -296,43 +296,18 @@ export default function Home() {
       {/* ── FAQ ── */}
       <section className="px-6 py-16 max-w-2xl mx-auto w-full">
         <h2 className="font-display text-2xl md:text-3xl tracking-tight text-center mb-10">
-          Questions
+          {t(lang, "landing.faq.heading")}
         </h2>
         <div className="space-y-6">
           {[
-
-            {
-              q: "Can I manage tasks from Telegram?",
-              a: "Yes! Our Telegram bot (@Firstlightapp_bot) lets you add tasks, check your day, mark things done, and review your week — all from a chat. Just type naturally: 'Buy groceries tomorrow 3pm' and it creates the task with the right date and priority."
-            },
-            {
-              q: "What is MCP integration?",
-              a: "MCP (Model Context Protocol) is the open standard that lets AI assistants like Claude and ChatGPT work directly inside an app. Ask your assistant to 'plan my day' or 'reschedule everything overdue,' and it actually moves items in your planner. Other task managers can be reached through community-built MCP bridges; First Light is built MCP-native from the core — first-party, OAuth-secured, and designed for it rather than patched onto it. Your AI doesn’t read a copy of your tasks. It manages the real ones."
-            },
-            {
-              q: "What is the Daily Edition?",
-              a: "Every morning, First Light writes you a personal briefing about your day. It looks at your tasks, calendar, and patterns, then composes a short editorial — not bullet points, but a readable narrative that helps you see what matters."
-            },
-            {
-              q: "Is First Light a task manager?",
-              a: "It has tasks, calendar sync, habits, and focus modes — the essentials. But the core experience is the Daily Edition: an AI-written morning briefing that reads like a newspaper column about your day. The name says it all: First Light is the moment possibility becomes visible."
-            },
-            {
-              q: "Which languages are supported?",
-              a: "English, Traditional Chinese (繁體中文), Simplified Chinese (简体中文), Japanese (日本語), and Korean (한국어) — with native typography for each."
-            },
-            {
-              q: "Is it free?",
-              a: `The core planner is free forever. The AI features — Daily Edition, smart planning, weekly retrospectives — are available with Plus (${plusPrice?.formattedPerMonth ?? '...'}) and Pro (${proPrice?.formattedPerMonth ?? '...'}). Both include a 14-day free trial.`
-            },
-            {
-              q: "Does it sync with Google Calendar?",
-              a: "Yes. Your Google Calendar events appear alongside your tasks, so the Daily Edition can plan around your meetings."
-            },
-            {
-              q: "Can I use it on my phone?",
-              a: "First Light is a PWA (Progressive Web App). Add it to your home screen on iOS or Android and it works like a native app — with offline support and push notifications."
-            },
+            { q: t(lang, "landing.faq.q1"), a: t(lang, "landing.faq.a1") },
+            { q: t(lang, "landing.faq.q2"), a: t(lang, "landing.faq.a2") },
+            { q: t(lang, "landing.faq.q3"), a: t(lang, "landing.faq.a3") },
+            { q: t(lang, "landing.faq.q4"), a: t(lang, "landing.faq.a4") },
+            { q: t(lang, "landing.faq.q5"), a: t(lang, "landing.faq.a5") },
+            { q: t(lang, "landing.faq.q6"), a: t(lang, "landing.faq.a6") + (plusPrice?.formattedPerMonth ? ` Plus (${plusPrice.formattedPerMonth}), Pro (${proPrice?.formattedPerMonth ?? '...'}).` : '') },
+            { q: t(lang, "landing.faq.q7"), a: t(lang, "landing.faq.a7") },
+            { q: t(lang, "landing.faq.q8"), a: t(lang, "landing.faq.a8") },
           ].map(({ q, a }) => (
             <details key={q} className="group border-b border-border pb-4">
               <summary className="cursor-pointer font-medium text-sm flex items-center justify-between">

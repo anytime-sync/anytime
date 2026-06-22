@@ -2,12 +2,13 @@
 
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { t, type LanguageCode } from "@/lib/i18n";
 
 /**
  * DemoCarousel — 4-card "See it in motion" strip for the landing page.
  * Shows the four most distinctive First Light surfaces as inline mockups.
  */
-export function DemoCarousel() {
+export function DemoCarousel({ lang = "en" }: { lang?: LanguageCode }) {
   const demosRef = useRef<HTMLDivElement>(null);
   function scrollDemos(direction: 1 | -1) {
     const el = demosRef.current;
@@ -22,9 +23,9 @@ export function DemoCarousel() {
       <section className="mb-16">
         <div className="flex items-end justify-between mb-3 gap-4 flex-wrap">
           <div>
-            <h2 className="font-display text-3xl tracking-tight">See it in motion</h2>
+            <h2 className="font-display text-3xl tracking-tight">{t(lang, "landing.demo.heading")}</h2>
             <p className="text-muted-fg text-sm md:text-base max-w-xl mt-2">
-              Four surfaces that show what makes First Light different.
+              {t(lang, "landing.demo.subheading")}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -53,24 +54,24 @@ export function DemoCarousel() {
           <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50/60 to-stone-50 shadow-sm">
             <div className="aspect-[4/3] p-5 flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-2">
-                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">TUESDAY · OPEN DAY</p>
+                <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">{t(lang, "landing.demo.card1.kicker")}</p>
                 <p className="text-[8px] text-stone-400">May 13</p>
               </div>
-              <p className="font-display text-base md:text-lg leading-tight text-stone-800">An open day asks its own kind of question.</p>
-              <p className="text-[11px] text-stone-700 leading-snug">Nothing is scheduled. Nothing is due. The morning is yours to shape — start with the Q4 doc while the room is still quiet.</p>
-              <p className="text-[10px] text-stone-600 leading-snug">Two windows of deep work fit cleanly before the 3pm review. Maya&apos;s note on cross-team framing is worth a second read first.</p>
-              <p className="text-[10px] italic text-stone-500 border-t border-stone-200/70 pt-1.5 mt-auto leading-snug">Three of your last five wins started in mornings exactly like this one.</p>
+              <p className="font-display text-base md:text-lg leading-tight text-stone-800">{t(lang, "landing.demo.card1.title")}</p>
+              <p className="text-[11px] text-stone-700 leading-snug">{t(lang, "landing.demo.card1.body1")}</p>
+              <p className="text-[10px] text-stone-600 leading-snug">{t(lang, "landing.demo.card1.body2")}</p>
+              <p className="text-[10px] italic text-stone-500 border-t border-stone-200/70 pt-1.5 mt-auto leading-snug">{t(lang, "landing.demo.card1.closing")}</p>
             </div>
             <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-              <p className="font-medium text-sm">Daily Edition</p>
-              <p className="text-xs text-muted-fg">A morning briefing — never a to-do list.</p>
+              <p className="font-medium text-sm">{t(lang, "landing.demo.card1.name")}</p>
+              <p className="text-xs text-muted-fg">{t(lang, "landing.demo.card1.desc")}</p>
             </figcaption>
           </figure>
 
           {/* 2 — MCP / AI Assistant */}
           <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-violet-50/60 to-stone-50 shadow-sm">
             <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">MCP · YOUR AI KNOWS YOUR TASKS</p>
+              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">{t(lang, "landing.demo.card2.kicker")}</p>
               <div className="bg-white border border-stone-200 rounded-xl p-3 flex-1 flex flex-col gap-2">
                 <div className="bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1.5 text-[10px] text-violet-900">
                   <span className="text-[8px] tracking-[0.18em] text-violet-500">YOU → CLAUDE</span>
@@ -87,15 +88,15 @@ export function DemoCarousel() {
               </div>
             </div>
             <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-              <p className="font-medium text-sm">Works with your AI</p>
-              <p className="text-xs text-muted-fg">Claude, ChatGPT, or any MCP client can read and manage your tasks natively.</p>
+              <p className="font-medium text-sm">{t(lang, "landing.demo.card2.name")}</p>
+              <p className="text-xs text-muted-fg">{t(lang, "landing.demo.card2.desc")}</p>
             </figcaption>
           </figure>
 
           {/* 3 — Voice / Snapshot / Paste → Task */}
           <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-stone-50 shadow-sm">
             <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">SAY IT · SHOOT IT</p>
+              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">{t(lang, "landing.demo.card3.kicker")}</p>
               <div className="bg-white border border-stone-200 rounded-xl p-2.5 flex items-center gap-2">
                 <div className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-rose-500 text-white shrink-0">
                   <div className="size-2.5 rounded-full bg-white" />
@@ -125,16 +126,16 @@ export function DemoCarousel() {
               </div>
             </div>
             <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-              <p className="font-medium text-sm">Voice · Snapshot · Paste → Task</p>
-              <p className="text-xs text-muted-fg">Speak, photograph, or paste a screenshot; AI extracts every task with the right date and priority.</p>
+              <p className="font-medium text-sm">{t(lang, "landing.demo.card3.name")}</p>
+              <p className="text-xs text-muted-fg">{t(lang, "landing.demo.card3.desc")}</p>
             </figcaption>
           </figure>
 
           {/* 4 — Weekly Review */}
           <figure className="snap-start shrink-0 w-[280px] md:w-[calc((100%-32px)/3)] border border-border rounded-2xl overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50/40 shadow-sm">
             <div className="aspect-[4/3] p-5 flex flex-col gap-2">
-              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">FRIDAY · WEEKLY REVIEW</p>
-              <p className="font-display text-base text-stone-800 leading-tight">Look back, then forward.</p>
+              <p className="editorial-number text-[8px] tracking-[0.22em] text-stone-500">{t(lang, "landing.demo.card4.kicker")}</p>
+              <p className="font-display text-base text-stone-800 leading-tight">{t(lang, "landing.demo.card4.title")}</p>
               <div className="bg-white border border-stone-200 rounded-md p-2 text-[10px]">
                 <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">LAST WEEK</p>
                 <p className="text-stone-700 leading-snug">14 done · 3 carried · best morning Tue.</p>
@@ -146,8 +147,8 @@ export function DemoCarousel() {
               <p className="text-[9px] text-stone-500 italic mt-auto">A Friday-style retro that actually surfaces patterns.</p>
             </div>
             <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
-              <p className="font-medium text-sm">Weekly Review + Next-week Preview</p>
-              <p className="text-xs text-muted-fg">Close last week. Pre-stage the next one.</p>
+              <p className="font-medium text-sm">{t(lang, "landing.demo.card4.name")}</p>
+              <p className="text-xs text-muted-fg">{t(lang, "landing.demo.card4.desc")}</p>
             </figcaption>
           </figure>
         </div>
@@ -155,16 +156,16 @@ export function DemoCarousel() {
         {/* Three-moment callout strip */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-center">
           <div>
-            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">MORNING</p>
-            <p className="text-sm text-muted-fg leading-snug">A briefing you read once, not a backlog you scroll past.</p>
+            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">{t(lang, "landing.demo.rhythm.morning")}</p>
+            <p className="text-sm text-muted-fg leading-snug">{t(lang, "landing.demo.rhythm.morningDesc")}</p>
           </div>
           <div>
-            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">MIDDAY</p>
-            <p className="text-sm text-muted-fg leading-snug">Plan-my-day pre-arranges deep work around your peaks.</p>
+            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">{t(lang, "landing.demo.rhythm.midday")}</p>
+            <p className="text-sm text-muted-fg leading-snug">{t(lang, "landing.demo.rhythm.middayDesc")}</p>
           </div>
           <div>
-            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">EVENING</p>
-            <p className="text-sm text-muted-fg leading-snug">Reflect, learn one thing, close the day clean.</p>
+            <p className="editorial-number text-[9px] tracking-[0.22em] text-accent mb-1">{t(lang, "landing.demo.rhythm.evening")}</p>
+            <p className="text-sm text-muted-fg leading-snug">{t(lang, "landing.demo.rhythm.eveningDesc")}</p>
           </div>
         </div>
       </section>
