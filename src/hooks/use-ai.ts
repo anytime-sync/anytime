@@ -660,8 +660,15 @@ export function useRespondToCopilot() {
       }
       return (await r.json()) as MorningCopilotRow;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["morningCopilot"] });
+    onSuccess: (updatedRow) => {
+      // Immediately update the cache with the returned row so the card
+      // hides instantly without waiting for a background refetch.
+      if (updatedRow && typeof updatedRow === "object" && "status" in updatedRow) {
+        qc.setQueryData(["morningCopilot"], updatedRow);
+      } else {
+        // Fallback: invalidate so the next render re-fetches the dismissed row.
+        qc.invalidateQueries({ queryKey: ["morningCopilot"] });
+      }
     },
   });
 }
