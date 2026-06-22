@@ -57,19 +57,19 @@ export default function Home() {
               href="/pricing"
               className="hover:text-fg transition-colors hidden sm:inline"
             >
-              Pricing
+              {t(lang, "landing.nav.pricing")}
             </Link>
             <Link
               href="/compare"
               className="hover:text-fg transition-colors hidden sm:inline"
             >
-              Compare
+              {t(lang, "landing.nav.compare")}
             </Link>
             <Link
               href="/blog"
               className="hover:text-fg transition-colors hidden sm:inline"
             >
-              Blog
+              {t(lang, "landing.nav.blog")}
             </Link>
             <LanguagePicker mode="local" onChange={setLang} />
           </nav>
@@ -129,12 +129,12 @@ export default function Home() {
 
       <section className="px-6 py-16 max-w-6xl mx-auto w-full">
         <div className="text-center mb-8">
-          <p className="editorial-number text-xs mb-3">SEE IT IN MOTION</p>
+          <p className="editorial-number text-xs mb-3">{t(lang, "landing.demo.kicker")}</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Four surfaces, one calm rhythm.
+            {t(lang, "landing.demo.heading")}
           </h2>
         </div>
-        <DemoCarousel />
+        <DemoCarousel lang={lang} />
       </section>
 
       <div className="max-w-6xl w-full mx-auto px-6">
@@ -144,12 +144,12 @@ export default function Home() {
       {/* ── Works with your AI ── */}
       <section className="px-6 py-16 max-w-4xl mx-auto w-full">
         <div className="text-center mb-10">
-          <p className="editorial-number text-xs mb-3">WORKS WITH YOUR AI</p>
+          <p className="editorial-number text-xs mb-3">{t(lang, "landing.ai.kicker")}</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Your AI assistant already knows your tasks.
+            {t(lang, "landing.ai.heading")}
           </h2>
           <p className="text-muted-fg text-sm md:text-base max-w-xl mx-auto mt-3">
-            First Light speaks MCP - the open protocol that lets Claude, ChatGPT, and any AI assistant read, create, and reorganize your tasks natively. No copy-pasting. No screenshots.
+            {t(lang, "landing.ai.subheading")}
           </p>
         </div>
         <div className="grid sm:grid-cols-3 gap-6 text-center">
@@ -157,22 +157,22 @@ export default function Home() {
             <div className="size-12 mx-auto rounded-xl bg-violet-100 grid place-items-center">
               <span className="text-violet-600 text-lg">🧠</span>
             </div>
-            <h3 className="font-medium text-sm">Plan my day</h3>
-            <p className="text-xs text-muted-fg">AI reorganizes today&apos;s tasks around your calendar and energy peaks.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item1.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item1.desc")}</p>
           </div>
           <div className="space-y-2">
             <div className="size-12 mx-auto rounded-xl bg-amber-100 grid place-items-center">
               <span className="text-amber-600 text-lg">📋</span>
             </div>
-            <h3 className="font-medium text-sm">Prep my meeting</h3>
-            <p className="text-xs text-muted-fg">Ask your AI to pull context, create an agenda, and stage follow-up tasks.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item2.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item2.desc")}</p>
           </div>
           <div className="space-y-2">
             <div className="size-12 mx-auto rounded-xl bg-emerald-100 grid place-items-center">
               <span className="text-emerald-600 text-lg">🔍</span>
             </div>
-            <h3 className="font-medium text-sm">Find patterns</h3>
-            <p className="text-xs text-muted-fg">Detect procrastination, suggest reschedules, spot what keeps slipping.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item3.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item3.desc")}</p>
           </div>
         </div>
       </section>
@@ -181,9 +181,9 @@ export default function Home() {
       {/* ── Task from anywhere ── */}
       <section className="px-6 py-16 max-w-4xl mx-auto w-full">
         <div className="text-center mb-10">
-          <p className="editorial-number text-xs mb-3">TASK FROM ANYWHERE</p>
+          <p className="editorial-number text-xs mb-3">{t(lang, "landing.capture.kicker")}</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Capture without context-switching.
+            {t(lang, "landing.capture.heading")}
           </h2>
         </div>
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -191,29 +191,29 @@ export default function Home() {
             <div className="size-10 mx-auto rounded-lg bg-[#2AABEE]/15 grid place-items-center">
               <span className="text-[#2AABEE] text-base">✈️</span>
             </div>
-            <h3 className="font-medium text-sm">Telegram</h3>
-            <p className="text-xs text-muted-fg">Type a task in chat. Done. <a href="https://t.me/Firstlightapp_bot" target="_blank" rel="noopener" className="underline hover:text-foreground">Try the bot</a></p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.capture.telegram.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.telegram.desc")} <a href="https://t.me/Firstlightapp_bot" target="_blank" rel="noopener" className="underline hover:text-foreground">Try the bot</a></p>
           </div>
           <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-rose-100 grid place-items-center">
               <span className="text-rose-500 text-base">🎤</span>
             </div>
-            <h3 className="font-medium text-sm">Voice</h3>
-            <p className="text-xs text-muted-fg">Say it. AI parses the date, priority, title.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.capture.voice.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.voice.desc")}</p>
           </div>
           <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-blue-100 grid place-items-center">
               <span className="text-blue-500 text-base">📧</span>
             </div>
-            <h3 className="font-medium text-sm">Email</h3>
-            <p className="text-xs text-muted-fg">Forward to your inbox alias. It becomes a task.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.capture.email.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.email.desc")}</p>
           </div>
           <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-stone-100 grid place-items-center">
               <span className="text-stone-500 text-base">📸</span>
             </div>
-            <h3 className="font-medium text-sm">Screenshot</h3>
-            <p className="text-xs text-muted-fg">Paste a whiteboard photo. Get a task list.</p>
+            <h3 className="font-medium text-sm">{t(lang, "landing.capture.screenshot.title")}</h3>
+            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.screenshot.desc")}</p>
           </div>
         </div>
       </section>
@@ -260,9 +260,9 @@ export default function Home() {
       </div>
       <section className="px-6 py-16 max-w-4xl mx-auto w-full">
         <div className="text-center mb-10">
-          <p className="editorial-number text-xs mb-3">FROM EARLY USERS</p>
+          <p className="editorial-number text-xs mb-3">{t(lang, "landing.testimonials.kicker")}</p>
           <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            Quiet tools, loud fans.
+            {t(lang, "landing.testimonials.heading")}
           </h2>
         </div>
         <div className="grid sm:grid-cols-3 gap-6">
@@ -310,9 +310,9 @@ export default function Home() {
             { q: t(lang, "landing.faq.q8"), a: t(lang, "landing.faq.a8") },
           ].map(({ q, a }) => (
             <details key={q} className="group border-b border-border pb-4">
-              <summary className="cursor-pointer font-medium text-sm flex items-center justify-between">
+              <summary className="cursor-pointer font-display text-xl tracking-tight flex items-center justify-between">
                 {q}
-                <span className="text-muted-fg transition-transform group-open:rotate-45 text-lg ml-2">+</span>
+                <span className="text-muted-fg transition-transform group-open:rotate-45 text-lg ml-2 shrink-0">+</span>
               </summary>
               <p className="mt-3 text-sm text-muted-fg leading-relaxed">{a}</p>
             </details>
