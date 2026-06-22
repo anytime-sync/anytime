@@ -315,7 +315,7 @@ export default function Home() {
             },
             {
               q: "Is First Light a task manager?",
-              a: "It has tasks, calendar sync, habits, and focus modes — the essentials. But the core experience is the Daily Edition: an AI-written morning briefing that reads like a newspaper column about your day."
+              a: "It has tasks, calendar sync, habits, and focus modes — the essentials. But the core experience is the Daily Edition: an AI-written morning briefing that reads like a newspaper column about your day. The name says it all: First Light is the moment possibility becomes visible."
             },
             {
               q: "Which languages are supported?",
