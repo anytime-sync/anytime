@@ -45,9 +45,11 @@ export function MarketingNav({
         {/* Left: wordmark + back-to-home */}
         <Link
           href="/"
-          className="wordmark text-base shrink-0 hover:opacity-80 transition-opacity"
+          className="wordmark text-[21px] flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity"
           title={t(lang, "nav.backToHome")}
         >
+          <img src="/logo-black.png" alt="" className="size-9 block dark:hidden" aria-hidden="true" />
+          <img src="/logo-white.png" alt="" className="size-9 hidden dark:block" aria-hidden="true" />
           First Light
         </Link>
 
