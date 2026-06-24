@@ -210,7 +210,7 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
           </p>
         )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[13px] text-muted-fg">
-          {task.due_at && <DueChip due_at={task.due_at} all_day={task.is_all_day} />}
+          {task.due_at && <DueChip due_at={task.due_at} start_at={task.start_at ?? undefined} all_day={task.is_all_day} />}
           {/* Duration: explicit start->end range wins; otherwise estimated. */}
           {(task.start_at && task.due_at && !task.is_all_day) ||
           task.estimated_pomodoros > 0 ? (
@@ -301,20 +301,23 @@ function DurationChip({ task }: { task: TaskWithTags }) {
   return null;
 }
 
-function DueChip({ due_at, all_day }: { due_at: string; all_day: boolean }) {
+function DueChip({ due_at, start_at, all_day }: { due_at: string; start_at?: string; all_day: boolean }) {
   const d = new Date(due_at);
+  // Use start_at for the displayed time when available (shows when the task begins,
+  // which is more actionable than the end/due time). Overdue logic always uses due_at.
+  const displayD = start_at ? new Date(start_at) : d;
   const overdue = isPast(d);
-  const label = isToday(d)
+  const label = isToday(displayD)
     ? all_day
       ? "Today"
-      : `Today ${format(d, "h:mm a")}`
-    : isTomorrow(d)
+      : `Today ${format(displayD, "h:mm a")}`
+    : isTomorrow(displayD)
     ? all_day
       ? "Tomorrow"
-      : `Tomorrow ${format(d, "h:mm a")}`
+      : `Tomorrow ${format(displayD, "h:mm a")}`
     : all_day
-    ? format(d, "MMM d")
-    : format(d, "MMM d, h:mm a");
+    ? format(displayD, "MMM d")
+    : format(displayD, "MMM d, h:mm a");
   return (
     <span className={cn("inline-flex items-center gap-1", overdue && "text-danger")}>
       <Calendar className="size-3" /> {label}
