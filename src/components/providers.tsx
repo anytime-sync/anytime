@@ -10,7 +10,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, refetchOnWindowFocus: false },
+          queries: {
+            // 10s staleTime — short enough that external mutations (e.g. MCP
+            // complete_task) reflect quickly on next focus or poll interval.
+            staleTime: 10_000,
+            // Re-fetch when the user switches back to the tab so that any
+            // server-side changes (recurring task advancing, external API
+            // mutations) are picked up without a manual refresh.
+            refetchOnWindowFocus: true,
+          },
         },
       })
   );
