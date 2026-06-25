@@ -21,6 +21,7 @@ export type DigestPayload = {
   language: LanguageCode;
   locale: Locale;
   date: Date;
+  timezone: string;
   topToday: DigestTask[];
   q1Today: DigestTask[];
   overdue: DigestTask[];
@@ -48,7 +49,14 @@ export function renderDigestHtml(p: DigestPayload): string {
   const dateLine = format(p.date, "EEEE, MMMM d", { locale: p.locale });
 
   const taskLi = (t: DigestTask) => {
-    const due = t.due_at ? format(new Date(t.due_at), "h:mm a", { locale: p.locale }) : "";
+    const due = t.due_at
+      ? new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
+          timeZone: p.timezone,
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: p.language === "en" || p.language === "ko",
+        }).format(new Date(t.due_at))
+      : "";
     return `<li style="margin:0 0 8px 0;line-height:1.45;">
       <span style="color:#222;">${escapeHtml(t.title)}</span>
       ${due ? `<span style="color:#888;font-size:13px;margin-left:8px;">· ${due}</span>` : ""}
@@ -133,7 +141,14 @@ export function renderDigestText(p: DigestPayload): string {
     lines.push("— " + title.toUpperCase() + " —");
     if (tasks.length === 0) lines.push("  (" + emptyHint + ")");
     else for (const t of tasks) {
-      const due = t.due_at ? format(new Date(t.due_at), "h:mm a", { locale: p.locale }) : "";
+      const due = t.due_at
+        ? new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
+            timeZone: p.timezone,
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: p.language === "en" || p.language === "ko",
+          }).format(new Date(t.due_at))
+        : "";
       lines.push(`  • ${t.title}${due ? `  (${due})` : ""}`);
     }
     lines.push("");
