@@ -122,19 +122,43 @@ export type PlanWeekResult = {
  * Batch-plan the next 7 days. Sends up to 30 tasks in one shot so the
  * model can weight them against each other (one item is the most
  * important THIS week — that's only visible across the whole list).
+ *
+ * One automatic retry on transient 5xx (Vercel cold-start, upstream
+ * timeout). 429 is never retried — budget exhausted.
  */
 export function usePlanWeek() {
   return useMutation({
     mutationFn: async (
       tasks: PlanWeekTaskInput[]
     ): Promise<PlanWeekResult | null> => {
-      const r = await fetch("/api/ai/plan-week", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
-      });
+      const body = JSON.stringify({ tasks, tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      const headers = { "Content-Type": "application/json" };
+
+      async function attempt(): Promise<Response> {
+        return fetch("/api/ai/plan-week", { method: "POST", headers, body });
+      }
+
+      let r = await attempt();
+
+      // One automatic retry for transient server errors (cold start, upstream timeout).
+      // Never retry 4xx (auth, budget, bad request) — those won't self-heal.
+      if (r.status >= 500 && r.status !== 429) {
+        await new Promise((res) => setTimeout(res, 1200));
+        r = await attempt();
+      }
+
       if (r.status === 503) return null;
-      if (!r.ok) throw new Error(`plan_week_failed ${r.status}`);
+      if (r.status === 429) {
+        const err = new Error("plan_week_rate_limited");
+        (err as Error & { code?: string }).code = "rate_limited";
+        throw err;
+      }
+      if (!r.ok) {
+        // Surface the status + any server detail so it's visible in Vercel logs.
+        const detail = await r.json().catch(() => ({} as { error?: string; detail?: string })) as { error?: string; detail?: string };
+        const msg = detail?.detail ?? detail?.error ?? `plan_week_failed`;
+        throw new Error(`${msg} [HTTP ${r.status}]`);
+      }
       return (await r.json()) as PlanWeekResult;
     },
   });
