@@ -10,6 +10,16 @@ import { safeTimezone, localNowStr } from "@/lib/ai/tz";
 import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
 
 export const runtime = "nodejs";
+/**
+ * Extend the Vercel function timeout to 30 s.
+ *
+ * The default is 10 s (Vercel Pro). plan-week makes 3 parallel Supabase
+ * queries + one Anthropic Haiku call (typically ~2-4 s, but up to ~8 s
+ * on a cold start). With budget-check + prefs query on top, it can race
+ * the 10 s wall on cold starts, producing a Vercel 502 before our own
+ * error handler can fire. 30 s gives comfortable headroom.
+ */
+export const maxDuration = 30;
 
 /**
  * /api/ai/plan-week — batch quadrant + priority planner for the next 7 days.
