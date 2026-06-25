@@ -8,6 +8,7 @@ import { QuickAdd } from "./quick-add";
 import { Reminders } from "./reminders";
 import { useUIStore } from "@/store/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
+import { useTimezoneSync } from "@/hooks/use-timezone-sync";
 import { ImpersonationBanner } from "./impersonation-banner";
 import { AnnouncementBanner } from "./announcement-banner";
 import { GoalModal } from "./goal-modal";
@@ -29,6 +30,7 @@ export function AppShell({
   const [mounted, setMounted] = useState(false);
 
   useRealtimeSync();
+  useTimezoneSync();
 
   useEffect(() => {
     setMounted(true);

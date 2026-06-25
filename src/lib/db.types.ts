@@ -272,6 +272,12 @@ export type UserPreferences = {
   language: Language;
   email_reminders: boolean;
   push_reminders: boolean;
+  email_daily_digest: boolean;
+  email_broadcasts: boolean;
+  /** IANA timezone string, e.g. "Asia/Taipei". Defaults to "UTC" when unset. */
+  timezone: string;
+  /** Local hour (0–23) to send the daily digest. Defaults to 7. */
+  digest_send_hour: number;
   /** ICS feed token (0014). */
   ics_feed_token: string | null;
   ics_feed_created_at: string | null;

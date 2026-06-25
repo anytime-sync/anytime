@@ -355,6 +355,33 @@ export default function SettingsPage() {
               checked={prefs?.email_daily_digest ?? true}
               onChange={(v) => setPref("email_daily_digest", v)}
             />
+            {(prefs?.email_daily_digest ?? true) && (
+              <div className="flex items-center justify-between gap-4 py-1">
+                <div>
+                  <p className="text-sm font-medium">{lang === "zh-TW" ? "寄送時間" : lang === "zh-CN" ? "发送时间" : "Digest send time"}</p>
+                  <p className="text-xs text-muted-fg">
+                    {lang === "zh-TW" || lang === "zh-CN"
+                      ? `時區：${prefs?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}`
+                      : `Time zone: ${prefs?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                  </p>
+                </div>
+                <select
+                  className="text-sm border border-border rounded-md px-2 py-1 bg-surface"
+                  value={prefs?.digest_send_hour ?? 7}
+                  onChange={(e) => setPref("digest_send_hour", parseInt(e.target.value, 10))}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {new Intl.DateTimeFormat(lang === "en" ? "en-US" : lang, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: lang === "en",
+                      }).format(new Date(2000, 0, 1, h, 0))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <Toggle
               label={tr(lang, "view.settings.toggle.emailBroadcasts")}
               hint={tr(lang, "view.settings.toggle.emailBroadcastsHint")}
