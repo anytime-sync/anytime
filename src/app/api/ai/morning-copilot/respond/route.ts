@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkAiBudget } from "@/lib/ai-rate-limit";
 import type { LanguageCode } from "@/lib/i18n";
 
 export const runtime = "nodejs";
@@ -36,6 +37,15 @@ export async function POST(req: Request) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // AI budget check — respond route may trigger follow-up AI processing
+  const budget = await checkAiBudget(u.user.id, "morning_copilot");
+  if (!budget.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", used: budget.used, limit: budget.limit },
+      { status: 429, headers: { "Retry-After": String(budget.retryAfter) } }
+    );
   }
 
   const body = (await req.json().catch(() => ({}))) as {
