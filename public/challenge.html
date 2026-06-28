@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7-Day Calm Morning Challenge — First Light</title>
+    <meta name="description" content="Free 7-day email challenge to transform your mornings. No phone for 30 min, daily mindfulness, and the morning ritual that actually sticks.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #faf8f5;
+            color: #2c2c2c;
+            line-height: 1.6;
+        }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #faf8f5 0%, #f0ebe3 100%);
+            position: relative;
+        }
+        .hero-content {
+            max-width: 680px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            background: #e8e0d4;
+            color: #8b7355;
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #6b6b6b;
+            margin-bottom: 2rem;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b6b6b;
+            font-size: 0.95rem;
+        }
+        .feature svg {
+            width: 20px;
+            height: 20px;
+            color: #c4a77d;
+        }
+        .email-form {
+            max-width: 480px;
+            margin: 0 auto 1.5rem;
+        }
+        .form-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        input[type="email"] {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            border: 1px solid #ddd5c8;
+            border-radius: 12px;
+            background: #fff;
+            color: #2c2c2c;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="email"]::placeholder { color: #aaa; }
+        input[type="email"]:focus { border-color: #c4a77d; }
+        button {
+            padding: 1rem 2rem;
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            background: #333;
+        }
+        .trust {
+            color: #999;
+            font-size: 0.85rem;
+        }
+        .trust strong { color: #6b6b6b; }
+
+        .days {
+            padding: 5rem 2rem;
+            background: #fff;
+        }
+        .days-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .days h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .days > .days-content > p {
+            text-align: center;
+            color: #6b6b6b;
+            margin-bottom: 2.5rem;
+        }
+        .day-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .day-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.25rem;
+            padding: 1.25rem;
+            background: #faf8f5;
+            border-radius: 16px;
+            border: 1px solid #f0ebe3;
+        }
+        .day-num {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: #1a1a1a;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .day-text h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+            color: #1a1a1a;
+        }
+        .day-text p {
+            color: #6b6b6b;
+            font-size: 0.95rem;
+        }
+
+        .testimonial {
+            padding: 5rem 2rem;
+            background: #f5f0e8;
+            text-align: center;
+        }
+        .testimonial blockquote {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: #4a4a4a;
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+            line-height: 1.5;
+        }
+        .testimonial cite {
+            color: #8b7355;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        .cta-section {
+            padding: 5rem 2rem;
+            text-align: center;
+            background: #faf8f5;
+        }
+        .cta-section h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .cta-section p {
+            color: #6b6b6b;
+            margin-bottom: 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer {
+            padding: 2rem;
+            text-align: center;
+            color: #aaa;
+            font-size: 0.85rem;
+            border-top: 1px solid #f0ebe3;
+        }
+        .footer a { color: #999; text-decoration: none; }
+        .footer a:hover { color: #c4a77d; }
+
+        @media (max-width: 600px) {
+            .form-group { flex-direction: column; }
+            button { width: 100%; }
+            .features { flex-direction: column; gap: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <div class="badge">Free 7-Day Challenge</div>
+            <h1>The Calm Morning Challenge</h1>
+            <p class="subtitle">Transform your mornings in 7 days. No phone for 30 minutes. A daily mindfulness practice. And the morning ritual that actually sticks.</p>
+            <div class="features">
+                <div class="feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    7 daily emails
+                </div>
+                <div class="feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    5-15 min/day
+                </div>
+                <div class="feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    No apps needed
+                </div>
+            </div>
+            <form class="email-form" action="/api/subscribe" method="POST">
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Enter your email" required>
+                    <button type="submit">Start the Challenge</button>
+                </div>
+                <p class="trust">Join <strong>1,000+</strong> people building calmer mornings. Unsubscribe anytime.</p>
+            </form>
+        </div>
+    </section>
+
+    <section class="days">
+        <div class="days-content">
+            <h2>Your 7-Day Journey</h2>
+            <p>Each morning, one email. One practice. One small step toward mornings that feel like yours.</p>
+            <div class="day-list">
+                <div class="day-item">
+                    <div class="day-num">1</div>
+                    <div class="day-text">
+                        <h3>No Phone for 30 Minutes</h3>
+                        <p>The first input of your day sets the tone. Break the automatic reach. Reclaim the first half hour.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">2</div>
+                    <div class="day-text">
+                        <h3>The 5-Minute Mind Reset</h3>
+                        <p>No apps. No guided audio. Just you, your breath, and 5 minutes of stillness. The practice that creates clarity.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">3</div>
+                    <div class="day-text">
+                        <h3>Your First Daily Edition</h3>
+                        <p>Three sentences that set your agenda before the world sets it for you. The practice people forward to friends.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">4</div>
+                    <div class="day-text">
+                        <h3>Move Before You Think</h3>
+                        <p>Your body wakes slower than your mind. Movement invites it awake — better than caffeine, gentler than force.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">5</div>
+                    <div class="day-text">
+                        <h3>Tonight Sets Up Tomorrow</h3>
+                        <p>Calm mornings start the night before. Three things, 10 minutes, zero decisions when you wake.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">6</div>
+                    <div class="day-text">
+                        <h3>Protect the Boundary</h3>
+                        <p>Your morning will be tested. Learn to set boundaries with work, family, and yourself — without being rigid.</p>
+                    </div>
+                </div>
+                <div class="day-item">
+                    <div class="day-num">7</div>
+                    <div class="day-text">
+                        <h3>The Morning Ritual That Sticks</h3>
+                        <p>You don't need all of it. You need YOUR version. Build a ritual that fits your life and actually lasts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonial">
+        <blockquote>"By Day 3, I stopped reaching for my phone automatically. By Day 7, my mornings felt like mine again."</blockquote>
+        <cite>— Sarah K., Challenge Participant</cite>
+    </section>
+
+    <section class="cta-section">
+        <h2>Start Your Calm Morning</h2>
+        <p>7 days. One email each morning. No cost, no apps, no complexity. Just mornings that feel like yours.</p>
+        <form class="email-form" action="/api/subscribe" method="POST">
+            <div class="form-group">
+                <input type="email" name="email" placeholder="Enter your email" required>
+                <button type="submit">Join the Challenge</button>
+            </div>
+        </form>
+    </section>
+
+    <footer class="footer">
+        <p>Made for people who want their mornings back · <a href="https://firstlight.to">First Light</a> · © 2026</p>
+    </footer>
+</body>
+</html>
