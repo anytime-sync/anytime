@@ -59,7 +59,7 @@ export default function ChallengePage() {
             <p className="editorial-number text-xs text-muted-fg">
               First Light · Free Challenge
             </p>
-            <h1 className="font-display text-3xl md:text-4xl leading-[1.1] tracking-tight mt-4 max-w-lg mx-auto">
+            <h1 className="font-display text-4xl md:text-5xl leading-[1.1] tracking-tight mt-4 max-w-lg mx-auto">
               The 7-Day <span className="italic font-display">Calm Morning</span> Challenge
             </h1>
             <p className="text-base md:text-lg text-muted-fg max-w-xl mx-auto">
