@@ -145,4 +145,3 @@ export default function ChallengePage() {
     </main>
   );
 }
-// Challenge page - built Sun Jun 28 03:26:23 UTC 2026
