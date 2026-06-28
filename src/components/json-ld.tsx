@@ -76,6 +76,39 @@ export function SoftwareApplicationJsonLd({
   );
 }
 
+export function BlogIndexJsonLd({
+  posts,
+}: {
+  posts: Array<{ slug: string; title: string; description: string; date: string }>;
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: "First Light Blog",
+    description: "Thoughts on calm productivity, AI-assisted planning, and building a daily practice that sticks.",
+    url: "https://firstlight.to/blog",
+    publisher: {
+      "@type": "Organization",
+      name: "First Light",
+      url: "https://firstlight.to",
+    },
+    blogPost: posts.map((p) => ({
+      "@type": "BlogPosting",
+      headline: p.title,
+      description: p.description,
+      datePublished: p.date,
+      url: `https://firstlight.to/blog/${p.slug}`,
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function BlogPostJsonLd({
   title,
   description,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllPosts } from "@/lib/blog";
 import { BlogList } from "@/components/marketing/blog-list";
+import { BlogIndexJsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title: "Blog — First Light",
@@ -26,5 +27,10 @@ export default function BlogIndex() {
     readingTime: p.readingTime,
   }));
 
-  return <BlogList posts={posts} />;
+  return (
+    <>
+      <BlogIndexJsonLd posts={posts} />
+      <BlogList posts={posts} />
+    </>
+  );
 }
