@@ -86,7 +86,7 @@ export default function Home() {
               {t(lang, "landing.heroLine1")}
             </DesignSlot>
             <br />
-            <DesignSlot id="landing.hero.title.line2" as="span" textKey="landing.heroLine2" className="italic font-display text-2xl md:text-7xl">
+            <DesignSlot id="landing.hero.title.line2" as="span" textKey="landing.heroLine2" className="italic font-display text-xl md:text-7xl">
               {t(lang, "landing.heroLine2")}
             </DesignSlot>
           </h1>
