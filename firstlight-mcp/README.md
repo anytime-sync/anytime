@@ -2,12 +2,12 @@
 
 Model Context Protocol server for [First Light](https://firstlight.to) — the AI-native task manager.
 
-## Tools (23 total)
+## Tools (28)
 
 ### Task Management
 | Tool | Description |
 |------|-------------|
-| `list_tasks` | List tasks with filters (status, project, date range) |
+| `list_tasks` | List tasks with filters (status, priority, project, date range) |
 | `get_task` | Get a single task by ID |
 | `create_task` | Create a new task |
 | `update_task` | Update task properties |
@@ -26,21 +26,30 @@ Model Context Protocol server for [First Light](https://firstlight.to) — the A
 ### Notes, Daily & Goals
 | Tool | Description |
 |------|-------------|
-| `search_notes` | Full-text search across notes |
-| `get_daily` | Get daily summary for a date |
-| `get_daily_edition` | Get AI-generated daily edition |
-| `list_goals` | List goals by status |
-| `get_inbox` | Get inbox items |
+| `search_notes` | Semantic search across notes (Voyage embeddings) |
+| `get_active_goals` | List active goals with progress and linked task counts |
+| `link_task_to_note` | Link a task to a note |
+| `daily_summary` | Structured snapshot of a day (tasks, events, overdue, goals) |
+| `get_daily_edition` | First Light's editorial morning brief for a date |
 
-### 🧠 AI Intelligence (NEW)
+### Tags
 | Tool | Description |
 |------|-------------|
-| `plan_day` | AI day planner — quadrant + priority suggestions based on today's tasks and calendar |
-| `plan_week` | AI week planner — batch prioritize up to 30 tasks across 7 days |
-| `prep_meeting` | Generate meeting agenda + questions to ask. Cached per task. |
-| `find_time` | Suggest 3 best time slots in the next 7 days for a task |
-| `reschedule_overdue` | Find all overdue tasks, suggest realistic new due dates |
-| `detect_procrastination` | Find stuck tasks (14+ days) and recommend: drop, break-down, or schedule |
+| `list_tags` | List all tags (labels) |
+| `create_tag` | Create a tag (returns existing if name matches) |
+| `tag_task` | Add one or more tags to a task |
+| `untag_task` | Remove a tag from a task |
+| `get_task_tags` | List all tags on a task |
+
+### AI Intelligence
+| Tool | Description |
+|------|-------------|
+| `plan_day` | AI day planner — quadrant + priority suggestions grounded in today's tasks and calendar |
+| `plan_week` | AI week planner — batch-prioritize up to 30 tasks across 7 days |
+| `prep_meeting` | Generate a meeting agenda + questions to ask. Cached per task. |
+| `find_time` | Suggest the best time slots in the next 7 days for a task |
+| `reschedule_overdue` | Given overdue tasks, suggest realistic new due dates (or defer/drop) |
+| `detect_procrastination` | Find stuck tasks and recommend: drop, break down, or schedule |
 | `morning_copilot` | Proactive morning brief with task suggestions and calendar awareness |
 
 ## What Makes This Different

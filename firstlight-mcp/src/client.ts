@@ -121,11 +121,14 @@ export class FirstlightClient {
   findTime(taskId: string, title: string, estimatedMinutes?: number) {
     return this.req<{ slots: unknown[] }>("POST", "/ai/find-time", { body: { task_id: taskId, title, estimated_minutes: estimatedMinutes } });
   }
-  rescheduleOverdue() {
-    return this.req<{ items: unknown[] }>("POST", "/ai/reschedule-overdue", { body: {} });
+  rescheduleOverdue(
+    tasks: Array<{ id: string; title: string; due_at?: string | null; days_overdue: number; estimated_minutes?: number | null }>,
+    tz?: string,
+  ) {
+    return this.req<{ suggestions: unknown[] }>("POST", "/ai/reschedule-task", { body: { tasks, tz } });
   }
   detectProcrastination() {
-    return this.req<{ items: unknown[]; summary: string }>("POST", "/ai/detect-procrastination", { body: {} });
+    return this.req<{ items: unknown[]; summary: string }>("POST", "/ai/procrastination", { body: {} });
   }
   morningCopilot(tz?: string, force?: boolean) {
     return this.req<unknown>("POST", "/ai/morning-copilot", { body: { tz, force } });

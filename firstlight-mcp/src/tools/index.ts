@@ -381,6 +381,169 @@ const get_task_tags: Tool = {
   handler: (c, a) => c.getTaskTags(a.task_id as string),
 };
 
+// ---------- AI Intelligence -----------------------------------------------
+
+const plan_day: Tool = {
+  name: "plan_day",
+  description:
+    "AI day planner. Given today's open tasks, returns quadrant + priority suggestions grounded in the user's calendar. Pass the tasks to plan (id, title, numeric priority; optional due_at/project).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Tasks to plan — usually today's open tasks.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            due_at: { type: ["string", "null"] },
+            priority: { type: "number", description: "Numeric priority (higher = more important)." },
+            project: { type: ["string", "null"] },
+          },
+          required: ["id", "title", "priority"],
+        },
+      },
+    },
+    required: ["tasks"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.planDay(a.tasks as Parameters<FirstlightClient["planDay"]>[0]),
+};
+
+const plan_week: Tool = {
+  name: "plan_week",
+  description:
+    "AI week planner. Batch-prioritizes up to 30 tasks across the next 7 days, grounded in the user's calendar. Pass the tasks to plan.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Tasks to plan across the week (up to 30).",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            due_at: { type: ["string", "null"] },
+            priority: { type: "number", description: "Numeric priority (higher = more important)." },
+            project: { type: ["string", "null"] },
+          },
+          required: ["id", "title", "priority"],
+        },
+      },
+    },
+    required: ["tasks"],
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.planWeek(a.tasks as Parameters<FirstlightClient["planWeek"]>[0]),
+};
+
+const prep_meeting: Tool = {
+  name: "prep_meeting",
+  description:
+    "Generate a short meeting agenda + questions to ask for a task. Result is cached per task; pass refresh=true to regenerate.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_id: { type: "string" },
+      title: { type: "string", description: "Meeting / task title." },
+      notes: { type: "string", description: "Optional context to ground the prep." },
+      refresh: { type: "boolean", description: "Force regeneration, bypassing cache." },
+    },
+    required: ["task_id", "title"],
+    additionalProperties: false,
+  },
+  handler: (c, a) =>
+    c.prepMeeting(
+      a.task_id as string,
+      a.title as string,
+      a.notes as string | undefined,
+      a.refresh as boolean | undefined,
+    ),
+};
+
+const find_time: Tool = {
+  name: "find_time",
+  description:
+    "Suggest the best time slots in the next 7 days for a task, working around the user's calendar.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_id: { type: "string" },
+      title: { type: "string", description: "Task title." },
+      estimated_minutes: { type: "number", description: "Estimated duration in minutes. Defaults to 30." },
+    },
+    required: ["task_id", "title"],
+    additionalProperties: false,
+  },
+  handler: (c, a) =>
+    c.findTime(a.task_id as string, a.title as string, a.estimated_minutes as number | undefined),
+};
+
+const reschedule_overdue: Tool = {
+  name: "reschedule_overdue",
+  description:
+    "Given the user's overdue tasks, suggest realistic new due dates (or defer/drop). Pass the overdue tasks, each with days_overdue.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        description: "Overdue tasks to reschedule.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            due_at: { type: ["string", "null"] },
+            days_overdue: { type: "number", description: "How many days past due." },
+            estimated_minutes: { type: ["number", "null"] },
+          },
+          required: ["id", "title", "days_overdue"],
+        },
+      },
+      tz: { type: "string", description: "IANA timezone, e.g. 'America/Chicago'. Optional." },
+    },
+    required: ["tasks"],
+    additionalProperties: false,
+  },
+  handler: (c, a) =>
+    c.rescheduleOverdue(
+      a.tasks as Parameters<FirstlightClient["rescheduleOverdue"]>[0],
+      a.tz as string | undefined,
+    ),
+};
+
+const detect_procrastination: Tool = {
+  name: "detect_procrastination",
+  description:
+    "Find stuck / repeatedly-deferred tasks and recommend an action (drop, break down, or schedule). Takes no arguments.",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    additionalProperties: false,
+  },
+  handler: (c) => c.detectProcrastination(),
+};
+
+const morning_copilot: Tool = {
+  name: "morning_copilot",
+  description:
+    "Proactive morning brief: task suggestions with calendar awareness. Pass force=true to bypass the daily cache.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      tz: { type: "string", description: "IANA timezone, e.g. 'America/Chicago'. Defaults to UTC." },
+      force: { type: "boolean", description: "Bypass the once-per-day cache." },
+    },
+    additionalProperties: false,
+  },
+  handler: (c, a) => c.morningCopilot(a.tz as string | undefined, a.force as boolean | undefined),
+};
+
 // ---------- Registry ------------------------------------------------------
 
 export const tools: Tool[] = [
@@ -405,6 +568,14 @@ export const tools: Tool[] = [
   tag_task,
   untag_task,
   get_task_tags,
+  // AI intelligence
+  plan_day,
+  plan_week,
+  prep_meeting,
+  find_time,
+  reschedule_overdue,
+  detect_procrastination,
+  morning_copilot,
 ];
 
 const byName = new Map(tools.map((t) => [t.name, t]));
