@@ -92,6 +92,30 @@ FIRSTLIGHT_API_URL=https://firstlight.to/api/v1  # optional, this is the default
 }
 ```
 
+#### Run from a local build (this repo)
+If you're running the server straight from a checkout instead of the published
+package, point `command` at the compiled entrypoint (`npm run build` first):
+
+```json
+{
+  "mcpServers": {
+    "firstlight": {
+      "command": "node",
+      "args": ["C:\\anytime\\firstlight-mcp\\dist\\index.js"],
+      "env": {
+        "FIRSTLIGHT_API_KEY": "flp_live_your_token_here"
+      }
+    }
+  }
+}
+```
+
+> The server needs `FIRSTLIGHT_API_KEY` set to start. Mint a Personal Access
+> Token (`flp_live_...`) at
+> [firstlight.to/settings/api-tokens](https://firstlight.to/settings/api-tokens)
+> — it's shown only once at creation. Treat it like a password: never commit it
+> or paste it into shared logs, and rotate it if it's ever exposed.
+
 ### OpenClaw
 Add to your OpenClaw MCP config:
 ```json
