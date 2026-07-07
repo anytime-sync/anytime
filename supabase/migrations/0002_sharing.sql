@@ -189,7 +189,7 @@ begin
   insert into public.tasks (user_id, project_id, title, notes, priority, due_at)
   values
     (new.id, proj_id,
-     'Welcome to Anytime — try the quick add (press q)',
+     'Welcome to First Light — try the quick add (press q)',
      'Try: "Email Sam tomorrow 9am #work !1" — chrono parses dates, # adds tags, !1 is High priority.',
      5,
      now() + interval '1 day'),
