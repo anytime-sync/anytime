@@ -326,6 +326,125 @@ const get_task_tags = {
     },
     handler: (c, a) => c.getTaskTags(a.task_id),
 };
+// ---------- AI Intelligence -----------------------------------------------
+const plan_day = {
+    name: "plan_day",
+    description: "AI day planner. Given today's open tasks, returns quadrant + priority suggestions grounded in the user's calendar. Pass the tasks to plan (id, title, numeric priority; optional due_at/project).",
+    inputSchema: {
+        type: "object",
+        properties: {
+            tasks: {
+                type: "array",
+                description: "Tasks to plan — usually today's open tasks.",
+                items: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string" },
+                        title: { type: "string" },
+                        due_at: { type: ["string", "null"] },
+                        priority: { type: "number", description: "Numeric priority (higher = more important)." },
+                        project: { type: ["string", "null"] },
+                    },
+                    required: ["id", "title", "priority"],
+                },
+            },
+        },
+        required: ["tasks"],
+        additionalProperties: false,
+    },
+    handler: (c, a) => c.planDay(a.tasks),
+};
+const plan_week = {
+    name: "plan_week",
+    description: "AI week planner. Batch-prioritizes up to 30 tasks across the next 7 days, grounded in the user's calendar. Pass the tasks to plan.",
+    inputSchema: {
+        type: "object",
+        properties: {
+            tasks: {
+                type: "array",
+                description: "Tasks to plan across the week (up to 30).",
+                items: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string" },
+                        title: { type: "string" },
+                        due_at: { type: ["string", "null"] },
+                        priority: { type: "number", description: "Numeric priority (higher = more important)." },
+                        project: { type: ["string", "null"] },
+                    },
+                    required: ["id", "title", "priority"],
+                },
+            },
+        },
+        required: ["tasks"],
+        additionalProperties: false,
+    },
+    handler: (c, a) => c.planWeek(a.tasks),
+};
+const prep_meeting = {
+    name: "prep_meeting",
+    description: "Generate a short meeting agenda + questions to ask for a task. Result is cached per task; pass refresh=true to regenerate.",
+    inputSchema: {
+        type: "object",
+        properties: {
+            task_id: { type: "string" },
+            title: { type: "string", description: "Meeting / task title." },
+            notes: { type: "string", description: "Optional context to ground the prep." },
+            refresh: { type: "boolean", description: "Force regeneration, bypassing cache." },
+        },
+        required: ["task_id", "title"],
+        additionalProperties: false,
+    },
+    handler: (c, a) => c.prepMeeting(a.task_id, a.title, a.notes, a.refresh),
+};
+const find_time = {
+    name: "find_time",
+    description: "Suggest the best time slots in the next 7 days for a task, working around the user's calendar.",
+    inputSchema: {
+        type: "object",
+        properties: {
+            task_id: { type: "string" },
+            title: { type: "string", description: "Task title." },
+            estimated_minutes: { type: "number", description: "Estimated duration in minutes. Defaults to 30." },
+        },
+        required: ["task_id", "title"],
+        additionalProperties: false,
+    },
+    handler: (c, a) => c.findTime(a.task_id, a.title, a.estimated_minutes),
+};
+const reschedule_overdue = {
+    name: "reschedule_overdue",
+    description: "Find all overdue tasks automatically and suggest realistic new due dates (or defer/drop). Takes no arguments — the server finds the overdue tasks itself.",
+    inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+    },
+    handler: (c) => c.rescheduleOverdue(),
+};
+const detect_procrastination = {
+    name: "detect_procrastination",
+    description: "Find stuck / repeatedly-deferred tasks and recommend an action (drop, break down, or schedule). Takes no arguments.",
+    inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+    },
+    handler: (c) => c.detectProcrastination(),
+};
+const morning_copilot = {
+    name: "morning_copilot",
+    description: "Proactive morning brief: task suggestions with calendar awareness. Pass force=true to bypass the daily cache.",
+    inputSchema: {
+        type: "object",
+        properties: {
+            tz: { type: "string", description: "IANA timezone, e.g. 'America/Chicago'. Defaults to UTC." },
+            force: { type: "boolean", description: "Bypass the once-per-day cache." },
+        },
+        additionalProperties: false,
+    },
+    handler: (c, a) => c.morningCopilot(a.tz, a.force),
+};
 // ---------- Registry ------------------------------------------------------
 export const tools = [
     list_tasks,
@@ -349,6 +468,14 @@ export const tools = [
     tag_task,
     untag_task,
     get_task_tags,
+    // AI intelligence
+    plan_day,
+    plan_week,
+    prep_meeting,
+    find_time,
+    reschedule_overdue,
+    detect_procrastination,
+    morning_copilot,
 ];
 const byName = new Map(tools.map((t) => [t.name, t]));
 export async function dispatch(client, name, args) {
