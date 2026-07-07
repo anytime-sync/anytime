@@ -486,35 +486,13 @@ const find_time: Tool = {
 const reschedule_overdue: Tool = {
   name: "reschedule_overdue",
   description:
-    "Given the user's overdue tasks, suggest realistic new due dates (or defer/drop). Pass the overdue tasks, each with days_overdue.",
+    "Find all overdue tasks automatically and suggest realistic new due dates (or defer/drop). Takes no arguments — the server finds the overdue tasks itself.",
   inputSchema: {
     type: "object",
-    properties: {
-      tasks: {
-        type: "array",
-        description: "Overdue tasks to reschedule.",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "string" },
-            title: { type: "string" },
-            due_at: { type: ["string", "null"] },
-            days_overdue: { type: "number", description: "How many days past due." },
-            estimated_minutes: { type: ["number", "null"] },
-          },
-          required: ["id", "title", "days_overdue"],
-        },
-      },
-      tz: { type: "string", description: "IANA timezone, e.g. 'America/Chicago'. Optional." },
-    },
-    required: ["tasks"],
+    properties: {},
     additionalProperties: false,
   },
-  handler: (c, a) =>
-    c.rescheduleOverdue(
-      a.tasks as Parameters<FirstlightClient["rescheduleOverdue"]>[0],
-      a.tz as string | undefined,
-    ),
+  handler: (c) => c.rescheduleOverdue(),
 };
 
 const detect_procrastination: Tool = {
