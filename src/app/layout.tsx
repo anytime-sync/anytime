@@ -161,26 +161,9 @@ export default async function RootLayout({
             dangerouslySetInnerHTML={{ __html: classCss }}
           />
         )}
-        {/* Plausible — privacy-respecting analytics. Loaded only when
-            NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set (Vercel env var). The
-            script is < 1kb, sets no cookies, sends no personal data, and
-            ignores DNT. The "manual" extension lets us track custom
-            events via window.plausible() (see src/lib/track.ts). */}
-        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
-          <>
-            <script
-              defer
-              data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
-              src="https://plausible.io/js/script.manual.js"
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html:
-                  "window.plausible = window.plausible || function(){(window.plausible.q = window.plausible.q || []).push(arguments)}",
-              }}
-            />
-          </>
-        )}
+        {/* Plausible analytics removed 2026-07-07 (subscription not renewed).
+            First Light uses Vercel Analytics (see <Analytics /> below).
+            src/lib/track.ts custom-event helpers are now no-ops. */}
       </head>
       <body>
         <SoftwareApplicationJsonLd plusPrice={formatPriceNumeric(prices.plusCents)} proPrice={formatPriceNumeric(prices.proCents)} />

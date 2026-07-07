@@ -1,36 +1,27 @@
 "use client";
 
 /**
- * Plausible tracking helpers.
+ * Analytics tracking helpers — NO-OP.
  *
- * Plausible is loaded by layout.tsx as a deferred script. We use the
- * "manual" build so route changes don't auto-track — the SPA never
- * reloads, and we want to count meaningful events not micro-navigation.
- *
- * No cookies, no PII, no fingerprinting.
+ * Plausible was removed 2026-07-07 (subscription not renewed). These
+ * functions are kept as no-ops so existing callers (RouteTracker, UI
+ * event handlers) don't need to change. If a new analytics provider is
+ * wired up later, implement the bodies here and every call site picks
+ * it up automatically.
  */
 
 type Props = Record<string, string | number | boolean>;
 
-type PlausibleFn = (event: string, opts?: { props?: Props; u?: string }) => void;
-
-function plausible(): PlausibleFn | null {
-  if (typeof window === "undefined") return null;
-  const fn = (window as any).plausible as PlausibleFn | undefined;
-  return fn ?? null;
-}
-
-/** Standard pageview, fired by RouteTracker on every route change. */
-export function trackPageview(url: string) {
-  const p = plausible();
-  if (!p) return;
-  p("pageview", { u: url });
+/** Standard pageview. No-op — analytics provider removed. */
+export function trackPageview(_url: string): void {
+  /* no-op */
 }
 
 /**
- * Custom event. Names are dot-namespaced so they group nicely.
+ * Custom event. No-op — analytics provider removed.
  *
- * Standard names in this app:
+ * Historical event names used in this app (for reference if analytics
+ * is re-added):
  *   task.created           { source: "quick_add" | "manual" | "import" | "voice" }
  *   task.completed
  *   ai.invoked             { feature }
@@ -40,8 +31,6 @@ export function trackPageview(url: string) {
  *   plan_week.applied      { count }
  *   voice.dictation        { lang }
  */
-export function track(event: string, props?: Props) {
-  const p = plausible();
-  if (!p) return;
-  p(event, props ? { props } : undefined);
+export function track(_event: string, _props?: Props): void {
+  /* no-op */
 }
