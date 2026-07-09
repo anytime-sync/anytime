@@ -89,6 +89,90 @@ function aliasFromAddress(addr: string | null): string | null {
 }
 
 /**
+ * Decode quoted-printable (RFC 2045 §6.7). Handles `=XX` hex escapes
+ * and `=\r?\n` soft line breaks. This is what leaks `=3D`, `=E2=80=99`
+ * and trailing `=` into notes when a provider hands us a QP-encoded
+ * body without decoding it first. Best-effort: undecodable `=XX`
+ * sequences are left as-is rather than throwing.
+ */
+function decodeQuotedPrintable(input: string): string {
+  // Soft line breaks: `=` at end of line means "no real newline here".
+  const unfolded = input.replace(/=\r?\n/g, "");
+  // Hex escapes: =XX → byte. Collect the raw bytes so multi-byte UTF-8
+  // sequences (e.g. =E2=80=99) decode correctly instead of per-byte.
+  return unfolded.replace(/(?:=[0-9A-Fa-f]{2})+/g, (seq) => {
+    const bytes: number[] = [];
+    for (let i = 0; i < seq.length; i += 3) {
+      bytes.push(parseInt(seq.slice(i + 1, i + 3), 16));
+    }
+    try {
+      return new TextDecoder("utf-8", { fatal: false }).decode(
+        new Uint8Array(bytes)
+      );
+    } catch {
+      return seq;
+    }
+  });
+}
+
+// Detects a raw multipart MIME body that leaked in un-parsed: either a
+// leading boundary marker (`--_000_...`, `--===============...`, or a
+// generic `--<token>`) or a bare `Content-Type: multipart/...` header.
+const MIME_MULTIPART_RE =
+  /^\s*(?:--[=_A-Za-z0-9]|Content-Type:\s*multipart\/)/i;
+const MIME_BOUNDARY_DECL_RE = /boundary="?([^"\r\n;]+)"?/i;
+const MIME_HEADER_BLOCK_RE = /^[\s\S]*?\r?\n\r?\n/; // up to first blank line
+const CONTENT_TE_QP_RE = /content-transfer-encoding:\s*quoted-printable/i;
+
+/**
+ * When a provider hands us the raw RFC 822 / multipart source instead
+ * of the decoded `TextBody`/`HtmlBody`, pull out the best single part
+ * (prefer text/plain, else text/html) and return it decoded. Returns
+ * `null` when the input doesn't look like raw MIME, so callers can
+ * fall through to the normal path.
+ */
+function extractFromRawMime(
+  raw: string
+): { body: string; isHtml: boolean } | null {
+  if (!MIME_MULTIPART_RE.test(raw)) return null;
+
+  const boundaryMatch = raw.match(MIME_BOUNDARY_DECL_RE);
+  // Split into parts. If we found a declared boundary use it; otherwise
+  // fall back to the generic `--token` delimiter that opens most parts.
+  const parts = boundaryMatch
+    ? raw.split(new RegExp(`--${escapeRegExp(boundaryMatch[1])}(?:--)?`))
+    : raw.split(/^--[=_A-Za-z0-9][^\r\n]*$/m);
+
+  type Cand = { body: string; isHtml: boolean };
+  let plain: Cand | null = null;
+  let html: Cand | null = null;
+
+  for (const part of parts) {
+    const headerBlock = (part.match(MIME_HEADER_BLOCK_RE)?.[0] ?? "");
+    if (!/content-type:/i.test(headerBlock)) continue;
+    const isPlain = /content-type:\s*text\/plain/i.test(headerBlock);
+    const isHtml = /content-type:\s*text\/html/i.test(headerBlock);
+    if (!isPlain && !isHtml) continue;
+
+    let content = part.slice(headerBlock.length);
+    if (CONTENT_TE_QP_RE.test(headerBlock)) {
+      content = decodeQuotedPrintable(content);
+    }
+    content = content.trim();
+    if (!content) continue;
+
+    if (isPlain && !plain) plain = { body: content, isHtml: false };
+    else if (isHtml && !html) html = { body: content, isHtml: true };
+  }
+
+  return plain ?? html ?? null;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
  * Best-effort HTML → text. Strips tags, decodes a handful of common
  * named entities, and collapses whitespace. We don't bring in a real
  * parser — the result is dropped into `notes` as plain text and the
@@ -98,6 +182,7 @@ function htmlToText(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, " ")
     .replace(HTML_TAG_RE, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
@@ -105,6 +190,7 @@ function htmlToText(html: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -179,18 +265,69 @@ async function resolveTagsAndProject(
   return { tagIds, projectId };
 }
 
+/**
+ * Turn whatever a provider gave us (TextBody / HtmlBody, possibly raw
+ * MIME, possibly quoted-printable) into clean plain text for `notes`.
+ *
+ * Order of defence:
+ *   1. If a field is actually raw multipart MIME, extract the best
+ *      single part first (so boundaries/headers never leak).
+ *   2. Decode quoted-printable when the field carries QP artifacts
+ *      (`=3D`, soft `=\n` line breaks) even outside a MIME envelope.
+ *   3. HTML → text for html parts.
+ */
+function normalizeBody(
+  text: string | undefined,
+  html: string | undefined
+): string {
+  const candidates: (string | undefined)[] = [text, html];
+  for (const raw of candidates) {
+    if (!raw || raw.trim().length === 0) continue;
+
+    // 1. Raw multipart MIME leaked in as a "body" — extract a part.
+    const extracted = extractFromRawMime(raw);
+    if (extracted) {
+      return extracted.isHtml ? htmlToText(extracted.body) : extracted.body.trim();
+    }
+  }
+
+  // 2/3. Normal path: prefer text, fall back to html. Decode QP first
+  // when the payload shows QP artifacts (some providers pass the
+  // encoded text/plain through without decoding).
+  if (text && text.trim().length > 0) {
+    const t = /=\r?\n|=[0-9A-Fa-f]{2}/.test(text)
+      ? decodeQuotedPrintable(text)
+      : text;
+    return t.trim();
+  }
+  if (html && html.trim().length > 0) {
+    const h = /=\r?\n|=[0-9A-Fa-f]{2}/.test(html)
+      ? decodeQuotedPrintable(html)
+      : html;
+    return htmlToText(h);
+  }
+  return "";
+}
+
 function buildNotes(
   text: string | undefined,
   html: string | undefined,
   from: string | undefined,
   date: string | undefined
 ): string {
-  let body = "";
-  if (text && text.trim().length > 0) {
-    body = text.trim();
-  } else if (html && html.trim().length > 0) {
-    body = htmlToText(html);
+  let body = normalizeBody(text, html);
+
+  // Sanity guard: if the result STILL looks like MIME/header cruft
+  // (leftover boundaries or Content-* headers), drop the body rather
+  // than dump machine noise into a user-facing note. Better an empty
+  // note than a leaked message source.
+  if (
+    /^--[=_A-Za-z0-9]/m.test(body) ||
+    /content-(type|transfer-encoding):/i.test(body.slice(0, 200))
+  ) {
+    body = "";
   }
+
   if (body.length > NOTES_MAX) {
     body = body.slice(0, NOTES_MAX).trimEnd() + "…";
   }
