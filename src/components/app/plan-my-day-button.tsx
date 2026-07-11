@@ -147,11 +147,13 @@ export function PlanMyDayButton() {
       setResults(r.suggestions);
       setNotes(r.notes);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? tr(lang, "planDay.errBudget")
-          : tr(lang, "planDay.errPlan")
-      );
+      // Genuine daily cap on a deliberately-clicked action → calm, neutral
+      // notice (not a red error). Real failures still surface as errors.
+      if (e?.message?.includes("429")) {
+        toast.message(tr(lang, "planDay.errBudget"));
+      } else {
+        toast.error(tr(lang, "planDay.errPlan"));
+      }
       setOpen(false);
     } finally {
       setRunning(false);

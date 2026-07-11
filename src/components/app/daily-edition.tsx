@@ -47,14 +47,13 @@ export function DailyEdition() {
   }
 
   if (isError) {
+    // Product rule: a feature the user can't currently use should be invisible,
+    // not a scary "cap reached" / error card. When the daily AI budget is
+    // exhausted (rate_limited), just don't render the briefing at all.
     const code = (error as Error & { code?: string } | null)?.code;
-    if (code === "rate_limited") {
-      return (
-        <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
-          <p>{t(lang, "dailyEdition.rateLimited")}</p>
-        </article>
-      );
-    }
+    if (code === "rate_limited") return null;
+    // Genuine transient load failure (not a cap): offer a quiet retry rather
+    // than an error-styled block. Still low-key, no alarm.
     return (
       <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>

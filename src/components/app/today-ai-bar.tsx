@@ -9,6 +9,7 @@ import { useRescheduleTasks, type RescheduleSuggestion } from "@/hooks/use-ai";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 
 /**
  * Two AI-flavoured affordances on /app/today:
@@ -26,6 +27,13 @@ export function TodayAiBar() {
   const { data: tasks = [] } = useTasks({});
   const update = useUpdateTask();
   const reschedule = useRescheduleTasks();
+  // Tier/flag gate for the AI reschedule affordance. When the feature is off
+  // for this user's plan (or admin-disabled), we simply don't render the
+  // button — no dangling control that would only error on click.
+  const canReschedule = useCanUseFeature("ai_reschedule_task");
+  // If an entitled user exhausts their AI budget, hide the button for the
+  // rest of the session instead of surfacing a "cap reached" error.
+  const [capped, setCapped] = useState(false);
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<RescheduleSuggestion[] | null>(null);
 
@@ -86,17 +94,22 @@ export function TodayAiBar() {
         })),
       });
       if (!r) {
-        toast.error(tr(lang, "common.aiDisabled"));
+        // Feature turned off underneath us — hide silently, don't alarm.
+        setCapped(true);
         setOpen(false);
         return;
       }
       setResults(r.suggestions);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? tr(lang, "todayAi.errBudget")
-          : tr(lang, "todayAi.errReschedule")
-      );
+      // 429 = AI budget/cap exhausted. Per product rule, don't dangle a
+      // feature the user can't currently use: hide the button instead of
+      // showing a cap error. Any other error is a genuine failure worth a
+      // brief, non-blocking notice.
+      if (e?.message?.includes("429")) {
+        setCapped(true);
+      } else {
+        toast.error(tr(lang, "todayAi.errReschedule"));
+      }
       setOpen(false);
     }
   }
@@ -143,7 +156,7 @@ export function TodayAiBar() {
         </span>
       )}
 
-      {overdue.length > 0 && (
+      {overdue.length > 0 && canReschedule && !capped && (
         <button
           onClick={runReschedule}
           disabled={reschedule.isPending}
