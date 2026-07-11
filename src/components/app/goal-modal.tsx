@@ -45,11 +45,12 @@ export function GoalModal() {
       }
       setPlan(r);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? tr(lang, "goal.errBudget")
-          : tr(lang, "goal.errPlan")
-      );
+      // Cap on a deliberate action → calm notice, not a red error.
+      if (e?.message?.includes("429")) {
+        toast.message(tr(lang, "goal.errBudget"));
+      } else {
+        toast.error(tr(lang, "goal.errPlan"));
+      }
     } finally {
       setRunning(false);
     }
