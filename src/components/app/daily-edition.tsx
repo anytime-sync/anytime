@@ -35,7 +35,9 @@ export function DailyEdition() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  if (!aiEnabled) return null; if (isLoading) {
+  if (!aiEnabled) return null;
+
+  if (isLoading) {
     return (
       <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 animate-pulse">
         <div className="h-3 w-24 bg-muted rounded mb-3" />
@@ -48,13 +50,9 @@ export function DailyEdition() {
 
   if (isError) {
     const code = (error as Error & { code?: string } | null)?.code;
-    if (code === "rate_limited") {
-      return (
-        <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
-          <p>{t(lang, "dailyEdition.rateLimited")}</p>
-        </article>
-      );
-    }
+    // Silent hide when rate limited — don't show negative message to user
+    if (code === "rate_limited") return null;
+
     return (
       <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>
@@ -68,7 +66,6 @@ export function DailyEdition() {
   }
   if (!data) return null;
 
-  
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 group">
       {/* Clickable header — toggles collapse */}
