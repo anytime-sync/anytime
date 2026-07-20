@@ -357,8 +357,9 @@ function RowSnooze({ task }: { task: TaskWithTags }) {
         }}
         className={cn(
           "inline-flex items-center gap-1 transition-opacity hover:text-fg",
-          // Discoverable on hover of the row (group), always visible once open
-          open ? "opacity-100 text-fg" : "opacity-0 group-hover:opacity-100"
+          // Always visible (dimmed), brightening on row hover / when open, so
+          // it's discoverable without hovering and works on touch devices.
+          open ? "opacity-100 text-fg" : "opacity-55 group-hover:opacity-100"
         )}
       >
         <Clock3 className="size-3" />
@@ -484,7 +485,7 @@ function RowFindTime({ task }: { task: TaskWithTags }) {
         }}
         className={cn(
           "inline-flex items-center gap-1 transition-opacity hover:text-fg",
-          open ? "opacity-100 text-fg" : "opacity-0 group-hover:opacity-100"
+          open ? "opacity-100 text-fg" : "opacity-55 group-hover:opacity-100"
         )}
       >
         <Sparkles className={cn("size-3", findTime.isPending && "animate-pulse")} />
