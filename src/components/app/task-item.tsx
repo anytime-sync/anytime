@@ -1,10 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Flag, Hash, ListTree, Repeat, Trash2, Users } from "lucide-react";
+import { Calendar, Clock, Clock3, Flag, Hash, ListTree, Repeat, Sparkles, Trash2, Users } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
-import { useDeleteTask, useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
+import { useDeleteTask, useToggleTask, useSubtaskCounts, useUpdateTask } from "@/hooks/use-tasks";
+import { useFindTime, type TimeSlot } from "@/hooks/use-ai";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
+import { toast } from "sonner";
 import { useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
@@ -221,6 +224,13 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
               <Flag className={cn("size-3", priorityColorClass(task.priority))} />
             </span>
           )}
+          {/* Row-level quick snooze — clock icon reveals +1d/+2d/+3d/weekend/+1w
+              without opening the detail panel. Hidden on completed tasks. */}
+          {!task.is_completed && <RowSnooze task={task} />}
+          {/* Row-level "Find me time" — AI suggests 3 open slots and picking one
+              schedules the task, without opening the detail panel. Gated by the
+              same feature flag as the detail-panel action. */}
+          {!task.is_completed && <RowFindTime task={task} />}
           {/* Project pill — shows the list a task lives in. Hidden when
               there's no project (Inbox tasks). Same coloring scheme as
               the sidebar list dot. */}
@@ -265,6 +275,260 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
       </div>
     </div>
     </div>
+  );
+}
+
+/**
+ * Row-level quick snooze. A small clock button on the task row that opens a
+ * popover of one-tap reschedule presets (+1d / +2d / +3d / Weekend / +1w /
+ * Clear). Mirrors the detail-panel SnoozeRow logic:
+ *  - Anchor = existing due_at, else today 9:00 AM local.
+ *  - Preserves duration: if the task has both start_at + due_at, both slide
+ *    forward by the same delta.
+ *  - Weekend = coming Saturday 9:00 AM. Clear unschedules (drops due+start).
+ * All clicks stopPropagation so the row's open-detail handler doesn't fire.
+ */
+function RowSnooze({ task }: { task: TaskWithTags }) {
+  const lang = useLanguage();
+  const update = useUpdateTask();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  function anchor(): Date {
+    if (task.due_at) return new Date(task.due_at);
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  function applyDue(newDue: Date) {
+    const patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean } = {
+      id: task.id,
+      due_at: newDue.toISOString(),
+    };
+    if (task.start_at && task.due_at) {
+      const delta = newDue.getTime() - new Date(task.due_at).getTime();
+      patch.start_at = new Date(new Date(task.start_at).getTime() + delta).toISOString();
+    } else if (task.start_at && !task.due_at) {
+      patch.start_at = newDue.toISOString();
+    }
+    update.mutate(patch);
+    setOpen(false);
+  }
+  function shiftByDays(days: number) {
+    const base = anchor();
+    const newDue = new Date(base.getTime());
+    newDue.setDate(newDue.getDate() + days);
+    applyDue(newDue);
+  }
+  function toWeekend() {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    let add = (6 - d.getDay() + 7) % 7;
+    if (add === 0) add = 7;
+    d.setDate(d.getDate() + add);
+    applyDue(d);
+  }
+  function clearDue() {
+    update.mutate({ id: task.id, due_at: null, start_at: null });
+    setOpen(false);
+  }
+
+  const item =
+    "w-full text-left px-2.5 py-1.5 text-[12px] leading-none text-fg/85 hover:bg-muted rounded transition-colors whitespace-nowrap";
+
+  return (
+    <span ref={wrapRef} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={t(lang, "taskPanel.snooze")}
+        title={t(lang, "taskPanel.snooze")}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "inline-flex items-center gap-1 transition-opacity hover:text-fg",
+          // Always visible (dimmed), brightening on row hover / when open, so
+          // it's discoverable without hovering and works on touch devices.
+          open ? "opacity-100 text-fg" : "opacity-55 group-hover:opacity-100"
+        )}
+      >
+        <Clock3 className="size-3" />
+      </button>
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-30 top-5 left-0 min-w-[130px] rounded-lg border border-border bg-bg shadow-lg p-1"
+        >
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(1); }}>
+            {t(lang, "taskPanel.snooze1d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(2); }}>
+            {t(lang, "taskPanel.snooze2d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(3); }}>
+            {t(lang, "taskPanel.snooze3d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); toWeekend(); }}>
+            {t(lang, "taskPanel.snoozeWeekend")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(7); }}>
+            {t(lang, "taskPanel.snooze1w")}
+          </button>
+          {task.due_at && (
+            <button
+              type="button"
+              className={cn(item, "text-muted-fg hover:text-danger")}
+              onClick={(e) => { e.stopPropagation(); clearDue(); }}
+            >
+              {t(lang, "taskPanel.snoozeClear")}
+            </button>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
+
+/**
+ * Row-level "Find me time". A compact button on the task row that calls the
+ * AI find-time endpoint and shows up to 3 suggested open slots in a popover;
+ * picking one writes start_at/due_at on the task (same behavior as the
+ * detail-panel AiTaskActions, just surfaced on the row). Gated by the
+ * `ai_find_time` feature flag — renders nothing when the plan can't use it or
+ * the daily budget is exhausted. All clicks stopPropagation so the row's
+ * open-detail handler doesn't fire; click-outside closes the popover.
+ */
+function RowFindTime({ task }: { task: TaskWithTags }) {
+  const lang = useLanguage();
+  const findTime = useFindTime();
+  const update = useUpdateTask();
+  const canFindTime = useCanUseFeature("ai_find_time");
+  const [open, setOpen] = useState(false);
+  const [slots, setSlots] = useState<TimeSlot[] | null>(null);
+  const [capped, setCapped] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  if (!canFindTime || capped) return null;
+
+  async function run() {
+    setSlots(null);
+    setOpen(true);
+    try {
+      const r = await findTime.mutateAsync({
+        task_id: task.id,
+        title: task.title,
+        estimated_minutes: (task as any).estimated_minutes ?? null,
+      });
+      if (!r) {
+        setCapped(true);
+        setOpen(false);
+        return;
+      }
+      setSlots(r.slots);
+    } catch (e: any) {
+      if (e?.message?.includes("429")) {
+        setCapped(true);
+        setOpen(false);
+      } else {
+        toast.error("Couldn't find time — try again.");
+        setOpen(false);
+      }
+    }
+  }
+
+  function applySlot(s: TimeSlot) {
+    update.mutate({
+      id: task.id,
+      start_at: s.start_at,
+      due_at: s.end_at,
+      is_all_day: false,
+    } as any);
+    toast.success(`Scheduled — ${s.label}`);
+    setOpen(false);
+    setSlots(null);
+  }
+
+  return (
+    <span ref={wrapRef} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={t(lang, "aiActions.findTimeTooltip")}
+        title={t(lang, "aiActions.findTimeTooltip")}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (open) {
+            setOpen(false);
+          } else if (findTime.isPending) {
+            setOpen(true);
+          } else {
+            void run();
+          }
+        }}
+        className={cn(
+          "inline-flex items-center gap-1 transition-opacity hover:text-fg",
+          open ? "opacity-100 text-fg" : "opacity-55 group-hover:opacity-100"
+        )}
+      >
+        <Sparkles className={cn("size-3", findTime.isPending && "animate-pulse")} />
+      </button>
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-30 top-5 left-0 min-w-[220px] rounded-lg border border-border bg-bg shadow-lg p-1.5"
+        >
+          {findTime.isPending && (
+            <div className="px-2 py-1.5 text-[12px] text-muted-fg">Searching…</div>
+          )}
+          {!findTime.isPending && slots && slots.length > 0 && (
+            <ul className="space-y-1">
+              {slots.map((s, i) => (
+                <li key={`${s.start_at}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); applySlot(s); }}
+                    className="w-full text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                  >
+                    <div className="text-[12px] font-medium truncate">{s.label}</div>
+                    <div className="text-[11px] text-muted-fg">
+                      {new Date(s.start_at).toLocaleString(undefined, {
+                        weekday: "short", month: "short", day: "numeric",
+                        hour: "numeric", minute: "2-digit",
+                      })}{" "}·{" "}
+                      <span className={cn(
+                        "uppercase tracking-wider text-[10px]",
+                        s.fit === "best" ? "text-success" : s.fit === "good" ? "text-fg" : "text-muted-fg"
+                      )}>{s.fit}</span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!findTime.isPending && slots && slots.length === 0 && (
+            <div className="px-2 py-1.5 text-[12px] text-muted-fg">No open slots found.</div>
+          )}
+        </div>
+      )}
+    </span>
   );
 }
 

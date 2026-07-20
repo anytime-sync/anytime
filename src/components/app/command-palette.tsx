@@ -40,7 +40,12 @@ export function CommandPalette() {
       }
       setAiMatches(r.matches);
     } catch (e: any) {
-      toast.error(e?.message?.includes("429") ? tr(lang, "commandPalette.errBudget") : tr(lang, "commandPalette.errSearch"));
+      // Search-budget cap → neutral notice; genuine failures stay errors.
+      if (e?.message?.includes("429")) {
+        toast.message(tr(lang, "commandPalette.errBudget"));
+      } else {
+        toast.error(tr(lang, "commandPalette.errSearch"));
+      }
     }
   }
 

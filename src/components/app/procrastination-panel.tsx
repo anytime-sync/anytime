@@ -28,22 +28,25 @@ export function ProcrastinationPanel() {
   const create = useCreateTask();
   const procrastinate = useProcrastination();
   const [data, setData] = useState<{ items: ProcrastinationItem[]; summary: string } | null>(null);
+  // Once the daily budget is exhausted (or the feature is off), hide the
+  // panel's trigger instead of surfacing a "cap reached" error.
+  const [capped, setCapped] = useState(false);
 
   async function run() {
     setData(null);
     try {
       const r = await procrastinate.mutateAsync();
       if (!r) {
-        toast.error(tr(lang, "common.aiDisabled"));
+        setCapped(true);
         return;
       }
       setData(r);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? tr(lang, "procrastination.errBudget")
-          : tr(lang, "procrastination.errScan")
-      );
+      if (e?.message?.includes("429")) {
+        setCapped(true);
+      } else {
+        toast.error(tr(lang, "procrastination.errScan"));
+      }
     }
   }
 
@@ -80,6 +83,10 @@ export function ProcrastinationPanel() {
     setData((d) => (d ? { ...d, items: d.items.filter((x) => x.id !== it.id) } : d));
   }
 
+  // If the feature is capped/off and there's nothing to show, don't render an
+  // empty panel with a dead button — hide it entirely.
+  if (capped && !data) return null;
+
   return (
     <section className="border border-border rounded-lg p-4 surface">
       <div className="flex items-baseline justify-between mb-3">
@@ -89,6 +96,7 @@ export function ProcrastinationPanel() {
             {tr(lang, "procrastination.intro")}
           </p>
         </div>
+        {!capped && (
         <button
           onClick={run}
           disabled={procrastinate.isPending}
@@ -99,6 +107,7 @@ export function ProcrastinationPanel() {
           />
           {procrastinate.isPending ? tr(lang, "procrastination.scanning") : tr(lang, "procrastination.scan")}
         </button>
+        )}
       </div>
 
       {data && data.summary && (

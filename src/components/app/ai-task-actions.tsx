@@ -9,6 +9,7 @@ import type { Task } from "@/lib/db.types";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
+import { useCanUseFeature } from "@/hooks/use-feature-access";
 
 const MEETING_HINTS = /\b(meeting|sync|standup|stand-up|1:1|one[- ]on[- ]one|catch[- ]up|call|kickoff|kick[- ]off|review|interview|會議|會面|面試|미팅|회의)\b/i;
 
@@ -27,6 +28,15 @@ export function AiTaskActions({ task }: { task: Task }) {
   const [slots, setSlots] = useState<TimeSlot[] | null>(null);
   const [prep, setPrep] = useState<MeetingPrep | null>(null);
 
+  // Tier/flag gates. If the feature is off for this plan (or admin-disabled)
+  // we don't render the button at all — no control that only errors on click.
+  const canFindTime = useCanUseFeature("ai_find_time");
+  const canPrepMeeting = useCanUseFeature("ai_prep_meeting");
+  // Hide a button once its daily budget is exhausted, rather than showing a
+  // "budget reached" error each time it's clicked.
+  const [findTimeCapped, setFindTimeCapped] = useState(false);
+  const [prepCapped, setPrepCapped] = useState(false);
+
   const looksLikeMeeting = MEETING_HINTS.test(task.title);
 
   async function runFindTime() {
@@ -38,16 +48,17 @@ export function AiTaskActions({ task }: { task: Task }) {
         estimated_minutes: (task as any).estimated_minutes ?? null,
       });
       if (!r) {
-        toast.error("AI is currently disabled.");
+        setFindTimeCapped(true);
         return;
       }
       setSlots(r.slots);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? "Daily find-time budget reached."
-          : "Couldn't find time — try again."
-      );
+      // Cap reached → hide the affordance instead of an error toast.
+      if (e?.message?.includes("429")) {
+        setFindTimeCapped(true);
+      } else {
+        toast.error("Couldn't find time — try again.");
+      }
     }
   }
 
@@ -71,22 +82,24 @@ export function AiTaskActions({ task }: { task: Task }) {
         notes: task.notes,
       });
       if (!r) {
-        toast.error("AI is currently disabled.");
+        setPrepCapped(true);
         return;
       }
       setPrep(r);
     } catch (e: any) {
-      toast.error(
-        e?.message?.includes("429")
-          ? "Daily prep-meeting budget reached."
-          : "Couldn't prepare agenda — try again."
-      );
+      // Cap reached → hide the affordance instead of an error toast.
+      if (e?.message?.includes("429")) {
+        setPrepCapped(true);
+      } else {
+        toast.error("Couldn't prepare agenda — try again.");
+      }
     }
   }
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
+        {canFindTime && !findTimeCapped && (
         <button
           type="button"
           onClick={runFindTime}
@@ -97,8 +110,9 @@ export function AiTaskActions({ task }: { task: Task }) {
           <Clock className={cn("size-3.5", findTime.isPending && "animate-spin")} />
           {findTime.isPending ? "Searching…" : "Find me time"}
         </button>
+        )}
 
-        {looksLikeMeeting && (
+        {looksLikeMeeting && canPrepMeeting && !prepCapped && (
           <button
             type="button"
             onClick={runPrepMeeting}

@@ -6,7 +6,7 @@ import { useUIStore } from "@/store/ui";
 import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
-import { Bell, Flag, Trash2, X, Repeat, Paperclip, NotebookPen } from "lucide-react";
+import { Bell, Flag, Trash2, X, Repeat, Paperclip, NotebookPen, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -314,6 +314,12 @@ export function TaskDetailPanel() {
           </Field>
         </div>
 
+        {/* Quick snooze — shift due (and start, preserving duration) forward
+            by a preset without opening the date picker. Anchors off the
+            current due_at when set, otherwise off "now", so an unscheduled
+            task becomes "in N days" and a scheduled one slides forward. */}
+        <SnoozeRow task={task} onSnooze={(patch) => update.mutate(patch)} />
+
         <Field label={t(lang, "taskPanel.repeat")}>
           <div className="flex items-center gap-2">
             <Repeat className="size-4 text-muted-fg" />
@@ -466,6 +472,112 @@ export function TaskDetailPanel() {
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Quick-snooze row. Shifts a task's due date forward by a preset with one
+ * tap. Rules:
+ *  - Anchor = existing due_at when set, else "now" (so unscheduled tasks
+ *    become "in N days" at 9:00 AM local).
+ *  - If the task has BOTH start_at and due_at, both slide forward by the
+ *    same delta so the duration/time-block is preserved.
+ *  - "Weekend" jumps to the coming Saturday 9:00 AM. "Clear" removes the
+ *    due date entirely (unschedules).
+ * The date-clamp in useUpdateTask keeps start <= due safe regardless.
+ */
+function SnoozeRow({
+  task,
+  onSnooze,
+}: {
+  task: { id: string; start_at: string | null; due_at: string | null };
+  onSnooze: (patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean }) => void;
+}) {
+  const lang = useLanguage();
+
+  function anchor(): Date {
+    if (task.due_at) return new Date(task.due_at);
+    // No due date yet: anchor to today 9:00 AM local as a sensible default.
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+
+  function shiftByDays(days: number) {
+    const base = anchor();
+    const newDue = new Date(base.getTime());
+    newDue.setDate(newDue.getDate() + days);
+    applyDue(newDue);
+  }
+
+  function toWeekend() {
+    // Coming Saturday at 9:00 AM local (if today is Sat/Sun, jump to next Sat).
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    const day = d.getDay(); // 0 Sun .. 6 Sat
+    let add = (6 - day + 7) % 7;
+    if (add === 0) add = 7; // already Saturday -> next Saturday
+    d.setDate(d.getDate() + add);
+    applyDue(d);
+  }
+
+  function applyDue(newDue: Date) {
+    const patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean } = {
+      id: task.id,
+      due_at: newDue.toISOString(),
+    };
+    // Preserve duration: slide start_at forward by the same delta.
+    if (task.start_at && task.due_at) {
+      const delta = newDue.getTime() - new Date(task.due_at).getTime();
+      patch.start_at = new Date(new Date(task.start_at).getTime() + delta).toISOString();
+    } else if (task.start_at && !task.due_at) {
+      // Had a start but no due: set start = new due (single point in time).
+      patch.start_at = newDue.toISOString();
+    }
+    onSnooze(patch);
+  }
+
+  function clearDue() {
+    // Unschedule: drop due (and start) so the task returns to the inbox.
+    onSnooze({ id: task.id, due_at: null, start_at: null });
+  }
+
+  const btn =
+    "px-2.5 py-1 rounded-full border border-border text-[12px] leading-none text-fg/80 hover:bg-muted hover:text-fg transition-colors";
+
+  return (
+    <div className="space-y-1">
+      <div className="text-xs font-medium text-muted-fg flex items-center gap-1">
+        <Clock3 className="size-3.5" />
+        {t(lang, "taskPanel.snooze")}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <button type="button" className={btn} onClick={() => shiftByDays(1)}>
+          {t(lang, "taskPanel.snooze1d")}
+        </button>
+        <button type="button" className={btn} onClick={() => shiftByDays(2)}>
+          {t(lang, "taskPanel.snooze2d")}
+        </button>
+        <button type="button" className={btn} onClick={() => shiftByDays(3)}>
+          {t(lang, "taskPanel.snooze3d")}
+        </button>
+        <button type="button" className={btn} onClick={toWeekend}>
+          {t(lang, "taskPanel.snoozeWeekend")}
+        </button>
+        <button type="button" className={btn} onClick={() => shiftByDays(7)}>
+          {t(lang, "taskPanel.snooze1w")}
+        </button>
+        {task.due_at && (
+          <button
+            type="button"
+            className="px-2.5 py-1 rounded-full border border-transparent text-[12px] leading-none text-muted-fg hover:text-danger transition-colors"
+            onClick={clearDue}
+          >
+            {t(lang, "taskPanel.snoozeClear")}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
