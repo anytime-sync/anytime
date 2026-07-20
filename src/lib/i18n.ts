@@ -494,6 +494,13 @@ export type StringKey =
   | "taskPanel.due"
   | "taskPanel.startPlaceholder"
   | "taskPanel.duePlaceholder"
+  | "taskPanel.snooze"
+  | "taskPanel.snooze1d"
+  | "taskPanel.snooze2d"
+  | "taskPanel.snooze3d"
+  | "taskPanel.snooze1w"
+  | "taskPanel.snoozeWeekend"
+  | "taskPanel.snoozeClear"
   | "taskPanel.repeat"
   | "taskPanel.recurNone"
   | "taskPanel.recurDaily"
@@ -1402,6 +1409,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.starts": "Starts",
     "taskPanel.ends": "Ends",
     "taskPanel.due": "Due",
+    "taskPanel.snooze": "Snooze",
+    "taskPanel.snooze1d": "+1 day",
+    "taskPanel.snooze2d": "+2 days",
+    "taskPanel.snooze3d": "+3 days",
+    "taskPanel.snooze1w": "+1 week",
+    "taskPanel.snoozeWeekend": "Weekend",
+    "taskPanel.snoozeClear": "Clear",
     "taskPanel.startPlaceholder": "Pick a start time",
     "taskPanel.duePlaceholder": "Pick a due time",
     "taskPanel.repeat": "Repeat",
@@ -2302,6 +2316,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.starts": "開始",
     "taskPanel.ends": "結束",
     "taskPanel.due": "到期",
+    "taskPanel.snooze": "延後",
+    "taskPanel.snooze1d": "+1 天",
+    "taskPanel.snooze2d": "+2 天",
+    "taskPanel.snooze3d": "+3 天",
+    "taskPanel.snooze1w": "+1 週",
+    "taskPanel.snoozeWeekend": "週末",
+    "taskPanel.snoozeClear": "清除",
     "taskPanel.startPlaceholder": "選擇開始時間",
     "taskPanel.duePlaceholder": "選擇到期時間",
     "taskPanel.repeat": "重複",
@@ -3195,6 +3216,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.starts": "开始",
     "taskPanel.ends": "结束",
     "taskPanel.due": "到期",
+    "taskPanel.snooze": "延后",
+    "taskPanel.snooze1d": "+1 天",
+    "taskPanel.snooze2d": "+2 天",
+    "taskPanel.snooze3d": "+3 天",
+    "taskPanel.snooze1w": "+1 周",
+    "taskPanel.snoozeWeekend": "周末",
+    "taskPanel.snoozeClear": "清除",
     "taskPanel.startPlaceholder": "选择开始时间",
     "taskPanel.duePlaceholder": "选择到期时间",
     "taskPanel.repeat": "重复",
@@ -4088,6 +4116,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.starts": "開始",
     "taskPanel.ends": "終了",
     "taskPanel.due": "期限",
+    "taskPanel.snooze": "延期",
+    "taskPanel.snooze1d": "+1 日",
+    "taskPanel.snooze2d": "+2 日",
+    "taskPanel.snooze3d": "+3 日",
+    "taskPanel.snooze1w": "+1 週間",
+    "taskPanel.snoozeWeekend": "週末",
+    "taskPanel.snoozeClear": "クリア",
     "taskPanel.startPlaceholder": "開始時刻を選ぶ",
     "taskPanel.duePlaceholder": "期限を選ぶ",
     "taskPanel.repeat": "繰り返し",
@@ -4981,6 +5016,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.starts": "시작",
     "taskPanel.ends": "종료",
     "taskPanel.due": "마감",
+    "taskPanel.snooze": "미루기",
+    "taskPanel.snooze1d": "+1일",
+    "taskPanel.snooze2d": "+2일",
+    "taskPanel.snooze3d": "+3일",
+    "taskPanel.snooze1w": "+1주",
+    "taskPanel.snoozeWeekend": "주말",
+    "taskPanel.snoozeClear": "지우기",
     "taskPanel.startPlaceholder": "시작 시간 선택",
     "taskPanel.duePlaceholder": "마감 시간 선택",
     "taskPanel.repeat": "반복",
