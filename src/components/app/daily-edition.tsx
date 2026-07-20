@@ -35,7 +35,9 @@ export function DailyEdition() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  if (!aiEnabled) return null; if (isLoading) {
+  if (!aiEnabled) return null;
+
+  if (isLoading) {
     return (
       <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 animate-pulse">
         <div className="h-3 w-24 bg-muted rounded mb-3" />
@@ -47,13 +49,10 @@ export function DailyEdition() {
   }
 
   if (isError) {
-    // Product rule: a feature the user can't currently use should be invisible,
-    // not a scary "cap reached" / error card. When the daily AI budget is
-    // exhausted (rate_limited), just don't render the briefing at all.
     const code = (error as Error & { code?: string } | null)?.code;
+    // Silent hide when rate limited — don't show negative message to user
     if (code === "rate_limited") return null;
-    // Genuine transient load failure (not a cap): offer a quiet retry rather
-    // than an error-styled block. Still low-key, no alarm.
+
     return (
       <article className="rounded-xl border border-border surface p-4 mb-6 text-sm text-muted-fg">
         <p>
@@ -67,7 +66,6 @@ export function DailyEdition() {
   }
   if (!data) return null;
 
-  
   return (
     <article className="rounded-xl border border-border surface p-4 md:p-5 mb-6 group">
       {/* Clickable header — toggles collapse */}
