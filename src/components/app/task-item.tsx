@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Flag, Hash, ListTree, Repeat, Trash2, Users } from "lucide-react";
+import { Calendar, Clock, Clock3, Flag, Hash, ListTree, Repeat, Trash2, Users } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
-import { useDeleteTask, useToggleTask, useSubtaskCounts } from "@/hooks/use-tasks";
+import { useDeleteTask, useToggleTask, useSubtaskCounts, useUpdateTask } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useUIStore } from "@/store/ui";
 import type { TaskWithTags } from "@/hooks/use-tasks";
@@ -221,6 +221,9 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
               <Flag className={cn("size-3", priorityColorClass(task.priority))} />
             </span>
           )}
+          {/* Row-level quick snooze — clock icon reveals +1d/+2d/+3d/weekend/+1w
+              without opening the detail panel. Hidden on completed tasks. */}
+          {!task.is_completed && <RowSnooze task={task} />}
           {/* Project pill — shows the list a task lives in. Hidden when
               there's no project (Inbox tasks). Same coloring scheme as
               the sidebar list dot. */}
@@ -265,6 +268,126 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
       </div>
     </div>
     </div>
+  );
+}
+
+/**
+ * Row-level quick snooze. A small clock button on the task row that opens a
+ * popover of one-tap reschedule presets (+1d / +2d / +3d / Weekend / +1w /
+ * Clear). Mirrors the detail-panel SnoozeRow logic:
+ *  - Anchor = existing due_at, else today 9:00 AM local.
+ *  - Preserves duration: if the task has both start_at + due_at, both slide
+ *    forward by the same delta.
+ *  - Weekend = coming Saturday 9:00 AM. Clear unschedules (drops due+start).
+ * All clicks stopPropagation so the row's open-detail handler doesn't fire.
+ */
+function RowSnooze({ task }: { task: TaskWithTags }) {
+  const lang = useLanguage();
+  const update = useUpdateTask();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  function anchor(): Date {
+    if (task.due_at) return new Date(task.due_at);
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  function applyDue(newDue: Date) {
+    const patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean } = {
+      id: task.id,
+      due_at: newDue.toISOString(),
+    };
+    if (task.start_at && task.due_at) {
+      const delta = newDue.getTime() - new Date(task.due_at).getTime();
+      patch.start_at = new Date(new Date(task.start_at).getTime() + delta).toISOString();
+    } else if (task.start_at && !task.due_at) {
+      patch.start_at = newDue.toISOString();
+    }
+    update.mutate(patch);
+    setOpen(false);
+  }
+  function shiftByDays(days: number) {
+    const base = anchor();
+    const newDue = new Date(base.getTime());
+    newDue.setDate(newDue.getDate() + days);
+    applyDue(newDue);
+  }
+  function toWeekend() {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    let add = (6 - d.getDay() + 7) % 7;
+    if (add === 0) add = 7;
+    d.setDate(d.getDate() + add);
+    applyDue(d);
+  }
+  function clearDue() {
+    update.mutate({ id: task.id, due_at: null, start_at: null });
+    setOpen(false);
+  }
+
+  const item =
+    "w-full text-left px-2.5 py-1.5 text-[12px] leading-none text-fg/85 hover:bg-muted rounded transition-colors whitespace-nowrap";
+
+  return (
+    <span ref={wrapRef} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={t(lang, "taskPanel.snooze")}
+        title={t(lang, "taskPanel.snooze")}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "inline-flex items-center gap-1 transition-opacity hover:text-fg",
+          // Discoverable on hover of the row (group), always visible once open
+          open ? "opacity-100 text-fg" : "opacity-0 group-hover:opacity-100"
+        )}
+      >
+        <Clock3 className="size-3" />
+      </button>
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-30 top-5 left-0 min-w-[130px] rounded-lg border border-border bg-bg shadow-lg p-1"
+        >
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(1); }}>
+            {t(lang, "taskPanel.snooze1d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(2); }}>
+            {t(lang, "taskPanel.snooze2d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(3); }}>
+            {t(lang, "taskPanel.snooze3d")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); toWeekend(); }}>
+            {t(lang, "taskPanel.snoozeWeekend")}
+          </button>
+          <button type="button" className={item} onClick={(e) => { e.stopPropagation(); shiftByDays(7); }}>
+            {t(lang, "taskPanel.snooze1w")}
+          </button>
+          {task.due_at && (
+            <button
+              type="button"
+              className={cn(item, "text-muted-fg hover:text-danger")}
+              onClick={(e) => { e.stopPropagation(); clearDue(); }}
+            >
+              {t(lang, "taskPanel.snoozeClear")}
+            </button>
+          )}
+        </div>
+      )}
+    </span>
   );
 }
 
