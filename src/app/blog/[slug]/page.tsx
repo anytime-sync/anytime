@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAllSlugs, getPost, renderMarkdown } from "@/lib/blog";
 import { BlogPostJsonLd } from "@/components/json-ld";
 import { BlogNav } from "@/components/marketing/blog-nav";
+import { DailyEditionCta } from "@/components/marketing/daily-edition-cta";
 
 interface Props {
   params: { slug: string };
@@ -98,6 +99,8 @@ export default async function BlogPostPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
       </article>
+
+      <DailyEditionCta />
 
       <footer className="mt-16 pt-8 border-t border-border">
         <div className="flex items-center justify-between">
