@@ -67,56 +67,107 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-6 relative">
+    <main className="min-h-screen grid place-items-center px-6 py-12 relative">
       <FloatingLayer page="/signup" />
-      <div className="card w-full max-w-md p-8 space-y-5 relative">
-        <div className="absolute top-3 right-3">
-          <LanguagePicker mode="local" onChange={setLang} />
+      <div className="w-full max-w-md space-y-4">
+        {/*
+          Operator identity above the credential form. Added after the
+          July 2026 Google Safe Browsing "deceptive pages" flag: a sign-up
+          form on a domain with no visible owner reads as phishing. Do not
+          remove the wordmark link, the operator line, or the legal links
+          at the bottom of this page.
+        */}
+        <Link
+          href="/"
+          className="wordmark text-lg flex items-center justify-center gap-2 text-fg"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-black.png" alt="" className="size-7 block dark:hidden" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-white.png" alt="" className="size-7 hidden dark:block" aria-hidden="true" />
+          First Light
+        </Link>
+
+        <div className="card w-full p-8 space-y-5 relative">
+          <div className="absolute top-3 right-3">
+            <LanguagePicker mode="local" onChange={setLang} />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl tracking-tight">{t(lang, "auth.signup.title")}</h1>
+            <p className="text-sm text-muted-fg">{t(lang, "auth.signup.subtitle")}</p>
+          </div>
+
+          <OAuthButtons />
+
+          <p className="text-xs text-muted-fg leading-relaxed">
+            Signing in with Google gives First Light your name and email address
+            so we can create your account. We never read your Gmail, Drive or
+            Calendar, and we never post on your behalf.
+          </p>
+
+          <Divider>{t(lang, "auth.login.orEmail")}</Divider>
+
+          <form onSubmit={onSubmit} className="space-y-3">
+            <input
+              placeholder={t(lang, "auth.signup.namePlaceholder")}
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              type="email"
+              placeholder={t(lang, "auth.login.emailPlaceholder")}
+              className="input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t(lang, "auth.signup.passwordPlaceholder")}
+              className="input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <button className="btn-primary w-full" disabled={loading}>
+              {loading ? "…" : t(lang, "auth.signup.submit")}
+            </button>
+          </form>
+
+          <p className="text-sm text-center text-muted-fg">
+            {t(lang, "auth.signup.haveAccount")}{" "}
+            <Link href="/login" className="text-accent hover:underline">
+              {t(lang, "auth.signup.login")}
+            </Link>
+          </p>
         </div>
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">{t(lang, "auth.signup.title")}</h1>
-          <p className="text-sm text-muted-fg">{t(lang, "auth.signup.subtitle")}</p>
+
+        <div className="text-center text-xs text-muted-fg space-y-2">
+          <p>
+            By creating an account you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-fg">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-fg">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+          <p>
+            First Light is an independent product operated by Yulin Cheng in Taipei,
+            Taiwan.{" "}
+            <Link href="/about" className="underline hover:text-fg">
+              About
+            </Link>{" "}
+            &middot;{" "}
+            <Link href="/contact" className="underline hover:text-fg">
+              Contact
+            </Link>
+          </p>
         </div>
-
-        <OAuthButtons />
-
-        <Divider>{t(lang, "auth.login.orEmail")}</Divider>
-
-        <form onSubmit={onSubmit} className="space-y-3">
-          <input
-            placeholder={t(lang, "auth.signup.namePlaceholder")}
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            type="email"
-            placeholder={t(lang, "auth.login.emailPlaceholder")}
-            className="input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder={t(lang, "auth.signup.passwordPlaceholder")}
-            className="input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-          <button className="btn-primary w-full" disabled={loading}>
-            {loading ? "…" : t(lang, "auth.signup.submit")}
-          </button>
-        </form>
-
-        <p className="text-sm text-center text-muted-fg">
-          {t(lang, "auth.signup.haveAccount")}{" "}
-          <Link href="/login" className="text-accent hover:underline">
-            {t(lang, "auth.signup.login")}
-          </Link>
-        </p>
       </div>
     </main>
   );

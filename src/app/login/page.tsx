@@ -68,11 +68,27 @@ function LoginForm() {
         <LanguagePicker mode="local" onChange={setLang} />
       </div>
       <div>
+        {/* Wordmark: the sign-in page must say, on its face, whose site this is. */}
+        <Link
+          href="/"
+          className="inline-block font-display text-sm tracking-[0.18em] uppercase text-muted-fg hover:text-fg transition-colors mb-3"
+        >
+          First Light
+        </Link>
         <h1 className="font-display text-2xl tracking-tight">{t(lang, "auth.login.title")}</h1>
         <p className="text-sm text-muted-fg">{t(lang, "auth.login.subtitle")}</p>
       </div>
 
       <OAuthButtons next={next} />
+
+      {/* State plainly what the OAuth grant is used for. An unexplained
+          "Continue with Google" on a young domain is the classic phishing
+          shape; naming the purpose is both honest and de-risking. */}
+      <p className="text-xs text-muted-fg leading-relaxed">
+        Signing in with Google gives First Light your name and email address so
+        we can identify your account. We never post on your behalf and never
+        sell your data.
+      </p>
 
       <Divider>{t(lang, "auth.login.orEmail")}</Divider>
 
@@ -118,6 +134,28 @@ function LoginForm() {
           {t(lang, "auth.login.createAccount")}
         </Link>
       </p>
+
+      {/* Operator identity + reachable policies, mirroring /signup. */}
+      <div className="pt-4 border-t border-border space-y-2 text-center">
+        <p className="text-xs text-muted-fg">
+          First Light is an independent product built and operated by Yulin Cheng in
+          Taipei, Taiwan.
+        </p>
+        <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-fg">
+          <Link href="/about" className="hover:text-fg transition-colors">
+            About
+          </Link>
+          <Link href="/contact" className="hover:text-fg transition-colors">
+            Contact
+          </Link>
+          <Link href="/privacy" className="hover:text-fg transition-colors">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-fg transition-colors">
+            Terms
+          </Link>
+        </nav>
+      </div>
     </div>
   );
 }

@@ -257,10 +257,20 @@ export default function PricingPage() {
         </section>
       </main>
 
+      {/*
+        Operator identity + About/Contact are deliberate trust signals — see
+        src/components/site-footer.tsx for why. This is a payment page; do not
+        strip it back to Privacy/Terms only.
+      */}
       <footer className="border-t border-border mt-16 py-6">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-xs text-muted-fg">
-          <span>© First Light</span>
-          <nav className="flex gap-4">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-fg">
+          <span>
+            © First Light — an independent product built and operated by Yulin Cheng in
+            Taipei, Taiwan.
+          </span>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link href="/about" className="hover:text-fg">About</Link>
+            <Link href="/contact" className="hover:text-fg">Contact</Link>
             <Link href="/privacy" className="hover:text-fg">Privacy</Link>
             <Link href="/terms" className="hover:text-fg">Terms</Link>
           </nav>

@@ -320,9 +320,38 @@ export default function Home() {
         </div>
       </section>
 
+      {/*
+        Operator identity + About/Contact links are deliberate trust signals,
+        not decoration — firstlight.to was flagged by Google Safe Browsing as a
+        "deceptive page" in July 2026, and a domain that asks for a Google
+        sign-in while stating nowhere who runs it is the classic shape of that
+        false positive. See src/components/site-footer.tsx. Do not remove.
+      */}
       <DesignSlot id="landing.footer" as="footer" className="px-6 py-8 border-t border-border">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
-          <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-fg">
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
+            <span>
+              An independent product built and operated by Yulin Cheng in Taipei, Taiwan.
+            </span>
+          </div>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link href="/about" className="hover:text-fg transition-colors">
+              About
+            </Link>
+            <Link href="/contact" className="hover:text-fg transition-colors">
+              Contact
+            </Link>
+            <Link href="/pricing" className="hover:text-fg transition-colors">
+              Pricing
+            </Link>
+            <Link href="/privacy" className="hover:text-fg transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-fg transition-colors">
+              Terms
+            </Link>
+          </nav>
         </div>
       </DesignSlot>
 
