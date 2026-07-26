@@ -157,7 +157,7 @@ export default function SignupPage() {
             .
           </p>
           <p>
-            First Light is an independent product operated by YL in Taipei,
+            First Light is an independent product operated by Yulin Cheng in Taipei,
             Taiwan.{" "}
             <Link href="/about" className="underline hover:text-fg">
               About

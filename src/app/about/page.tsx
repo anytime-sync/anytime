@@ -28,7 +28,7 @@ export default function AboutPage() {
 
           <Section heading="Who runs this">
             <p>
-              First Light is an independent product built and operated by YL, a
+              First Light is an independent product built and operated by Yulin Cheng, a
               solo developer based in Taipei, Taiwan. It is not a front for a
               larger company, and it is not affiliated with, endorsed by, or
               sponsored by any other productivity app or brand mentioned on this
@@ -89,10 +89,10 @@ export default function AboutPage() {
             <p>
               Email{" "}
               <a
-                href="mailto:anytime.sync@gmail.com"
+                href="mailto:hello@firstlight.to"
                 className="text-accent hover:underline"
               >
-                anytime.sync@gmail.com
+                hello@firstlight.to
               </a>
               . One person reads it, and you will get a real reply. More ways to
               get in touch are on the{" "}

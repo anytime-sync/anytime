@@ -19,7 +19,7 @@ export function SiteFooter() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-fg">
         <p>
           &copy; {year} First Light — an independent product built and operated
-          by YL in Taipei, Taiwan.
+          by Yulin Cheng in Taipei, Taiwan.
         </p>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <Link href="/about" className="hover:text-fg transition-colors">

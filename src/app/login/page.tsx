@@ -138,7 +138,7 @@ function LoginForm() {
       {/* Operator identity + reachable policies, mirroring /signup. */}
       <div className="pt-4 border-t border-border space-y-2 text-center">
         <p className="text-xs text-muted-fg">
-          First Light is an independent product built and operated by YL in
+          First Light is an independent product built and operated by Yulin Cheng in
           Taipei, Taiwan.
         </p>
         <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-fg">

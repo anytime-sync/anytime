@@ -162,7 +162,7 @@ export default function ChangelogPage() {
       <footer className="border-t border-border mt-16 py-6">
         <div className="max-w-3xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-fg">
           <span>
-            © First Light — an independent product built and operated by YL in
+            © First Light — an independent product built and operated by Yulin Cheng in
             Taipei, Taiwan.
           </span>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

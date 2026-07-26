@@ -15,7 +15,7 @@ export function TrademarkNotice() {
     <aside className="px-6 pb-10">
       <div className="max-w-6xl mx-auto">
         <p className="text-xs text-muted-fg leading-relaxed border-t border-border pt-6">
-          First Light is an independent product operated by YL in Taipei,
+          First Light is an independent product operated by Yulin Cheng in Taipei,
           Taiwan. It is not affiliated with, endorsed by, or sponsored by any of
           the products or companies named on this page. All product names,
           logos, and trademarks are the property of their respective owners and

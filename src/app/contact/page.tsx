@@ -25,7 +25,7 @@ export default function ContactPage() {
               There is a person at this address.
             </h1>
             <p className="text-sm text-muted-fg mt-2">
-              First Light is operated by YL, an independent developer in Taipei,
+              First Light is operated by Yulin Cheng, an independent developer in Taipei,
               Taiwan.
             </p>
           </div>
@@ -33,10 +33,10 @@ export default function ContactPage() {
           <Section heading="Email">
             <p>
               <a
-                href="mailto:anytime.sync@gmail.com"
+                href="mailto:hello@firstlight.to"
                 className="text-accent hover:underline text-lg"
               >
-                anytime.sync@gmail.com
+                hello@firstlight.to
               </a>
             </p>
             <p>

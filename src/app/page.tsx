@@ -332,7 +332,7 @@ export default function Home() {
           <div className="flex flex-col items-center md:items-start gap-1">
             <DesignSlot id="landing.footer.credit" as="span" textKey="landing.footerCredit">{t(lang, "landing.footerCredit")}</DesignSlot>
             <span>
-              An independent product built and operated by YL in Taipei, Taiwan.
+              An independent product built and operated by Yulin Cheng in Taipei, Taiwan.
             </span>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
