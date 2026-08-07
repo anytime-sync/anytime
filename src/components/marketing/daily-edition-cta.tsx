@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BlogEmailCapture } from "@/components/marketing/blog-email-capture";
 
 /**
  * DailyEditionCta — inline conversion band shown at the foot of every blog post.
@@ -7,12 +8,17 @@ import Link from "next/link";
  * routed a reader toward a signup tied to the product's core value prop. This
  * band gives every post a single, high-intent conversion surface.
  *
- *   • Links to /signup?ref=blog  — the ?ref lets us attribute blog-sourced
- *     signups once the GA4 / GSC analytics loop is restored.
- *   • data-cta="blog-daily-edition" is a stable hook for click instrumentation.
+ * Growth loop step 2: instead of linking out to /signup, we capture the email
+ * inline and send a passwordless magic link (<BlogEmailCapture/> ->
+ * POST /api/auth/magic-link). The link lands the reader straight in /app with
+ * a pre-seeded first Daily Edition, so the core value is visible in under a
+ * minute with no password step.
  *
- * Server component (no client state) — safe to render inside the async
- * blog post page.
+ *   • data-cta="blog-daily-edition" is a stable hook for click instrumentation.
+ *   • ?ref=blog is carried into the new user's metadata for attribution once
+ *     the GA4 / GSC analytics loop is restored.
+ *
+ * Server component — the interactive form lives in the client child.
  */
 export function DailyEditionCta() {
   return (
@@ -29,20 +35,15 @@ export function DailyEditionCta() {
         morning briefing — your whole day, in under a minute. Free to start, no
         credit card.
       </p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/signup?ref=blog"
-          className="btn-primary h-10 px-5 text-sm"
-        >
-          Start your Daily Edition — free
-        </Link>
-        <Link
-          href="/"
-          className="text-sm text-muted-fg transition-colors hover:text-fg"
-        >
+
+      <BlogEmailCapture />
+
+      <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-muted-fg">
+        Enter your email and we’ll send a magic link — no password to create.{" "}
+        <Link href="/" className="underline transition-colors hover:text-fg">
           See how it works →
         </Link>
-      </div>
+      </p>
     </aside>
   );
 }
