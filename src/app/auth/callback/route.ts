@@ -15,7 +15,12 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
+  // Harden against open-redirect: only allow same-origin destinations.
+  // An absolute `next` like "https://evil.com" would otherwise be honored.
   const dest = new URL(next, url.origin);
+  if (dest.origin !== url.origin) {
+    dest.href = url.origin + "/app";
+  }
   if (welcome && !dest.searchParams.has("welcome")) {
     dest.searchParams.set("welcome", welcome);
   }
