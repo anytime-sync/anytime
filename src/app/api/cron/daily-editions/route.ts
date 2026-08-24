@@ -34,6 +34,13 @@ export const dynamic = "force-dynamic";
  * skipped, so Vercel Cron retries never double-generate.
  *
  * Auth: Bearer ${CRON_SECRET} (isAuthorizedCron), same as the sibling crons.
+ *
+ * Observability: this handler emits a one-line run summary (and a loud warn
+ * when ANTHROPIC_API_KEY is unset). Without it the cron failed silently —
+ * an unset key makes every generateDailyEdition() call short-circuit to
+ * {ok:false,"ai_disabled"} and the handler would just return generated:0
+ * with no trace of WHY. Keep these logs; they are the difference between a
+ * glance and an archaeology dig when the edition pipeline goes quiet.
  */
 export async function GET(req: Request)  { return handle(req); }
 export async function POST(req: Request) { return handle(req); }
@@ -47,6 +54,17 @@ async function handle(req: Request) {
   if (!serviceKey || !supaUrl) {
     return NextResponse.json({ error: "supabase_misconfigured" }, { status: 500 });
   }
+
+  // Loud, single-line signal when the AI credential is missing. An unset key
+  // makes EVERY generation below no-op as "ai_disabled" with no other trace,
+  // which is exactly how the Daily Edition pipeline went dark unnoticed.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn(
+      "[cron/daily-editions] ANTHROPIC_API_KEY is not set — every generation will no-op (ai_disabled). " +
+      "Set ANTHROPIC_API_KEY in the Vercel project env (Production) to restore Daily Edition pre-generation."
+    );
+  }
+
   const supabase = createSupabaseClient(supaUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -93,9 +111,31 @@ async function handle(req: Request) {
     });
   }
 
+  const generated = results.filter((r) => r.status === "generated").length;
+
+  // One-line run summary so a quiet pipeline is diagnosable from the logs.
+  // byStatus surfaces exists / skipped_plan_or_budget / error counts;
+  // firstError carries the first generateDailyEdition error (e.g.
+  // "ai_disabled" for an unset key) without dumping every user.
+  const byStatus = results.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const firstError = results.find((r) => r.status === "error")?.detail;
+  console.log(
+    "[cron/daily-editions] run summary " +
+      JSON.stringify({
+        prefs: prefs?.length ?? 0,
+        matched_morning_hour: results.length,
+        generated,
+        by_status: byStatus,
+        first_error: firstError,
+      })
+  );
+
   return NextResponse.json({
     ok: true,
-    generated: results.filter((r) => r.status === "generated").length,
+    generated,
     total: results.length,
     results,
   });
