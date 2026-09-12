@@ -276,7 +276,7 @@ export function useCreateTask() {
           createdTask.title &&
           createdTask.title.length >= 8 &&
           (createdTask.priority ?? 0) === 0 &&
-          !createdTask.due_at
+          !createdTask.due_at && !createdTask.start_at
         ) {
           const id = createdTask.id;
           const title = createdTask.title;
@@ -289,22 +289,13 @@ export function useCreateTask() {
             .then((r) => (r.ok ? r.json() : null))
             .then((j: any) => {
               if (!j || typeof j.quadrant !== "number") return;
-              // Quadrant -> priority (Q1=5,Q2=5,Q3=1,Q4=0); Q1+Q3 also get end-of-day.
-              // Use 09:00-09:30 today — never 23:59 (causes cross-day display bugs)
-              const t9 = new Date(); t9.setHours(9, 0, 0, 0);
-              const t930 = new Date(); t930.setHours(9, 30, 0, 0);
-              const map: Record<number, { priority: 0 | 1 | 3 | 5; start_at: string | null; due_at: string | null }> = {
-                1: { priority: 5, start_at: t9.toISOString(), due_at: t930.toISOString() },
-                2: { priority: 5, start_at: null, due_at: null },
-                3: { priority: 1, start_at: t9.toISOString(), due_at: t930.toISOString() },
-                4: { priority: 0, start_at: null, due_at: null },
-              };
-              const target = map[j.quadrant];
-              if (!target) return;
-              createClient()
-                .from("tasks")
-                .update({ priority: target.priority, start_at: target.start_at, due_at: target.due_at })
-                .eq("id", id)
+              // Classification is not a booking. Do not invent a past 09:00 slot
+              // or erase dates edited while the asynchronous AI call was running.
+              const priority = ({ 1: 5, 2: 5, 3: 1, 4: 0 } as Record<number, number>)[j.quadrant];
+              if (priority === undefined) return;
+              createClient().from("tasks").update({ priority })
+                .eq("id", id).eq("updated_at", createdTask.updated_at)
+                .eq("priority", 0).is("start_at", null).is("due_at", null)
                 .then(() => qc.invalidateQueries({ queryKey: ["tasks"] }));
             })
             .catch(() => {});
@@ -496,3 +487,4 @@ export function useReorderTasks() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
+
