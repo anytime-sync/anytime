@@ -34,6 +34,9 @@ export function TodayAiBar() {
   // If an entitled user exhausts their AI budget, hide the button for the
   // rest of the session instead of surfacing a "cap reached" error.
   const [capped, setCapped] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [coverage, setCoverage] = useState('');
+  const [unplaced, setUnplaced] = useState(0);
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<RescheduleSuggestion[] | null>(null);
 
@@ -88,7 +91,7 @@ export function TodayAiBar() {
         setOpen(false);
         return;
       }
-      setResults(r.suggestions);
+      setResults(r.suggestions); setCoverage(r.coverage ?? ""); setUnplaced(r.unplaced ?? 0);
     } catch (e: any) {
       // 429 = AI budget/cap exhausted. Per product rule, don't dangle a
       // feature the user can't currently use: hide the button instead of
@@ -103,27 +106,24 @@ export function TodayAiBar() {
     }
   }
 
-  function apply(s: RescheduleSuggestion) {
-    if (s.verdict === "drop") {
-      // Drop = clear the due date but keep the task. (Soft delete is too aggressive.)
-      update.mutate({ id: s.id, due_at: null } as any);
-    } else {
-      // AI now returns a real free slot (start_at + due_at).
-      // Fall back to new_due_at (legacy) + 30min if not provided.
-      const newStart = s.start_at ?? s.new_due_at ?? null;
-      const newEnd = s.due_at ?? (newStart ? new Date(new Date(newStart).getTime() + 30 * 60 * 1000).toISOString() : null);
-      update.mutate({ id: s.id, start_at: newStart, due_at: newEnd } as any);
+  async function saveSuggestion(s: RescheduleSuggestion) {
+    if (!s.start_at || !s.due_at || Date.parse(s.start_at) >= Date.parse(s.due_at) || Date.parse(s.start_at) < Date.now()) {
+      toast.error('This suggestion is no longer valid. Find new slots.'); return false;
     }
-    setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
+    try {
+      await update.mutateAsync({ id:s.id, start_at:s.start_at, due_at:s.due_at, is_all_day:false });
+      setResults(r => r ? r.filter(x=>x.id!==s.id) : null); return true;
+    } catch { toast.error('Could not save this move. The suggestion remains for review.'); return false; }
   }
-
-  function applyAll() {
-    if (!results) return;
-    const n = results.length;
-    for (const s of results) apply(s);
-    toast.success(tr(lang, "planDay.toastApplied").replace("{n}", String(n)));
-    setOpen(false);
-    setResults(null);
+  async function apply(s:RescheduleSuggestion) {
+    if(applying)return; setApplying(true);
+    try { await saveSuggestion(s); } finally { setApplying(false); }
+  }
+  async function applyAll() {
+    if(!results || applying)return; setApplying(true); let saved=0;
+    try { for(const s of results) if(await saveSuggestion(s))saved++; }
+    finally { setApplying(false); }
+    if(saved)toast.success(String(saved)+' task moves saved.');
   }
 
   return (
@@ -143,7 +143,7 @@ export function TodayAiBar() {
           onClick={runReschedule}
           disabled={reschedule.isPending}
           className="btn-ghost h-9 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
-          title={`AI reschedules ${overdue.length} overdue task${overdue.length !== 1 ? "s" : ""}`}
+          title="Review calculated slots for overdue tasks"
         >
           <CalendarClock
             className={cn("size-3.5", reschedule.isPending && "animate-spin")}
@@ -164,7 +164,7 @@ export function TodayAiBar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-display text-xl">{tr(lang, "todayAi.modalTitle")}</h2>
+              <h2 className="font-display text-xl">Review proposed task moves</h2>
               {results && (
                 <span className="text-xs text-muted-fg">
                   {results.length} item{results.length !== 1 && "s"}
@@ -172,6 +172,8 @@ export function TodayAiBar() {
               )}
             </div>
 
+            {coverage && <p className="text-xs text-muted-fg mb-3">{coverage}</p>}
+            {unplaced > 0 && <p className="text-sm text-warning mb-3">{unplaced} tasks have no fitting slot. Their dates remain unchanged.</p>}
             {!results && (
               <p className="text-sm text-muted-fg">{tr(lang, "todayAi.reading")}</p>
             )}
@@ -207,7 +209,7 @@ export function TodayAiBar() {
                       <button
                         className="btn-ghost size-8 grid place-items-center text-success"
                         title={tr(lang, "common.apply")}
-                        onClick={() => apply(s)}
+                        disabled={applying} onClick={() => void apply(s)}
                       >
                         <Check className="size-4" />
                       </button>
@@ -227,7 +229,7 @@ export function TodayAiBar() {
             )}
 
             {results && results.length === 0 && (
-              <p className="text-sm text-muted-fg">{tr(lang, "todayAi.cleared")}</p>
+              <p className="text-sm text-muted-fg">No remaining suggestions in this review. Unplaced or skipped tasks keep their dates.</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-2">
@@ -243,7 +245,7 @@ export function TodayAiBar() {
               {results && results.length > 0 && (
                 <button
                   className="btn-primary h-8 px-3 text-xs"
-                  onClick={applyAll}
+                  disabled={applying} onClick={() => void applyAll()}
                 >
                   {tr(lang, "todayAi.applyAll")}
                 </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useUIStore } from "@/store/ui";
 import { useState } from "react";
 import { Sparkles, Clock, MessageSquare, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +24,8 @@ const MEETING_HINTS = /\b(meeting|sync|standup|stand-up|1:1|one[- ]on[- ]one|cat
  */
 export function AiTaskActions({ task }: { task: Task }) {
   const lang = useLanguage();
+  const openTask = useUIStore(s => s.setSelectedTaskId);
+  const [coverage,setCoverage] = useState("");
   const findTime = useFindTime();
   const prepMeeting = usePrepMeeting();
   const update = useUpdateTask();
@@ -51,7 +55,7 @@ export function AiTaskActions({ task }: { task: Task }) {
         setFindTimeCapped(true);
         return;
       }
-      setSlots(r.slots);
+      setSlots(r.slots); setCoverage(r.coverage ?? "");
     } catch (e: any) {
       // Cap reached → hide the affordance instead of an error toast.
       if (e?.message?.includes("429")) {
@@ -62,15 +66,13 @@ export function AiTaskActions({ task }: { task: Task }) {
     }
   }
 
-  function applySlot(s: TimeSlot) {
-    update.mutate({
-      id: task.id,
-      start_at: s.start_at,
-      due_at: s.end_at,
-      is_all_day: false,
-    } as any);
-    toast.success(`Scheduled — ${s.label}`);
-    setSlots(null);
+  async function applySlot(s:TimeSlot) {
+    if(update.isPending)return;
+    try {
+      if(Date.parse(s.start_at)<Date.now())throw new Error('Slot has passed. Find a new time.');
+      await update.mutateAsync({id:task.id,start_at:s.start_at,due_at:s.end_at,is_all_day:false});
+      toast.success('Task dates updated.');setSlots(null);
+    } catch(e) {toast.error(e instanceof Error ? e.message : 'Could not save this slot.');}
   }
 
   async function runPrepMeeting() {
@@ -137,6 +139,8 @@ export function AiTaskActions({ task }: { task: Task }) {
         )}
       </div>
 
+      {slots && <p className="text-xs text-muted-fg">{coverage}</p>}
+      {slots && slots.length===0 && <p className="text-sm">No fitting slot was found. Try a shorter duration or review the calendar.</p>}
       {slots && slots.length > 0 && (
         <ul className="space-y-1.5">
           {slots.map((s, i) => (
@@ -165,7 +169,7 @@ export function AiTaskActions({ task }: { task: Task }) {
               </div>
               <button
                 type="button"
-                onClick={() => applySlot(s)}
+                disabled={update.isPending} onClick={() => void applySlot(s)}
                 className="btn-ghost size-7 grid place-items-center text-success"
                 title={t(lang, "aiActions.scheduleTooltip")}
               >
@@ -178,12 +182,15 @@ export function AiTaskActions({ task }: { task: Task }) {
 
       {prep && (
         <div className="border border-border rounded-md p-3 text-xs space-y-2 bg-muted/30">
+          {prep.actions?.map((action,i) => <article key={i} className="space-y-1 border-b border-border pb-2"><strong>{action.title}</strong><p>{action.why}</p><p>Next step: {action.nextAction}</p><div className="flex flex-wrap gap-2">{action.sourceIds.map(id => { const source=prep.sources?.find(s=>s.id===id); if(!source)return null; return source.kind==='task' ? <button key={id} className="underline text-accent" onClick={()=>openTask(id.slice(5))}>{source.title}</button> : <Link key={id} className="underline text-accent" href={`/app/notes/${id.slice(5)}`}>{source.title}</Link>; })}</div></article>)}
+          {prep.missingContext?.map((m,i)=><p key={i} className="text-muted-fg">{m}</p>)}
+          {!prep.actions && <>
           <div>
             <div className="font-medium uppercase tracking-wider text-[10px] text-muted-fg mb-1">
               Agenda
             </div>
             <ul className="space-y-0.5 text-fg">
-              {prep.agenda.map((line, i) => (
+              {(prep.actions ? [] : prep.agenda).map((line, i) => (
                 <li key={i} className="leading-relaxed">— {line}</li>
               ))}
             </ul>
@@ -193,11 +200,12 @@ export function AiTaskActions({ task }: { task: Task }) {
               Questions
             </div>
             <ul className="space-y-0.5 text-fg">
-              {prep.questions.map((q, i) => (
+              {(prep.actions ? [] : prep.questions).map((q, i) => (
                 <li key={i} className="leading-relaxed">· {q}</li>
               ))}
             </ul>
           </div>
+          </>}
         </div>
       )}
     </div>

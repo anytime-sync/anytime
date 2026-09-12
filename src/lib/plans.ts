@@ -76,21 +76,21 @@ export const FEATURES: FeatureSpec[] = [
   // ─── AI co-pilot ───────────────────────────────────────────────────────
   // Goals live here — designing a tracker for a project is intellectual work
   // and the AI is the thing that makes goals worth tracking.
-  { id: "ai_daily_edition",    label: "Daily Edition",    description: "Personal morning briefing that pulls from tasks, calendar, and goals.", category: "ai", minPlan: "free", freeLimit: "1 / day", order: 10 },
+  { id: "ai_daily_edition",    label: "Brief me",    description: "Source-linked commitments, decisions and suggested next actions, on request.", category: "ai", minPlan: "free", freeLimit: "1 / day", order: 10 },
   { id: "ai_plan_my_day",      label: "Plan my day",      description: "AI sequences your day around energy peaks and capacity.", category: "ai", minPlan: "pro", order: 20 },
   { id: "ai_plan_my_week",     label: "Plan my week",     description: "Weekly plan that respects deadlines, capacity, and goals.", category: "ai", minPlan: "pro", order: 30 },
   { id: "ai_morning_copilot",  label: "Morning Co-pilot", description: "Conversational briefing that answers follow-up questions.", category: "ai", minPlan: "pro", order: 40 },
   { id: "ai_voice_capture",    label: "Voice → Task",     description: "Speak tasks; we transcribe and structure them automatically.", category: "ai", minPlan: "pro", order: 50 },
   { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 }, { id: "ai_paste_capture", label: "Paste → Task", description: "⌘V a screenshot of any whiteboard, doc, or meeting notes; we extract every task.", category: "ai", minPlan: "pro", order: 57 },
   { id: "ai_smart_eisenhower", label: "Smart triage",     description: "AI assigns Eisenhower quadrants based on context.", category: "ai", minPlan: "pro", order: 60 },
-  { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Outcome-shaped goals with AI-designed sub-trackers and weekly check-ins.", category: "ai", minPlan: "pro", order: 70 },
+  { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Review suggested steps for a goal, then track task progress.", category: "ai", minPlan: "pro", order: 70 },
   { id: "ai_parse_task",       label: "Smart task parsing",   description: "NLP understands natural language and structures your tasks automatically.", category: "ai", minPlan: "free", order: 5 },
   { id: "ai_estimate_task",    label: "Time estimates",       description: "AI predicts how long each task will take based on context.", category: "ai", minPlan: "free", order: 6 },
   { id: "ai_translate_task",   label: "Task translation",     description: "Auto-translate tasks across languages for multilingual workflows.", category: "ai", minPlan: "free", order: 7 },
   { id: "ai_reschedule_task",  label: "Smart reschedule",     description: "AI finds the best new slot when you need to push tasks.", category: "ai", minPlan: "plus", order: 62 },
-  { id: "ai_find_time",        label: "Find time",            description: "AI scans your calendar and suggests open slots for any task.", category: "ai", minPlan: "plus", order: 63 },
+  { id: "ai_find_time",        label: "Find time",            description: "Calculate fitting slots from recorded calendar events and task blocks.", category: "ai", minPlan: "plus", order: 63 },
   { id: "ai_prep_meeting",     label: "Meeting prep",         description: "Auto-generate agendas and context briefs before meetings.", category: "ai", minPlan: "pro", order: 65 },
-  { id: "ai_procrastination",  label: "Procrastination cleanup", description: "Weekly AI pass finds stuck tasks and suggests next moves.", category: "ai", minPlan: "pro", order: 68 },
+  { id: "ai_procrastination",  label: "Commitment review", description: "Review overdue and stale undated commitments without automatically changing their dates.", category: "ai", minPlan: "pro", order: 68 },
 
   // ─── Review ───────────────────────────────────────────────────────────
   { id: "review_reflect",      label: "Reflection",       description: "End-of-day reflection with AI-assisted prompts.", category: "review", minPlan: "plus", order: 10 },

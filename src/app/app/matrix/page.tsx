@@ -276,9 +276,8 @@ export default function MatrixPage() {
           <p className="hidden md:block text-sm text-muted-fg mt-1">{tr(lang, "view.matrix.dragHint")}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <PlanMyWeekButton lang={lang} tasks={tasks} onApply={(id, q, p) => {
-            const target = targetForQuadrant(q);
-            update.mutate({ id, priority: p, start_at: target.start_at, due_at: target.due_at });
+          <PlanMyWeekButton lang={lang} tasks={tasks} onApply={async (id, q, p) => {
+            await update.mutateAsync({ id, priority: p });
           }} />
         </div>
       </div>
@@ -373,7 +372,7 @@ function PlanMyWeekButton({
   lang,
 }: {
   tasks: TaskWithTags[];
-  onApply: (id: string, q: QuadrantKey, suggestedPriority: 0 | 1 | 3 | 5) => void;
+  onApply: (id: string, q: QuadrantKey, suggestedPriority: 0 | 1 | 3 | 5) => Promise<void>;
   lang: string;
 }) {
   const aiEnabled = useCanUseFeature("ai_plan_my_week");
@@ -433,20 +432,15 @@ function PlanMyWeekButton({
     }
   }
 
-  function applyAll() {
-    if (!results) return;
-    let n = 0;
-    for (const s of results) {
-      const k = (`q${s.quadrant}`) as QuadrantKey;
-      onApply(s.id, k, s.suggested_priority);
-      n++;
-    }
-    toast.success(
-      (n === 1 ? tr(lang, "view.matrix.appliedOne") : tr(lang, "view.matrix.appliedMany"))
-        .replace("{n}", String(n))
-    );
-    setOpen(false);
-    setResults(null);
+  async function applyOne(s: PlanWeekSuggestion) {
+    try { await onApply(s.id, ('q'+s.quadrant) as QuadrantKey, s.suggested_priority);
+      setResults(r=>r?r.filter(x=>x.id!==s.id):null); return true;
+    } catch {toast.error('Priority was not saved. Try again.');return false;}
+  }
+  async function applyAll() {
+    if(!results || running)return;setRunning(true);let saved=0;
+    try {for(const s of results)if(await applyOne(s))saved++;}finally{setRunning(false);}
+    if(saved)toast.success(String(saved)+' priorities saved. Dates unchanged.');
   }
 
   if (!aiEnabled) return null;
@@ -459,7 +453,7 @@ function PlanMyWeekButton({
         title={tr(lang, "view.matrix.planAria")}
       >
         <Sparkles className={cn("size-3.5", running && "animate-spin")} />
-        {running ? tr(lang, "view.matrix.planning") : tr(lang, "view.matrix.planWeek")}
+        {running ? "Reviewing…" : "Review weekly priorities"}
       </button>
 
       {open && (
@@ -503,17 +497,6 @@ function PlanMyWeekButton({
                         <div className="font-medium text-sm truncate">{t.title}</div>
                         <div className="text-xs text-muted-fg mt-1.5 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {currentQ !== s.quadrant ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
-                                <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">{Q_LABEL[currentQ] ?? `Q${currentQ}`}</span>
-                                <span className="text-[#8D6F2A]">→</span>
-                                <span className="text-[#5C4516] font-bold">{Q_LABEL[s.quadrant] ?? `Q${s.quadrant}`}</span>
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-[11px] text-muted-fg leading-none">
-                                {Q_LABEL[currentQ] ?? `Q${currentQ}`}
-                              </span>
-                            )}
                             {(t.priority ?? 0) !== s.suggested_priority ? (
                               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/35 border border-accent/70 text-[11px] leading-none">
                                 <span className="text-[#8D6F2A]/80 line-through decoration-[#8D6F2A]/60">{P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}</span>
@@ -525,7 +508,7 @@ function PlanMyWeekButton({
                                 {P_LABEL[t.priority ?? 0] ?? `p${t.priority ?? 0}`}
                               </span>
                             )}
-                            <SlotChip task={t as any} quadrant={s.quadrant} />
+                            <span className="text-xs text-muted-fg">Dates unchanged</span>
                             {currentQ === s.quadrant && (t.priority ?? 0) === s.suggested_priority && (
                               <span className="text-muted-fg/50 italic text-[11px]">already on target</span>
                             )}
@@ -536,11 +519,7 @@ function PlanMyWeekButton({
                       <button
                         className="btn-ghost size-8 grid place-items-center text-success"
                         title={tr(lang, "view.matrix.applyTitle")}
-                        onClick={() => {
-                          const k = (`q${s.quadrant}`) as QuadrantKey;
-                          onApply(s.id, k, s.suggested_priority);
-                          setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null));
-                        }}
+                        disabled={running} onClick={async () => {setRunning(true);try {await applyOne(s);}finally {setRunning(false);}}}
                       >
                         <Check className="size-4" />
                       </button>
@@ -573,7 +552,7 @@ function PlanMyWeekButton({
               {results && results.length > 0 && (
                 <button
                   className="btn-primary h-8 px-3 text-xs"
-                  onClick={applyAll}
+                  disabled={running} onClick={() => void applyAll()}
                 >
                   {tr(lang, "common.applyAll")}
                 </button>

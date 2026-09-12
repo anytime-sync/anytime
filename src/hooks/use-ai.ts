@@ -398,15 +398,15 @@ export type RescheduleSuggestion = {
 
 export function useRescheduleTasks() {
   return useMutation({
-    mutationFn: async (input: RescheduleInput): Promise<{ suggestions: RescheduleSuggestion[] } | null> => {
+    mutationFn: async (input: RescheduleInput): Promise<{ suggestions: RescheduleSuggestion[]; unplaced?: number; coverage?: string } | null> => {
       const r = await fetch("/api/ai/reschedule-task", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, tz: tz() }),
       });
-      if (r.status === 503) return null;
-      if (!r.ok) throw new Error(`reschedule ${r.status}`);
-      return (await r.json()) as { suggestions: RescheduleSuggestion[] };
+
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(`${r.status}: ${e.error ?? "Request failed"}`); }
+      return (await r.json()) as { suggestions: RescheduleSuggestion[]; unplaced?: number; coverage?: string };
     },
   });
 }
@@ -425,15 +425,15 @@ export type TimeSlot = {
 
 export function useFindTime() {
   return useMutation({
-    mutationFn: async (input: FindTimeInput): Promise<{ slots: TimeSlot[] } | null> => {
+    mutationFn: async (input: FindTimeInput): Promise<{ slots: TimeSlot[]; coverage?: string } | null> => {
       const r = await fetch("/api/ai/find-time", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, tz: tz() }),
       });
-      if (r.status === 503) return null;
-      if (!r.ok) throw new Error(`find-time ${r.status}`);
-      return (await r.json()) as { slots: TimeSlot[] };
+
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(`${r.status}: ${e.error ?? "Request failed"}`); }
+      return (await r.json()) as { slots: TimeSlot[]; coverage?: string };
     },
   });
 }
@@ -445,6 +445,9 @@ export type PrepMeetingInput = {
   refresh?: boolean;
 };
 export type MeetingPrep = {
+  actions?: import("@/lib/ai/action-brief").ActionBrief["actions"];
+  sources?: Array<{ id: string; kind: string; title: string; date: string | null }>;
+  missingContext?: string[];
   agenda: string[];
   questions: string[];
   cached?: boolean;
