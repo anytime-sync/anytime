@@ -18,6 +18,7 @@ import { ProcrastinationPanel } from "@/components/app/procrastination-panel";
 import { getLanguage, t as tr } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 import type { Task } from "@/lib/db.types";
+import { calendarTask } from "@/lib/task-schedule";
 
 type RetroTarget = "last" | "current" | "next";
 
@@ -66,7 +67,8 @@ export default function RetroPage() {
     const end = startOfDay(addDays(weekRange.end, 1)); // exclusive
     const groups: Record<string, Task[]> = {};
     let total = 0;
-    for (const task of allTasks) {
+    for (const source of allTasks) {
+      const task = calendarTask(source);
       const anchor = task.start_at ?? task.due_at;
       if (!anchor) continue;
       const dt = new Date(anchor);

@@ -37,8 +37,7 @@ export function TodayAiBar() {
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<RescheduleSuggestion[] | null>(null);
 
-  // Workload calc: sum estimated_minutes for tasks due today (or pinned to
-  // today). Compare to ~8 hours minus blocks already in the calendar.
+  // Estimates describe task effort; calendar availability is calculated separately.
   const workload = useMemo(() => {
     const eod = endOfDay(new Date());
     const today = tasks.filter((t) => {
@@ -51,18 +50,8 @@ export function TodayAiBar() {
       (acc, t) => acc + ((t as any).estimated_minutes ?? 0),
       0
     );
-    // Already-blocked time (start_at..due_at on time-blocked tasks today)
-    const bookedMs = today.reduce((acc, t) => {
-      if (!t.start_at || !t.due_at) return acc;
-      return acc + Math.max(0, new Date(t.due_at).getTime() - new Date(t.start_at).getTime());
-    }, 0);
-    const bookedMin = Math.round(bookedMs / 60_000);
-    const FREE_MIN_BUDGET = 8 * 60; // ~8 hours of working time per day
-    const free = Math.max(0, FREE_MIN_BUDGET - bookedMin);
     return {
       planned,
-      free,
-      delta: planned - free,
       hasEstimates: today.some((t) => (t as any).estimated_minutes != null),
     };
   }, [tasks]);
@@ -141,18 +130,11 @@ export function TodayAiBar() {
     <>
       {workload.hasEstimates && (
         <span
-          className={cn(
-            "inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs",
-            workload.delta > 30
-              ? "border-warning text-warning bg-warning/10"
-              : "border-border text-muted-fg"
-          )}
-          title={`Today: ~${workload.planned}m of work · ~${workload.free}m of free time`}
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs border-border text-muted-fg"
+          title="Estimated effort for tasks due today. Tasks without estimates and calendar availability are not included."
         >
           <Sparkles className="size-3.5" />
-          {workload.delta > 30
-            ? `${minutes(workload.delta)} ${tr(lang, "todayAi.over")}`
-            : `${minutes(workload.planned)} ${tr(lang, "todayAi.planned")}`}
+          {`${minutes(workload.planned)} ${tr(lang, "todayAi.planned")}`}
         </span>
       )}
 

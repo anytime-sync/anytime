@@ -35,16 +35,18 @@ export async function POST(req: NextRequest) {
 
   const now = new Date();
   const nowLocal = now.toLocaleString("sv-SE", { timeZone: tz }).replace(" ", "T");
-  const { data: overdue } = await ctx.supabase
+  const { data: overdue, error: overdueError } = await ctx.supabase
     .from("tasks")
     .select("id, title, priority, due_at, created_at")
     .eq("user_id", ctx.userId)
     .eq("is_completed", false)
+    .neq("status", "archived")
     .not("due_at", "is", null)
     .lt("due_at", now.toISOString())
     .order("due_at", { ascending: true })
     .limit(20);
 
+  if (overdueError) return jsonError(503, "tasks_unavailable", "Unable to load overdue tasks. Try again.");
   if (!overdue || overdue.length === 0) {
     return jsonOk({ items: [], message: "No overdue tasks." });
   }
