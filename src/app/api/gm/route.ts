@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { gmSchema, readGM, writeGM } from '@/lib/gm';
+import { gmSchema, readGM, writeGM, emptyGM } from '@/lib/gm';
 import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 export async function GET() {
   const db = createClient();
   const { data: { user } } = await db.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { data, error } = await db.from('tasks').select('id,title,notes,due_at,updated_at,status').eq('user_id', user.id).neq('status', 'archived').order('updated_at', { ascending: false }).limit(1000);
+  const { data, error } = await db.from('tasks').select('id,title,notes,due_at,updated_at,status,task_tags(tags(name))').eq('user_id', user.id).neq('status', 'archived').order('updated_at', { ascending: false }).limit(1000);
   if (error) return NextResponse.json({ error: 'Unable to load records' }, { status: 500 });
-  return NextResponse.json({ tasks: (data ?? []).map(t => ({ ...t, gm: readGM(t.notes) })), limited: (data?.length ?? 0) >= 1000 });
+  return NextResponse.json({ tasks: (data ?? []).map(t => {
+    const { task_tags, ...record } = t;
+    const tagged = (task_tags as unknown as Array<{ tags: { name: string } | null }> ?? []).some(link => link.tags?.name.toLowerCase() === 'gm-work');
+    return { ...record, gm: readGM(t.notes) ?? (tagged ? { ...emptyGM } : null) };
+  }), limited: (data?.length ?? 0) >= 1000 });
 }
 const input = z.object({ id: z.string().uuid().optional(), title: z.string().trim().min(1).max(500), updated_at: z.string().optional(), gm: gmSchema });
 export async function POST(req: Request) {
@@ -32,3 +36,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
