@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PromotionSchedule from "./promotion-schedule";
 
 type Setup = { account: string; configured: boolean; missing: string[]; brands: { name: string; url: string }[] };
 type Result = { state: string; message?: string; checkedAt?: string; account?: { username: string } };
@@ -56,7 +57,7 @@ export default function XConnectionPage() {
             <h2 className="font-medium">{brand.name}</h2><p className="text-sm text-muted-fg break-all mt-2">{brand.url}</p>
           </a>)}
         </section>
-        <p className="text-sm text-muted-fg">This page manages connection readiness. Existing queued posts remain separate; it does not replay a backlog or start an automatic publishing schedule.</p>
+        <PromotionSchedule />
       </>}
     </div>
   );
