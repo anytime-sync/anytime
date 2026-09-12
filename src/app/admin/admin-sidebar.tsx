@@ -41,6 +41,7 @@ const navItems = [
   { kicker: "10", href: "/admin/newsletter", label: "Newsletter", icon: Mail },
   { kicker: "11", href: "/admin/announcements", label: "Announcements", icon: Megaphone },
   { kicker: "12", href: "/admin/format", label: "Format", icon: Paintbrush },
+  { kicker: "13", href: "/admin/x-connection", label: "X connection", icon: Megaphone },
 ];
 
 /* ── Sunburst SVG (unchanged from original layout) ── */
