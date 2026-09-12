@@ -1,3 +1,5 @@
+import { getUserPlan } from '@/lib/billing';
+import { canUseFeature } from '@/lib/feature-flags';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { requireApiAuth,jsonError,jsonOk } from '../../_lib/auth';
@@ -8,6 +10,7 @@ export const runtime='nodejs';
 const Input=z.object({task_id:z.string().uuid(),tz:z.string().optional()});
 export async function POST(req:NextRequest) {
   const ctx=await requireApiAuth(req,'write');if(!ctx.ok)return ctx.response;
+  if(!(await canUseFeature(await getUserPlan(ctx.userId),'ai_find_time')))return jsonError(403,'feature_unavailable','This planning feature is unavailable for this account.');
   const parsed=Input.safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return jsonError(400,'bad_request','Provide a valid task_id.');
   const {data:task,error}=await ctx.supabase.from('tasks').select('id,estimated_minutes').eq('id',parsed.data.task_id).eq('user_id',ctx.userId).eq('is_completed',false).neq('status','archived').maybeSingle();

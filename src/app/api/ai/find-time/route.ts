@@ -1,3 +1,5 @@
+import { getUserPlan } from '@/lib/billing';
+import { canUseFeature } from '@/lib/feature-flags';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -9,6 +11,7 @@ const Input=z.object({task_id:z.string().uuid(),tz:z.string().optional()});
 export async function POST(req:Request) {
   const supabase=createClient();const {data:auth}=await supabase.auth.getUser();
   if(!auth.user)return NextResponse.json({error:'unauthorized'},{status:401});
+  if(!(await canUseFeature(await getUserPlan(auth.user.id),'ai_find_time')))return NextResponse.json({error:'This planning feature is unavailable for this account.'},{status:403});
   const parsed=Input.safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return NextResponse.json({error:'Invalid task request'},{status:400});
   const {data:task,error}=await supabase.from('tasks').select('id,estimated_minutes').eq('id',parsed.data.task_id).eq('user_id',auth.user.id).eq('is_completed',false).neq('status','archived').maybeSingle();

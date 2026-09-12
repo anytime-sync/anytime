@@ -1,3 +1,5 @@
+import { getUserPlan } from '@/lib/billing';
+import { canUseFeature } from '@/lib/feature-flags';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -9,6 +11,7 @@ const Input=z.object({tz:z.string().optional(),tasks:z.array(z.object({id:z.stri
 export async function POST(req:Request) {
   const supabase=createClient();const {data:auth}=await supabase.auth.getUser();
   if(!auth.user)return NextResponse.json({error:'unauthorized'},{status:401});
+  if(!(await canUseFeature(await getUserPlan(auth.user.id),'ai_reschedule_task')))return NextResponse.json({error:'This planning feature is unavailable for this account.'},{status:403});
   const parsed=Input.safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return NextResponse.json({error:'Invalid task request'},{status:400});
   const now=new Date();

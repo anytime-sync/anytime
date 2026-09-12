@@ -1,3 +1,5 @@
+import { getUserPlan } from '@/lib/billing';
+import { canUseFeature } from '@/lib/feature-flags';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { requireApiAuth,jsonError,jsonOk } from '../../_lib/auth';
@@ -7,6 +9,7 @@ import { findSlots,reserveSlot } from '@/lib/ai/slots';
 export const runtime='nodejs';
 export async function POST(req:NextRequest) {
   const ctx=await requireApiAuth(req,'write');if(!ctx.ok)return ctx.response;
+  if(!(await canUseFeature(await getUserPlan(ctx.userId),'ai_reschedule_task')))return jsonError(403,'feature_unavailable','This planning feature is unavailable for this account.');
   const text=await req.text();let body:unknown={};
   try {body=text?JSON.parse(text):{};}catch{return jsonError(400,'bad_request','Invalid JSON.');}
   const input=z.object({tz:z.string().optional()}).safeParse(body);

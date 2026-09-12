@@ -1,17 +1,20 @@
 import { beforeEach,expect,it,vi } from 'vitest';
-const state=vi.hoisted(()=>({user:{id:'owner'} as {id:string}|null,results:{} as Record<string,any>,calls:[] as unknown[][],model:vi.fn()}));
+const state=vi.hoisted(()=>({user:{id:'owner'} as {id:string}|null,results:{} as Record<string,any>,calls:[] as unknown[][],allowed:true,model:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createClient:()=>({auth:{getUser:async()=>({data:{user:state.user}})},from:(table:string)=>{
   const chain:any={then:(resolve:any)=>Promise.resolve(state.results[table]??{data:null,error:null}).then(resolve)};
   for(const method of ['select','eq','neq','is','or','order','limit','gt','lt','in','upsert','maybeSingle']) chain[method]=(...args:unknown[])=>{state.calls.push([table,method,...args]);return chain;};
   return chain;
 }})}));
+vi.mock('@/lib/billing',()=>({getUserPlan:async()=> 'pro'}));
+vi.mock('@/lib/feature-flags',()=>({canUseFeature:async()=>state.allowed}));
 vi.mock('@/lib/anthropic',()=>({MODELS:{fast:'test'},getAnthropic:()=>({messages:{create:state.model}})}));
 vi.mock('@/lib/ai-rate-limit',()=>({checkAiBudget:async()=>({ok:true}),logAiCall:async()=>{}}));
+import { POST as findTime } from '@/app/api/ai/find-time/route';
 import { POST as brief } from '@/app/api/ai/action-brief/route';
 import { POST as meeting } from '@/app/api/ai/prep-meeting/route';
 const id='11111111-1111-4111-8111-111111111111';
 const request=(body:unknown)=>new Request('http://localhost/api',{method:'POST',body:JSON.stringify(body)});
-beforeEach(()=>{state.user={id:'owner'};state.results={};state.calls=[];state.model.mockReset();});
+beforeEach(()=>{state.user={id:'owner'};state.allowed=true;state.results={};state.calls=[];state.model.mockReset();});
 it('requires authentication before reading sources or calling the model',async()=>{
   state.user=null;expect((await brief(request({}))).status).toBe(401);expect(state.calls).toEqual([]);expect(state.model).not.toHaveBeenCalled();
 });
@@ -35,4 +38,8 @@ it('uses saved meeting evidence, ignores spoofed client notes, and exposes citat
   const response=await meeting(request({task_id:id,title:'Spoofed',notes:'Do not use me'}));expect(response.status).toBe(200);
   const sent=state.model.mock.calls[0][0].messages[0].content;expect(sent).toContain('Verified saved context');expect(sent).not.toContain('Do not use me');
   expect((await response.json()).sources[0].id).toBe(`task:${id}`);
+});
+
+it('preserves server-side planning entitlements without making an AI call',async()=>{
+  state.allowed=false;expect((await findTime(request({task_id:id}))).status).toBe(403);expect(state.calls).toEqual([]);expect(state.model).not.toHaveBeenCalled();
 });
