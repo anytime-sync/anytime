@@ -35,6 +35,8 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
+  // Older open tabs must not generate a briefing automatically.
+  if (body.force !== true) return NextResponse.json(null);
   const tz: string = body.tz || "UTC";
   const force: boolean = !!body.force;
   const today = localDateKey(new Date(), tz);

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
+import { ReviewDialog } from './review-dialog';
 
 /**
  * Two AI-flavoured affordances on /app/today:
@@ -74,6 +75,7 @@ export function TodayAiBar() {
     }
     setOpen(true);
     setResults(null);
+    setCoverage(''); setUnplaced(0);
     try {
       const r = await reschedule.mutateAsync({
         tasks: overdue.map((t) => ({
@@ -155,23 +157,16 @@ export function TodayAiBar() {
       )}
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 animate-fade-in"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="card max-w-xl w-[92vw] p-5 max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-baseline justify-between mb-3">
+        <ReviewDialog label="Review proposed task moves" onClose={() => setOpen(false)}>
+            <div className="flex shrink-0 items-baseline justify-between gap-3 border-b border-border p-4 sm:p-5">
               <h2 className="font-display text-xl">Review proposed task moves</h2>
               {results && (
-                <span className="text-xs text-muted-fg">
+                <span className="shrink-0 text-xs text-muted-fg">
                   {results.length} item{results.length !== 1 && "s"}
                 </span>
               )}
             </div>
-
+            <div className="min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
             {coverage && <p className="text-xs text-muted-fg mb-3">{coverage}</p>}
             {unplaced > 0 && <p className="text-sm text-warning mb-3">{unplaced} tasks have no fitting slot. Their dates remain unchanged.</p>}
             {!results && (
@@ -186,11 +181,11 @@ export function TodayAiBar() {
                   return (
                     <li
                       key={s.id}
-                      className="border border-border rounded-md p-3 flex items-start gap-3"
+                      className="border border-border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-start gap-2"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{t.title}</div>
-                        <div className="text-xs text-muted-fg mt-0.5">
+                      <div className="w-full sm:w-auto sm:flex-1 min-w-0">
+                        <div className="font-medium text-sm break-words leading-5">{t.title}</div>
+                        <div className="text-xs text-muted-fg mt-2 leading-5 break-words">
                           <span className={cn(
                             "uppercase tracking-wider text-[10px] mr-1",
                             s.verdict === "drop" ? "text-warning" : "text-fg"
@@ -202,20 +197,23 @@ export function TodayAiBar() {
                               weekday: "short",
                               month: "short",
                               day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
                             })} · `}
                           {s.reason}
                         </div>
                       </div>
                       <button
-                        className="btn-ghost size-8 grid place-items-center text-success"
+                        className="btn-ghost size-9 shrink-0 grid place-items-center text-success"
                         title={tr(lang, "common.apply")}
                         disabled={applying} onClick={() => void apply(s)}
                       >
                         <Check className="size-4" />
                       </button>
                       <button
-                        className="btn-ghost size-8 grid place-items-center text-muted-fg"
+                        className="btn-ghost size-9 shrink-0 grid place-items-center text-muted-fg"
                         title={tr(lang, "common.skip")}
+                        disabled={applying}
                         onClick={() =>
                           setResults((r) => (r ? r.filter((x) => x.id !== s.id) : null))
                         }
@@ -232,7 +230,8 @@ export function TodayAiBar() {
               <p className="text-sm text-muted-fg">No remaining suggestions in this review. Unplaced or skipped tasks keep their dates.</p>
             )}
 
-            <div className="mt-4 flex items-center justify-between gap-2">
+            </div>
+            <div className="shrink-0 border-t border-border p-4 flex items-center justify-between gap-2">
               <button
                 className="btn-ghost h-8 px-3 text-xs"
                 onClick={() => {
@@ -251,8 +250,7 @@ export function TodayAiBar() {
                 </button>
               )}
             </div>
-          </div>
-        </div>
+        </ReviewDialog>
       )}
     </>
   );

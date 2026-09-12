@@ -5,6 +5,7 @@ import { useTasks,useUpdateTask } from '@/hooks/use-tasks';
 import { usePlanDay,type PlanWeekSuggestion } from '@/hooks/use-ai';
 import { useCanUseFeature } from '@/hooks/use-feature-access';
 import { useUIStore } from '@/store/ui';
+import { ReviewDialog } from './review-dialog';
 
 /** Priority review never assigns arbitrary clock times or clears deadlines. */
 export function PlanMyDayButton() {
@@ -28,8 +29,9 @@ export function PlanMyDayButton() {
   }
   if(!enabled)return null;
   return <><button className="btn-ghost text-sm" onClick={run} disabled={plan.isPending}>Review priorities</button>
-    {open&&<div className="fixed inset-0 z-50 bg-black/40 grid place-items-center" onClick={()=>setOpen(false)}><section role="dialog" aria-modal="true" aria-label="Review priorities" className="card p-5 w-[92vw] max-w-xl max-h-[80vh] overflow-auto space-y-3" onClick={e=>e.stopPropagation()}>
-      <div className="flex justify-between"><h2 className="text-xl font-display">Review priorities</h2><button onClick={()=>setOpen(false)}>Close</button></div>
+    {open&&<ReviewDialog label="Review priorities" onClose={()=>setOpen(false)}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border p-4"><h2 className="text-xl font-display">Review priorities</h2><button className="btn-ghost" onClick={()=>setOpen(false)}>Close</button></div>
+      <div className="min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3 break-words">
       <p className="text-sm text-muted-fg">Suggestions use task descriptions. Review the reason before accepting. Applying changes priority only; your dates stay intact.</p>
       {error&&<p role="alert" className="text-warning text-sm">{error}</p>}
       {plan.isPending?<p role="status">Reviewing…</p>:items.map(item=><article key={item.id} className="border border-border rounded p-3 space-y-2">
@@ -38,6 +40,7 @@ export function PlanMyDayButton() {
         <div className="flex gap-3 text-sm"><button className="text-accent" disabled={update.isPending} onClick={()=>void apply(item)}>Use this priority</button><button onClick={()=>setItems(list=>list.filter(x=>x.id!==item.id))}>Keep current</button></div>
       </article>)}
       {!plan.isPending&&!error&&!items.length&&<p className="text-sm">No remaining suggestions.</p>}
-    </section></div>}
+      </div>
+    </ReviewDialog>}
   </>;
 }

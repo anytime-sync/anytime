@@ -37,6 +37,10 @@ export async function POST(req: Request) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const body = await req.json().catch(() => ({}));
+  // Older open tabs still mount this retired panel. Never spend tokens on mount.
+  if (body.force !== true) return NextResponse.json(null);
+
   // Per-user daily AI budget check (Anthropic cost guard).
   const __budget = await checkAiBudget(u.user.id, "daily_edition");
   if (!__budget.ok) {
@@ -46,7 +50,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
   const tz: string = body.tz || "UTC";
   const force: boolean = !!body.force;
   const today = localDateKey(new Date(), tz);
