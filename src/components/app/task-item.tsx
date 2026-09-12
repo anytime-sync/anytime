@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask, snoozedDue } from "@/lib/task-schedule";
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +19,7 @@ import { t } from "@/lib/i18n";
 
 export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverlapping?: boolean }) {
   const lang = useLanguage();
+  const displayTask = calendarTask(task);
   const toggle = useToggleTask();
   const selectedId = useUIStore((s) => s.selectedTaskId);
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
@@ -218,11 +220,11 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
           </p>
         )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[13px] text-muted-fg">
-          {task.due_at && <DueChip due_at={task.due_at} start_at={task.start_at ?? undefined} all_day={task.is_all_day} />}
+          {task.due_at && <DueChip due_at={task.due_at} start_at={displayTask.start_at ?? undefined} all_day={task.is_all_day} />}
           {/* Duration: explicit start->end range wins; otherwise estimated. */}
           {(task.start_at && task.due_at && !task.is_all_day) ||
           task.estimated_pomodoros > 0 ? (
-            <DurationChip task={task} />
+            <DurationChip task={displayTask} />
           ) : null}
           {task.priority > 0 && (
             <span className="inline-flex items-center gap-1">
@@ -374,19 +376,12 @@ function SnoozeTray({ task, onDone }: { task: TaskWithTags; onDone: () => void }
       id: task.id,
       due_at: newDue.toISOString(),
     };
-    if (task.start_at && task.due_at) {
-      const delta = newDue.getTime() - new Date(task.due_at).getTime();
-      patch.start_at = new Date(new Date(task.start_at).getTime() + delta).toISOString();
-    } else if (task.start_at && !task.due_at) {
-      patch.start_at = newDue.toISOString();
-    }
+
     update.mutate(patch);
     onDone();
   }
   function shiftByDays(days: number) {
-    const newDue = new Date(snoozeAnchor(task).getTime());
-    newDue.setDate(newDue.getDate() + days);
-    applyDue(newDue);
+    applyDue(snoozedDue(task.due_at, days));
   }
   function toWeekend() {
     const d = new Date();

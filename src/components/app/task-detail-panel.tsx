@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask, snoozedDue } from "@/lib/task-schedule";
 import { AiTaskActions } from "./ai-task-actions";
 import { TaskComments } from "./task-comments";
 
@@ -504,10 +505,7 @@ function SnoozeRow({
   }
 
   function shiftByDays(days: number) {
-    const base = anchor();
-    const newDue = new Date(base.getTime());
-    newDue.setDate(newDue.getDate() + days);
-    applyDue(newDue);
+    applyDue(snoozedDue(task.due_at, days));
   }
 
   function toWeekend() {
@@ -527,13 +525,7 @@ function SnoozeRow({
       due_at: newDue.toISOString(),
     };
     // Preserve duration: slide start_at forward by the same delta.
-    if (task.start_at && task.due_at) {
-      const delta = newDue.getTime() - new Date(task.due_at).getTime();
-      patch.start_at = new Date(new Date(task.start_at).getTime() + delta).toISOString();
-    } else if (task.start_at && !task.due_at) {
-      // Had a start but no due: set start = new due (single point in time).
-      patch.start_at = newDue.toISOString();
-    }
+
     onSnooze(patch);
   }
 

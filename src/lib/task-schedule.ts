@@ -1,5 +1,15 @@
 type Dates = { start_at?: string | null; due_at?: string | null; is_all_day?: boolean };
 const DAY = 86400000;
+/** Snoozing an overdue task means N days from today, not N days from
+ * an old deadline that would leave it overdue immediately after the move. */
+export function snoozedDue(due: string | null, days: number, now = new Date()): Date {
+  const old = due ? new Date(due) : null;
+  const base = old && Number.isFinite(+old) && +old > +now ? new Date(old) : new Date(now);
+  if (old && Number.isFinite(+old)) base.setHours(old.getHours(), old.getMinutes(), old.getSeconds(), old.getMilliseconds());
+  else base.setHours(9, 0, 0, 0);
+  base.setDate(base.getDate() + days);
+  return base;
+}
 function timestamp(value: string | null | undefined) {
   return typeof value === "string" && value ? Date.parse(value) : NaN;
 }

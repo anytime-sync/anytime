@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask } from "@/lib/task-schedule";
 
 import { useState, useMemo } from "react";
 import {
@@ -60,7 +61,7 @@ export function SortableMixedList({
   // Overlap detection: find tasks whose [start_at, due_at] ranges intersect
   // with at least one other timed task in this section.
   const overlapIds = useMemo(() => {
-    const timed = taskItems
+    const timed = taskItems.map(it => ({ ...it, task: calendarTask(it.task) }))
       .filter((it) => it.task.start_at && it.task.due_at && !it.task.is_all_day && !it.task.is_completed)
       .map((it) => ({
         id: it.id,
