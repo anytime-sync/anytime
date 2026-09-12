@@ -10,7 +10,8 @@
  * - user working preferences (energy peak, capacity, default task duration)
  */
 
-import { localDateStr, localDayBounds } from "./tz";
+import { calendarDate, dayWindow } from "@/lib/day-window";
+import { calendarTask } from "@/lib/task-schedule";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface BusyBlock {
@@ -41,6 +42,40 @@ export interface ScheduleContext {
 }
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export function scheduleDates(now: Date, tz: string, count: number): string[] {
+  const first = Date.parse(calendarDate(now, tz));
+  return Array.from({ length: count }, (_, i) => new Date(first + i * 86400000).toISOString().slice(0, 10));
+}
+
+type ScheduledItem = { title?: string | null; start_at: string | null; end_at?: string | null; due_at?: string | null; is_all_day?: boolean };
+
+export function buildScheduleDays(dates: string[], tz: string, events: ScheduledItem[], tasks: ScheduledItem[], prefs: UserWorkPrefs, now: Date): DaySchedule[] {
+  return dates.map(date => {
+    const { start, nextStart } = dayWindow(date, tz);
+    const busyBlocks: BusyBlock[] = [];
+    const add = (item: ScheduledItem, end: string | null | undefined) => {
+      if (item.is_all_day || !item.start_at || !end) return;
+      const s = Date.parse(item.start_at), e = Date.parse(end);
+      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s || s >= +nextStart || e <= +start) return;
+      busyBlocks.push({
+        start: s <= +start ? '00:00' : toLocalTime(item.start_at, tz),
+        end: e >= +nextStart ? '24:00' : toLocalTime(end, tz),
+        label: item.title ?? 'Busy',
+      });
+    };
+    for (const event of events) add(event, event.end_at);
+    for (const source of tasks) {
+      const task = calendarTask(source);
+      add(task, task.due_at);
+    }
+    busyBlocks.sort((a,b) => toMinutes(a.start) - toMinutes(b.start));
+    const elapsed: BusyBlock[] = +now >= +nextStart ? [{ start: '00:00', end: '24:00', label: 'Past' }]
+      : +now > +start ? [{ start: '00:00', end: toLocalTime(now.toISOString(), tz), label: 'Past' }] : [];
+    const freeMinutes = Math.min(prefs.dailyCapacityMinutes, computeFreeMinutes([...busyBlocks, ...elapsed], prefs.workStart, prefs.workEnd));
+    return { date, dayOfWeek: DOW[new Date(date).getUTCDay()], busyBlocks, freeMinutes };
+  });
+}
 
 /** Format a UTC ISO string as local HH:mm in the given IANA tz. */
 function toLocalTime(iso: string, tz: string): string {
@@ -102,8 +137,9 @@ export async function fetchScheduleContext(
   const now = new Date();
 
   // Compute the full window once
-  const windowStart = localDayBounds(now, tz).start;
-  const windowEnd   = localDayBounds(new Date(now.getTime() + (horizonDays - 1) * 86400_000), tz).end;
+  const dates = scheduleDates(now, tz, Math.max(1, Math.min(31, Math.floor(horizonDays))));
+  const windowStart = dayWindow(dates[0], tz).start;
+  const windowEnd = dayWindow(dates[dates.length - 1], tz).nextStart;
 
   // 3 parallel fetches: prefs + all events in window + all blocked tasks in window
   const [prefsRes, eventsRes, tasksRes] = await Promise.all([
@@ -117,25 +153,28 @@ export async function fetchScheduleContext(
       .select("title,start_at,end_at,is_all_day")
       .eq("user_id", userId)
       .eq("cancelled", false)
-      .gte("start_at", windowStart.toISOString())
+      .gt("end_at", windowStart.toISOString())
       .lt("start_at",  windowEnd.toISOString())
       .order("start_at", { ascending: true })
-      .limit(200),
+      .limit(201),
     supabase
       .from("tasks")
-      .select("title,start_at,due_at")
+      .select("title,start_at,due_at,is_all_day")
       .eq("user_id", userId)
       .eq("is_completed", false)
+      .neq("status", "archived")
       .not("start_at", "is", null)
       .not("due_at",   "is", null)
-      .gte("start_at", windowStart.toISOString())
+      .gt("due_at", windowStart.toISOString())
       .lt("start_at",  windowEnd.toISOString())
-      .limit(200),
+      .limit(201),
   ]);
 
   const prefs = prefsRes.data;
   const allEvents = eventsRes.data ?? [];
   const allTasks  = tasksRes.data  ?? [];
+  if (eventsRes.error || tasksRes.error) throw new Error('Calendar availability could not be loaded. Try again before planning.');
+  if (allEvents.length > 200 || allTasks.length > 200) throw new Error('Too many schedule items to calculate availability safely. Use a shorter planning horizon.');
 
   const workPrefs: UserWorkPrefs = {
     workStart: "09:00",
@@ -146,44 +185,7 @@ export async function fetchScheduleContext(
     dailyCapacityMinutes: prefs?.daily_capacity_minutes ?? 480,
   };
 
-  // Build per-day schedule by distributing events/tasks into their local day
-  const days: DaySchedule[] = [];
-  for (let d = 0; d < horizonDays; d++) {
-    const dayDate = new Date(now.getTime() + d * 86400_000);
-    const { start: dayStart, end: dayEnd } = localDayBounds(dayDate, tz);
-    const dateStr = localDateStr(dayDate, tz);
-    const dowStr  = DOW[dayDate.getUTCDay()];
-    const dayStartMs = dayStart.getTime();
-    const dayEndMs   = dayEnd.getTime();
-
-    const busyBlocks: BusyBlock[] = [];
-
-    for (const ev of allEvents) {
-      if (ev.is_all_day || !ev.start_at || !ev.end_at) continue;
-      const evMs = new Date(ev.start_at).getTime();
-      if (evMs < dayStartMs || evMs >= dayEndMs) continue;
-      busyBlocks.push({
-        start: toLocalTime(ev.start_at, tz),
-        end:   toLocalTime(ev.end_at, tz),
-        label: ev.title ?? "Event",
-      });
-    }
-
-    for (const t of allTasks) {
-      if (!t.start_at || !t.due_at) continue;
-      const tMs = new Date(t.start_at).getTime();
-      if (tMs < dayStartMs || tMs >= dayEndMs) continue;
-      busyBlocks.push({
-        start: toLocalTime(t.start_at, tz),
-        end:   toLocalTime(t.due_at, tz),
-        label: t.title ?? "Task",
-      });
-    }
-
-    busyBlocks.sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
-    const freeMinutes = computeFreeMinutes(busyBlocks, workPrefs.workStart, workPrefs.workEnd);
-    days.push({ date: dateStr, dayOfWeek: dowStr, busyBlocks, freeMinutes });
-  }
+  const days = buildScheduleDays(dates, tz, allEvents, allTasks, workPrefs, now);
 
   return { prefs: workPrefs, days };
 }
@@ -208,7 +210,7 @@ export function renderScheduleContext(ctx: ScheduleContext): string {
     ` | DAILY_CAPACITY: ${ctx.prefs.dailyCapacityMinutes}min`
   );
   lines.push("");
-  lines.push("SCHEDULE (next 7 days):");
+  lines.push(`SCHEDULE (next ${ctx.days.length} days):`);
   for (const day of ctx.days) {
     const busyStr = day.busyBlocks.length === 0
       ? "OPEN"

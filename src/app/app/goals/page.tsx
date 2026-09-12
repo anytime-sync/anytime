@@ -19,7 +19,7 @@ import { useUIStore } from "@/store/ui";
  */
 export default function GoalsPage() {
   const { data: projects = [] } = useProjects();
-  const { data: tasks = [] } = useTasks({});
+  const { data: tasks = [] } = useTasks({ includeCompleted: true });
   const setGoalModal = useUIStore((s) => s.setGoalModalOpen);const _canUse = useCanUseFeature("ai_goal_tracker");const _router = useRouter();useEffect(() => { if (!_canUse) _router.replace("/app/features"); }, [_canUse, _router]);
 
   // Compute progress per project.
@@ -43,7 +43,7 @@ export default function GoalsPage() {
         <p className="editorial-number text-[11px]">GOALS</p>
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="font-display text-3xl md:text-4xl tracking-tight leading-tight">
-            Outcomes, not checklists.
+            Goals and project progress.
           </h1>
           <button
             onClick={() => setGoalModal(true)}
@@ -54,7 +54,7 @@ export default function GoalsPage() {
           </button>
         </div>
         <p className="text-sm text-muted-fg mt-1">
-          Each goal is a project — AI checks in every Friday and surfaces patterns in your weekly review.
+          Progress reflects completed tasks in each project. Use your weekly review to verify whether the intended outcome was achieved.
         </p>
       </header>
 
@@ -69,7 +69,7 @@ export default function GoalsPage() {
                 Your first goal is one sentence away.
               </p>
               <p className="text-sm text-muted-fg mb-5 max-w-md mx-auto">
-                Type the outcome you want. AI breaks it into 5–9 tracked sub-tasks and checks in weekly.
+                Type the outcome you want. AI suggests steps you can review and track.
               </p>
               <button
                 onClick={() => setGoalModal(true)}
@@ -112,7 +112,7 @@ export default function GoalsPage() {
                 <Sparkles className="size-4 text-accent" />
               </div>
               <div className="flex-1">
-                <p className="font-medium">AI checks in every Friday.</p>
+                <p className="font-medium">Review progress each week.</p>
                 <p className="text-muted-fg text-xs mt-0.5">
                   Your weekly review pulls patterns across all goals — what shipped, what stalled, what to pre-stage for next week.
                 </p>
@@ -160,7 +160,7 @@ function GoalCard({
           />
         </div>
         <div className="flex items-baseline justify-between text-[11px] text-muted-fg">
-          <span>{goal.pct}% complete</span>
+          <span>{goal.pct}% of tasks complete</span>
           <span className="text-accent inline-flex items-center gap-1">
             Open <ArrowRight className="size-3" />
           </span>
