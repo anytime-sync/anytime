@@ -99,18 +99,10 @@ function buildCellItems(
     timed.push({ kind: "event", id: `ev-${ev.id}`, event: ev, startMs, endMs: Math.max(endMs, startMs + 1), timed: true });
   }
 
+  // Month cells are for scanning titles. Show tasks as full-width rows;
+  // detailed time overlaps remain visible in the day/week timeline.
   for (const t of tasks) {
-    // A task is "timed" for overlap purposes when it has a due time and
-    // is not all-day. Zero-duration tasks get a synthetic 30-min window.
-    if (t.is_all_day || !t.due_at) {
-      loose.push({ kind: "task", id: t.id, task: t, startMs: 0, endMs: 0, timed: false });
-      continue;
-    }
-    const dueMs = new Date(t.due_at).getTime();
-    const startMs = t.start_at ? new Date(t.start_at).getTime() : dueMs;
-    const s = startMs < dueMs ? startMs : dueMs;
-    const e = startMs < dueMs ? dueMs : startMs + 30 * 60_000;
-    timed.push({ kind: "task", id: t.id, task: t, startMs: s, endMs: Math.max(e, s + 1), timed: true });
+    loose.push({ kind: "task", id: t.id, task: t, startMs: 0, endMs: 0, timed: false });
   }
 
   // Sort timed items by start, then sweep into overlap clusters.
