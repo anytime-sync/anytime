@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
 import { toast } from "sonner";
+import { resolveTaskDates } from "@/lib/task-schedule";
 import { rrulestr } from "rrule";
 
 export type TaskWithTags = Task & { tags: Tag[] };
@@ -32,7 +33,7 @@ export function useTasks(filter: TasksFilter = {}) {
         .order("created_at", { ascending: false });
 
       // Top-level tasks only — subtasks are loaded via useSubtasks(parentId).
-      q = q.is("parent_id", null);
+      q = q.is("parent_id", null).neq("status", "archived");
 
       // The 'completed' view is the only one that flips the polarity of
       // is_completed — every other view filters out completed tasks
@@ -42,7 +43,7 @@ export function useTasks(filter: TasksFilter = {}) {
           .eq("is_completed", true)
           .order("completed_at", { ascending: false });
       } else if (!filter.includeCompleted) {
-        q = q.eq("is_completed", false);
+        q = q.eq("is_completed", false).neq("status", "archived");
       }
 
       if (filter.projectId !== undefined) {
@@ -329,26 +330,10 @@ export function useUpdateTask() {
     mutationFn: async (p: Partial<Task> & { id: string }) => {
       const supabase = createClient();
       const { id, ...rest } = p;
-      // Enforce start ≤ end: if both dates are in the patch, clamp.
-      // If only one is changing, fetch the other from the DB to compare.
       if ("start_at" in rest || "due_at" in rest) {
-        let effectiveStart = rest.start_at;
-        let effectiveEnd = rest.due_at;
-        if (effectiveStart === undefined || effectiveEnd === undefined) {
-          const { data: cur } = await supabase.from("tasks").select("start_at, due_at").eq("id", id).maybeSingle();
-          if (cur) {
-            if (effectiveStart === undefined) effectiveStart = cur.start_at;
-            if (effectiveEnd === undefined) effectiveEnd = cur.due_at;
-          }
-        }
-        if (effectiveStart && effectiveEnd) {
-          const s = new Date(effectiveStart).getTime();
-          const e = new Date(effectiveEnd).getTime();
-          if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
-            // Clamp: set end = start
-            rest.due_at = effectiveStart;
-          }
-        }
+        const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,is_all_day").eq("id", id).single();
+        if (error) throw error;
+        Object.assign(rest, resolveTaskDates(current, rest));
       }
       const { error } = await supabase.from("tasks").update(rest).eq("id", id);
       if (error) throw error;
