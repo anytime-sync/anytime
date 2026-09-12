@@ -1,3 +1,5 @@
+import { calendarDate, dayWindow } from "@/lib/day-window";
+import { safeTimezone } from "@/lib/ai/tz";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
@@ -9,19 +11,13 @@ import type { LanguageCode } from "@/lib/i18n";
 export const runtime = "nodejs";
 
 function isoWeek(d: Date, tz: string): { year: number; week: number; start: Date } {
-  const localStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(d);
-  const local = new Date(`${localStr}T00:00:00`);
-  const tmp = new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate()));
-  const day = tmp.getUTCDay() || 7;
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
-  const year = tmp.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(year, 0, 1));
-  const week = Math.ceil(((+tmp - +yearStart) / 86400000 + 1) / 7);
-  const start = new Date(local);
-  start.setDate(local.getDate() - (day - 1));
-  return { year, week, start };
+  const localDate = calendarDate(d,tz), local = new Date(localDate);
+  const dow=local.getUTCDay() || 7;
+  const thursday=new Date(+local);thursday.setUTCDate(thursday.getUTCDate()+4-dow);
+  const year=thursday.getUTCFullYear();
+  const week=Math.ceil(((+thursday-Date.UTC(year,0,1))/86400000+1)/7);
+  local.setUTCDate(local.getUTCDate()-(dow-1));
+  return {year,week,start:dayWindow(local.toISOString().slice(0,10),tz).start};
 }
 
 export async function POST(req: Request) {
@@ -39,11 +35,11 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const tz: string = body.tz || "UTC";
-  const force: boolean = !!body.force;
-  const target = body.target === "current" ? new Date() : new Date(Date.now() - 7 * 86400000);
+  const tz = safeTimezone(body?.tz);
+  const force: boolean = !!body?.force;
+  const target = body?.target === "current" ? new Date() : new Date(Date.now() - 7 * 86400000);
   const { year, week, start } = isoWeek(target, tz);
-  const startStr = start.toISOString().slice(0, 10);
+  const startStr = calendarDate(start,tz);
 
   const { data: prefs } = await supabase
     .from("user_preferences")
@@ -59,8 +55,9 @@ export async function POST(req: Request) {
       .eq("user_id", u.user.id)
       .eq("iso_year", year)
       .eq("iso_week", week)
+      .eq("language", language)
       .maybeSingle();
-    if (cached && (cached.raw_json as any)?.language === language) {
+    if (cached && (cached.raw_json as any)?.language === language && (cached.raw_json as any)?.brief_version === 2) {
       return NextResponse.json(cached);
     }
   }
@@ -69,8 +66,7 @@ export async function POST(req: Request) {
   if (!client) return NextResponse.json({ error: "ai_disabled" }, { status: 503 });
 
   const weekStart = new Date(start);
-  const weekEnd = new Date(start);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEnd = dayWindow(new Date(Date.parse(startStr)+7*86400000).toISOString().slice(0,10),tz).start;
 
   // Smarter-retro: fetch last week's saved retro so the model can
   // pick up on continuing themes. ISO-week math handles year wrap.
@@ -81,17 +77,20 @@ export async function POST(req: Request) {
   const [shipped, slipped, openTasks, lastWeekRetro, weekEvents] = await Promise.all([
     supabase.from("tasks").select("title,priority,project_id,completed_at")
       .eq("is_completed", true)
+      .eq("user_id",u.user.id).neq("status","archived")
       .gte("completed_at", weekStart.toISOString())
       .lt("completed_at", weekEnd.toISOString())
       .order("completed_at", { ascending: true })
       .limit(60),
     supabase.from("tasks").select("title,priority,due_at,project_id")
       .eq("is_completed", false)
+      .eq("user_id",u.user.id).neq("status","archived")
       .gte("due_at", weekStart.toISOString())
       .lt("due_at", weekEnd.toISOString())
       .limit(40),
     supabase.from("tasks").select("title,priority,due_at")
       .eq("is_completed", false)
+      .eq("user_id",u.user.id).neq("status","archived")
       .lt("due_at", weekStart.toISOString())
       .limit(20),
     supabase.from("weekly_retros")
@@ -99,6 +98,7 @@ export async function POST(req: Request) {
       .eq("user_id", u.user.id)
       .eq("iso_year", lastWeekIso.year)
       .eq("iso_week", lastWeekIso.week)
+      .eq("language", language)
       .maybeSingle(),
     // Round F v4.5: include the week's Google Calendar events so the
     // retro can speak about meetings that consumed time, not only
@@ -107,12 +107,13 @@ export async function POST(req: Request) {
       .select("title,start_at,end_at,is_all_day,location,attendees_count")
       .eq("user_id", u.user.id)
       .eq("cancelled", false)
-      .gte("start_at", weekStart.toISOString())
+      .gt("end_at", weekStart.toISOString())
       .lt("start_at", weekEnd.toISOString())
       .order("start_at", { ascending: true })
       .limit(60),
   ]);
 
+  if ([shipped,slipped,openTasks,weekEvents].some(r=>r.error)) return NextResponse.json({error:"Source records unavailable; no review was generated."},{status:503});
   const lw = lastWeekRetro.data;
   const lastWeekSnippet = lw
     ? {
@@ -160,6 +161,7 @@ export async function POST(req: Request) {
       // Smarter-retro additions live in raw_json (no schema migration).
       raw_json: {
         ...parsed,
+        brief_version: 2,
         themes: parsed.themes ?? "",
         next_week_plan: parsed.next_week_plan ?? "",
         language,

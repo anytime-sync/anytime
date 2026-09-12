@@ -1,105 +1,22 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { getAnthropic, MODELS } from "@/lib/anthropic";
-import { checkAiBudget, logAiCall } from "@/lib/ai-rate-limit";
-import { findTimeSystem } from "@/lib/ai/prompts";
-import { extractJson } from "@/lib/ai/types";
-import { safeTimezone, localNowStr } from "@/lib/ai/tz";
-import type { LanguageCode } from "@/lib/i18n";
-
-export const runtime = "nodejs";
-
-const ReqSchema = z.object({
-  task_id: z.string(),
-  title: z.string().min(1).max(280),
-  estimated_minutes: z.number().int().nullable().optional(),
-  tz: z.string().optional(),
-});
-
-const ResSchema = z.object({
-  slots: z.array(z.object({
-    start_at: z.string(),
-    end_at: z.string(),
-    label: z.string(),
-    fit: z.enum(["best", "good", "backup"]),
-  })).min(1).max(3),
-});
-
-/**
- * /api/ai/find-time — suggests 3 candidate slots in the next 7 days for
- * one task. Pulls the user's busy windows from existing time-blocked
- * tasks so the AI doesn't double-book.
- */
-export async function POST(req: Request) {
-  const supabase = createClient();
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const __budget = await checkAiBudget(u.user.id, "find_time");
-  if (!__budget.ok) {
-    return NextResponse.json(
-      { error: "rate_limited", used: __budget.used, limit: __budget.limit },
-      { status: 429, headers: { "Retry-After": String(__budget.retryAfter) } }
-    );
-  }
-  const client = getAnthropic();
-  if (!client) return NextResponse.json({ error: "ai_disabled" }, { status: 503 });
-
-  let body: unknown;
-  try { body = await req.json(); } catch { body = {}; }
-  const parsed = ReqSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "bad_request", detail: parsed.error.message }, { status: 400 });
-  }
-  const { task_id, title, estimated_minutes } = parsed.data;
-
-  const { data: prefs } = await supabase
-    .from("user_preferences")
-    .select("language")
-    .eq("user_id", u.user.id)
-    .maybeSingle();
-  const language = (prefs?.language ?? "en") as LanguageCode;
-
-  // Pull busy blocks: any time-blocked task in next 7d.
-  const horizon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: busyTasks } = await supabase
-    .from("tasks")
-    .select("title, start_at, due_at")
-    .eq("user_id", u.user.id)
-    .not("start_at", "is", null)
-    .lte("start_at", horizon);
-  const busyBlock = (busyTasks ?? [])
-    .filter((t) => t.start_at && t.due_at)
-    .slice(0, 50)
-    .map((t) => `${t.start_at} → ${t.due_at} (${t.title})`)
-    .join("\n");
-
-  const tz = safeTimezone(parsed.data.tz);
-  const userMsg = [
-    `NOW: ${localNowStr(new Date(), tz)}`,
-    `USER_TIMEZONE: ${tz}`,
-    `TASK: ${title}`,
-    `DURATION: ${estimated_minutes ?? 30} minutes`,
-    `BUSY_BLOCKS (next 7d):`,
-    busyBlock || "(none)",
-  ].join("\n");
-
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
+import { safeTimezone } from '@/lib/ai/tz';
+import { fetchScheduleContext } from '@/lib/ai/schedule-context';
+import { findSlots } from '@/lib/ai/slots';
+export const runtime='nodejs';
+const Input=z.object({task_id:z.string().uuid(),tz:z.string().optional()});
+export async function POST(req:Request) {
+  const supabase=createClient();const {data:auth}=await supabase.auth.getUser();
+  if(!auth.user)return NextResponse.json({error:'unauthorized'},{status:401});
+  const parsed=Input.safeParse(await req.json().catch(()=>null));
+  if(!parsed.success)return NextResponse.json({error:'Invalid task request'},{status:400});
+  const {data:task,error}=await supabase.from('tasks').select('id,estimated_minutes').eq('id',parsed.data.task_id).eq('user_id',auth.user.id).eq('is_completed',false).neq('status','archived').maybeSingle();
+  if(error)return NextResponse.json({error:'Could not load task'},{status:503});
+  if(!task)return NextResponse.json({error:'Task not found'},{status:404});
   try {
-    const res = await client.messages.create({
-      model: MODELS.fast,
-      max_tokens: 800,
-      system: findTimeSystem(language),
-      messages: [{ role: "user", content: userMsg }],
-    });
-    const content = res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
-    const json = extractJson(content);
-    const out = ResSchema.parse(json);
-
-    await logAiCall(u.user.id, "find_time", { model: res.model, status: 200, inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens });
-    return NextResponse.json(out);
-  } catch (e: any) {
-    console.error("[ai] find-time", "\n", e?.stack || e?.message || e);
-    return NextResponse.json({ error: "find_time_failed", detail: e?.message ?? String(e) }, { status: 502 });
-  }
+    const tz=safeTimezone(parsed.data.tz),ctx=await fetchScheduleContext(supabase,auth.user.id,tz,7);
+    const duration=task.estimated_minutes ?? ctx.prefs.defaultTaskMinutes;
+    return NextResponse.json({slots:findSlots(ctx,tz,duration),coverage:'Based on synced timed events and tasks, 09:00–18:00. Check all-day events and calendars not connected to First Light before applying.'});
+  } catch {return NextResponse.json({error:'Calendar availability could not be verified. Try again.'},{status:503});}
 }

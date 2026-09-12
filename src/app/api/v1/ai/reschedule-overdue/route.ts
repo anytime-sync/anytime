@@ -1,99 +1,28 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
-import { resolveAiContext, jsonError, jsonOk } from "../_lib/ai-handler";
-import { extractJson } from "@/lib/ai/types";
-import { logAiCall } from "@/lib/ai-rate-limit";
-import { MODELS } from "@/lib/anthropic";
-
-export const runtime = "nodejs";
-import { safeTimezone } from "@/lib/ai/tz";
-import { fetchScheduleContext, renderScheduleContext } from "@/lib/ai/schedule-context";
-
-const ResSchema = z.object({
-  items: z.array(z.object({
-    id: z.string(),
-    start_at: z.string().nullable().optional(),
-    due_at: z.string().nullable().optional(),
-    new_due_at: z.string().optional(), // legacy fallback
-    reason: z.string(),
-  })),
-});
-
-/**
- * POST /api/v1/ai/reschedule-overdue
- * No body required — automatically finds overdue tasks and suggests new dates.
- * Returns: { items: [{ id, new_due_at, reason }] }
- */
-export async function POST(req: NextRequest) {
-  const rawBody = await req.text();
-  let bodyJson: Record<string, unknown> = {};
-  try { bodyJson = JSON.parse(rawBody); } catch { /* ok */ }
-  const tz = safeTimezone(bodyJson.tz);
-  const resolved = await resolveAiContext(req, "reschedule_task");
-  if (!resolved.ok) return resolved.response;
-  const { ctx } = resolved;
-
-  const now = new Date();
-  const nowLocal = now.toLocaleString("sv-SE", { timeZone: tz }).replace(" ", "T");
-  const { data: overdue, error: overdueError } = await ctx.supabase
-    .from("tasks")
-    .select("id, title, priority, due_at, created_at")
-    .eq("user_id", ctx.userId)
-    .eq("is_completed", false)
-    .neq("status", "archived")
-    .not("due_at", "is", null)
-    .lt("due_at", now.toISOString())
-    .order("due_at", { ascending: true })
-    .limit(20);
-
-  if (overdueError) return jsonError(503, "tasks_unavailable", "Unable to load overdue tasks. Try again.");
-  if (!overdue || overdue.length === 0) {
-    return jsonOk({ items: [], message: "No overdue tasks." });
-  }
-
-  // Fetch schedule context for real slot-finding
-  const schedCtx = await fetchScheduleContext(ctx.supabase, ctx.userId, tz, 14);
-
-  const block = overdue.map((t: any) => {
-    const daysOverdue = Math.floor((now.getTime() - new Date(t.due_at!).getTime()) / 86400_000);
-    return `[${t.id}] ${t.title} · p${t.priority} · ${daysOverdue}d overdue · was due ${t.due_at}`;
-  }).join("\n");
-
-  const systemPrompt = `You reschedule overdue tasks by finding real available time slots in the user's calendar.
-Output JSON: { "items": [{ "id": "<task_id>", "start_at": "<ISO 8601>", "due_at": "<ISO 8601>", "reason": "<brief>" }] }
-Rules:
-- Use the SCHEDULE to find free slots — never overlap a busy block.
-- Respect WORKING_HOURS. Place deep tasks in ENERGY_PEAK, admin in afternoon.
-- Start times on :00 or :30 boundaries. Duration = DEFAULT_DURATION unless task title implies longer.
-- Spread across days. Higher priority = sooner.
-- Use correct UTC offset for USER_TIMEZONE in all timestamps.`;
-
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { requireApiAuth,jsonError,jsonOk } from '../../_lib/auth';
+import { safeTimezone } from '@/lib/ai/tz';
+import { fetchScheduleContext } from '@/lib/ai/schedule-context';
+import { findSlots,reserveSlot } from '@/lib/ai/slots';
+export const runtime='nodejs';
+export async function POST(req:NextRequest) {
+  const ctx=await requireApiAuth(req,'write');if(!ctx.ok)return ctx.response;
+  const text=await req.text();let body:unknown={};
+  try {body=text?JSON.parse(text):{};}catch{return jsonError(400,'bad_request','Invalid JSON.');}
+  const input=z.object({tz:z.string().optional()}).safeParse(body);
+  if(!input.success)return jsonError(400,'bad_request','Expected an object.');
+  const now=new Date();
+  const {data:tasks,error}=await ctx.supabase.from('tasks').select('id,title,estimated_minutes,due_at,priority').eq('user_id',ctx.userId)
+    .eq('is_completed',false).neq('status','archived').lt('due_at',now.toISOString()).order('priority',{ascending:false}).order('due_at').limit(20);
+  if(error)return jsonError(503,'tasks_unavailable','Could not read overdue tasks.');
+  if(!tasks?.length)return jsonOk({items:[],unplaced:0});
   try {
-    const res = await ctx.anthropic!.messages.create({
-      model: MODELS.fast,
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: [
-        `NOW: ${nowLocal} (${tz})`,
-        `USER_TIMEZONE: ${tz}`,
-        "",
-        renderScheduleContext(schedCtx),
-        "",
-        `OVERDUE TASKS (${overdue.length}):`,
-        block,
-      ].join("\n") }],
-    });
-    const content = res.content.map((c: any) => (c.type === "text" ? c.text : "")).join("");
-    const json = extractJson(content);
-    const out = ResSchema.parse(json);
-
-    const known = new Set(overdue.map((t: any) => t.id));
-    out.items = out.items.filter((it) => known.has(it.id));
-
-    await logAiCall(ctx.userId, "reschedule_task", { model: res.model, status: 200 });
-    return jsonOk(out);
-  } catch (e: any) {
-    console.error("[v1/ai] reschedule-overdue", e?.message ?? e);
-    return jsonError(502, "reschedule_failed", e?.message ?? String(e));
-  }
+    const tz=safeTimezone(input.data.tz),schedule=await fetchScheduleContext(ctx.supabase,ctx.userId,tz,14);const items=[];let unplaced=0;
+    for(const task of tasks){
+      const slot=findSlots(schedule,tz,task.estimated_minutes??schedule.prefs.defaultTaskMinutes,now,1)[0];
+      if(!slot){unplaced++;continue;}reserveSlot(schedule,tz,slot,task.title);
+      items.push({id:task.id,start_at:slot.start_at,due_at:slot.end_at,new_due_at:slot.end_at,reason:'Calculated slot from recorded availability. Review before changing the commitment.'});
+    }
+    return jsonOk({items,unplaced,coverage:'Synced timed events and tasks only, 09:00–18:00; check other calendars and all-day events. Up to 20 overdue tasks considered.'});
+  }catch{return jsonError(503,'availability_unavailable','Calendar availability could not be verified.');}
 }

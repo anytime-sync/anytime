@@ -9,7 +9,7 @@ import { useLanguage } from "@/lib/use-language";
 import { PlanMyDayButton } from "@/components/app/plan-my-day-button";
 import { TodayAiBar } from "@/components/app/today-ai-bar";
 import { StreakRibbon } from "@/components/app/streak-ribbon";
-import { MorningCopilotCard } from "@/components/app/morning-copilot-card";
+import { ActionBrief } from "@/components/app/action-brief";
 import { Celebrations } from "@/components/app/celebrations";
 import { OnboardingModal } from "@/components/app/onboarding-modal";
 
@@ -45,8 +45,8 @@ export default function TodayPage() {
           prelude={<StreakRibbon />}
           headerExtra={
             <>
-              <TodayAiBar />
-              <PlanMyDayButton />
+
+
               <DayViewToggle mode={mode} setMode={setMode} />
             </>
           }
@@ -68,8 +68,8 @@ export default function TodayPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <TodayAiBar />
-            <PlanMyDayButton />
+
+
             <DayViewToggle mode={mode} setMode={setMode} />
             <button
               className="btn-ghost gap-2 px-2 md:px-3"
@@ -84,7 +84,7 @@ export default function TodayPage() {
         </div>
       </div>
       <div className="px-4 md:px-6 pt-3">
-        <MorningCopilotCard />
+        <ActionBrief />
       </div>
       <DayTimeline date={new Date()} />
       <OnboardingModal />

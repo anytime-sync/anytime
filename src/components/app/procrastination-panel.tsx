@@ -1,175 +1,30 @@
-"use client";
+'use client';
+import { useMemo } from 'react';
+import { useTasks } from '@/hooks/use-tasks';
+import { useUIStore } from '@/store/ui';
 
-import { useState } from "react";
-import { Sparkles, Check, X as XIcon } from "lucide-react";
-import { toast } from "sonner";
-import { addDays } from "date-fns";
-import {
-  useProcrastination,
-  type ProcrastinationItem,
-} from "@/hooks/use-ai";
-import { useTasks, useUpdateTask, useCreateTask } from "@/hooks/use-tasks";
-import { cn } from "@/lib/utils";
-import { useLanguage } from "@/lib/use-language";
-import { t as tr } from "@/lib/i18n";
-
-/**
- * Inline panel for the weekly review page. A button kicks off
- * /api/ai/procrastination, which returns 3-5 verdicts on stuck tasks.
- * "Apply" maps each verdict to the right action:
- *   - drop       → clear due_at + priority
- *   - schedule   → set due_at to next Mon
- *   - break-down → create child tasks under the parent
- */
+/** Dates flag records for review; they do not establish procrastination or permission to drop work. */
 export function ProcrastinationPanel() {
-  const lang = useLanguage();
-  const { data: tasks = [] } = useTasks({});
-  const update = useUpdateTask();
-  const create = useCreateTask();
-  const procrastinate = useProcrastination();
-  const [data, setData] = useState<{ items: ProcrastinationItem[]; summary: string } | null>(null);
-  // Once the daily budget is exhausted (or the feature is off), hide the
-  // panel's trigger instead of surfacing a "cap reached" error.
-  const [capped, setCapped] = useState(false);
-
-  async function run() {
-    setData(null);
-    try {
-      const r = await procrastinate.mutateAsync();
-      if (!r) {
-        setCapped(true);
-        return;
-      }
-      setData(r);
-    } catch (e: any) {
-      if (e?.message?.includes("429")) {
-        setCapped(true);
-      } else {
-        toast.error(tr(lang, "procrastination.errScan"));
-      }
-    }
-  }
-
-  function titleFor(id: string) {
-    return tasks.find((t) => t.id === id)?.title ?? tr(lang, "common.unknown");
-  }
-  function projectFor(id: string) {
-    return tasks.find((t) => t.id === id)?.project_id ?? null;
-  }
-
-  async function apply(it: ProcrastinationItem) {
-    if (it.verdict === "drop") {
-      update.mutate({ id: it.id, due_at: null, start_at: null, priority: 0 } as any);
-    } else if (it.verdict === "schedule") {
-      // Pin to next Monday at end of day.
-      const now = new Date();
-      const day = now.getDay() || 7;
-      const daysUntilNextMon = day === 1 ? 7 : 8 - day;
-      const next = addDays(now, daysUntilNextMon);
-      next.setHours(9, 0, 0, 0);
-      const nextEnd = new Date(next); nextEnd.setHours(9, 30, 0, 0);
-      update.mutate({ id: it.id, start_at: next.toISOString(), due_at: nextEnd.toISOString() } as any);
-    } else if (it.verdict === "break-down") {
-      const parent = tasks.find((t) => t.id === it.id);
-      const project_id = projectFor(it.id);
-      for (const sub of it.subtasks ?? []) {
-        await create.mutateAsync({
-          title: sub,
-          parent_id: parent?.id,
-          project_id,
-        } as any);
-      }
-    }
-    setData((d) => (d ? { ...d, items: d.items.filter((x) => x.id !== it.id) } : d));
-  }
-
-  // If the feature is capped/off and there's nothing to show, don't render an
-  // empty panel with a dead button — hide it entirely.
-  if (capped && !data) return null;
-
-  return (
-    <section className="border border-border rounded-lg p-4 surface">
-      <div className="flex items-baseline justify-between mb-3">
-        <div>
-          <h3 className="font-display text-xl">{tr(lang, "procrastination.title")}</h3>
-          <p className="text-sm text-muted-fg italic leading-relaxed mt-0.5">
-            {tr(lang, "procrastination.intro")}
-          </p>
-        </div>
-        {!capped && (
-        <button
-          onClick={run}
-          disabled={procrastinate.isPending}
-          className="btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          <Sparkles
-            className={cn("size-3.5", procrastinate.isPending && "animate-spin")}
-          />
-          {procrastinate.isPending ? tr(lang, "procrastination.scanning") : tr(lang, "procrastination.scan")}
-        </button>
-        )}
-      </div>
-
-      {data && data.summary && (
-        <p className="text-base text-fg italic font-display mb-3 leading-relaxed">{data.summary}</p>
-      )}
-
-      {data && data.items.length > 0 && (
-        <ul className="space-y-2">
-          {data.items.map((it) => (
-            <li
-              key={it.id}
-              className="border border-border rounded-md p-3"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-base truncate">{titleFor(it.id)}</div>
-                  <div className="text-sm text-muted-fg mt-0.5 leading-relaxed">
-                    <span className={cn(
-                      "uppercase tracking-wider text-xs mr-1",
-                      it.verdict === "drop"
-                        ? "text-warning"
-                        : it.verdict === "break-down"
-                        ? "text-accent"
-                        : "text-fg"
-                    )}>
-                      {it.verdict === "drop" ? tr(lang, "procrastination.verdictDrop") : it.verdict === "break-down" ? tr(lang, "procrastination.verdictBreak") : tr(lang, "procrastination.verdictSchedule")}
-                    </span>
-                    {it.reason}
-                  </div>
-                  {it.verdict === "break-down" && it.subtasks.length > 0 && (
-                    <ul className="mt-2 ml-4 list-disc text-sm text-muted-fg space-y-0.5">
-                      {it.subtasks.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <button
-                  className="btn-ghost size-8 grid place-items-center text-success"
-                  title={tr(lang, "procrastination.apply")}
-                  onClick={() => apply(it)}
-                >
-                  <Check className="size-4" />
-                </button>
-                <button
-                  className="btn-ghost size-8 grid place-items-center text-muted-fg"
-                  title={tr(lang, "procrastination.skip")}
-                  onClick={() =>
-                    setData((d) => (d ? { ...d, items: d.items.filter((x) => x.id !== it.id) } : d))
-                  }
-                >
-                  <XIcon className="size-4" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {data && data.items.length === 0 && !procrastinate.isPending && (
-        <p className="text-base text-muted-fg italic leading-relaxed">{tr(lang, "procrastination.allClear")}</p>
-      )}
-    </section>
-  );
+  const { data: tasks = [], isLoading, isError } = useTasks({});
+  const openTask = useUIStore(s => s.setSelectedTaskId);
+  const candidates = useMemo(() => {
+    const now = Date.now();
+    return tasks.flatMap(task => {
+      const due = task.due_at ? Date.parse(task.due_at) : NaN;
+      const updated = Date.parse(task.updated_at);
+      const reason = due < now ? 'Deadline passed; verify the outcome or agree a next step.'
+        : !task.due_at && updated < now - 14*86400000 ? 'Undated and unchanged for 14 days; confirm whether this is still a commitment.' : null;
+      return reason ? [{ task, reason }] : [];
+    }).sort((a,b) => (a.task.due_at ?? '9999').localeCompare(b.task.due_at ?? '9999'));
+  },[tasks]);
+  return <section className="border border-border rounded-lg p-4 surface space-y-3">
+    <h3 className="font-display text-xl">Commitments needing review</h3>
+    <p className="text-sm text-muted-fg">Check the outcome, owner and next action. Age alone does not explain a blocker.</p>
+    {isLoading ? <p role="status">Loading commitments…</p> : isError ? <p role="alert">Could not load commitments. Try again before reviewing.</p> : candidates.length===0 ? <p className="text-sm">No overdue or stale undated commitments found in the loaded records.</p> : <ul className="space-y-2">{candidates.slice(0,8).map(({task,reason}) => <li key={task.id} className="rounded border border-border p-3">
+      <div className="flex justify-between gap-3"><strong className="text-sm">{task.title}</strong><button className="text-accent underline text-sm" onClick={() => openTask(task.id)}>Review</button></div>
+      <p className="text-sm text-muted-fg mt-1">{reason}</p>
+      {task.due_at && <p className="text-xs mt-1">Recorded deadline: {new Date(task.due_at).toLocaleString()}</p>}
+    </li>)}</ul>}
+    {candidates.length>8 && <p className="text-xs text-muted-fg">Showing 8 of {candidates.length}. Review the remaining commitments in Today.</p>}
+  </section>;
 }
