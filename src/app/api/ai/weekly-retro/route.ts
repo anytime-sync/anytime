@@ -37,7 +37,9 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const tz = safeTimezone(body?.tz);
   const force: boolean = !!body?.force;
-  const target = body?.target === "current" ? new Date() : new Date(Date.now() - 7 * 86400000);
+  const today = calendarDate(new Date(),tz);
+  const targetDate = body?.target === "current" ? today : new Date(Date.parse(today)-7*86400000).toISOString().slice(0,10);
+  const target = dayWindow(targetDate,tz).start;
   const { year, week, start } = isoWeek(target, tz);
   const startStr = calendarDate(start,tz);
 
@@ -70,8 +72,7 @@ export async function POST(req: Request) {
 
   // Smarter-retro: fetch last week's saved retro so the model can
   // pick up on continuing themes. ISO-week math handles year wrap.
-  const lastWeekDate = new Date(weekStart);
-  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastWeekDate = dayWindow(new Date(Date.parse(startStr)-7*86400000).toISOString().slice(0,10),tz).start;
   const lastWeekIso = isoWeek(lastWeekDate, tz);
 
   const [shipped, slipped, openTasks, lastWeekRetro, weekEvents] = await Promise.all([
