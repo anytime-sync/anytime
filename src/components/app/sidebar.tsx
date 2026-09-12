@@ -81,6 +81,7 @@ const HREF_TO_FEATURE_ID: Record<string, string> = {
  * editorial-number caps treatment.
  */
 const SECTION_FOR_HREF: Record<string, "plan" | "build" | "look" | "more"> = {
+  "/app/gm": "plan",
   "/app/today": "plan",
   "/app/tomorrow": "plan",
   "/app/next7": "plan",
@@ -177,6 +178,7 @@ function canShowFeature(plan: Plan, featureId: string, flags: EffectiveFlags): b
 
 function topLinks(lang: Lang, isAdmin: boolean): LinkDef[] {
   return [
+    { href: "/app/gm", label: "GM Desk", icon: Target },
     { href: "/app/today",     label: t(lang, "sidebar.today"),        icon: Sun },
     { href: "/app/tomorrow",  label: t(lang, "sidebar.tomorrow"),     icon: Sunrise },
     { href: "/app/next7",     label: t(lang, "sidebar.next7"),        icon: CalendarRange },

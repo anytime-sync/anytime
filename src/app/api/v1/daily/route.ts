@@ -9,6 +9,7 @@
  * For the editorial First-Light-voice summary, use /api/v1/daily-edition.
  */
 
+import { calendarDate, dayWindow, dailyTaskFilter } from "@/lib/day-window";
 import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../_lib/auth";
 
@@ -17,11 +18,16 @@ export async function GET(req: NextRequest) {
   if (!ctx.ok) return ctx.response;
 
   const { searchParams } = new URL(req.url);
-  const date = searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
-
-  // Day boundaries (UTC; if you want tz-correct, pass the tz and use date-fns-tz)
-  const start = `${date}T00:00:00.000Z`;
-  const end = `${date}T23:59:59.999Z`;
+  const tz = searchParams.get("tz") ?? "UTC";
+  let date: string, start: string, nextStart: string;
+  try {
+    date = searchParams.get("date") ?? calendarDate(new Date(), tz);
+    const window = dayWindow(date, tz);
+    start = window.start.toISOString();
+    nextStart = window.nextStart.toISOString();
+  } catch {
+    return jsonError(400, "invalid_date", "Use a valid YYYY-MM-DD date and IANA timezone.");
+  }
 
   // ---------- Tasks due today / overdue / scheduled today -----------------
   const tasksReq = ctx.supabase
@@ -29,7 +35,7 @@ export async function GET(req: NextRequest) {
     .select("id,title,status,priority,due_at,start_at,project_id")
     .eq("user_id", ctx.userId)
     .in("status", ["open"])
-    .or(`due_at.gte.${start},due_at.lte.${end},start_at.gte.${start},start_at.lte.${end}`)
+    .or(dailyTaskFilter(start, nextStart))
     .order("priority", { ascending: false })
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(200);
@@ -45,8 +51,8 @@ export async function GET(req: NextRequest) {
     .from("calendar_events")
     .select("id,title,start_at,end_at,is_all_day,task_id,external_provider")
     .eq("user_id", ctx.userId)
-    .gte("start_at", start)
-    .lte("start_at", end)
+    .lt("start_at", nextStart)
+    .or(`end_at.gt.${start},and(end_at.is.null,start_at.gte.${start})`)
     .order("start_at", { ascending: true });
 
   const completionsReq = ctx.supabase
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
     .eq("user_id", ctx.userId)
     .eq("status", "done")
     .gte("completed_at", start)
-    .lte("completed_at", end);
+    .lt("completed_at", nextStart);
 
   const goalsReq = ctx.supabase
     .from("goals")
@@ -78,6 +84,7 @@ export async function GET(req: NextRequest) {
 
   return jsonOk({
     date,
+    tz,
     tasks: tasks.data ?? [],
     events: events.data ?? [],
     overdue_count: overdue.count ?? 0,

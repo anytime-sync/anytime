@@ -1,3 +1,4 @@
+import { dayWindow } from "@/lib/day-window";
 /**
  * Timezone helpers for AI routes.
  *
@@ -46,28 +47,15 @@ export function normalizeToMorning(isoStr: string | null, tz: string): string | 
   // Get the local date string (YYYY-MM-DD) in the user's tz
   const localDate = localDateStr(d, tz); // e.g. "2026-06-21"
 
-  // Build 09:00 in that tz using a known fixed reference
-  // Parse "YYYY-MM-DDT09:00:00" as if it were local time in `tz`
-  const [year, month, day] = localDate.split("-").map(Number);
-
-  // Use Intl to find the UTC offset at 09:00 on that date in that tz
-  // Trick: format a known UTC time and compare with what Intl says
-  // Simpler: iterate to find the UTC instant that equals 09:00 local
-  const approxUtc = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
-
-  // Get what local hour that UTC time maps to in the target tz
-  const localHour = Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      hour: "numeric",
-      hour12: false,
-    }).format(approxUtc)
-  );
-
-  // Adjust: if localHour != 9, we need to shift approxUtc
-  const diffMs = (localHour - 9) * 60 * 60 * 1000;
-  const result = new Date(approxUtc.getTime() - diffMs);
-  return result.toISOString();
+  const target = Date.parse(localDate + "T09:00:00Z");
+  let result = target;
+  for (let i = 0; i < 4; i++) {
+    const offset = getUtcOffsetStr(new Date(result), tz);
+    const sign = offset[0] === "-" ? -1 : 1;
+    const minutes = sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
+    result = target - minutes * 60000;
+  }
+  return new Date(result).toISOString();
 }
 
 /**
@@ -78,20 +66,8 @@ export function localDayBounds(
   now: Date,
   tz: string
 ): { start: Date; end: Date } {
-  const localDate = localDateStr(now, tz); // "YYYY-MM-DD"
-  const [year, month, day] = localDate.split("-").map(Number);
-
-  // 00:00 local
-  const approxStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-  const startLocalHour = Number(
-    new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hour12: false }).format(approxStart)
-  );
-  const startUtc = new Date(approxStart.getTime() - startLocalHour * 60 * 60 * 1000);
-
-  // end = start + 24h - 1ms
-  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-  return { start: startUtc, end: endUtc };
+  const { start, nextStart } = dayWindow(localDateStr(now, tz), tz);
+  return { start, end: new Date(+nextStart - 1) };
 }
 
 /**

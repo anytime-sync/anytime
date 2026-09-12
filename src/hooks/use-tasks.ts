@@ -42,7 +42,7 @@ export function useTasks(filter: TasksFilter = {}) {
           .eq("is_completed", true)
           .order("completed_at", { ascending: false });
       } else if (!filter.includeCompleted) {
-        q = q.eq("is_completed", false);
+        q = q.eq("is_completed", false).neq("status", "archived");
       }
 
       if (filter.projectId !== undefined) {
