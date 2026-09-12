@@ -1,3 +1,4 @@
+import { validDate } from "@/lib/day-window";
 /**
  * GET /api/v1/notes/search?q=...&limit=...&since=YYYY-MM-DD
  *
@@ -21,19 +22,21 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10) || 20, 100);
+  const limit = Math.max(1, Math.min(parseInt(searchParams.get("limit") ?? "20", 10) || 20, 100));
   const since = searchParams.get("since");
 
   if (!q) {
     return jsonError(400, "missing_query", "`q` is required.");
   }
 
+  if (since && !validDate(since)) return jsonError(400, "invalid_since", "Use YYYY-MM-DD.");
+
   // ---- Semantic path (Voyage embeddings) ---------------------------------
   // If the query is short / ambiguous, fall through to ILIKE.
   let embedding: number[] | null = null;
   if (q.length >= 3) {
     try {
-      embedding = await embedOne(q);
+      embedding = await embedOne(q, { inputType: "query" });
     } catch {
       embedding = null;
     }
@@ -48,29 +51,33 @@ export async function GET(req: NextRequest) {
   }> = [];
 
   if (embedding) {
-    // Assumes you exposed a SQL function `match_notes(query_embedding vector, match_count int, p_user uuid)`
-    // returning (id, title, body, updated_at, score). If your function signature differs,
-    // adjust this call. (You already wired Voyage embeddings end-to-end.)
-    const { data, error } = await ctx.supabase.rpc("match_notes", {
-      query_embedding: embedding,
-      match_count: limit,
-      p_user: ctx.userId,
+    const { data: hits, error } = await ctx.supabase.rpc("semantic_search", {
+      query_embedding: embedding, match_count: 100,
+      match_user_id: ctx.userId, match_threshold: 0.3,
     });
-    if (error) return jsonError(500, "search_error", error.message);
-    rows = (data ?? []) as typeof rows;
-  } else {
-    // ILIKE fallback
-    let qb = ctx.supabase
-      .from("notes")
-      .select("id,title,body,updated_at")
-      .eq("user_id", ctx.userId)
-      .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
-      .order("updated_at", { ascending: false })
-      .limit(limit);
-    if (since) qb = qb.gte("updated_at", since);
-    const { data, error } = await qb;
-    if (error) return jsonError(500, "search_error", error.message);
-    rows = (data ?? []) as typeof rows;
+    if (!error && hits) {
+      const noteHits = (hits as Array<{ source_type: string; source_id: string; score: number }>).filter(h => h.source_type === "note");
+      if (noteHits.length) {
+        let query = ctx.supabase.from("notes").select("id,title,body,updated_at").eq("user_id", ctx.userId).in("id", noteHits.map(h => h.source_id));
+        if (since) query = query.gte("updated_at", since);
+        const result = await query;
+        if (!result.error) {
+          const scores = new Map(noteHits.map(h => [h.source_id, h.score]));
+          rows = (result.data ?? []).map(r => ({ ...r, score: scores.get(r.id) ?? 0 })).sort((a,b) => b.score - a.score).slice(0,limit);
+        }
+      }
+    }
+  }
+  if (!rows.length) {
+    // Separate parameterized filters keep punctuation out of PostgREST's OR grammar.
+    const pattern = '%' + q.replace(/[\\%_]/g, char => '\\' + char) + '%';
+    const responses = await Promise.all(['title', 'body'].map(column => {
+      let query = ctx.supabase.from("notes").select("id,title,body,updated_at").eq("user_id", ctx.userId).ilike(column, pattern).order("updated_at", { ascending: false }).limit(limit);
+      if (since) query = query.gte("updated_at", since);
+      return query;
+    }));
+    if (responses.some(r => r.error)) return jsonError(500, "search_error", "Unable to search notes.");
+    rows = Array.from(new Map(responses.flatMap(r => r.data ?? []).map(r => [r.id, r])).values()).sort((a,b) => b.updated_at.localeCompare(a.updated_at)).slice(0,limit);
   }
 
   // Fetch linked task ids in one shot (small; bounded by `limit`)
