@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask } from "@/lib/task-schedule";
 
 import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
@@ -154,7 +155,9 @@ function MonthView({
     [gridStart.getTime(), gridEnd.getTime()]
   );
 
-  const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
+  const [showCompleted, setShowCompleted] = useState(false);
+  const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: showCompleted });
+  const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
   // Fetch every event that overlaps the visible grid (typ. 6 weeks).
   // RLS-gated query — supabase reads only this user's rows.
   const { data: calEventsAll = [] } = useCalendarEvents({
@@ -321,7 +324,7 @@ function MonthView({
       bar.lane = lane;
     }
     return out;
-  }, [tasks, days]);
+  }, [tasks, days, calEventsAll]);
 
   // For each visible cell (by dateKey), how many bar lanes sit on top
   // of it. Cells use this to push their chip area down so chips never
@@ -568,6 +571,7 @@ function MonthView({
         </button>
       </div>
 
+      <label className="px-6 py-2 text-xs text-muted-fg flex items-center gap-2"><input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed tasks</label>
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="grid grid-cols-7 text-xs text-muted-fg uppercase tracking-wider px-1">
           {(["mon","tue","wed","thu","fri","sat","sun"] as const).map((d) => (
@@ -581,7 +585,7 @@ function MonthView({
           onDragEnd={(e) => { setDragOverDateKey(null); onDragEnd(e); }}
           onDragCancel={() => { setActiveId(null); setDragOverDateKey(null); }}
         >
-          <div ref={gridRef} className="flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-border/15 overflow-auto relative">
+          <div ref={gridRef} className="flex-1 grid grid-cols-7 gap-px bg-border/15 overflow-auto relative" style={{ gridTemplateRows: `repeat(${days.length / 7}, minmax(140px, 1fr))` }}>
             {days.map((d: Date, i: number) => {
               const key = format(d, "yyyy-MM-dd");
               // Single-day tasks only — multi-day tasks render as a
@@ -902,9 +906,11 @@ function DraggableBar({
     <div
       style={{
         position: "absolute",
-        top: `calc(${(bar.weekRow * 100) / 6}% + ${LANE_TOP_OFFSET + bar.lane * LANE_HEIGHT}px)`,
-        left: `calc(${((bar.startCol - 1) * 100) / 7}% + ${leftPadPx}px)`,
-        width: `calc(${(numCols * 100) / 7}% - ${leftPadPx + rightPadPx}px)`,
+        gridRow: bar.weekRow + 1,
+        gridColumn: `${bar.startCol} / ${bar.endCol + 1}`,
+        top: `${LANE_TOP_OFFSET + bar.lane * LANE_HEIGHT}px`,
+        left: `${leftPadPx}px`,
+        right: `${rightPadPx}px`,
         pointerEvents: "none",
         zIndex: 5,
       }}
@@ -1051,7 +1057,9 @@ function DayView({
   const lang = useLanguage();
   const dfLocale = getLanguage(lang).dateFnsLocale;
   const [viewMode, setViewMode] = useDayViewMode();
-  const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
+  const [showCompleted, setShowCompleted] = useState(false);
+  const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: showCompleted });
+  const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
 
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
@@ -1129,12 +1137,13 @@ function DayView({
         </div>
       </div>
 
+      <label className="px-6 py-2 text-xs text-muted-fg flex items-center gap-2"><input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed tasks</label>
       {/* Timeline mode: vertical hour rail with Google-Calendar-style
           side-by-side columns for overlapping/clashing tasks, so two tasks
           in the same 12:00–12:30 slot render next to each other instead of
           stacked. Reuses the same DayTimeline as the Today/Tomorrow pages. */}
       {viewMode === "timeline" ? (
-        <DayTimeline date={date} />
+        <DayTimeline date={date} includeCompleted={showCompleted} />
       ) : (
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
         <InlineTaskInput

@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask } from "@/lib/task-schedule";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, isSameDay, startOfDay, endOfDay, differenceInMinutes } from "date-fns";
@@ -88,9 +89,10 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
   return out;
 }
 
-export function DayTimeline({ date }: { date: Date }) {
+export function DayTimeline({ date, includeCompleted = false }: { date: Date; includeCompleted?: boolean }) {
   const lang = useLanguage();
-  const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
+  const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted });
+  const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
   const { data: prefs } = useUserPrefs();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const update = useUpdateTask();
@@ -114,7 +116,7 @@ export function DayTimeline({ date }: { date: Date }) {
     const origDue = new Date(task.due_at);
     const origStart = task.start_at
       ? new Date(task.start_at)
-      : new Date(origDue.getTime() - 30 * 60_000);
+      : new Date(origDue);
 
     const dyMin = delta.y / PX_PER_MIN;
     const rawMin =
@@ -137,15 +139,7 @@ export function DayTimeline({ date }: { date: Date }) {
       : 30;
     const newDue = new Date(newStart.getTime() + dur * 60_000);
 
-    if (task.start_at) {
-      update.mutate({
-        id: task.id,
-        start_at: newStart.toISOString(),
-        due_at: newDue.toISOString(),
-      });
-    } else {
-      update.mutate({ id: task.id, due_at: newDue.toISOString() });
-    }
+    update.mutate({ id: task.id, start_at: newStart.toISOString(), due_at: newDue.toISOString() });
   }
 
   useEffect(() => {

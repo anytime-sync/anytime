@@ -11,6 +11,7 @@
  *   - VIP ON     -> only VIP has access
  */
 
+import { describe, it, expect } from "vitest";
 import { isPlanEnabledByOverride, type FeatureFlagRow } from "@/lib/feature-flags";
 
 describe("Feature Flags Tier Cascade Rule", () => {

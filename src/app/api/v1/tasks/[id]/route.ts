@@ -1,3 +1,4 @@
+import { resolveTaskDates } from "@/lib/task-schedule";
 /**
  * GET    /api/v1/tasks/{id}     read a single task
  * PATCH  /api/v1/tasks/{id}     update title/notes/due/priority/status
@@ -84,6 +85,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return jsonError(400, "invalid_json", "Request body must be valid JSON.");
   }
 
+  if (!body || typeof body !== "object" || Array.isArray(body)) return jsonError(400, "invalid_json", "Request body must be an object.");
   const patch: Record<string, unknown> = {};
   for (const k of ALLOWED) {
     if (k in body) patch[k] = (body as Record<string, unknown>)[k];
@@ -114,50 +116,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
   }
 
-  // Enforce start <= end invariant. When both dates are present in the
-  // patch (or one is being updated against the existing task), clamp
-  // so start never exceeds end.
   if ("start_at" in patch || "due_at" in patch) {
-    const MIN_DURATION_MS = 30 * 60 * 1000;
-    const isMidnight = (iso: unknown) => typeof iso === "string" && /T00:00:00/.test(iso);
-    // We need the current row to resolve partial updates.
-    const { data: current } = await ctx.supabase
-      .from("tasks")
-      .select("start_at, due_at")
-      .eq("id", params.id)
-      .eq("user_id", ctx.userId)
-      .maybeSingle();
-    const effectiveStart = "start_at" in patch ? patch.start_at : current?.start_at;
-    const effectiveEnd   = "due_at"   in patch ? patch.due_at   : current?.due_at;
-
-    // Validate any caller-supplied dates up front — NaN would throw
-    // RangeError below on .toISOString().
-    const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
-    if ("start_at" in patch && patch.start_at != null && !isValidIso(patch.start_at)) {
-      return jsonError(400, "bad_request", "start_at is not a valid ISO-8601 date.");
-    }
-    if ("due_at" in patch && patch.due_at != null && !isValidIso(patch.due_at)) {
-      return jsonError(400, "bad_request", "due_at is not a valid ISO-8601 date.");
-    }
-
-    // Rule 1: timed due_at set, no start_at — derive start_at = due_at - 30min.
-    if ("due_at" in patch && patch.due_at && !isMidnight(patch.due_at) &&
-        !("start_at" in patch) && !current?.start_at) {
-      patch.start_at = new Date(new Date(patch.due_at as string).getTime() - MIN_DURATION_MS).toISOString();
-    }
-    // Rule 2: timed start_at set, no due_at — derive due_at = start_at + 30min.
-    if ("start_at" in patch && patch.start_at && !isMidnight(patch.start_at) &&
-        !("due_at" in patch) && !current?.due_at) {
-      patch.due_at = new Date(new Date(patch.start_at as string).getTime() + MIN_DURATION_MS).toISOString();
-    }
-    // Rule 3: inversion or zero-duration — extend due_at = start + 30min.
-    if (effectiveStart && effectiveEnd) {
-      const s = new Date(effectiveStart as string).getTime();
-      const e = new Date(effectiveEnd   as string).getTime();
-      if (!Number.isNaN(s) && !Number.isNaN(e) && s >= e) {
-        patch.due_at = new Date(s + MIN_DURATION_MS).toISOString();
-      }
-    }
+    const { data: current, error } = await ctx.supabase.from("tasks").select("start_at,due_at,is_all_day").eq("id", params.id).eq("user_id", ctx.userId).maybeSingle();
+    if (error) return jsonError(500, "db_error", error.message);
+    if (!current) return jsonError(404, "not_found", "Task not found.");
+    try { Object.assign(patch, resolveTaskDates(current, patch)); }
+    catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }
   }
 
   const { data, error } = await ctx.supabase

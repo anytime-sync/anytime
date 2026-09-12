@@ -1,4 +1,5 @@
 "use client";
+import { calendarTask } from "@/lib/task-schedule";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -90,7 +91,8 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
 export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
   const update = useUpdateTask();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
-  const { data: tasks = [] } = useTasks({ view: "all", includeCompleted: true });
+  const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: false });
+  const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
   const [now, setNow] = useState(() => new Date());
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -160,7 +162,7 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const origDue = new Date(task.due_at);
     const origStart = task.start_at
       ? new Date(task.start_at)
-      : new Date(origDue.getTime() - 30 * 60_000);
+      : new Date(origDue);
     const origHour = origStart.getHours();
     const origMin = origStart.getMinutes();
 
