@@ -33,10 +33,10 @@ export default function ContactPage() {
           <Section heading="Email">
             <p>
               <a
-                href="mailto:hello@firstlight.to"
+                href="mailto:info@firstlight.to"
                 className="text-accent hover:underline text-lg"
               >
-                hello@firstlight.to
+                info@firstlight.to
               </a>
             </p>
             <p>

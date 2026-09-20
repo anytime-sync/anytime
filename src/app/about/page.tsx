@@ -89,10 +89,10 @@ export default function AboutPage() {
             <p>
               Email{" "}
               <a
-                href="mailto:hello@firstlight.to"
+                href="mailto:info@firstlight.to"
                 className="text-accent hover:underline"
               >
-                hello@firstlight.to
+                info@firstlight.to
               </a>
               . One person reads it, and you will get a real reply. More ways to
               get in touch are on the{" "}

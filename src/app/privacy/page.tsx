@@ -97,7 +97,8 @@ export default function PrivacyPage() {
         </Section>
 
         <p className="text-xs text-muted-fg pt-8 border-t border-border">
-          First Light is operated and hosted on enterprise-grade infrastructure. For questions about this Privacy Policy, contact support through the app or via your account settings.
+          First Light is operated and hosted on enterprise-grade infrastructure. For questions about this Privacy Policy, email{" "}
+          <a href="mailto:info@firstlight.to" className="hover:text-fg underline">info@firstlight.to</a>.
         </p>
       </div>
     </main>
