@@ -49,7 +49,7 @@ Expired Google sync-token recovery does not remove stale locally cached events; 
 
 ## Screenshot follow-up — multi-day stretching
 
-Live records verified: Alan task 7046d06a has start Sep2 00:00Z / due Oct1 09:00Z; completed Instagram task af95600f has a seven-day window and FREQ=DAILY. Neither record has a Google task-event link, so the subscribed feed is the leading explanation, not conclusively proven from the screenshot alone.
+Legacy recurring task records can retain old starts after due-only reschedules. The export now normalizes stale timed ranges into a bounded deadline slot; calendar subscription refresh timing is controlled by the subscriber.
 
 Added regression fixes: apply the existing task-range normalization to timed iCalendar and Google event exports; stale ranges >=24h use a short deadline slot rather than an occupied multi-day interval. Do not emit RRULE for completed historical tasks. Exclude archived/completed tasks from NEW Google creates. Preserve valid short meeting blocks and explicit all-day multi-day ranges. No task source dates, historical records or external events were deleted. Existing Google archive/event cleanup remains a separate migration/reconciliation concern.
 
