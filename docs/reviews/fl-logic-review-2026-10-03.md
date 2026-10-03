@@ -46,3 +46,11 @@ Expired Google sync-token recovery does not remove stale locally cached events; 
 ## Validation
 
 81 tests pass across 16 files; TypeScript passes. New tests cover all-day exclusive ends, Chinese/emoji folding, archived export exclusion, token-reset bounds, truncated sync, checkpoint errors, malformed inputs, cursor filters and history-insert failures. No live calendar writes, production migrations, or credential changes were performed. Integration behavior against live Google/ICS clients and PostgREST remains to be verified after deployment.
+
+## Screenshot follow-up — multi-day stretching
+
+Live records verified: Alan task 7046d06a has start Sep2 00:00Z / due Oct1 09:00Z; completed Instagram task af95600f has a seven-day window and FREQ=DAILY. Neither record has a Google task-event link, so the subscribed feed is the leading explanation, not conclusively proven from the screenshot alone.
+
+Added regression fixes: apply the existing task-range normalization to timed iCalendar and Google event exports; stale ranges >=24h use a short deadline slot rather than an occupied multi-day interval. Do not emit RRULE for completed historical tasks. Exclude archived/completed tasks from NEW Google creates. Preserve valid short meeting blocks and explicit all-day multi-day ranges. No task source dates, historical records or external events were deleted. Existing Google archive/event cleanup remains a separate migration/reconciliation concern.
+
+Validation updated: 85 tests pass; TypeScript passes. Production deployment and Apple subscription refresh still pending.
