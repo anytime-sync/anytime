@@ -34,6 +34,7 @@ export default function TodayPage() {
     return (
       <>
         <Celebrations />
+        <OnboardingModal />
         <TaskListView
           title={t(lang, "view.today.heading")}
           subtitle={format(new Date(), "EEEE, MMMM d")}
