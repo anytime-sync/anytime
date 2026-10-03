@@ -18,3 +18,15 @@ it('folds Chinese and emoji on UTF-8 boundaries with at most 75 bytes per physic
   for (const line of ics.split('\r\n')) expect(Buffer.byteLength(line, 'utf8')).toBeLessThanOrEqual(75);
   expect(ics.replace(/\r\n /g, '')).toContain(`SUMMARY:${title}\r\n`);
 });
+
+it('does not export a stale month-long task window as an occupied month', () => {
+  const ics = buildIcs([{ ...task, is_all_day: false, start_at: '2026-09-02T00:00:00Z', due_at: '2026-10-01T09:00:00Z', rrule: 'FREQ=MONTHLY;BYMONTHDAY=1' }]);
+  expect(ics).toContain('DTSTART:20261001T090000Z');
+  expect(ics).toContain('DTEND:20261001T093000Z');
+  expect(ics).not.toContain('DTSTART:20260902');
+});
+it('completed recurring history does not generate future recurring bookings', () => {
+  const ics = buildIcs([{ ...task, is_completed: true, rrule: 'FREQ=DAILY', is_all_day: false, start_at: '2026-08-02T02:30:00Z', due_at: '2026-08-09T03:00:00Z' }]);
+  expect(ics).not.toContain('RRULE:');
+  expect(ics).toContain('DTSTART:20260809T030000Z');
+});
