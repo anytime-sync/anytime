@@ -236,8 +236,12 @@ export function buildEventInput(stored: TaskRowForPush): GoogleCalendarEventInpu
   const start = isAllDay
     ? { date: t.start_at.slice(0, 10) }
     : { dateTime: t.start_at };
+  const allDayStart = t.start_at.slice(0, 10);
+  const dueDate = t.due_at.slice(0, 10);
+  const nextDay = new Date(`${allDayStart}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   const end = isAllDay
-    ? { date: t.due_at.slice(0, 10) }
+    ? { date: dueDate > allDayStart ? dueDate : nextDay.toISOString().slice(0, 10) }
     : { dateTime: new Date(t.due_at) > new Date(t.start_at) ? t.due_at : new Date(new Date(t.start_at).getTime() + 30 * 60 * 1000).toISOString() };
 
   return {
