@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UsageConsent } from "@/components/usage-consent";
 
 export const metadata = {
   title: "Privacy Policy — First Light",
@@ -15,7 +16,7 @@ export default function PrivacyPage() {
           <h1 className="font-display text-4xl tracking-tight leading-tight mt-1">
             What we keep, why, and what we don&apos;t.
           </h1>
-          <p className="text-sm text-muted-fg mt-2">Last updated: April 2026</p>
+          <p className="text-sm text-muted-fg mt-2">Last updated: October 2026</p>
         </div>
 
         <Section heading="What we store">
@@ -44,6 +45,19 @@ export default function PrivacyPage() {
             don&apos;t track you across the web — there is no Google Analytics
             or pixel running on the app.
           </p>
+        </Section>
+
+        <Section heading="Optional usage measurement">
+          <p>
+            With your permission, we record basic signed-in usage events, such as
+            creating or completing a task and requesting a briefing, to understand
+            which parts of First Light are useful. These events are tied to your
+            account and contain counts and feature names, never task titles,
+            notes, calendar contents, or page URLs. Measurement is off by default,
+            uses no analytics cookies, and honors your browser&apos;s Do Not Track
+            setting. You can change your choice below for this browser.
+          </p>
+          <UsageConsent />
         </Section>
 
         <Section heading="Email">

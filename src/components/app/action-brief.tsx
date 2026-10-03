@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { track } from '@/lib/track';
 import { useState } from 'react';
 import { useUIStore } from '@/store/ui';
 import { useLanguage } from '@/lib/use-language';
@@ -13,14 +14,15 @@ export function ActionBrief() {
   const openCapture = useUIStore(s => s.setQuickAddOpen), openTask = useUIStore(s => s.setSelectedTaskId);
   const [result,setResult] = useState<Result|null>(null), [loading,setLoading] = useState(false), [error,setError] = useState('');
   async function brief() {
+    track('brief.requested');
     setLoading(true); setError('');
     try {
       const response = await fetch('/api/ai/action-brief',{ method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ tz:Intl.DateTimeFormat().resolvedOptions().timeZone,language }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Could not prepare brief');
-      setResult(data);
-    } catch(e) { setError(e instanceof Error ? e.message : 'Could not prepare brief'); }
+      setResult(data); track('brief.succeeded',{count:data.actions.length});
+    } catch(e) { track('brief.failed'); setError(e instanceof Error ? e.message : 'Could not prepare brief'); }
     finally { setLoading(false); }
   }
   return <section className="rounded-xl border border-border surface p-4 space-y-3" aria-label="Personal assistant">

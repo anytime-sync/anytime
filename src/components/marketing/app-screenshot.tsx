@@ -18,7 +18,7 @@ const screenshots: Screenshot[] = [
   {
     id: "today",
     label: "TODAY",
-    caption: "The Daily Edition — an AI briefing shaped by your calendar, tasks, and patterns.",
+    caption: "Today — your task list, calendar, and an optional briefing when you need one.",
     light: "/screenshots/app-today-light.png",
     dark: "/screenshots/app-today-dark.png",
     width: 1920,

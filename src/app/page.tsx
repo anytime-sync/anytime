@@ -254,45 +254,6 @@ export default function Home() {
 
 
 
-      {/* ── What people are saying ── */}
-      <div className="max-w-6xl w-full mx-auto px-6">
-        <div className="h-px bg-border" />
-      </div>
-      <section className="px-6 py-16 max-w-4xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <p className="editorial-number text-xs mb-3">{t(lang, "landing.testimonials.kicker")}</p>
-          <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            {t(lang, "landing.testimonials.heading")}
-          </h2>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-6">
-          <blockquote className="rounded-xl border border-border p-5 space-y-3">
-            <p className="text-sm text-muted-fg leading-relaxed">
-              &ldquo;I used to open Todoist, stare at 40 tasks, and close it. Now I read my Daily Edition with coffee and actually know what to do first.&rdquo;
-            </p>
-            <footer className="text-xs text-muted-fg/70">
-              <span className="font-medium text-fg">James K.</span> &middot; Product Manager
-            </footer>
-          </blockquote>
-          <blockquote className="rounded-xl border border-border p-5 space-y-3">
-            <p className="text-sm text-muted-fg leading-relaxed">
-              &ldquo;MCP integration is the real deal. I tell Claude 'reschedule everything from Friday' and it just does it inside First Light. No other planner lets my AI touch my real tasks.&rdquo;
-            </p>
-            <footer className="text-xs text-muted-fg/70">
-              <span className="font-medium text-fg">Mika T.</span> &middot; Software Engineer
-            </footer>
-          </blockquote>
-          <blockquote className="rounded-xl border border-border p-5 space-y-3">
-            <p className="text-sm text-muted-fg leading-relaxed">
-              &ldquo;終於有一個懂繁體中文的計畫工具。早報用中文寫,不是翻譯的,是真的懂的。&rdquo;
-            </p>
-            <footer className="text-xs text-muted-fg/70">
-              <span className="font-medium text-fg">陳小蕊</span> &middot; 行銷經理,台北
-            </footer>
-          </blockquote>
-        </div>
-      </section>
-
       {/* ── FAQ ── */}
       <section className="px-6 py-16 max-w-2xl mx-auto w-full">
         <h2 className="font-display text-2xl md:text-3xl tracking-tight text-center mb-10">

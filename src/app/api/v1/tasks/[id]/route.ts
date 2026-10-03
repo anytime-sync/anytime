@@ -30,6 +30,7 @@ function normalizePriority(
   if (typeof val === "number") {
     return [0, 1, 3, 5].includes(val) ? val : null;
   }
+  if (typeof val !== "string") return null;
   const mapped = PRIORITY_MAP[val.toLowerCase()];
   return mapped !== undefined ? mapped : null;
 }

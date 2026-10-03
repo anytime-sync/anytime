@@ -12,6 +12,7 @@
  *   - On delete, the AFTER DELETE trigger on `tasks` writes to
  *     `pending_calendar_deletions`; the cron drains that queue.
  */
+import { calendarTask } from "./task-schedule";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidAccessToken } from "./calendar-token";
 import {
@@ -72,6 +73,8 @@ export async function pushPendingTasksForUser({
     .select("id, user_id, title, notes, start_at, due_at, is_all_day, calendar_event_id, updated_at")
     .eq("user_id", userId)
     .is("calendar_event_id", null)
+    .eq("is_completed", false)
+    .neq("status", "archived")
     .not("start_at", "is", null)
     .not("due_at", "is", null)
     .order("updated_at", { ascending: false })
@@ -223,7 +226,9 @@ export async function drainCalendarDeletions({
   return { deleted, failed };
 }
 
-function buildEventInput(t: TaskRowForPush): GoogleCalendarEventInput {
+export function buildEventInput(stored: TaskRowForPush): GoogleCalendarEventInput {
+  const normalized = stored.is_all_day ? stored : calendarTask({ ...stored, is_all_day: Boolean(stored.is_all_day) });
+  const t = { ...normalized, start_at: normalized.start_at ?? normalized.due_at };
   const isAllDay = Boolean(t.is_all_day);
   const summary = t.title || "Untitled task";
   const description = t.notes ?? undefined;
@@ -231,9 +236,13 @@ function buildEventInput(t: TaskRowForPush): GoogleCalendarEventInput {
   const start = isAllDay
     ? { date: t.start_at.slice(0, 10) }
     : { dateTime: t.start_at };
+  const allDayStart = t.start_at.slice(0, 10);
+  const dueDate = t.due_at.slice(0, 10);
+  const nextDay = new Date(`${allDayStart}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   const end = isAllDay
-    ? { date: t.due_at.slice(0, 10) }
-    : { dateTime: t.due_at };
+    ? { date: dueDate > allDayStart ? dueDate : nextDay.toISOString().slice(0, 10) }
+    : { dateTime: new Date(t.due_at) > new Date(t.start_at) ? t.due_at : new Date(new Date(t.start_at).getTime() + 30 * 60 * 1000).toISOString() };
 
   return {
     summary,

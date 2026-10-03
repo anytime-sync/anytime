@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
+import { track } from "@/lib/track";
 import { toast } from "sonner";
 import { resolveTaskDates } from "@/lib/task-schedule";
 import { rrulestr } from "rrule";
@@ -260,6 +261,7 @@ export function useCreateTask() {
       toast.error(e.message);
     },
     onSuccess: (createdTask) => {
+      track("task.created", { source: "task_ui" });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
@@ -343,6 +345,7 @@ export function useUpdateTask() {
     },
     onSettled: (_d, _e, p) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      if (!_e && p.is_completed === true) track("task.completed");
       qc.invalidateQueries({ queryKey: ["task", p.id] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });

@@ -87,12 +87,8 @@ export async function syncUserCalendar({
   const MAX_PAGES = 25;
 
   const now = Date.now();
-  const timeMin = syncToken
-    ? undefined
-    : new Date(now - BOOTSTRAP_PAST_MS).toISOString();
-  const timeMax = syncToken
-    ? undefined
-    : new Date(now + BOOTSTRAP_FUTURE_MS).toISOString();
+  const bootstrapMin = new Date(now - BOOTSTRAP_PAST_MS).toISOString();
+  const bootstrapMax = new Date(now + BOOTSTRAP_FUTURE_MS).toISOString();
 
   while (pages < MAX_PAGES) {
     let resp;
@@ -101,8 +97,8 @@ export async function syncUserCalendar({
         accessToken,
         calendarId,
         syncToken,
-        timeMin,
-        timeMax,
+        timeMin: syncToken ? undefined : bootstrapMin,
+        timeMax: syncToken ? undefined : bootstrapMax,
         pageToken,
       });
     } catch (e) {
@@ -110,11 +106,12 @@ export async function syncUserCalendar({
       if (msg === "google_sync_token_expired" && syncToken) {
         syncToken = null;
         pageToken = undefined;
-        await supabase
+        const { error: resetError } = await supabase
           .from("user_calendar_connections")
           .update({ sync_token: null })
           .eq("user_id", userId)
           .eq("provider", "google");
+        if (resetError) return { user_id: userId, status: "error", count: total, error: resetError.message };
         continue;
       }
       return { user_id: userId, status: "error", count: total, error: msg };
@@ -150,9 +147,12 @@ export async function syncUserCalendar({
       pageToken = resp.nextPageToken;
       continue;
     }
+    pageToken = undefined;
     nextSyncToken = resp.nextSyncToken;
     break;
   }
+
+  if (pageToken) return { user_id: userId, status: "error", count: total, error: "sync_page_limit_exceeded" };
 
   const { error: bumpErr } = await supabase
     .from("user_calendar_connections")
@@ -164,7 +164,7 @@ export async function syncUserCalendar({
     .eq("user_id", userId)
     .eq("provider", "google");
   if (bumpErr) {
-    console.error("[calendar-sync] bump failed", bumpErr);
+    return { user_id: userId, status: "error", count: total, error: bumpErr.message };
   }
 
   return { user_id: userId, status: "ok", count: total };

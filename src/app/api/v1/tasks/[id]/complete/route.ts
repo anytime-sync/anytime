@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     .select("*")
     .eq("user_id", ctx.userId)
     .eq("id", params.id)
-    .single();
+    .maybeSingle();
 
   if (fetchError) return jsonError(500, "db_error", fetchError.message);
   if (!task) return jsonError(404, "not_found", "Task not found.");
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (next) {
       // 1. Insert a historical "done" clone for this occurrence (no rrule,
       //    so it won't recur — it's just the audit record).
-      await ctx.supabase.from("tasks").insert({
+      const { error: historyError } = await ctx.supabase.from("tasks").insert({
         user_id: ctx.userId,
         project_id: task.project_id,
         title: task.title,
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest, { params }: Params) {
         position: 0,
         // rrule intentionally omitted — clone is a one-off record
       });
+
+      if (historyError) return jsonError(500, "db_error", historyError.message);
 
       // 2. Slide the live task forward to next occurrence, preserving duration.
       const patch: Record<string, unknown> = {
