@@ -33,6 +33,7 @@ function normalizePriority(
   if (typeof val === "number") {
     return [0, 1, 3, 5].includes(val) ? val : null;
   }
+  if (typeof val !== "string") return null;
   const mapped = PRIORITY_MAP[val.toLowerCase()];
   return mapped !== undefined ? mapped : null;
 }
@@ -58,11 +59,12 @@ export async function GET(req: NextRequest) {
   let q = ctx.supabase
     .from("tasks")
     .select(
-      "id,title,status,priority,due_at,start_at,is_all_day,notes,project_id,created_at,updated_at,completed_at",
+      "id,title,status,priority,due_at,start_at,is_all_day,notes,project_id,created_at,updated_at,completed_at,rrule",
     )
     .eq("user_id", ctx.userId)
     .order("due_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
+    .order("id", { ascending: true })
     .limit(limit);
 
   if (status) q = q.eq("status", status);
@@ -73,7 +75,20 @@ export async function GET(req: NextRequest) {
   if (projectId) q = q.eq("project_id", projectId);
   if (from) q = q.gte("due_at", from);
   if (to) q = q.lte("due_at", to);
-  if (cursor) q = q.lt("id", cursor); // simple id-cursor pagination
+  if (cursor) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cursor)) {
+      return jsonError(400, "invalid_cursor", "Cursor must be a task UUID.");
+    }
+    const { data: anchor, error: cursorError } = await ctx.supabase.from("tasks")
+      .select("id,due_at,created_at").eq("user_id", ctx.userId).eq("id", cursor).maybeSingle();
+    if (cursorError) return jsonError(500, "db_error", cursorError.message);
+    if (!anchor) return jsonError(400, "invalid_cursor", "Cursor task not found.");
+    const created = new Date(anchor.created_at).toISOString();
+    const tie = `or(created_at.lt.${created},and(created_at.eq.${created},id.gt.${anchor.id}))`;
+    q = anchor.due_at
+      ? q.or(`due_at.gt.${new Date(anchor.due_at).toISOString()},due_at.is.null,and(due_at.eq.${new Date(anchor.due_at).toISOString()},${tie})`)
+      : q.is("due_at", null).or(`created_at.lt.${created},and(created_at.eq.${created},id.gt.${anchor.id})`);
+  }
 
   const { data, error } = await q;
   if (error) return jsonError(500, "db_error", error.message);
@@ -135,6 +150,9 @@ export async function POST(req: NextRequest) {
     body = (await req.json()) as CreateTaskBody;
   } catch {
     return jsonError(400, "invalid_json", "Request body must be valid JSON.");
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return jsonError(400, "invalid_json", "Request body must be an object.");
   }
   if (!body.title || typeof body.title !== "string" || body.title.length > 500) {
     return jsonError(
