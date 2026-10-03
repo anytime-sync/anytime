@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { useCreateTask, useTasks } from '@/hooks/use-tasks';
+import { useCreateTask } from '@/hooks/use-tasks';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { todayIntent, TUTORIAL_TITLES } from '@/lib/activation';
 import { track } from '@/lib/track';
@@ -11,10 +12,20 @@ import { useLanguage } from '@/lib/use-language';
 export function OnboardingModal() {
   const lang = useLanguage();
   const zh = lang === 'zh-TW' || lang === 'zh-CN';
-  const { data: existing, isLoading } = useTasks({ view: 'all', includeCompleted: true });
   const create = useCreateTask();
   const openTask = useUIStore(s => s.setSelectedTaskId);
   const [owner, setOwner] = useState('');
+  const { data: eligible } = useQuery({
+    queryKey: ['activation-eligibility', owner], enabled: Boolean(owner),
+    queryFn: async () => {
+      const tutorialTitles = `(${Array.from(TUTORIAL_TITLES).map(title => JSON.stringify(title)).join(',')})`;
+      const { data, error } = await createClient().from('tasks').select('id')
+        .eq('user_id', owner).is('parent_id', null).neq('status', 'archived')
+        .not('title', 'in', tutorialTitles).limit(1).maybeSingle();
+      if (error) throw error;
+      return !data;
+    },
+  });
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(['','','']);
   const [saved, setSaved] = useState<{id:string;title:string}[]>([]);
@@ -30,10 +41,10 @@ export function OnboardingModal() {
   const seenKey = `fl.activation.v1.${owner}`;
   useEffect(() => { let alive = true; void createClient().auth.getUser().then(({data}) => { if(alive && data.user) setOwner(data.user.id); }); return () => { alive = false; }; }, []);
   useEffect(() => {
-    if (!owner || isLoading || !existing || existing.some(t => !TUTORIAL_TITLES.has(t.title))) return;
+    if (!owner || eligible !== true) return;
     try { if (localStorage.getItem(seenKey)) return; } catch { return; }
     setOpen(true); track('activation.opened');
-  }, [owner, isLoading, existing, seenKey]);
+  }, [owner, eligible, seenKey]);
   function close(skipped = false) {
     if (saving.current) return;
     try { localStorage.setItem(seenKey,'1'); } catch {}
