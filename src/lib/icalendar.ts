@@ -1,3 +1,5 @@
+import { calendarTask } from "./task-schedule";
+
 // ---------------------------------------------------------------------
 // iCalendar serializer
 //
@@ -36,8 +38,9 @@ export function buildIcs(tasks: TaskRow[]): string {
 
   const stamp = formatUtc(new Date());
 
-  for (const task of tasks) {
-    if (task.status === "archived") continue;
+  for (const stored of tasks) {
+    if (stored.status === "archived") continue;
+    const task = stored.is_all_day ? stored : calendarTask(stored);
     const anchor = task.start_at ?? task.due_at;
     if (!anchor) continue;
     const start = new Date(anchor);
@@ -82,7 +85,7 @@ export function buildIcs(tasks: TaskRow[]): string {
     if (task.notes && task.notes.trim()) {
       lines.push(`DESCRIPTION:${escapeText(task.notes)}`);
     }
-    if (task.rrule) {
+    if (task.rrule && !task.is_completed) {
       // Pass the rrule through verbatim — date-fns / RRule library
       // already emits RFC-compliant strings.
       const trimmed = task.rrule.trim().replace(/^RRULE:/i, "");
