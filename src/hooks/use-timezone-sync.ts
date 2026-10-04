@@ -1,10 +1,9 @@
 /**
- * Silently keeps user_preferences.timezone in sync with the browser's
- * detected IANA timezone. Runs once per mount; no UI, no toast.
+ * Initializes a missing account timezone from the browser.
+ * Existing account choices are preserved across devices and travel.
  *
- * Why: the daily-digest cron formats task times in the user's stored
- * timezone. If timezone is null/UTC, times appear in UTC regardless of
- * where the user actually is.
+ * Digest delivery uses the stored account zone. Settings offers an explicit
+ * device-zone action so opening a browser cannot silently shift reminders.
  */
 "use client";
 
@@ -13,16 +12,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserPrefs } from "@/hooks/use-ai";
 
 export function useTimezoneSync() {
-  const { data: prefs } = useUserPrefs();
+  const { data: prefs, isSuccess } = useUserPrefs();
 
   useEffect(() => {
+    if (!isSuccess || prefs?.timezone) return;
     const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!browserTz) return;
-
-    // Only write if stored value differs or is missing — avoids a pointless
-    // DB round-trip on every page load once the value is correct.
-    const storedTz = prefs?.timezone;
-    if (storedTz === browserTz) return;
 
     (async () => {
       const supabase = createClient();
@@ -33,5 +28,5 @@ export function useTimezoneSync() {
         .upsert({ user_id: u.user.id, timezone: browserTz });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs?.timezone]);
+  }, [isSuccess, prefs?.timezone]);
 }

@@ -8,6 +8,8 @@ import {
   renderDigestText,
   type DigestTask,
 } from "@/lib/email/daily-digest-template";
+import { calendarDate, dayWindow } from "@/lib/day-window";
+import { safeTimezone } from "@/lib/ai/tz";
 import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
@@ -60,7 +62,7 @@ async function handle(req: Request) {
 
   const sent: Array<{ user_id: string; status: string; detail?: string }> = [];
   for (const pref of prefs ?? []) {
-    const tz = pref.timezone || "UTC";
+    const tz = safeTimezone(pref.timezone);
     const localHour = currentHourInTz(nowUtc, tz);
     if (localHour !== (pref.digest_send_hour ?? 7)) continue;
 
@@ -85,28 +87,33 @@ async function handle(req: Request) {
 
     // Pull today's tasks: bucket by quadrant 1 vs everything-else due
     // today, plus overdue (due_at < today's local 00:00).
-    const todayStart = startOfLocalDay(nowUtc, tz);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+    const { start: todayStart, nextStart: todayEnd } = dayWindow(localDate, tz);
 
-    const { data: dueToday } = await supabase
+    const { data: dueToday, error: dueError } = await supabase
       .from("tasks")
-      .select("id, title, due_at, priority")
+      .select("id, title, due_at, priority, is_all_day")
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
+      .neq("status", "archived")
       .gte("due_at", todayStart.toISOString())
       .lt("due_at", todayEnd.toISOString())
       .order("priority", { ascending: false })
       .order("due_at", { ascending: true })
       .limit(20);
-    const { data: overdueRaw } = await supabase
+    const { data: overdueRaw, error: overdueError } = await supabase
       .from("tasks")
-      .select("id, title, due_at, priority")
+      .select("id, title, due_at, priority, is_all_day")
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
+      .neq("status", "archived")
       .lt("due_at", todayStart.toISOString())
       .order("due_at", { ascending: true })
       .limit(5);
+
+    if (dueError || overdueError) {
+      sent.push({ user_id: pref.user_id, status: "task_query_error", detail: (dueError ?? overdueError)!.message });
+      continue;
+    }
 
     const due = (dueToday ?? []) as DigestTask[];
     // Quadrant 1 in our model = priority >= 4 (high/urgent + important)
@@ -202,19 +209,7 @@ function currentHourInTz(now: Date, tz: string): number {
 }
 
 function currentDateInTz(now: Date, tz: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now); // YYYY-MM-DD
-}
-
-function startOfLocalDay(now: Date, tz: string): Date {
-  const ymd = currentDateInTz(now, tz);
-  // Re-anchor that local date to UTC midnight equivalent. The query
-  // tolerance is 24h so a small offset doesn't matter.
-  return new Date(`${ymd}T00:00:00.000Z`);
+  return calendarDate(now, tz);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

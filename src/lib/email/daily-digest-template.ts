@@ -6,7 +6,9 @@
  * Same skeleton across all 5 languages; strings are passed in as a
  * pre-translated chrome object built from i18n.ts.
  */
-import { format, type Locale } from "date-fns";
+import { type Locale } from "date-fns";
+import { calendarDate } from "@/lib/day-window";
+import { safeTimezone } from "@/lib/ai/tz";
 import { type LanguageCode } from "@/lib/i18n";
 
 export type DigestTask = {
@@ -14,6 +16,7 @@ export type DigestTask = {
   title: string;
   due_at: string | null;
   priority: number | null;
+  is_all_day?: boolean;
 };
 
 export type DigestPayload = {
@@ -46,17 +49,10 @@ export type DigestPayload = {
 };
 
 export function renderDigestHtml(p: DigestPayload): string {
-  const dateLine = format(p.date, "EEEE, MMMM d", { locale: p.locale });
+  const dateLine = digestDate(p);
 
   const taskLi = (t: DigestTask) => {
-    const due = t.due_at
-      ? new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
-          timeZone: p.timezone,
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: p.language === "en" || p.language === "ko",
-        }).format(new Date(t.due_at))
-      : "";
+    const due = taskDate(t, p);
     return `<li style="margin:0 0 8px 0;line-height:1.45;">
       <span style="color:#222;">${escapeHtml(t.title)}</span>
       ${due ? `<span style="color:#888;font-size:13px;margin-left:8px;">· ${due}</span>` : ""}
@@ -128,7 +124,7 @@ export function renderDigestHtml(p: DigestPayload): string {
 export function renderDigestText(p: DigestPayload): string {
   const lines: string[] = [];
   lines.push(p.chrome.kicker.toUpperCase());
-  lines.push(format(p.date, "EEEE, MMMM d", { locale: p.locale }));
+  lines.push(digestDate(p));
   lines.push("");
   lines.push(p.chrome.headline);
   lines.push("");
@@ -141,14 +137,7 @@ export function renderDigestText(p: DigestPayload): string {
     lines.push("— " + title.toUpperCase() + " —");
     if (tasks.length === 0) lines.push("  (" + emptyHint + ")");
     else for (const t of tasks) {
-      const due = t.due_at
-        ? new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
-            timeZone: p.timezone,
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: p.language === "en" || p.language === "ko",
-          }).format(new Date(t.due_at))
-        : "";
+      const due = taskDate(t, p);
       lines.push(`  • ${t.title}${due ? `  (${due})` : ""}`);
     }
     lines.push("");
@@ -171,4 +160,25 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/** Date headings and task labels must share the recipient's calendar day. */
+function digestDate(p: DigestPayload): string {
+  return new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
+    timeZone: safeTimezone(p.timezone), weekday: "long", month: "long", day: "numeric",
+  }).format(p.date);
+}
+
+function taskDate(t: DigestTask, p: DigestPayload): string {
+  if (!t.due_at) return "";
+  const due = new Date(t.due_at);
+  if (!Number.isFinite(due.getTime())) return "";
+  const timeZone = safeTimezone(p.timezone);
+  const sameDay = calendarDate(due, timeZone) === calendarDate(p.date, timeZone);
+  if (t.is_all_day && sameDay) return "";
+  return new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
+    timeZone,
+    ...(!sameDay ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
+    ...(!t.is_all_day ? { hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko" } as const : {}),
+  }).format(due);
 }

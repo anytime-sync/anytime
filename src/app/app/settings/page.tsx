@@ -364,6 +364,13 @@ export default function SettingsPage() {
                       ? `時區：${prefs?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}`
                       : `Time zone: ${prefs?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}`}
                   </p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-fg underline"
+                    onClick={() => setPref("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone)}
+                  >
+                    {lang === "zh-TW" ? "改用目前裝置時區" : lang === "zh-CN" ? "改用当前设备时区" : "Use this device’s time zone"}
+                  </button>
                 </div>
                 <select
                   className="text-sm border border-border rounded-md px-2 py-1 bg-surface"
