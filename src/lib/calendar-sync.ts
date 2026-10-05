@@ -87,10 +87,10 @@ export async function syncUserCalendar({
   const MAX_PAGES = 25;
 
   const now = Date.now();
-  const timeMin = syncToken
+  let timeMin = syncToken
     ? undefined
     : new Date(now - BOOTSTRAP_PAST_MS).toISOString();
-  const timeMax = syncToken
+  let timeMax = syncToken
     ? undefined
     : new Date(now + BOOTSTRAP_FUTURE_MS).toISOString();
 
@@ -110,11 +110,15 @@ export async function syncUserCalendar({
       if (msg === "google_sync_token_expired" && syncToken) {
         syncToken = null;
         pageToken = undefined;
-        await supabase
+        pages = 0;
+        timeMin = new Date(now - BOOTSTRAP_PAST_MS).toISOString();
+        timeMax = new Date(now + BOOTSTRAP_FUTURE_MS).toISOString();
+        const { error: resetErr } = await supabase
           .from("user_calendar_connections")
           .update({ sync_token: null })
           .eq("user_id", userId)
           .eq("provider", "google");
+        if (resetErr) return { user_id: userId, status: "error", count: total, error: resetErr.message };
         continue;
       }
       return { user_id: userId, status: "error", count: total, error: msg };
@@ -151,7 +155,13 @@ export async function syncUserCalendar({
       continue;
     }
     nextSyncToken = resp.nextSyncToken;
+    pageToken = undefined;
     break;
+  }
+
+  // Never advertise a partial read as a successful synchronization.
+  if (pageToken) {
+    return { user_id: userId, status: "error", count: total, error: "calendar_sync_page_limit" };
   }
 
   const { error: bumpErr } = await supabase
@@ -164,7 +174,7 @@ export async function syncUserCalendar({
     .eq("user_id", userId)
     .eq("provider", "google");
   if (bumpErr) {
-    console.error("[calendar-sync] bump failed", bumpErr);
+    return { user_id: userId, status: "error", count: total, error: bumpErr.message };
   }
 
   return { user_id: userId, status: "ok", count: total };
