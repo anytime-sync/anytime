@@ -1,5 +1,7 @@
 import { projectTaskCalendar, validTimezone, taskCalendarDescription } from "./task-calendar";
 import type { TaskTimeKind } from "./task-schedule";
+import { getVtimezoneComponent } from '@touch4it/ical-timezones';
+import { wallClock } from './day-window';
 
 export type IcsTaskRow = {
   id: string;
@@ -31,6 +33,15 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
   lines.push("X-PUBLISHED-TTL:PT15M");
 
   const stamp = formatUtc(now);
+  const hasRecurringWork = tasks.some(task => {
+    const p = projectTaskCalendar(task, zone);
+    return p?.recurrence && !p.allDay;
+  });
+  const vtimezone = hasRecurringWork && zone !== 'UTC' ? getVtimezoneComponent(zone) : null;
+  if (hasRecurringWork && zone !== 'UTC' && !vtimezone) throw new Error(`ICS recurrence timezone is unsupported: ${zone}`);
+  // The timezone dataset may resolve an IANA alias to another TZID. The
+  // component identifier must match the parameter used by this feed.
+  if (vtimezone) lines.push(...vtimezone.trim().split(/\r?\n/).map(line => line.startsWith('TZID:') ? `TZID:${zone}` : line));
   // Bump old events once so subscribers replace cached pre-fix date ranges.
   const feedRevision = Date.UTC(2026, 9, 5);
 
@@ -49,8 +60,16 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
       lines.push(`DTSTART;VALUE=DATE:${projection.start.date.replace(/-/g, '')}`);
       lines.push(`DTEND;VALUE=DATE:${projection.end.date.replace(/-/g, '')}`);
     } else if ('dateTime' in projection.start && 'dateTime' in projection.end) {
-      lines.push(`DTSTART:${formatUtc(new Date(projection.start.dateTime))}`);
-      lines.push(`DTEND:${formatUtc(new Date(projection.end.dateTime))}`);
+      if (projection.recurrence && vtimezone) {
+        lines.push(`DTSTART;TZID=${zone}:${formatUtc(wallClock(new Date(projection.start.dateTime), zone)).slice(0, -1)}`);
+        // DURATION preserves elapsed work time even on an occurrence that
+        // crosses a DST transition; a local DTEND would change its duration.
+        const seconds = Math.floor(Date.parse(projection.end.dateTime) / 1000) - Math.floor(Date.parse(projection.start.dateTime) / 1000);
+        lines.push(`DURATION:PT${seconds}S`);
+      } else {
+        lines.push(`DTSTART:${formatUtc(new Date(projection.start.dateTime))}`);
+        lines.push(`DTEND:${formatUtc(new Date(projection.end.dateTime))}`);
+      }
     }
     lines.push(`SUMMARY:${escapeText(task.title || "(untitled)")}`);
     const description = taskCalendarDescription(task.notes, projection, zone);

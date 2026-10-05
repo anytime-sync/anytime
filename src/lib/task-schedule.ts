@@ -1,4 +1,4 @@
-import { validDate } from "./day-window";
+import { addCalendarDays, dayWindow, taskDate, validDate, validTimezone } from "./day-window";
 export type TaskTimeKind = 'deadline' | 'work' | 'span';
 export type TaskDates = {
   start_at?: string | null;
@@ -41,7 +41,7 @@ export function createTaskDates<T extends TaskDates>(input: T): T & Pick<TaskDat
 
 /** Single-boundary rescheduling preserves exact work/span duration. Editors
  * changing a boundary independently pass both fields. Explicit nulls clear. */
-export function resolveTaskDates<T extends TaskDates>(current: TaskDates, changes: T): T & Pick<TaskDates, 'start_at' | 'due_at' | 'time_kind'> {
+export function resolveTaskDates<T extends TaskDates>(current: TaskDates, changes: T, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone): T & Pick<TaskDates, 'start_at' | 'due_at' | 'time_kind'> {
   const patch = { ...changes };
   if (patch.time_kind != null && !['deadline', 'work', 'span'].includes(patch.time_kind)) throw new Error('Invalid time_kind');
   for (const key of ['start_at', 'due_at'] as const) {
@@ -51,15 +51,25 @@ export function resolveTaskDates<T extends TaskDates>(current: TaskDates, change
   }
   const oldStart = timestamp(current.start_at), oldDue = timestamp(current.due_at);
   const duration = oldDue - oldStart;
-  const kind = patch.time_kind ?? taskTimeKind(current);
+  let kind = patch.time_kind ?? taskTimeKind(current);
+  if (kind === 'work' && (patch.start_at === null || patch.due_at === null) && patch.time_kind !== 'work') {
+    patch.time_kind = kind = 'deadline';
+  }
   const interval = kind !== 'deadline' && Number.isFinite(duration) && duration >= 0;
-  if (interval && patch.due_at && !('start_at' in patch)) patch.start_at = new Date(timestamp(patch.due_at) - duration).toISOString();
-  if (interval && patch.start_at && !('due_at' in patch)) patch.due_at = new Date(timestamp(patch.start_at) + duration).toISOString();
+  const zone = validTimezone(timezone);
+  const shift = (anchor: string, direction: number) => {
+    if (kind !== 'span') return new Date(timestamp(anchor) + direction * duration).toISOString();
+    const days = (Date.parse(taskDate(current.due_at!, zone)) - Date.parse(taskDate(current.start_at!, zone))) / 86400000;
+    const date = addCalendarDays(taskDate(anchor, zone), direction * days);
+    return validDate(anchor) ? date : dayWindow(date, zone).start.toISOString();
+  };
+  if (interval && patch.due_at && !('start_at' in patch)) patch.start_at = shift(patch.due_at, -1);
+  if (interval && patch.start_at && !('due_at' in patch)) patch.due_at = shift(patch.start_at, 1);
   const result = { ...current, ...patch };
   const start = timestamp(result.start_at), due = timestamp(result.due_at);
   if (Number.isFinite(start) && Number.isFinite(due) && start > due) throw new Error('Start must not be after due. Set both dates to move the interval.');
-  if (kind === 'work' && Number.isFinite(start) && Number.isFinite(due) && start === due) throw new Error('Work needs an end after its start.');
-  if (kind === 'work' && (patch.start_at === null || patch.due_at === null)) patch.time_kind = 'deadline';
+  if (kind === 'work' && (!Number.isFinite(start) || !Number.isFinite(due))) throw new Error('Scheduled work needs both dates.');
+  if (kind === 'work' && start === due) throw new Error('Work needs an end after its start.');
   return patch;
 }
 

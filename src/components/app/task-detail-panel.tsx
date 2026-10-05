@@ -190,7 +190,8 @@ export function TaskDetailPanel() {
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={task.is_all_day} onChange={(e) => update.mutate({
             id: task.id, is_all_day: e.target.checked,
-            time_kind: taskTimeKind(task) === 'deadline' ? 'deadline' : e.target.checked ? 'span' : 'work',
+            time_kind: taskTimeKind(task) === 'deadline' ? 'deadline' : e.target.checked ? 'span'
+              : task.start_at && task.due_at && Date.parse(task.due_at) > Date.parse(task.start_at) ? 'work' : 'deadline',
           })} />
           {t(lang, "taskPanel.allDay")}
         </label>

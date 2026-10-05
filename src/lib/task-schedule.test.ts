@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { calendarTask, resolveTaskDates, snoozedDue } from './task-schedule';
+import { projectTaskCalendar } from './task-calendar';
 const task = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', is_all_day: false };
 it('moves both ends when an overdue block gets a new due date', () => {
   expect(resolveTaskDates(task, { due_at: '2026-09-14T09:00:00Z' })).toEqual({ start_at: '2026-09-14T08:30:00.000Z', due_at: '2026-09-14T09:00:00Z' });
@@ -32,4 +33,22 @@ it('snoozes old deadlines into the future, preserving local clock time', () => {
   expect(next.getMonth()).toBe(8);
   expect(next.getHours()).toBe(9);
   expect(+next).toBeGreaterThan(+now);
+});
+
+it.each([{ start_at: null, due_at: task.due_at }, { start_at: task.start_at, due_at: null }])('rejects incomplete merged work intent: %j', dates => {
+  const current = { ...dates, time_kind: 'deadline' as const };
+  expect(() => resolveTaskDates(current, { time_kind: 'work' })).toThrow('both dates');
+  expect(() => resolveTaskDates({ ...current, time_kind: 'span' }, { time_kind: 'work', is_all_day: false })).toThrow('both dates');
+  expect(() => resolveTaskDates({ ...task, time_kind: 'work' }, { due_at: null, time_kind: 'work' })).toThrow('both dates');
+});
+
+it.each(['start_at', 'due_at'] as const)('moves civil spans by day count across DST when editing %s', boundary => {
+  const span = { start_at: '2026-10-31T04:00:00Z', due_at: '2026-11-02T05:00:00Z', time_kind: 'span' as const, is_all_day: true };
+  const moved = { ...span, ...resolveTaskDates(span, boundary === 'due_at' ? { due_at: '2026-11-09T05:00:00Z' } : { start_at: '2026-11-07T05:00:00Z' }, 'America/New_York') };
+  expect(projectTaskCalendar(moved, 'America/New_York')).toMatchObject({ start: { date: '2026-11-07' }, end: { date: '2026-11-10' } });
+  expect(Date.parse(moved.start_at!)).toBe(Date.parse('2026-11-07T05:00:00Z'));
+});
+
+it('preserves civil-date strings when moving date-only spans', () => {
+  expect(resolveTaskDates({ start_at: '2026-10-31', due_at: '2026-11-02', time_kind: 'span' }, { due_at: '2026-11-09' }, 'America/New_York')).toEqual({ start_at: '2026-11-07', due_at: '2026-11-09' });
 });

@@ -131,7 +131,7 @@ export function MorningCopilotCard() {
 
           if (!task) continue;
           const patch = resolveTaskDates(task, task.start_at && !task.due_at
-            ? { start_at: tomorrowIso } : { due_at: tomorrowIso });
+            ? { start_at: tomorrowIso } : { due_at: tomorrowIso }, prefs?.timezone);
 
           const { error } = await supabase
             .from("tasks")

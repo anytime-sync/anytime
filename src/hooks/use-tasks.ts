@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
 import { toast } from "sonner";
 import { createTaskDates, resolveTaskDates } from "@/lib/task-schedule";
-import { nextTaskRecurrence } from "@/lib/task-recurrence";
+import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
+import { useUserPrefs } from "@/hooks/use-ai";
 
 export type TaskWithTags = Task & { tags: Tag[] };
 
@@ -305,6 +306,7 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   const qc = useQueryClient();
+  const { data: prefs } = useUserPrefs();
   return useMutation({
     mutationFn: async (p: Partial<Task> & { id: string }) => {
       const supabase = createClient();
@@ -312,7 +314,7 @@ export function useUpdateTask() {
       if ("start_at" in rest || "due_at" in rest || "time_kind" in rest || "is_all_day" in rest) {
         const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,is_all_day,time_kind").eq("id", id).single();
         if (error) throw error;
-        Object.assign(rest, resolveTaskDates(current, rest));
+        Object.assign(rest, resolveTaskDates(current, rest, prefs?.timezone));
       }
       const { error } = await supabase.from("tasks").update(rest).eq("id", id);
       if (error) throw error;
@@ -340,9 +342,10 @@ export function useUpdateTask() {
 
 export function useToggleTask() {
   const update = useUpdateTask();
+  const { data: prefs } = useUserPrefs();
   return (task: Task) => {
     if (!task.is_completed) {
-      const recurrence = nextTaskRecurrence(task);
+      const recurrence = nextTaskRecurrence(task, prefs?.timezone);
       if (recurrence) {
         // Slide BOTH ends of the meeting window forward by the same
         // delta so the duration is preserved on the next occurrence.
@@ -364,20 +367,7 @@ export function useToggleTask() {
             const sb = createClient();
             const { data: u } = await sb.auth.getUser();
             if (!u.user) return;
-            await sb.from("tasks").insert({
-              user_id: u.user.id,
-              project_id: task.project_id,
-              title: task.title,
-              notes: task.notes,
-              priority: task.priority,
-              due_at: task.due_at,
-              start_at: task.start_at,
-              is_all_day: task.is_all_day,
-              time_kind: task.time_kind,
-              is_completed: true,
-              completed_at: new Date().toISOString(),
-              position: 0,
-            });
+            await sb.from("tasks").insert(completedTaskOccurrence(task, u.user.id, new Date().toISOString()));
           } catch (e) {
             console.error("[useToggleTask] recurring log clone failed", e);
           }
@@ -456,4 +446,3 @@ export function useReorderTasks() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
-

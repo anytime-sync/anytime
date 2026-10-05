@@ -6,13 +6,15 @@ import { getValidAccessToken } from "./calendar-token";
 import {
   createCalendarEvent,
   deleteCalendarEvent,
+  getCalendarEvent,
   patchCalendarEvent,
+  type GoogleCalendarEvent,
   type GoogleCalendarEventInput,
 } from "./google-calendar";
 
 import { createHash } from "node:crypto";
 import { projectTaskCalendar, taskCalendarDescription, validTimezone } from "./task-calendar";
-import type { TaskTimeKind } from "./task-schedule";
+import { taskTimeKind, type TaskTimeKind } from "./task-schedule";
 
 const FIRSTLIGHT_TAG_KEY = "firstlightTaskId";
 
@@ -30,6 +32,7 @@ export type TaskRowForPush = {
   parent_id?: string | null;
   is_all_day: boolean | null;
   calendar_event_id: string | null;
+  calendar_event_generation?: number;
   updated_at: string | null;
 };
 
@@ -37,6 +40,47 @@ export function isOurOwnEventTag(privateProps?: Record<string, string>): string 
   if (!privateProps) return null;
   const id = privateProps[FIRSTLIGHT_TAG_KEY];
   return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+function taskEventId(taskId: string, generation: number): string {
+  // Preserve generation-zero identity from the initial implementation.
+  return `fl${createHash('sha256').update(generation ? `${taskId}:${generation}` : taskId).digest('hex')}`;
+}
+
+async function loadEvent(accessToken: string, calendarId: string, eventId: string): Promise<GoogleCalendarEvent | null> {
+  try { return await getCalendarEvent({ accessToken, calendarId, eventId }); }
+  catch (error) {
+    if (error instanceof Error && /^google_get_event_failed: 404\b/.test(error.message)) return null;
+    if (error instanceof Error && /^google_get_event_failed: 410\b/.test(error.message)) return { id: eventId, status: 'cancelled' };
+    throw error;
+  }
+}
+
+function assertTaskOwner(event: GoogleCalendarEvent, taskId?: string) {
+  const owner = isOurOwnEventTag(event.extendedProperties?.private);
+  if (!owner || (taskId && owner !== taskId)) throw new Error('Calendar event ownership is unverified; review before changing it.');
+}
+
+async function createTaskEvent(accessToken: string, calendarId: string, task: TaskRowForPush, event: GoogleCalendarEventInput, generation: number) {
+  // Deletions leave tombstones, so never restore a cancelled resource. A new
+  // persisted generation is stable for retries and distinct on reopening.
+  for (let i = 0; i < 8; i++, generation++) {
+    const eventId = taskEventId(task.id, generation);
+    try {
+      await createCalendarEvent({ accessToken, calendarId, event: { ...event, id: eventId }, sendUpdates: 'none' });
+      return { eventId, generation };
+    } catch (error) {
+      if (!(error instanceof Error) || !/^google_create_event_failed: 409\b/.test(error.message)) throw error;
+      const existing = await loadEvent(accessToken, calendarId, eventId);
+      if (!existing) throw new Error('Conflicting task calendar event is unavailable; retry pending.');
+      if (existing.status === 'cancelled') continue;
+      assertTaskOwner(existing, task.id);
+      const result = await patchCalendarEvent({ accessToken, calendarId, eventId, patch: event, sendUpdates: 'none' });
+      if (result.status === 'cancelled') throw new Error('Task calendar event disappeared during recovery; retry pending.');
+      return { eventId, generation };
+    }
+  }
+  throw new Error('Repeated calendar tombstones need review; task remains pending.');
 }
 
 /** Push at most 50 tasks. Dirty state is cleared only for the exact task
@@ -65,30 +109,42 @@ export async function pushPendingTasksForUser({ supabase, userId, primaryCalenda
     try {
       const event = buildEventInput(t, timezone);
       let eventId = t.calendar_event_id;
+      let generation = t.calendar_event_generation ?? 0;
+      let didCreate = false;
+      const linked = eventId ? await loadEvent(accessToken, primaryCalendarId, eventId) : null;
       if (!event) {
-        if (eventId) await deleteCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId });
+        if (linked && linked.status !== 'cancelled') {
+          assertTaskOwner(linked, t.id);
+          await deleteCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId: eventId!, sendUpdates: 'none' });
+        }
+        if (eventId) generation++;
         eventId = null;
-      } else if (eventId) {
+      } else if (eventId && linked?.status !== 'cancelled') {
+        if (!linked) throw new Error('Linked calendar event is missing; review its source before recreating.');
+        assertTaskOwner(linked, t.id);
         const result = await patchCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId, patch: event, sendUpdates: 'none' });
         if (result.status === 'cancelled') throw new Error('Linked calendar event is missing; review its source before recreating.');
       } else {
-        // Google ids permit lowercase base32hex. A stable task-derived id makes
-        // retries idempotent if the event succeeds but saving its link fails.
-        eventId = `fl${createHash('sha256').update(t.id).digest('hex')}`;
-        try { await createCalendarEvent({ accessToken, calendarId: primaryCalendarId, event: { ...event, id: eventId }, sendUpdates: 'none' }); }
-        catch (error) {
-          if (!(error instanceof Error) || !/^google_create_event_failed: 409\b/.test(error.message)) throw error;
-          const result = await patchCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId, patch: event, sendUpdates: 'none' });
-          if (result.status === 'cancelled') throw new Error('Task calendar event could not be recovered.');
+        if (eventId) {
+          // A concurrent reopen can happen after Google deletion but before
+          // the removal acknowledgement. Only replace a provably generated id.
+          if (eventId !== taskEventId(t.id, generation) && isOurOwnEventTag(linked?.extendedProperties?.private) !== t.id) {
+            throw new Error('Cancelled linked event ownership is unverified; review before recreating.');
+          }
+          generation++;
         }
+        const createdEvent = await createTaskEvent(accessToken, primaryCalendarId, t, event, generation);
+        eventId = createdEvent.eventId;
+        generation = createdEvent.generation;
+        didCreate = true;
       }
       const { data: saved, error } = await supabase.from('tasks')
-        .update({ calendar_event_id: eventId, calendar_dirty: false })
+        .update({ calendar_event_id: eventId, calendar_event_generation: generation, calendar_dirty: false })
         .eq('user_id', userId).eq('id', t.id).eq('updated_at', t.updated_at)
         .select('id');
       if (error) throw error;
       if (!saved?.length) throw new Error('Task changed during sync; retry pending.');
-      if (event) { if (t.calendar_event_id) patched++; else created++; }
+      if (event) { if (didCreate) created++; else patched++; }
     } catch (error) {
       console.error('[calendar-write] task push failed', t.id, error);
       failed++;
@@ -160,15 +216,16 @@ export async function drainCalendarDeletions({
     for (const r of rows) {
       const calendarId = r.calendar_id ?? "primary";
       try {
-        await deleteCalendarEvent({
-          accessToken,
-          calendarId,
-          eventId: r.event_id,
-        });
-        await supabase
+        const event = await loadEvent(accessToken, calendarId, r.event_id);
+        if (event && event.status !== 'cancelled') {
+          assertTaskOwner(event);
+          await deleteCalendarEvent({ accessToken, calendarId, eventId: r.event_id, sendUpdates: 'none' });
+        }
+        const { error: deleteError } = await supabase
           .from("pending_calendar_deletions")
           .delete()
           .eq("id", r.id);
+        if (deleteError) throw deleteError;
         deleted++;
       } catch (e) {
         const msg = e instanceof Error ? e.message : "delete_failed";
@@ -186,7 +243,12 @@ export async function drainCalendarDeletions({
 
 export function buildEventInput(t: TaskRowForPush, timezone = 'UTC'): GoogleCalendarEventInput | null {
   const projection = projectTaskCalendar(t, timezone);
-  if (!projection) return null;
+  if (!projection) {
+    if (!t.is_completed && t.status !== 'done' && t.status !== 'archived' && !t.parent_id && taskTimeKind(t) === 'work') {
+      throw new Error('Invalid work interval; review before removing its calendar event.');
+    }
+    return null;
+  }
   const zone = validTimezone(timezone);
   return {
     summary: t.title || 'Untitled task',

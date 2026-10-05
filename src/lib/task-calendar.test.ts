@@ -55,4 +55,29 @@ describe('explicit time intent', () => {
     const moved = nextTaskRecurrence({ ...work, rrule: 'FREQ=WEEKLY' })!.patch;
     expect(Date.parse(moved.due_at!) - Date.parse(moved.start_at!)).toBe(Date.parse(work.due_at) - Date.parse(work.start_at));
   });
+  it('advances recurring 09:00 work by its local start across fall DST, preserving duration', () => {
+    const task = { start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:30:00Z', time_kind: 'work' as const, rrule: 'FREQ=WEEKLY;BYDAY=SU;COUNT=3' };
+    const first = nextTaskRecurrence(task, 'America/New_York')!;
+    expect(first.patch).toMatchObject({ start_at: '2026-11-01T14:00:00.000Z', due_at: '2026-11-01T15:30:00.000Z', rrule: 'FREQ=WEEKLY;BYDAY=SU;COUNT=2' });
+    const second = nextTaskRecurrence({ ...task, ...first.patch }, 'America/New_York')!;
+    expect(second.patch).toMatchObject({ start_at: '2026-11-08T14:00:00.000Z', due_at: '2026-11-08T15:30:00.000Z' });
+    expect(nextTaskRecurrence({ ...task, ...second.patch }, 'America/New_York')).toBeNull();
+  });
+  it('keeps recurrent spans at local midnight and the same civil-day length through DST', () => {
+    const task = { start_at: '2026-10-31T04:00:00Z', due_at: '2026-11-02T05:00:00Z', time_kind: 'span' as const, rrule: 'FREQ=WEEKLY' };
+    const patch = nextTaskRecurrence(task, 'America/New_York')!.patch;
+    expect(patch).toMatchObject({ start_at: '2026-11-07T05:00:00.000Z', due_at: '2026-11-09T05:00:00.000Z' });
+  });
+  it('uses the start weekday for overnight work and the exact UTC UNTIL limit', () => {
+    const task = { start_at: '2026-10-31T23:00:00Z', due_at: '2026-11-01T08:00:00Z', time_kind: 'work' as const, rrule: 'FREQ=WEEKLY;BYDAY=SA;UNTIL=20261108T000000Z' };
+    const patch = nextTaskRecurrence(task, 'America/New_York')!.patch;
+    expect(patch).toMatchObject({ start_at: '2026-11-08T00:00:00.000Z', due_at: '2026-11-08T09:00:00.000Z' });
+    expect(nextTaskRecurrence({ ...task, ...patch }, 'America/New_York')).toBeNull();
+  });
+  it('skips a nonexistent spring-forward clock time without shifting the deadline an hour', () => {
+    const task = { due_at: '2026-03-01T07:30:00Z', time_kind: 'deadline' as const, rrule: 'FREQ=WEEKLY;COUNT=2' };
+    const next = nextTaskRecurrence(task, 'America/New_York')!;
+    expect(next.patch.due_at).toBe('2026-03-15T06:30:00.000Z');
+    expect(next.patch.rrule).toBe('FREQ=WEEKLY;COUNT=1');
+  });
 });

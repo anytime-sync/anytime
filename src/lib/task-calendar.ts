@@ -1,16 +1,12 @@
 import { RRule } from 'rrule';
-import { calendarDate, validDate, dayWindow } from './day-window';
+import { taskDate, validDate, dayWindow, validTimezone } from './day-window';
 import { taskTimeKind, timestamp, type TaskDates } from './task-schedule';
 
-export function validTimezone(timezone: string): string {
-  try { new Intl.DateTimeFormat('en', { timeZone: timezone }); return timezone; }
-  catch { return 'UTC'; }
-}
+export { validTimezone } from './day-window';
 
 /** Date-only values are civil dates, never UTC instants to be shifted. */
 export function taskCalendarDate(value: string, timezone: string): string {
-  if (validDate(value)) return value;
-  return calendarDate(new Date(value), validTimezone(timezone));
+  return taskDate(value, timezone);
 }
 
 export function normalizeTaskDate(value: string | null | undefined, timezone: string) {

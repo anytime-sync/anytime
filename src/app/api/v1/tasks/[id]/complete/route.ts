@@ -1,4 +1,4 @@
-import { nextTaskRecurrence } from "@/lib/task-recurrence";
+import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
 /**
  * POST /api/v1/tasks/{id}/complete
  *   Mark a task complete. Convenience over PATCH { status: "done" } so that
@@ -34,27 +34,14 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // --- Recurring task: advance to next occurrence ---
   if (task.rrule && task.due_at) {
-    const recurrence = nextTaskRecurrence(task);
+    const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
+    if (prefsError) return jsonError(500, 'db_error', prefsError.message);
+    const recurrence = nextTaskRecurrence(task, prefs?.timezone ?? 'UTC');
 
     if (recurrence) {
       // 1. Insert a historical "done" clone for this occurrence (no rrule,
       //    so it won't recur — it's just the audit record).
-      await ctx.supabase.from("tasks").insert({
-        user_id: ctx.userId,
-        project_id: task.project_id,
-        title: task.title,
-        notes: task.notes,
-        priority: task.priority,
-        due_at: task.due_at,
-        start_at: task.start_at,
-        is_all_day: task.is_all_day,
-        time_kind: task.time_kind,
-        status: "done",
-        is_completed: true,
-        completed_at: now,
-        position: 0,
-        // rrule intentionally omitted — clone is a one-off record
-      });
+      await ctx.supabase.from("tasks").insert(completedTaskOccurrence(task, ctx.userId, now));
 
       // 2. Slide the live task forward to next occurrence, preserving duration.
       const patch: Record<string, unknown> = {
@@ -91,4 +78,3 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!data) return jsonError(404, "not_found", "Task not found.");
   return jsonOk({ data });
 }
-

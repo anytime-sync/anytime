@@ -8,6 +8,11 @@ alter table public.tasks add constraint tasks_time_kind_check
 alter table public.tasks add column calendar_dirty boolean not null default false;
 alter table public.tasks alter column calendar_dirty set default true;
 
+-- A deleted Google id can remain a tombstone. Each acknowledged removal
+-- advances the identity generation; retries of the same generation are stable.
+alter table public.tasks add column calendar_event_generation integer not null default 0
+  check (calendar_event_generation >= 0);
+
 create function public.mark_task_calendar_dirty() returns trigger
 language plpgsql security invoker set search_path = '' as $$
 begin

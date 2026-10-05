@@ -109,12 +109,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (error) return jsonError(500, "db_error", error.message);
     if (!current) return jsonError(404, "not_found", "Task not found.");
     try {
-      if ([patch.start_at, patch.due_at].some(v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) {
-        const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
-        if (prefsError) return jsonError(500, 'db_error', prefsError.message);
-        for (const key of ['start_at', 'due_at'] as const) if (key in patch) patch[key] = normalizeTaskDate(patch[key] as string | null, prefs?.timezone ?? 'UTC');
-      }
-      Object.assign(patch, resolveTaskDates(current, patch));
+      const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
+      if (prefsError) return jsonError(500, 'db_error', prefsError.message);
+      const zone = prefs?.timezone ?? 'UTC';
+      for (const key of ['start_at', 'due_at'] as const) if (key in patch) patch[key] = normalizeTaskDate(patch[key] as string | null, zone);
+      Object.assign(patch, resolveTaskDates(current, patch, zone));
     }
     catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }
   }

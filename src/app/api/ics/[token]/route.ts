@@ -77,7 +77,9 @@ export async function GET(
     if (!data || data.length < 1000) break;
   }
 
-  const ics = buildIcs(tasks, pref.timezone || "UTC", now);
+  let ics: string;
+  try { ics = buildIcs(tasks, pref.timezone || "UTC", now); }
+  catch { return NextResponse.json({ error: "calendar_timezone_unsupported" }, { status: 500 }); }
 
   return new NextResponse(ics, {
     status: 200,

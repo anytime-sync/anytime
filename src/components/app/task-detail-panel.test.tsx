@@ -14,6 +14,7 @@ vi.mock('./subtask-list', () => ({ SubtaskList: () => null }));
 vi.mock('./attachment-list', () => ({ AttachmentList: () => null }));
 vi.mock('./tag-editor', () => ({ TagEditor: () => null }));
 import { TaskDetailPanel } from './task-detail-panel';
+import { resolveTaskDates } from '@/lib/task-schedule';
 const base = { id: 'task', title: 'Task', notes: null, tags: [], start_at: null, due_at: '2026-10-08T01:00:00Z', time_kind: 'deadline', is_all_day: false, priority: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' };
 beforeEach(() => { state.task = { ...base }; vi.clearAllMocks(); });
 function mount() { let tree!: ReactTestRenderer; act(() => { tree = create(<TaskDetailPanel />); }); return tree; }
@@ -36,4 +37,20 @@ it('preserves date-only intent when selecting a due date', () => {
   const picker = tree.root.findAll(node => node.type === ('picker' as any))[1];
   expect(picker.props.allDay).toBe(true); act(() => picker.props.onChange('2026-10-09T16:00:00Z'));
   expect(state.mutate.mock.calls[0][0]).not.toHaveProperty('is_all_day'); act(() => tree.unmount());
+});
+
+it('keeps an interrupted deadline-to-span-to-timed flow valid across repeated edits', () => {
+  const tree = mount();
+  state.mutate.mockImplementation(({ id: _id, ...patch }) => { state.task = { ...state.task, ...resolveTaskDates(state.task, patch) }; });
+  for (let i = 0; i < 3; i++) {
+    act(() => tree.root.findAllByType('select')[0].props.onChange({ target: { value: 'span' } }));
+    act(() => tree.update(<TaskDetailPanel />));
+    expect(state.task.time_kind).toBe('span');
+    const checkbox = tree.root.findAllByType('input').find(input => input.props.type === 'checkbox')!;
+    act(() => checkbox.props.onChange({ target: { checked: false } }));
+    act(() => tree.update(<TaskDetailPanel />));
+    expect(state.task).toMatchObject({ time_kind: 'deadline', start_at: null, due_at: base.due_at, is_all_day: false });
+    expect(tree.root.findAllByType('select')[0].findAllByType('option').find(option => option.props.value === 'work')?.props.disabled).toBe(true);
+  }
+  act(() => tree.unmount());
 });

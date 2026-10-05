@@ -21,7 +21,12 @@ independent start/end editors. It does not write on open. Date picker drafts
 apply explicitly; cancellation/dismissal discards them. Clear removes the field.
 
 Changing one boundary through a reschedule preserves the exact duration of work
-(and the existing interval of a span). Changing a boundary independently in the
+(and the inclusive civil-day count of a span, across daylight-saving changes).
+Work intent is rejected unless the merged task has two valid endpoints with a
+positive interval. Clearing an endpoint intentionally changes work to deadline;
+explicitly requesting incomplete work fails before a database write. An
+interrupted deadline → span → timed editor flow returns to deadline when an
+endpoint is missing. Changing a boundary independently in the
 detail editor sends both fields, so it can intentionally resize the interval.
 Timeline and month dragging retain exact work duration; display minimum chip
 height does not change stored dates. Snooze, deferral, reflection carry-forward,
@@ -29,8 +34,12 @@ and accepted AI slots no longer silently manufacture or cap intervals.
 
 Recurrence completion shares one advancement helper across UI/API: deadlines
 keep a missing start, work keeps its duration, and `COUNT` decreases instead of
-restarting. Completion history is a one-off clone without a recurrence or event
-link. Imported Google meetings remain in `calendar_events` and retain their
+restarting. Work/span recurrence is anchored to the start; deadlines to the due
+date. Expansion uses the account's local civil time, independently of the host
+timezone. Nonexistent spring-forward times are skipped. Completion history sets
+both `status=done` and `is_completed=true`, so the existing status INSERT trigger
+cannot turn the clone into an open task. It has no recurrence or event link.
+Imported Google meetings remain in `calendar_events` and retain their
 source intervals; task intent never reclassifies them. The bulk account importer
 continues to import VTODO/CSV commitments as deadlines and does not import VEVENT
 appointments into tasks.
@@ -43,9 +52,27 @@ are preserved as dates. API date-only input is converted to the user's local
 midnight before timestamptz storage. For example, Taipei `2026-10-08` is stored as
 `2026-10-07T16:00:00Z`, and exports as October 8 with an exclusive October 9 end.
 Stable ICS identity remains `<task-id>@firstlight.to`. New Google event ids are
-stable hashes of task ids, making create retries idempotent when saving the link
-fails. Existing event ids are retained. Date/dateTime fields are explicitly
+stable hashes of task ids plus a persisted `calendar_event_generation`, making
+create retries idempotent when saving the link fails. Acknowledged deletion
+increments the generation, so reopening/rescheduling creates a distinct id
+instead of PATCHing a cancelled tombstone. Existing active event ids are retained.
+A concurrent reopen or a conflicting cancelled generated id advances to the next
+generation. Conflict recovery and linked writes verify `firstlightTaskId` before
+changing an active event; cancelled resources are never restored. Unverified
+appointments stay unchanged and the task/queue remains pending for review.
+Date/dateTime fields are explicitly
 cleared when switching event type; empty recurrence clears an old RRULE.
+
+Recurring timed ICS events use `DTSTART;TZID=...` plus a matching `VTIMEZONE` and
+an elapsed `DURATION`, so weekly 09:00 New York work remains at 09:00 across DST.
+Google receives the same account timezone. Nonrecurring work stays in UTC.
+The pinned `@touch4it/ical-timezones` dataset supplies ICS zone rules; these are a
+snapshot, not live government timezone updates. New IANA zones missing from the
+dataset return an explicit feed error instead of silently switching recurrence
+to UTC. Historical pre-1970 rules and future legal timezone changes are not
+guaranteed by that dataset; check/update it before supporting those cases.
+ICS date-times have RFC 5545 second precision; storage, Google and work
+rescheduling retain the original millisecond precision.
 
 Google creation accepts either endpoint, including a date-only deadline or
 start-only task. Linked edits use a persistent `calendar_dirty` flag instead of
@@ -53,13 +80,17 @@ a ten-minute timestamp window, so downtime does not lose updates. Successful
 acknowledgement is scoped to the user's id and the exact `updated_at` version
 sent; concurrent edits remain pending. Unscheduling, completion, archiving or
 moving a linked task under a parent removes its generated event on the next
-push. Task writes send no attendee notifications. A missing linked event is
+push. Creation, patching and both direct/queued deletion paths explicitly use
+`sendUpdates=none`. The generic Google meeting transport retains its notification
+defaults. Invalid persisted work intervals stay pending for review rather than
+being interpreted as a removal request. A missing linked event is
 reported for review rather than silently counted as synchronized.
 
 ## Migration and release review
 
 `supabase/migrations/20261005140000_task_time_intent.sql` is PR-only. It adds a
-nullable, constrained `time_kind` and `calendar_dirty`, plus a SECURITY INVOKER
+nullable, constrained `time_kind`, `calendar_dirty` and a nonnegative
+`calendar_event_generation` defaulting to zero, plus a SECURITY INVOKER
 trigger and partial pending-update index. It changes no ownership/RLS policy.
 Existing rows keep null intent, unchanged dates and `calendar_dirty=false`;
 new rows default to dirty. It does not backfill intent or enqueue historical
@@ -75,11 +106,35 @@ must pass `time_kind=work` when converting an explicit deadline to scheduled wor
 Changing a user's timezone does not automatically enqueue historical Google
 projections; include those in a separately reviewed repair if needed.
 
+**ICS rollout changes historical subscribed events immediately after polling.**
+The migration's unchanged dates/null intent/dirty=false only prevent a Google
+bulk enqueue. ICS has no dirty gate: application release runs every selected
+historical row through the new projection and bumps `LAST-MODIFIED`. Compared
+with base main, legacy positive timed intervals of 24 hours or longer and
+multiday all-day intervals now retain their complete ranges instead of the old
+single marker. Some are legitimate work; some may be fabricated lifecycle ranges.
+This can increase crowding until reviewed per-id intent classification. No
+duration heuristic can safely decide which is which. This PR does not claim
+historical calendars stay visually unchanged or that the screenshot is fixed.
+
+Before an approved release, inventory the affected subscribed ICS rows and
+review ambiguous intent per id, while preserving actual appointments. Apply the
+additive migration first, then any separately approved targeted classification,
+then release the code and verify subscription refresh plus owned Google writes.
+If verification fails, pause task sync before reverting application code; keep
+the additive columns and original values for investigation. The prior binary
+ignores the columns but restores its old date fabrication/export behavior, and
+Google events already written will not be reversed by a code rollback. ICS can
+revert on the next provider poll, subject to its cache; provider restoration and
+any reversal of approved data changes require separate reviewed per-id actions.
+
 The Supabase CLI could not initialize its read-only home configuration in this
 cloud environment. The migration file was prepared directly and validated by
 executing its actual SQL in a disposable PGlite PostgreSQL database. The committed
-regression checks old-row preservation, defaults, dirty-trigger behavior,
-metadata acknowledgements, date clearing and the constraint. This is local SQL
+regression executes the existing `0021_api_compat.sql` task status trigger and the
+new migration, checking old-row preservation, defaults, dirty-trigger behavior,
+metadata/generation acknowledgements, date clearing, completed history and the
+constraints. This is local SQL
 validation, not validation against production policies or application of a
 production migration.
 
@@ -110,8 +165,11 @@ is part of this draft PR.
 
 ## Validation in this cloud workspace
 
-- `npm test`: 151 passing tests across 22 files, including mounted editor/picker
-  behavior and execution of the actual migration SQL in local PostgreSQL.
+- `npm test`: 177 passing tests across 22 files, including mounted editor/picker
+  behavior, lifecycle/ownership/notification regressions, independent ICS parsing
+  across DST and execution of actual migration/status-trigger SQL in local PostgreSQL.
+- The 49 schedule, API and ICS tests also pass with `TZ=Asia/Taipei`, while
+  exercising New York DST semantics independent of the host timezone.
 - `npm run typecheck` and `npm run lint`: passed; ESLint retains repository
   warnings in existing components.
 - `npm run build --prefix firstlight-mcp`: passed; tracked distributable files
