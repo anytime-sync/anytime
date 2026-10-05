@@ -19,8 +19,8 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed(patch)).not.toContain('BEGIN:VEVENT');
   });
   it('represents an active stale interval at its deadline, keeping the same UID', () => {
-    const ics = feed({ start_at: '2026-08-02T02:30:00Z', due_at: '2026-10-04T03:00:00Z', rrule: 'FREQ=DAILY' });
-    expect(ics).toContain('DTSTART:20261004T030000Z\r\nDTEND:20261004T033000Z');
+    const ics = feed({ time_kind: 'deadline', start_at: '2026-08-02T02:30:00Z', due_at: '2026-10-04T03:00:00Z', rrule: 'FREQ=DAILY' });
+    expect(ics).toContain('DTSTART;VALUE=DATE:20261004\r\nDTEND;VALUE=DATE:20261005');
     expect(ics).toContain('UID:task-1@firstlight.to');
     expect(ics).toContain('RRULE:FREQ=DAILY');
     expect(ics).toContain('TRANSP:TRANSPARENT');
@@ -44,7 +44,7 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed({ is_all_day: true, due_at: null })).toContain('DTSTART;VALUE=DATE:20261004\r\nDTEND;VALUE=DATE:20261005');
   });
   it('uses the deadline for stale all-day starts and preserves month-end recurrence', () => {
-    const ics = feed({ is_all_day: true, start_at: '2026-10-07T00:00:00Z', due_at: '2026-10-08T00:30:00Z', rrule: 'FREQ=MONTHLY;BYMONTHDAY=8' });
+    const ics = feed({ time_kind: 'deadline', is_all_day: true, start_at: '2026-10-07T00:00:00Z', due_at: '2026-10-08T00:30:00Z', rrule: 'FREQ=MONTHLY;BYMONTHDAY=8' });
     expect(ics).toContain('DTSTART;VALUE=DATE:20261008\r\nDTEND;VALUE=DATE:20261009');
     expect(ics).toContain('RRULE:FREQ=MONTHLY;BYMONTHDAY=8');
   });

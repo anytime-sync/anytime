@@ -9,6 +9,8 @@
  *   project_id?, status?, is_all_day? }
  */
 
+import { createTaskDates, type TaskTimeKind } from "@/lib/task-schedule";
+import { normalizeTaskDate } from "@/lib/task-calendar";
 import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../_lib/auth";
 
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
   let q = ctx.supabase
     .from("tasks")
     .select(
-      "id,title,status,priority,due_at,start_at,is_all_day,notes,project_id,created_at,updated_at,completed_at",
+      "id,title,status,priority,due_at,start_at,time_kind,is_all_day,notes,project_id,created_at,updated_at,completed_at",
     )
     .eq("user_id", ctx.userId)
     .order("due_at", { ascending: true, nullsFirst: false })
@@ -91,6 +93,7 @@ export async function GET(req: NextRequest) {
 
 interface CreateTaskBody {
   title: string;
+  time_kind?: TaskTimeKind | null;
   due_at?: string | null;
   start_at?: string | null;
   is_all_day?: boolean | null;
@@ -136,6 +139,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return jsonError(400, "invalid_json", "Request body must be valid JSON.");
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return jsonError(400, "invalid_json", "Request body must be an object.");
   if (!body.title || typeof body.title !== "string" || body.title.length > 500) {
     return jsonError(
       400,
@@ -144,49 +148,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let sanitizedStartAt = body.start_at ?? null;
-  let sanitizedDueAt = body.due_at ?? null;
-  const MIN_DURATION_MS = 30 * 60 * 1000;
-  const isMidnight = (iso: string) => /T00:00:00/.test(iso);
-
-  // Validate caller-supplied dates up front — an unparseable string
-  // becomes NaN and throws RangeError on .toISOString() below.
-  const isValidIso = (v: unknown) => typeof v === "string" && !Number.isNaN(new Date(v).getTime());
-  if (sanitizedStartAt != null && !isValidIso(sanitizedStartAt)) {
-    return jsonError(400, "invalid_start_at", "`start_at` must be a valid ISO-8601 date.");
-  }
-  if (sanitizedDueAt != null && !isValidIso(sanitizedDueAt)) {
-    return jsonError(400, "invalid_due_at", "`due_at` must be a valid ISO-8601 date.");
-  }
-
-  // Rule 1: timed due_at with no start_at — set start_at = due_at - 30min.
-  // A task with only due_at has no timeline slot and won’t show correctly.
-  if (sanitizedDueAt && !sanitizedStartAt && !isMidnight(sanitizedDueAt)) {
-    sanitizedStartAt = new Date(new Date(sanitizedDueAt).getTime() - MIN_DURATION_MS).toISOString();
-  }
-
-  // Rule 2: timed start_at with no due_at — set due_at = start_at + 30min.
-  if (sanitizedStartAt && !sanitizedDueAt && !isMidnight(sanitizedStartAt)) {
-    sanitizedDueAt = new Date(new Date(sanitizedStartAt).getTime() + MIN_DURATION_MS).toISOString();
-  }
-
-  // Rule 3: start > end — set due_at = start_at + 30min (never zero-duration).
-  if (sanitizedStartAt && sanitizedDueAt) {
-    const s = new Date(sanitizedStartAt).getTime();
-    const e = new Date(sanitizedDueAt).getTime();
-    if (!Number.isNaN(s) && !Number.isNaN(e) && s >= e) {
-      sanitizedDueAt = new Date(s + MIN_DURATION_MS).toISOString();
-    }
-  }
+  const { data: prefs, error: prefsError } = await ctx.supabase.from("user_preferences").select("timezone").eq("user_id", ctx.userId).maybeSingle();
+  if (prefsError) return jsonError(500, "db_error", prefsError.message);
+  let dates;
+  try {
+    dates = createTaskDates({
+      start_at: normalizeTaskDate(body.start_at ?? null, prefs?.timezone ?? 'UTC'),
+      due_at: normalizeTaskDate(body.due_at ?? null, prefs?.timezone ?? 'UTC'),
+      is_all_day: deriveIsAllDay(body), time_kind: body.time_kind,
+    });
+  } catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }
 
   const { data, error } = await ctx.supabase
     .from("tasks")
     .insert({
       user_id: ctx.userId,
       title: body.title,
-      due_at: sanitizedDueAt,
-      start_at: sanitizedStartAt,
-      is_all_day: deriveIsAllDay(body),
+      ...dates,
       priority: normalizePriority(body.priority) ?? 0,
       notes: body.notes ?? null,
       project_id: body.project_id ?? null,

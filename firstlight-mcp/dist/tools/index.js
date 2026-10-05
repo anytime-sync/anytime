@@ -36,13 +36,15 @@ const get_task = {
 };
 const create_task = {
     name: "create_task",
-    description: "Create a new task. Prefer concise titles; put background in `notes`. Use ISO timestamps for `due_at` and `start_at`.",
+    description: "Create a new task. Prefer concise titles; put background in `notes`. Use ISO timestamps or date-only values. A single endpoint is a deadline marker; scheduled work needs both endpoints.",
     inputSchema: {
         type: "object",
         properties: {
             title: { type: "string", maxLength: 500 },
             due_at: { type: "string", description: "ISO timestamp; null for unscheduled." },
             start_at: { type: "string" },
+            time_kind: { type: "string", enum: ["deadline", "work", "span"] },
+            is_all_day: { type: "boolean" },
             priority: { type: "string", enum: ["low", "med", "high"] },
             notes: { type: "string" },
             project_id: { type: "string" },
@@ -62,6 +64,8 @@ const update_task = {
             title: { type: "string" },
             due_at: { type: ["string", "null"] },
             start_at: { type: ["string", "null"] },
+            time_kind: { type: ["string", "null"], enum: ["deadline", "work", "span", null] },
+            is_all_day: { type: "boolean" },
             priority: { type: ["string", "null"], enum: ["low", "med", "high", null] },
             notes: { type: ["string", "null"] },
             status: { type: "string", enum: ["open", "done", "archived"] },

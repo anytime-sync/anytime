@@ -63,13 +63,13 @@ export async function GET(
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await admin
       .from("tasks")
-      .select("id, title, notes, start_at, due_at, is_all_day, is_completed, status, rrule, updated_at, created_at, estimated_minutes")
+      .select("id, title, notes, start_at, due_at, time_kind, is_all_day, is_completed, status, rrule, updated_at, created_at, estimated_minutes")
       .eq("user_id", pref.user_id)
       .is("parent_id", null)
       .eq("is_completed", false)
       .neq("status", "done")
       .neq("status", "archived")
-      .or(`and(start_at.gte.${minIso},start_at.lte.${maxIso}),and(due_at.gte.${minIso},due_at.lte.${maxIso}),rrule.not.is.null`)
+      .or(`and(start_at.gte.${minIso},start_at.lte.${maxIso}),and(due_at.gte.${minIso},due_at.lte.${maxIso}),and(start_at.lt.${minIso},due_at.gt.${maxIso}),rrule.not.is.null`)
       .order("id", { ascending: true })
       .range(offset, offset + 999);
     if (error) return NextResponse.json({ error: "calendar_fetch_failed" }, { status: 500 });

@@ -113,7 +113,7 @@ export function TodayAiBar() {
       toast.error('This suggestion is no longer valid. Find new slots.'); return false;
     }
     try {
-      await update.mutateAsync({ id:s.id, start_at:s.start_at, due_at:s.due_at, is_all_day:false });
+      await update.mutateAsync({ id:s.id, start_at:s.start_at, due_at:s.due_at, is_all_day:false, time_kind:"work" });
       setResults(r => r ? r.filter(x=>x.id!==s.id) : null); return true;
     } catch { toast.error('Could not save this move. The suggestion remains for review.'); return false; }
   }

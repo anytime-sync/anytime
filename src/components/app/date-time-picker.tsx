@@ -38,6 +38,7 @@ type Props = {
   onChange: (iso: string | null) => void;
   placeholder?: string;
   className?: string;
+  allDay?: boolean;
 };
 
 function clamp(n: number, lo: number, hi: number) {
@@ -60,6 +61,7 @@ export function DateTimePicker({
   onChange,
   placeholder,
   className,
+  allDay = false,
 }: Props) {
   const lang = useLanguage();
   const { data: prefs } = useUserPrefs();
@@ -78,11 +80,12 @@ export function DateTimePicker({
 
   const current = value ? new Date(value) : null;
   const [open, setOpen] = useState(false);
+  const [draftDay, setDraftDay] = useState<Date | null>(current);
+  const [dirty, setDirty] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // The popover keeps its own draft date/time so editing time fields
-  // doesn't fire a write per keystroke. We commit on selection / blur.
+  // Draft changes are written only by Apply; dismissal discards them.
   const [viewMonth, setViewMonth] = useState<Date>(() => current ?? new Date());
   const initial12 = to12h(current?.getHours() ?? 9);
   const [h12, setH12] = useState<number>(initial12.h12);
@@ -115,31 +118,33 @@ export function DateTimePicker({
   function commit(day: Date, hours12 = h12, minutes = mm, mer = meridiem) {
     const h24 = from12h(hours12, mer);
     const d = new Date(day);
-    d.setHours(h24, minutes, 0, 0);
+    d.setHours(allDay ? 0 : h24, allDay ? 0 : minutes, 0, 0);
     onChange(d.toISOString());
   }
 
   function selectDay(day: Date) {
-    commit(day);
+    setDraftDay(day);
+    setDirty(true);
   }
 
   function changeTime(nextH12: number, nextMm: number, nextMer: "AM" | "PM") {
     setH12(nextH12);
     setMm(nextMm);
     setMeridiem(nextMer);
-    if (current) commit(current, nextH12, nextMm, nextMer);
+    if (!draftDay) setDraftDay(new Date());
+    setDirty(true);
   }
 
   function pickToday() {
     const t = new Date();
     setViewMonth(t);
-    commit(t);
+    selectDay(t);
   }
 
   function pickTomorrow() {
     const t = addDays(new Date(), 1);
     setViewMonth(t);
-    commit(t);
+    selectDay(t);
   }
 
   function clear() {
@@ -157,7 +162,7 @@ export function DateTimePicker({
 
   // Trigger label — locale-formatted full date + time, or placeholder.
   const triggerLabel = current
-    ? format(current, "PPP p", { locale })
+    ? format(current, allDay ? "PPP" : "PPP p", { locale })
     : resolvedPlaceholder;
 
   return (
@@ -165,7 +170,14 @@ export function DateTimePicker({
       <button
         type="button"
         ref={triggerRef}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) {
+            setDraftDay(current); setDirty(false); setViewMonth(current ?? new Date());
+            const time = to12h(current?.getHours() ?? 9);
+            setH12(time.h12); setMeridiem(time.meridiem); setMm(current?.getMinutes() ?? 0);
+          }
+          setOpen((v) => !v);
+        }}
         className={cn(
           "input w-full text-left flex items-center justify-between gap-2",
           !current && "text-muted-fg"
@@ -222,7 +234,7 @@ export function DateTimePicker({
           {/* Day grid */}
           <div className="grid grid-cols-7 gap-0.5">
             {days.map((d) => {
-              const sel = current ? isSameDay(d, current) : false;
+              const sel = draftDay ? isSameDay(d, draftDay) : false;
               const today = isSameDay(d, new Date());
               const inMonth = isSameMonth(d, viewMonth);
               return (
@@ -251,7 +263,7 @@ export function DateTimePicker({
               grid is twelve 5-minute steps in the same shape so the two
               read as a matched pair. AM/PM toggle is centered below
               and rendered in the active locale (上午/下午 in zh-TW). */}
-          <div className="mt-3 pt-3 border-t border-border space-y-2">
+          {!allDay && <div className="mt-3 pt-3 border-t border-border space-y-2">
             <div>
               <p className="editorial-number text-[10px] uppercase mb-1.5">
                 Hour
@@ -315,9 +327,9 @@ export function DateTimePicker({
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
 
-          {/* Quick presets + done */}
+          {/* Quick presets and draft actions */}
           <div className="mt-2 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1">
               <button
@@ -342,12 +354,15 @@ export function DateTimePicker({
                 Clear
               </button>
             </div>
+            <button type="button" onClick={() => setOpen(false)} className="btn-ghost px-2 h-7">
+              {t(lang, "dateTimePicker.cancel")}
+            </button>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => { if (dirty && draftDay) commit(draftDay); setOpen(false); }}
               className="btn-ghost px-2 h-7"
             >
-              Done
+              {t(lang, "dateTimePicker.apply")}
             </button>
           </div>
         </div>

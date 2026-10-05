@@ -48,7 +48,7 @@ export function scheduleDates(now: Date, tz: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => new Date(first + i * 86400000).toISOString().slice(0, 10));
 }
 
-type ScheduledItem = { title?: string | null; start_at: string | null; end_at?: string | null; due_at?: string | null; is_all_day?: boolean };
+type ScheduledItem = { time_kind?: import("../task-schedule").TaskTimeKind | null; title?: string | null; start_at: string | null; end_at?: string | null; due_at?: string | null; is_all_day?: boolean };
 
 export function buildScheduleDays(dates: string[], tz: string, events: ScheduledItem[], tasks: ScheduledItem[], prefs: UserWorkPrefs, now: Date): DaySchedule[] {
   return dates.map(date => {
@@ -159,7 +159,7 @@ export async function fetchScheduleContext(
       .limit(201),
     supabase
       .from("tasks")
-      .select("title,start_at,due_at,is_all_day")
+      .select("title,start_at,due_at,is_all_day,time_kind")
       .eq("user_id", userId)
       .eq("is_completed", false)
       .neq("status", "archived")

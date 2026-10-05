@@ -1,4 +1,5 @@
-import { resolveTaskDates } from "@/lib/task-schedule";
+import { normalizeTaskDate } from "@/lib/task-calendar";
+import { resolveTaskDates, type TaskTimeKind } from "@/lib/task-schedule";
 /**
  * GET    /api/v1/tasks/{id}     read a single task
  * PATCH  /api/v1/tasks/{id}     update title/notes/due/priority/status
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 interface PatchBody {
+  time_kind?: TaskTimeKind | null;
   title?: string;
   due_at?: string | null;
   start_at?: string | null;
@@ -64,6 +66,7 @@ interface PatchBody {
 
 const ALLOWED: (keyof PatchBody)[] = [
   "title",
+  "time_kind",
   "due_at",
   "start_at",
   "is_all_day",
@@ -101,26 +104,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     patch.priority = normalizePriority(patch.priority as string | number | null) ?? 0;
   }
 
-  // Auto-derive is_all_day when dates change but is_all_day wasn't explicitly set
-  if (("start_at" in patch || "due_at" in patch) && !("is_all_day" in patch)) {
-    // Check the raw ISO string for midnight in sender's timezone (not UTC).
-    // "T00:00:00+08:00" = midnight Taipei = all-day; "T10:30:00" = timed.
-    const midnightRe = /T00:00:00([Z+-]|$)/;
-    const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
-    const hasTime = (iso: unknown) => {
-      if (!iso || typeof iso !== "string") return false;
-      return !dateOnlyRe.test(iso) && !midnightRe.test(iso);
-    };
-    if (hasTime(patch.start_at) || hasTime(patch.due_at)) {
-      patch.is_all_day = false;
-    }
-  }
-
-  if ("start_at" in patch || "due_at" in patch) {
-    const { data: current, error } = await ctx.supabase.from("tasks").select("start_at,due_at,is_all_day").eq("id", params.id).eq("user_id", ctx.userId).maybeSingle();
+  if ("start_at" in patch || "due_at" in patch || "time_kind" in patch || "is_all_day" in patch) {
+    const { data: current, error } = await ctx.supabase.from("tasks").select("start_at,due_at,is_all_day,time_kind").eq("id", params.id).eq("user_id", ctx.userId).maybeSingle();
     if (error) return jsonError(500, "db_error", error.message);
     if (!current) return jsonError(404, "not_found", "Task not found.");
-    try { Object.assign(patch, resolveTaskDates(current, patch)); }
+    try {
+      if ([patch.start_at, patch.due_at].some(v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) {
+        const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
+        if (prefsError) return jsonError(500, 'db_error', prefsError.message);
+        for (const key of ['start_at', 'due_at'] as const) if (key in patch) patch[key] = normalizeTaskDate(patch[key] as string | null, prefs?.timezone ?? 'UTC');
+      }
+      Object.assign(patch, resolveTaskDates(current, patch));
+    }
     catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }
   }
 

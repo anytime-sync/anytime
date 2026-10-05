@@ -489,6 +489,12 @@ export type StringKey =
   | "taskPanel.close"
   | "taskPanel.done"
   | "taskPanel.titlePlaceholder"
+  | "taskPanel.timeKind"
+  | "taskPanel.timeDeadline"
+  | "taskPanel.timeWork"
+  | "taskPanel.timeSpan"
+  | "taskPanel.timeHelp"
+  | "taskPanel.allDay"
   | "taskPanel.starts"
   | "taskPanel.ends"
   | "taskPanel.due"
@@ -841,6 +847,8 @@ export type StringKey =
   | "attachments.loading"
   | "attachments.deleteAria"
   | "attachments.delete"
+  | "dateTimePicker.apply"
+  | "dateTimePicker.cancel"
   | "dateTimePicker.pick"
   | "dateTimePicker.prevMonth"
   | "dateTimePicker.nextMonth"
@@ -1406,7 +1414,13 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.close": "Close",
     "taskPanel.done": "Done",
     "taskPanel.titlePlaceholder": "Task title",
-    "taskPanel.starts": "Starts",
+    "taskPanel.timeKind": "Calendar meaning",
+  "taskPanel.timeDeadline": "Deadline",
+  "taskPanel.timeWork": "Scheduled work",
+  "taskPanel.timeSpan": "Date span",
+  "taskPanel.timeHelp": "Deadlines appear as date markers. Set both dates to schedule work. Date spans include the end date.",
+  "taskPanel.allDay": "Date only",
+  "taskPanel.starts": "Starts",
     "taskPanel.ends": "Ends",
     "taskPanel.due": "Due",
     "taskPanel.snooze": "Snooze",
@@ -1760,6 +1774,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "attachments.loading": "Loading attachments…",
     "attachments.deleteAria": "delete attachment",
     "attachments.delete": "Delete",
+    "dateTimePicker.apply": "Apply",
+    "dateTimePicker.cancel": "Cancel",
     "dateTimePicker.pick": "Pick date & time",
     "dateTimePicker.prevMonth": "Previous month",
     "dateTimePicker.nextMonth": "Next month",
@@ -2313,6 +2329,12 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.close": "關閉",
     "taskPanel.done": "完成",
     "taskPanel.titlePlaceholder": "任務標題",
+    "taskPanel.timeKind": "日曆用途",
+    "taskPanel.timeDeadline": "截止日期",
+    "taskPanel.timeWork": "安排工作",
+    "taskPanel.timeSpan": "日期範圍",
+    "taskPanel.timeHelp": "截止日期顯示為日期標記。設定開始與結束時間以安排工作。日期範圍包含結束日期。",
+    "taskPanel.allDay": "僅日期",
     "taskPanel.starts": "開始",
     "taskPanel.ends": "結束",
     "taskPanel.due": "到期",
@@ -2667,6 +2689,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "attachments.loading": "載入附件中…",
     "attachments.deleteAria": "刪除附件",
     "attachments.delete": "刪除",
+    "dateTimePicker.apply": "套用",
+    "dateTimePicker.cancel": "取消",
     "dateTimePicker.pick": "選擇日期與時間",
     "dateTimePicker.prevMonth": "上個月",
     "dateTimePicker.nextMonth": "下個月",
@@ -3213,6 +3237,12 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.close": "关闭",
     "taskPanel.done": "完成",
     "taskPanel.titlePlaceholder": "任务标题",
+    "taskPanel.timeKind": "日历用途",
+    "taskPanel.timeDeadline": "截止日期",
+    "taskPanel.timeWork": "安排工作",
+    "taskPanel.timeSpan": "日期范围",
+    "taskPanel.timeHelp": "截止日期显示为日期标记。设置开始与结束时间以安排工作。日期范围包含结束日期。",
+    "taskPanel.allDay": "仅日期",
     "taskPanel.starts": "开始",
     "taskPanel.ends": "结束",
     "taskPanel.due": "到期",
@@ -3567,6 +3597,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "attachments.loading": "正在加载附件…",
     "attachments.deleteAria": "删除附件",
     "attachments.delete": "删除",
+    "dateTimePicker.apply": "应用",
+    "dateTimePicker.cancel": "取消",
     "dateTimePicker.pick": "选择日期和时间",
     "dateTimePicker.prevMonth": "上个月",
     "dateTimePicker.nextMonth": "下个月",
@@ -4113,6 +4145,12 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.close": "閉じる",
     "taskPanel.done": "完了",
     "taskPanel.titlePlaceholder": "タスク名",
+    "taskPanel.timeKind": "カレンダーでの用途",
+    "taskPanel.timeDeadline": "期限",
+    "taskPanel.timeWork": "作業予定",
+    "taskPanel.timeSpan": "日付の範囲",
+    "taskPanel.timeHelp": "期限は日付のマーカーとして表示されます。作業予定には開始と終了を設定してください。日付の範囲には終了日も含まれます。",
+    "taskPanel.allDay": "日付のみ",
     "taskPanel.starts": "開始",
     "taskPanel.ends": "終了",
     "taskPanel.due": "期限",
@@ -4467,6 +4505,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "attachments.loading": "添付ファイルを読み込み中…",
     "attachments.deleteAria": "添付ファイルを削除",
     "attachments.delete": "削除",
+    "dateTimePicker.apply": "適用",
+    "dateTimePicker.cancel": "キャンセル",
     "dateTimePicker.pick": "日時を選択",
     "dateTimePicker.prevMonth": "前の月",
     "dateTimePicker.nextMonth": "次の月",
@@ -5013,6 +5053,12 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskPanel.close": "닫기",
     "taskPanel.done": "완료",
     "taskPanel.titlePlaceholder": "작업 제목",
+    "taskPanel.timeKind": "캘린더 용도",
+    "taskPanel.timeDeadline": "마감일",
+    "taskPanel.timeWork": "작업 일정",
+    "taskPanel.timeSpan": "날짜 범위",
+    "taskPanel.timeHelp": "마감일은 날짜 표시로 나타납니다. 작업 일정에는 시작과 종료를 설정하세요. 날짜 범위는 종료일을 포함합니다.",
+    "taskPanel.allDay": "날짜만",
     "taskPanel.starts": "시작",
     "taskPanel.ends": "종료",
     "taskPanel.due": "마감",
@@ -5367,6 +5413,8 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "attachments.loading": "첨부 파일 불러오는 중…",
     "attachments.deleteAria": "첨부 파일 삭제",
     "attachments.delete": "삭제",
+    "dateTimePicker.apply": "적용",
+    "dateTimePicker.cancel": "취소",
     "dateTimePicker.pick": "날짜와 시간 선택",
     "dateTimePicker.prevMonth": "이전 달",
     "dateTimePicker.nextMonth": "다음 달",

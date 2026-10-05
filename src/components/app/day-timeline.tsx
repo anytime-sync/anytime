@@ -2,7 +2,7 @@
 import { calendarTask } from "@/lib/task-schedule";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { format, isSameDay, startOfDay, endOfDay, differenceInMinutes } from "date-fns";
+import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
 import { Clock, Plus } from "lucide-react";
 import {
   DndContext,
@@ -134,12 +134,12 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
 
     if (newStart.getTime() === origStart.getTime()) return;
 
-    const dur = task.start_at
-      ? Math.max(15, differenceInMinutes(origDue, new Date(task.start_at)))
-      : 30;
-    const newDue = new Date(newStart.getTime() + dur * 60_000);
+    if (!task.start_at) return;
+    const durationMs = origDue.getTime() - Date.parse(task.start_at);
+    if (durationMs <= 0) return;
+    const newDue = new Date(newStart.getTime() + durationMs);
 
-    update.mutate({ id: task.id, start_at: newStart.toISOString(), due_at: newDue.toISOString() });
+    update.mutate({ id: task.id, time_kind: "work", start_at: newStart.toISOString(), due_at: newDue.toISOString() });
   }
 
   useEffect(() => {
@@ -164,7 +164,8 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
         const anchor = t.start_at ?? t.due_at;
         if (!anchor) return false;
         const a = new Date(anchor);
-        return a >= dayStart && a <= dayEnd;
+        const end = new Date(t.due_at ?? anchor);
+        return a <= dayEnd && (t.is_all_day ? startOfDay(end) >= dayStart : end > dayStart);
       }),
     [tasks, dayStart.getTime(), dayEnd.getTime()]
   );
@@ -172,29 +173,13 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
   const allDayTasks = dayTasks.filter((t) => t.is_all_day || (!t.start_at && !t.due_at));
   const RAIL_MAX_MIN = (RAIL_END_HOUR - RAIL_START_HOUR) * 60;
   const timed = dayTasks
-    .filter((t) => !t.is_all_day && t.due_at)
+    .filter((t) => !t.is_all_day && t.start_at && t.due_at && Date.parse(t.due_at) > Date.parse(t.start_at))
     .map((t) => {
       const rawDue = new Date(t.due_at!);
-      // Resolve a start/end pair that always spans a real interval so the
-      // chip is visible AND positioned at its labeled time.
-      //  - Has start_at and start < due  -> use as-is.
-      //  - Has start_at but start >= due (zero-duration / point-in-time)
-      //    OR has only due  -> render a 30-min block STARTING at the
-      //    anchor time (start = anchor, end = anchor + 30), so a task
-      //    labeled "12:00 PM" sits at 12:00, not 11:30. (2026-06-16)
-      const explicitStart = t.start_at ? new Date(t.start_at) : null;
-      let start: Date;
-      let due: Date;
-      if (explicitStart && explicitStart.getTime() < rawDue.getTime()) {
-        start = explicitStart;
-        due = rawDue;
-      } else {
-        const anchor = explicitStart ?? rawDue;
-        start = anchor;
-        due = new Date(anchor.getTime() + 30 * 60_000);
-      }
-      const startMin = minutesFromRailStart(start);
-      const endMin = minutesFromRailStart(due);
+      const start = new Date(t.start_at!);
+      const due = rawDue;
+      const startMin = (start.getTime() - dayStart.getTime()) / 60000 - RAIL_START_HOUR * 60;
+      const endMin = (due.getTime() - dayStart.getTime()) / 60000 - RAIL_START_HOUR * 60;
       // Clamp the chip into the visible 6 AM–11 PM rail. Tasks that fall
       // entirely before 6 AM or after 11 PM (e.g. a 12:30 AM "Closing")
       // used to be dropped silently. Instead, pin them to the nearest

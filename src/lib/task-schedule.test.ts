@@ -9,20 +9,20 @@ it('does not stretch the block after repeated overdue moves', () => {
   for (const day of ['14','21','28']) current = { ...current, ...resolveTaskDates(current, { due_at: `2026-09-${day}T09:00:00Z` }) };
   expect(Date.parse(current.due_at) - Date.parse(current.start_at!)).toBe(1800000);
 });
-it('renders a stale multi-week interval once at its deadline without changing storage', () => {
-  const stale = { ...task, due_at: '2026-10-01T09:00:00Z' };
+it('projects explicit deadline ranges without altering storage', () => {
+  const stale = { ...task, time_kind: 'deadline' as const, due_at: '2026-10-01T09:00:00Z' };
   expect(calendarTask(stale).start_at).toBeNull();
   expect(stale.start_at).toBe(task.start_at);
-  expect(resolveTaskDates(stale, { due_at: '2026-10-02T09:00:00Z' }).start_at).toBeNull();
+  expect(resolveTaskDates(stale, { due_at: '2026-10-02T09:00:00Z' })).toEqual({ due_at: '2026-10-02T09:00:00Z' });
 });
 it('preserves explicit windows and nulls; rejects inversion without changing the deadline', () => {
-  expect(resolveTaskDates(task, { start_at: null })).toEqual({ start_at: null });
+  expect(resolveTaskDates(task, { start_at: null })).toEqual({ start_at: null, time_kind: 'deadline' });
   expect(() => resolveTaskDates(task, { start_at: '2026-10-01T10:00:00Z', due_at: task.due_at })).toThrow();
-  expect(resolveTaskDates(task, { due_at: null })).toEqual({ due_at: null });
+  expect(resolveTaskDates(task, { due_at: null })).toEqual({ due_at: null, time_kind: 'deadline' });
   expect(() => resolveTaskDates(task, { due_at: 'not a date' })).toThrow();
 });
 it('keeps all-day deadlines on one day', () => {
-  expect(calendarTask({ ...task, is_all_day: true }).start_at).toBeNull();
+  expect(calendarTask({ ...task, time_kind: "deadline", is_all_day: true }).start_at).toBeNull();
 });
 it('snoozes old deadlines into the future, preserving local clock time', () => {
   const now = new Date(2026, 8, 12, 12);

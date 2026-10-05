@@ -25,6 +25,7 @@ import {
   isBotConfigured,
   verifyWebhookSecret,
 } from "@/lib/telegram";
+import { taskTimeKind } from "@/lib/task-schedule";
 import { parseQuickInput } from "@/lib/quick-parse";
 
 // Service-role client for DB access
@@ -202,6 +203,7 @@ async function createTask(
       status: "open",
       priority: opts?.priority ?? 0,
       is_all_day: isAllDay,
+      time_kind: taskTimeKind({ start_at: startAt, due_at: dueAt, is_all_day: isAllDay }),
       rrule: opts?.rrule ?? null,
     })
     .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
@@ -274,17 +276,6 @@ function formatTaskList(tasks: TaskRow[], title: string): string {
  * parsed result back to a true UTC instant. This makes "tomorrow 3pm"
  * mean 3pm Taipei, not 3pm UTC.
  */
-const TELEGRAM_TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Taipei UTC+8
-
-function shiftIsoFromTaipeiWallClock(iso: string | null): string | null {
-  if (!iso) return null;
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return null;
-  // chrono produced a Date whose wall-clock fields we want to treat as
-  // Taipei local; subtract the offset to get the real UTC instant.
-  return new Date(t - TELEGRAM_TZ_OFFSET_MS).toISOString();
-}
-
 function parseTaskInput(text: string): {
   title: string;
   dueAt?: string;
@@ -297,14 +288,11 @@ function parseTaskInput(text: string): {
   if (!raw) return { title: "" };
 
   try {
-    const p = parseQuickInput(raw);
+    const p = parseQuickInput(raw, { timezoneOffsetMinutes: 480 });
     return {
       title: (p.title || raw).slice(0, 500),
-      // Only shift TIMED values. All-day due_at is a date-only midnight
-      // marker that should NOT be offset (chrono emits local midnight,
-      // which we keep as the day boundary the app expects).
-      dueAt: p.is_all_day ? (p.due_at ?? undefined) : (shiftIsoFromTaipeiWallClock(p.due_at) ?? undefined),
-      startAt: p.is_all_day ? undefined : (shiftIsoFromTaipeiWallClock(p.start_at) ?? undefined),
+      dueAt: p.due_at ?? undefined,
+      startAt: p.start_at ?? undefined,
       isAllDay: p.is_all_day,
       priority: p.priority,
       rrule: p.rrule,
