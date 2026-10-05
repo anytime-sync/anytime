@@ -8,6 +8,7 @@ import path from "node:path";
  * runner stays fast and dependency-light.
  */
 export default defineConfig({
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],

@@ -1,26 +1,28 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-const state = vi.hoisted(() => ({ current: { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', is_all_day: false }, patch: null as Record<string, unknown> | null, filters: [] as unknown[], authorized: true }));
+import type { TaskDates } from '@/lib/task-schedule';
+const base = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', is_all_day: false };
+const state = vi.hoisted(() => ({ current: {} as TaskDates, timezone: 'Asia/Taipei', patch: null as Record<string, unknown> | null, filters: [] as unknown[], authorized: true }));
 vi.mock('../../_lib/auth', () => ({
-  requireApiAuth: async () => state.authorized ? { ok: true, userId: 'owner', supabase: { from: () => {
+  requireApiAuth: async () => state.authorized ? { ok: true, userId: 'owner', supabase: { from: (table: string) => {
     const query = {
       select: () => query,
       eq: (column: string, value: string) => { state.filters.push([column, value]); return query; },
       update: (patch: Record<string, unknown>) => { state.patch = patch; return query; },
-      maybeSingle: async () => ({ data: state.patch ?? state.current, error: null }),
+      maybeSingle: async () => ({ data: table === 'user_preferences' ? { timezone: state.timezone } : state.patch ?? state.current, error: null }),
     }; return query;
   } } } : { ok: false, response: Response.json({}, { status: 401 }) },
   jsonError: (status: number, code: string, message: string) => Response.json({ code, message }, { status }),
   jsonOk: (value: unknown) => Response.json(value),
 }));
 import { PATCH } from './route';
-beforeEach(() => { state.patch = null; state.filters = []; state.authorized = true; });
+beforeEach(() => { state.current = { ...base }; state.timezone = 'Asia/Taipei'; state.patch = null; state.filters = []; state.authorized = true; });
 const request = (body: unknown) => new NextRequest('https://example.test/api/v1/tasks/task', { method: 'PATCH', body: JSON.stringify(body) });
 it('MCP/API due-only moves preserve a 30-minute work block and scope both queries', async () => {
   const response = await PATCH(request({ due_at: '2026-09-14T09:00:00Z' }), { params: { id: 'task' } });
   expect(response.status).toBe(200);
   expect(state.patch?.start_at).toBe('2026-09-14T08:30:00.000Z');
-  expect(state.filters.filter(v => JSON.stringify(v) === '["user_id","owner"]')).toHaveLength(2);
+  expect(state.filters.filter(v => JSON.stringify(v) === '["user_id","owner"]')).toHaveLength(3);
 });
 it('does not silently replace a supplied deadline with a later one', async () => {
   const response = await PATCH(request({ start_at: '2026-09-15T09:00:00Z', due_at: '2026-09-14T09:00:00Z' }), { params: { id: 'task' } });
@@ -33,4 +35,21 @@ it('does not read or write dates for unauthorized callers', async () => {
   state.authorized = false;
   expect((await PATCH(request({ due_at: '2026-09-14' }), { params: { id: 'task' } })).status).toBe(401);
   expect(state.filters).toHaveLength(0); expect(state.patch).toBeNull();
+});
+
+it.each(['deadline', 'span'] as const)('rejects a due-only %s becoming work before any write', async kind => {
+  state.current = { start_at: null, due_at: base.due_at, is_all_day: kind === 'span', time_kind: kind };
+  for (let i = 0; i < 2; i++) {
+    expect((await PATCH(request({ time_kind: 'work', is_all_day: false }), { params: { id: 'task' } })).status).toBe(400);
+    expect(state.patch).toBeNull();
+    expect(state.current.start_at).toBeNull();
+  }
+  expect((await PATCH(request({ time_kind: 'work', start_at: base.start_at }), { params: { id: 'task' } })).status).toBe(200);
+});
+
+it('reschedules spans with the stored account timezone instead of the server zone', async () => {
+  state.timezone = 'America/New_York';
+  state.current = { start_at: '2026-10-31T04:00:00Z', due_at: '2026-11-02T05:00:00Z', is_all_day: true, time_kind: 'span' };
+  expect((await PATCH(request({ due_at: '2026-11-09' }), { params: { id: 'task' } })).status).toBe(200);
+  expect(state.patch).toMatchObject({ start_at: '2026-11-07T05:00:00.000Z', due_at: '2026-11-09T05:00:00.000Z' });
 });

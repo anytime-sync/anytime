@@ -1,5 +1,5 @@
 "use client";
-import { calendarTask, snoozedDue } from "@/lib/task-schedule";
+import { snoozedDue, taskTimeKind, type TaskTimeKind } from "@/lib/task-schedule";
 import { AiTaskActions } from "./ai-task-actions";
 import { TaskComments } from "./task-comments";
 
@@ -85,55 +85,6 @@ export function TaskDetailPanel() {
   }, [task]);
 
 
-  // Auto-repair dates on load — fixes existing tasks with:
-  // 1. Only one date set (missing start or end)
-  // 2. End date before start date (inverted)
-  // 3. Gap smaller than 30 minutes
-  useEffect(() => {
-    if (!task) return;
-    const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
-    const hasStart = !!task.start_at;
-    const hasDue = !!task.due_at;
-
-    // Case 1: both missing — let user pick, do nothing
-    if (!hasStart && !hasDue) return;
-
-    // Case 2: only start set — fill end
-    if (hasStart && !hasDue) {
-      update.mutate({
-        id: task.id,
-        due_at: new Date(new Date(task.start_at!).getTime() + MIN_DURATION).toISOString(),
-      });
-      return;
-    }
-
-    // Case 3: only end set — fill start
-    if (!hasStart && hasDue) {
-      update.mutate({
-        id: task.id,
-        start_at: task.due_at!,
-      });
-      return;
-    }
-
-    // Case 4: both set — check for inversion or too-small gap
-    const startMs = new Date(task.start_at!).getTime();
-    const dueMs = new Date(task.due_at!).getTime();
-    if (dueMs < startMs) {
-      // End is before start — fix by setting end = start + 30min
-      update.mutate({
-        id: task.id,
-        due_at: new Date(startMs + MIN_DURATION).toISOString(),
-      });
-    } else if (dueMs - startMs < MIN_DURATION) {
-      // Gap too small — extend end to start + 30min
-      update.mutate({
-        id: task.id,
-        due_at: new Date(startMs + MIN_DURATION).toISOString(),
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id, task?.start_at, task?.due_at]);
   if (!id || !task) return null;
 
   const RECURRENCE_PRESETS = recurrencePresets(lang);
@@ -225,93 +176,35 @@ export function TaskDetailPanel() {
           }}
         />
 
-        {/* Start + Due pair — Starts is optional. When set, the task
-            is treated as a time block and renders that way on the
-            timeline view. Empty Starts = "due-only" task. */}
+        <Field label={t(lang, "taskPanel.timeKind")}>
+          <select className="input w-full" value={taskTimeKind(task)} onChange={(e) => {
+            const kind = e.target.value as TaskTimeKind;
+            update.mutate({ id: task.id, time_kind: kind, is_all_day: kind === 'span' ? true : kind === 'work' ? false : task.is_all_day });
+          }}>
+            <option value="deadline">{t(lang, "taskPanel.timeDeadline")}</option>
+            <option value="work" disabled={!task.start_at || !task.due_at || Date.parse(task.due_at) <= Date.parse(task.start_at)}>{t(lang, "taskPanel.timeWork")}</option>
+            <option value="span">{t(lang, "taskPanel.timeSpan")}</option>
+          </select>
+          <p className="text-xs text-muted-fg mt-1">{t(lang, "taskPanel.timeHelp")}</p>
+        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={task.is_all_day} onChange={(e) => update.mutate({
+            id: task.id, is_all_day: e.target.checked,
+            time_kind: taskTimeKind(task) === 'deadline' ? 'deadline' : e.target.checked ? 'span'
+              : task.start_at && task.due_at && Date.parse(task.due_at) > Date.parse(task.start_at) ? 'work' : 'deadline',
+          })} />
+          {t(lang, "taskPanel.allDay")}
+        </label>
         <div className="grid grid-cols-1 gap-3">
           <Field label={t(lang, "taskPanel.starts")}>
-            <DateTimePicker
-              value={task.start_at}
+            <DateTimePicker value={task.start_at} allDay={task.is_all_day}
               placeholder={t(lang, "taskPanel.startPlaceholder")}
-              onChange={(iso) => {
-                const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
-                const patch: { id: string; start_at: string | null; due_at?: string } = {
-                  id: task.id,
-                  start_at: iso,
-                };
-                if (iso) {
-                  const newStartMs = new Date(iso).getTime();
-                  if (!task.due_at) {
-                    // Auto-fill due = start + 30min
-                    patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
-                  } else {
-                    const oldDueMs = new Date(task.due_at).getTime();
-                    if (newStartMs > oldDueMs) {
-                      // Start moved past due — push due forward with min duration
-                      patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
-                    } else if (oldDueMs - newStartMs < MIN_DURATION) {
-                      // Gap too small — enforce minimum 30 min
-                      patch.due_at = new Date(newStartMs + MIN_DURATION).toISOString();
-                    }
-                  }
-                } else {
-                  // User tried to clear start — don't allow empty.
-                  // Set start = due (or now if due also missing).
-                  if (task.due_at) {
-                    patch.start_at = task.due_at;
-                    // Enforce min duration
-                    patch.due_at = new Date(new Date(task.due_at).getTime() + MIN_DURATION).toISOString();
-                  } else {
-                    const now = new Date();
-                    patch.start_at = now.toISOString();
-                    patch.due_at = new Date(now.getTime() + MIN_DURATION).toISOString();
-                  }
-                }
-                update.mutate(patch);
-              }}
-            />
+              onChange={(iso) => update.mutate({ id: task.id, start_at: iso, due_at: task.due_at })} />
           </Field>
-          <Field label={task.start_at ? t(lang, "taskPanel.ends") : t(lang, "taskPanel.due")}>
-            <DateTimePicker
-              value={task.due_at}
+          <Field label={taskTimeKind(task) === 'work' ? t(lang, "taskPanel.ends") : t(lang, "taskPanel.due")}>
+            <DateTimePicker value={task.due_at} allDay={task.is_all_day}
               placeholder={t(lang, "taskPanel.duePlaceholder")}
-              onChange={(iso) => {
-                const MIN_DURATION = 30 * 60 * 1000; // 30 minutes
-                const patch: { id: string; due_at: string | null; is_all_day: boolean; start_at?: string } = {
-                  id: task.id,
-                  due_at: iso,
-                  is_all_day: false,
-                };
-                if (iso) {
-                  const newDueMs = new Date(iso).getTime();
-                  if (!task.start_at) {
-                    // Auto-fill start = due - 30min
-                    patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
-                  } else {
-                    const oldStartMs = new Date(task.start_at).getTime();
-                    if (newDueMs < oldStartMs) {
-                      // Due moved before start — pull start back with min duration
-                      patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
-                    } else if (newDueMs - oldStartMs < MIN_DURATION) {
-                      // Gap too small — enforce minimum 30 min
-                      patch.start_at = new Date(newDueMs - MIN_DURATION).toISOString();
-                    }
-                  }
-                } else {
-                  // User tried to clear due — don't allow empty.
-                  // Set due = start + 30min (or now + 30min if start also missing).
-                  if (task.start_at) {
-                    const startMs = new Date(task.start_at).getTime();
-                    patch.due_at = new Date(startMs + MIN_DURATION).toISOString();
-                  } else {
-                    const now = new Date();
-                    patch.start_at = now.toISOString();
-                    patch.due_at = new Date(now.getTime() + MIN_DURATION).toISOString();
-                  }
-                }
-                update.mutate(patch);
-              }}
-            />
+              onChange={(iso) => update.mutate({ id: task.id, start_at: task.start_at, due_at: iso })} />
           </Field>
         </div>
 

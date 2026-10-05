@@ -7,6 +7,7 @@ const tz = () =>
   Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
 export type ParsedTask = {
+  time_kind?: import("@/lib/task-schedule").TaskTimeKind | null;
   title: string;
   start_at?: string | null;
   due_at: string | null;

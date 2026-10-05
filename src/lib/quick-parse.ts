@@ -1,4 +1,5 @@
 import * as chrono from "chrono-node";
+import { taskTimeKind, type TaskTimeKind } from "./task-schedule";
 
 export type ParsedQuickInput = {
   title: string;
@@ -7,6 +8,7 @@ export type ParsedQuickInput = {
   start_at: string | null;
   due_at: string | null;
   is_all_day: boolean;
+  time_kind: TaskTimeKind;
   priority: 0 | 1 | 3 | 5;
   tagNames: string[];
   projectName?: string;
@@ -32,6 +34,8 @@ export type ParsedQuickInput = {
  * existing "Work" list without typing ~Work.
  */
 export type QuickParseContext = {
+  /** Reference timezone for server callers (minutes east of UTC). */
+  timezoneOffsetMinutes?: number;
   existingTags?: string[];
   existingProjects?: string[];
   /**
@@ -64,6 +68,16 @@ export type QuickParseContext = {
  *   - ~ListName → project routing
  */
 export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQuickInput {
+  const instant = new Date();
+  const offset = ctx?.timezoneOffsetMinutes;
+  const reference = offset == null ? instant : { instant, timezone: offset };
+  const wallNow = offset == null ? instant : new Date(+instant + (offset + instant.getTimezoneOffset()) * 60000);
+  const localIso = (date: Date) => offset == null ? date.toISOString() : new Date(+date - (offset + date.getTimezoneOffset()) * 60000).toISOString();
+  const componentIso = (c: any, allDay = false, dateFrom = c) => {
+    if (offset == null && !allDay && dateFrom === c) return c.date().toISOString();
+    if (c.isCertain('timezoneOffset') && !allDay && dateFrom === c) return c.date().toISOString();
+    return localIso(new Date(dateFrom.get('year'), dateFrom.get('month') - 1, dateFrom.get('day'), allDay ? 0 : c.get('hour') ?? 0, allDay ? 0 : c.get('minute') ?? 0));
+  };
   // Normalize common typos / shorthands so the chrono fallback still gets
   // useful date phrases when the LLM parser is unavailable.
   let s = raw
@@ -192,7 +206,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     const atMatch = s.match(atRx);
     if (atMatch) {
       const phrase = atMatch[1]!.trim();
-      const r = chrono.parseDate(phrase, new Date(), { forwardDate: true });
+      const r = chrono.parseDate(phrase, reference, { forwardDate: true });
       if (r) {
         reminderAbsolute = r;
         s = s.replace(atMatch[0], " ").replace(/\s+/g, " ").trim();
@@ -237,7 +251,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
       m2 >= 1 && m2 <= 12 && d2 >= 1 && d2 <= 31 &&
       matchText
     ) {
-      const now = new Date();
+      const now = wallNow;
       let year = now.getFullYear();
       let startDate = new Date(year, m1 - 1, d1);
       // If the parsed start is more than 6 months in the past, assume
@@ -252,8 +266,8 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
       if (endDate < startDate) {
         endDate = new Date(year + 1, m2 - 1, d2);
       }
-      rangeStartIso = startDate.toISOString();
-      rangeEndIso = endDate.toISOString();
+      rangeStartIso = localIso(startDate);
+      rangeEndIso = localIso(endDate);
       s = s.replace(matchText, " ").replace(/\s+/g, " ").trim();
     }
   }
@@ -270,30 +284,22 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
   let start_at: string | null = null;
   let due_at: string | null = null;
   let is_all_day = true;
-  const results = chrono.parse(s, new Date(), { forwardDate: true });
+  const results = chrono.parse(s, reference, { forwardDate: true });
   if (results.length) {
     const has = (r: any, k: string) => r?.start?.isCertain(k);
     const dateRes = results.find((r: any) => has(r, "day") || has(r, "weekday") || has(r, "month"));
     const timeRes = results.find((r: any) => has(r, "hour"));
 
     if (dateRes && timeRes && dateRes !== timeRes) {
-      const baseDate = dateRes.start.date();
-      const t1 = timeRes.start.date();
-      const merged = new Date(baseDate);
-      merged.setHours(t1.getHours(), t1.getMinutes(), 0, 0);
+      const merged = componentIso(timeRes.start, false, dateRes.start);
       if (timeRes.end) {
-        const t2 = timeRes.end.date();
-        const mergedEnd = new Date(baseDate);
-        mergedEnd.setHours(t2.getHours(), t2.getMinutes(), 0, 0);
-        start_at = merged.toISOString();
-        due_at = mergedEnd.toISOString();
-      } else {
-        // Single time — set start_at = that time, due_at = +30min.
-        // A task with only due_at has no timeline slot.
-        start_at = merged.toISOString();
-        const mergedEnd30 = new Date(merged.getTime() + 30 * 60_000);
-        due_at = mergedEnd30.toISOString();
-      }
+        let mergedEnd = componentIso(timeRes.end, false, dateRes.start);
+        if (Date.parse(mergedEnd) < Date.parse(merged)) {
+          const nextDay = new Date(dateRes.start.get('year'), dateRes.start.get('month') - 1, dateRes.start.get('day') + 1, timeRes.end.get('hour'), timeRes.end.get('minute'));
+          mergedEnd = localIso(nextDay);
+        }
+        start_at = merged; due_at = mergedEnd;
+      } else due_at = merged;
       is_all_day = false;
       const spans = [dateRes, timeRes].sort((a, b) => b.index - a.index);
       for (const sp of spans) {
@@ -307,19 +313,21 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
         const known = (k: string) => startC.isCertain(k as any);
         is_all_day = !(known("hour") || known("minute"));
         if (r.end) {
-          start_at = startC.date().toISOString();
-          due_at = r.end.date().toISOString();
+          start_at = componentIso(startC, is_all_day);
+          due_at = componentIso(r.end, is_all_day);
         } else if (!is_all_day) {
-          // Single timed expression — start_at = parsed time, due_at = +30min.
-          start_at = startC.date().toISOString();
-          due_at = new Date(startC.date().getTime() + 30 * 60_000).toISOString();
+          due_at = componentIso(startC);
         } else {
           // All-day: due_at = midnight, no start_at.
-          due_at = startC.date().toISOString();
+          due_at = componentIso(startC, true);
         }
         s = (s.slice(0, r.index) + s.slice(r.index + r.text.length)).replace(/\s+/g, " ").trim();
       }
     }
+  }
+
+  if (rangeStartIso && rangeEndIso) {
+    start_at = rangeStartIso; due_at = rangeEndIso; is_all_day = true;
   }
 
   // ---------- compute reminder_at ----------
@@ -392,6 +400,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     start_at,
     due_at,
     is_all_day,
+    time_kind: taskTimeKind({ start_at, due_at, is_all_day }),
     priority: finalPriority,
     tagNames,
     projectName,

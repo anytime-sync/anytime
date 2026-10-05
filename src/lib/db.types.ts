@@ -83,6 +83,8 @@ export type Task = {
   completed_at: string | null;
   start_at: string | null;
   due_at: string | null;
+  /** Null preserves legacy intent until explicitly reviewed. */
+  time_kind?: import("./task-schedule").TaskTimeKind | null;
   is_all_day: boolean;
   priority: Priority;
   position: number;

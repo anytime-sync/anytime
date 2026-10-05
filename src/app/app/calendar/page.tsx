@@ -1,5 +1,5 @@
 "use client";
-import { calendarTask } from "@/lib/task-schedule";
+import { calendarTask, taskTimeKind } from "@/lib/task-schedule";
 
 import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
@@ -523,8 +523,10 @@ function MonthView({
       due_at: newDue.toISOString(),
     };
     if (t.start_at) {
-      const newStart = new Date(t.start_at);
-      newStart.setDate(newStart.getDate() + offsetDays);
+      const newStart = taskTimeKind(t) === 'work'
+        ? new Date(Date.parse(t.start_at) + newDue.getTime() - origDue.getTime())
+        : new Date(t.start_at);
+      if (taskTimeKind(t) !== 'work') newStart.setDate(newStart.getDate() + offsetDays);
       // Guard: never let start drift past due (start <= due always).
       if (newStart.getTime() <= newDue.getTime()) {
         updateData.start_at = newStart.toISOString();

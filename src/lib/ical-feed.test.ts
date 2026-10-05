@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildIcs, type IcsTaskRow } from './ical-feed';
+import ICAL from 'ical.js';
+import { buildEventInput } from './calendar-write';
 
 const base: IcsTaskRow = {
   id: 'task-1', title: 'Meeting', notes: null,
@@ -19,15 +21,15 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed(patch)).not.toContain('BEGIN:VEVENT');
   });
   it('represents an active stale interval at its deadline, keeping the same UID', () => {
-    const ics = feed({ start_at: '2026-08-02T02:30:00Z', due_at: '2026-10-04T03:00:00Z', rrule: 'FREQ=DAILY' });
-    expect(ics).toContain('DTSTART:20261004T030000Z\r\nDTEND:20261004T033000Z');
+    const ics = feed({ time_kind: 'deadline', start_at: '2026-08-02T02:30:00Z', due_at: '2026-10-04T03:00:00Z', rrule: 'FREQ=DAILY' });
+    expect(ics).toContain('DTSTART;VALUE=DATE:20261004\r\nDTEND;VALUE=DATE:20261005');
     expect(ics).toContain('UID:task-1@firstlight.to');
     expect(ics).toContain('RRULE:FREQ=DAILY');
     expect(ics).toContain('TRANSP:TRANSPARENT');
   });
   it('preserves real same-day meeting times and weekly recurrence', () => {
     const ics = feed({ rrule: 'FREQ=WEEKLY;BYDAY=SU' });
-    expect(ics).toContain('DTSTART:20261004T010000Z\r\nDTEND:20261004T013000Z');
+    expect(ics).toContain('DTSTART;TZID=Asia/Taipei:20261004T090000\r\nDURATION:PT1800S');
     expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=SU');
     expect(ics).toContain('TRANSP:OPAQUE');
   });
@@ -44,7 +46,7 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed({ is_all_day: true, due_at: null })).toContain('DTSTART;VALUE=DATE:20261004\r\nDTEND;VALUE=DATE:20261005');
   });
   it('uses the deadline for stale all-day starts and preserves month-end recurrence', () => {
-    const ics = feed({ is_all_day: true, start_at: '2026-10-07T00:00:00Z', due_at: '2026-10-08T00:30:00Z', rrule: 'FREQ=MONTHLY;BYMONTHDAY=8' });
+    const ics = feed({ time_kind: 'deadline', is_all_day: true, start_at: '2026-10-07T00:00:00Z', due_at: '2026-10-08T00:30:00Z', rrule: 'FREQ=MONTHLY;BYMONTHDAY=8' });
     expect(ics).toContain('DTSTART;VALUE=DATE:20261008\r\nDTEND;VALUE=DATE:20261009');
     expect(ics).toContain('RRULE:FREQ=MONTHLY;BYMONTHDAY=8');
   });
@@ -70,5 +72,20 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed({}, 'Invalid/Timezone')).toContain('X-WR-TIMEZONE:UTC');
     expect(feed({ start_at: 'invalid', due_at: null })).not.toContain('BEGIN:VEVENT');
     expect(feed({ notes: 'a,b;c\nEND:VEVENT' })).toContain('DESCRIPTION:a\\,b\\;c\\nEND:VEVENT');
+  });
+  it('emits a timezone definition and local recurrence that agrees with Google across DST', () => {
+    const task = { ...base, user_id: 'owner', calendar_event_id: null, start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:00:00Z', rrule: 'FREQ=WEEKLY;COUNT=3' };
+    const ics = buildIcs([task], 'America/New_York');
+    expect(ics).toContain('BEGIN:VTIMEZONE\r\nTZID:America/New_York');
+    expect(ics).toContain('TZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500');
+    expect(ics).toContain('RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU');
+    expect(ics).toContain('DTSTART;TZID=America/New_York:20261025T090000\r\nDURATION:PT3600S');
+    const component = new ICAL.Component(ICAL.parse(ics));
+    const event = new ICAL.Event(component.getFirstSubcomponent('vevent')!);
+    const iterator = event.iterator();
+    const dates = [iterator.next()!, iterator.next()!, iterator.next()!];
+    expect(dates.map(date => date.toJSDate().toISOString())).toEqual(['2026-10-25T13:00:00.000Z', '2026-11-01T14:00:00.000Z', '2026-11-08T14:00:00.000Z']);
+    expect(event.duration.toSeconds()).toBe(3600);
+    expect(buildEventInput(task, 'America/New_York')).toMatchObject({ start: { dateTime: '2026-10-25T13:00:00.000Z', timeZone: 'America/New_York' }, recurrence: [`RRULE:${task.rrule}`] });
   });
 });

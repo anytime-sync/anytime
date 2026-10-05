@@ -1,5 +1,7 @@
-import { calendarTask } from "./task-schedule";
-import { RRule } from "rrule";
+import { projectTaskCalendar, validTimezone, taskCalendarDescription } from "./task-calendar";
+import type { TaskTimeKind } from "./task-schedule";
+import { getVtimezoneComponent } from '@touch4it/ical-timezones';
+import { wallClock } from './day-window';
 
 export type IcsTaskRow = {
   id: string;
@@ -14,6 +16,7 @@ export type IcsTaskRow = {
   created_at: string;
   estimated_minutes: number | null;
   status?: string | null;
+  time_kind?: TaskTimeKind | null;
 };
 
 export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()): string {
@@ -30,36 +33,22 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
   lines.push("X-PUBLISHED-TTL:PT15M");
 
   const stamp = formatUtc(now);
+  const hasRecurringWork = tasks.some(task => {
+    const p = projectTaskCalendar(task, zone);
+    return p?.recurrence && !p.allDay;
+  });
+  const vtimezone = hasRecurringWork && zone !== 'UTC' ? getVtimezoneComponent(zone) : null;
+  if (hasRecurringWork && zone !== 'UTC' && !vtimezone) throw new Error(`ICS recurrence timezone is unsupported: ${zone}`);
+  // The timezone dataset may resolve an IANA alias to another TZID. The
+  // component identifier must match the parameter used by this feed.
+  if (vtimezone) lines.push(...vtimezone.trim().split(/\r?\n/).map(line => line.startsWith('TZID:') ? `TZID:${zone}` : line));
   // Bump old events once so subscribers replace cached pre-fix date ranges.
-  const feedRevision = Date.UTC(2026, 9, 4, 6, 48);
+  const feedRevision = Date.UTC(2026, 9, 5);
 
   for (const source of tasks) {
-    // Completed recurrence masters must not generate future appointments.
-    // Keep completion history in FL, not in the active calendar subscription.
-    if (source.is_completed || source.status === "done" || source.status === "archived") continue;
-    const task = calendarTask(source);
-    const anchor = task.start_at ?? task.due_at ?? source.start_at;
-    if (!anchor) continue;
-    const start = new Date(anchor);
-    if (isNaN(start.getTime())) continue;
-
-    // End time: prefer explicit due_at when it's after start_at; else
-    // derive from estimated_minutes; else 30 min default. For all-day
-    // events we use date-only DTSTART/DTEND with DTEND = next day.
-    let end: Date;
-    if (
-      task.start_at &&
-      task.due_at &&
-      new Date(task.due_at) > new Date(task.start_at)
-    ) {
-      end = new Date(task.due_at);
-    } else {
-      // An effort estimate is not a multi-day reservation.
-      const minutes = task.estimated_minutes && Number.isFinite(task.estimated_minutes) && task.estimated_minutes > 0
-        ? Math.min(task.estimated_minutes, 23 * 60 + 59)
-        : 30;
-      end = new Date(start.getTime() + minutes * 60 * 1000);
-    }
+    const task = source;
+    const projection = projectTaskCalendar(task, zone);
+    if (!projection) continue;
 
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${task.id}@firstlight.to`);
@@ -67,31 +56,28 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
     lines.push(`CREATED:${formatUtc(new Date(task.created_at))}`);
     lines.push(`LAST-MODIFIED:${formatUtc(new Date(Math.max(Date.parse(task.updated_at) || 0, feedRevision)))}`);
 
-    if (task.is_all_day) {
-      // RFC 5545 §3.6.1: VALUE=DATE for all-day, DTEND is exclusive
-      // (next day).
-      const startDate = formatDate(start, zone);
-      // Add a calendar day to the local DATE, not 24 hours to its UTC instant.
-      const date = new Date(`${startDate.slice(0, 4)}-${startDate.slice(4, 6)}-${startDate.slice(6, 8)}T00:00:00Z`);
-      const endDate = formatDate(addDays(date, 1), "UTC");
-      lines.push(`DTSTART;VALUE=DATE:${startDate}`);
-      lines.push(`DTEND;VALUE=DATE:${endDate}`);
-    } else {
-      lines.push(`DTSTART:${formatUtc(start)}`);
-      lines.push(`DTEND:${formatUtc(end)}`);
+    if ('date' in projection.start && 'date' in projection.end) {
+      lines.push(`DTSTART;VALUE=DATE:${projection.start.date.replace(/-/g, '')}`);
+      lines.push(`DTEND;VALUE=DATE:${projection.end.date.replace(/-/g, '')}`);
+    } else if ('dateTime' in projection.start && 'dateTime' in projection.end) {
+      if (projection.recurrence && vtimezone) {
+        lines.push(`DTSTART;TZID=${zone}:${formatUtc(wallClock(new Date(projection.start.dateTime), zone)).slice(0, -1)}`);
+        // DURATION preserves elapsed work time even on an occurrence that
+        // crosses a DST transition; a local DTEND would change its duration.
+        const seconds = Math.floor(Date.parse(projection.end.dateTime) / 1000) - Math.floor(Date.parse(projection.start.dateTime) / 1000);
+        lines.push(`DURATION:PT${seconds}S`);
+      } else {
+        lines.push(`DTSTART:${formatUtc(new Date(projection.start.dateTime))}`);
+        lines.push(`DTEND:${formatUtc(new Date(projection.end.dateTime))}`);
+      }
     }
-
     lines.push(`SUMMARY:${escapeText(task.title || "(untitled)")}`);
-    if (task.notes && task.notes.trim()) {
-      lines.push(`DESCRIPTION:${escapeText(task.notes)}`);
-    }
-    if (task.rrule) {
-      const rule = recurrenceRule(task.rrule, task.is_all_day, zone);
-      if (rule) lines.push(`RRULE:${rule}`);
-    }
+    const description = taskCalendarDescription(task.notes, projection, zone);
+    if (description) lines.push(`DESCRIPTION:${escapeText(description)}`);
+    if (projection.recurrence) lines.push(`RRULE:${projection.recurrence}`);
     lines.push("STATUS:CONFIRMED");
     // Deadlines and all-day task markers do not reserve the user's time.
-    lines.push(`TRANSP:${task.is_all_day || !task.start_at ? "TRANSPARENT" : "OPAQUE"}`);
+    lines.push(`TRANSP:${projection.transparency.toUpperCase()}`);
     lines.push("END:VEVENT");
   }
 
@@ -115,45 +101,6 @@ function formatUtc(d: Date): string {
     `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
     `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
   );
-}
-
-function validTimezone(timezone: string): string {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: timezone });
-    return timezone;
-  } catch {
-    return "UTC";
-  }
-}
-
-function formatDate(d: Date, timezone: string): string {
-  const parts = new Intl.DateTimeFormat("en", {
-    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(d);
-  return ["year", "month", "day"].map(type => parts.find(p => p.type === type)!.value).join("");
-}
-
-function recurrenceRule(input: string, allDay: boolean, timezone: string): string | null {
-  let rule = input.trim().replace(/^RRULE:/i, "");
-  // Never allow a stored rule to inject extra components into the feed.
-  if (!rule || /[\r\n]/.test(rule)) return null;
-  try { RRule.fromString(rule); } catch { return null; }
-  if (allDay) {
-    // DATE DTSTART requires DATE UNTIL; time selectors do not apply to DATE.
-    rule = rule.split(";").filter(part => !/^(BYHOUR|BYMINUTE|BYSECOND)=/i.test(part)).map(part => {
-      const until = /^UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/i.exec(part);
-      if (!until) return part;
-      const [, y, m, d, h, min, sec] = until;
-      return `UNTIL=${formatDate(new Date(`${y}-${m}-${d}T${h}:${min}:${sec}Z`), timezone)}`;
-    }).join(";");
-  }
-  return rule;
-}
-
-function addDays(d: Date, n: number): Date {
-  const out = new Date(d.getTime());
-  out.setUTCDate(out.getUTCDate() + n);
-  return out;
 }
 
 // RFC 5545 §3.1: lines longer than 75 octets must be folded with CRLF

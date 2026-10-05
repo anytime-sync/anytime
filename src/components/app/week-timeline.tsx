@@ -14,7 +14,6 @@ import {
 } from "@dnd-kit/core";
 import {
   addDays,
-  differenceInMinutes,
   format,
   isSameDay,
   startOfDay,
@@ -126,9 +125,9 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const ds = startOfDay(day).getTime();
     const de = ds + 24 * 60 * 60_000 - 1;
     return tasks.filter((t) => {
-      if (t.is_all_day || !t.due_at) return false;
+      if (t.is_all_day || !t.start_at || !t.due_at || Date.parse(t.due_at) <= Date.parse(t.start_at)) return false;
       const a = new Date(t.start_at ?? t.due_at).getTime();
-      return a >= ds && a <= de;
+      return a <= de && Date.parse(t.due_at) > ds;
     });
   }
 
@@ -139,8 +138,8 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const ds = startOfDay(day).getTime();
     const de = ds + 24 * 60 * 60_000 - 1;
     return tasks.filter((t) => {
-      if (!t.is_all_day || !t.due_at) return false;
-      const dueMs = startOfDay(new Date(t.due_at)).getTime();
+      if (!t.is_all_day || !(t.due_at ?? t.start_at)) return false;
+      const dueMs = startOfDay(new Date((t.due_at ?? t.start_at)!)).getTime();
       const startMs = t.start_at ? startOfDay(new Date(t.start_at)).getTime() : dueMs;
       return startMs <= de && dueMs >= ds;
     });
@@ -179,10 +178,10 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const newStart = new Date(newDay);
     newStart.setHours(newHour, newMinute, 0, 0);
 
-    const dur = task.start_at
-      ? Math.max(15, differenceInMinutes(origDue, new Date(task.start_at)))
-      : 30;
-    const newDue = new Date(newStart.getTime() + dur * 60_000);
+    if (!task.start_at) return;
+    const durationMs = origDue.getTime() - Date.parse(task.start_at);
+    if (durationMs <= 0) return;
+    const newDue = new Date(newStart.getTime() + durationMs);
 
     if (
       isSameDay(newDay, origStart) &&
@@ -194,6 +193,7 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     // due_at has no timeline slot and won't show correctly on the calendar.
     update.mutate({
       id: task.id,
+      time_kind: "work",
       start_at: newStart.toISOString(),
       due_at: newDue.toISOString(),
     });
@@ -281,11 +281,9 @@ function DayColumn({
   const timed = tasks
     .map((t) => {
       const due = new Date(t.due_at!);
-      const start = t.start_at
-        ? new Date(t.start_at)
-        : new Date(due.getTime() - 30 * 60_000);
-      const startMin = minutesFromRailStart(start);
-      const endMin = minutesFromRailStart(due);
+      const start = new Date(t.start_at!);
+      const startMin = Math.max(0, (start.getTime() - startOfDay(day).getTime()) / 60000 - RAIL_START_HOUR * 60);
+      const endMin = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, (due.getTime() - startOfDay(day).getTime()) / 60000 - RAIL_START_HOUR * 60);
       return { task: t, start, due, startMin, endMin };
     })
     .sort((a, b) => a.startMin - b.startMin);
@@ -384,6 +382,8 @@ function DayColumn({
               task={t.task}
               start={t.start}
               due={t.due}
+              startMin={t.startMin}
+              endMin={t.endMin}
               col={layout.col}
               cols={layout.cols}
               onSelect={onSelect}
@@ -410,6 +410,8 @@ function DraggableTask({
   task,
   start,
   due,
+  startMin,
+  endMin,
   col,
   cols,
   onSelect,
@@ -417,6 +419,8 @@ function DraggableTask({
   task: TaskWithTags;
   start: Date;
   due: Date;
+  startMin: number;
+  endMin: number;
   col: number;
   cols: number;
   onSelect: (id: string) => void;
@@ -424,16 +428,7 @@ function DraggableTask({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task.id });
 
-  // Treat start===due (zero-duration) as a 30-min block so the chip has
-  // height; otherwise it would be dropped by the guard below and the task
-  // would vanish from the week timeline while still showing elsewhere.
-  const effStart =
-    start.getTime() >= due.getTime()
-      ? new Date(due.getTime() - 30 * 60_000)
-      : start;
   const RAIL_MAX_MIN = (RAIL_END_HOUR - RAIL_START_HOUR) * 60;
-  const startMin = minutesFromRailStart(effStart);
-  const endMin = minutesFromRailStart(due);
   // Clamp into the visible rail and guarantee a minimum slice so tasks
   // outside 6 AM–11 PM (e.g. 12:30 AM) are pinned to the edge instead of
   // disappearing. The chip label still shows the true time.

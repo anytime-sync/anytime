@@ -471,6 +471,7 @@ export async function POST(req: Request) {
     : {
         title: "",
         start_at: null,
+        time_kind: "deadline",
         due_at: null,
         is_all_day: false,
         priority: 0,
@@ -516,6 +517,7 @@ export async function POST(req: Request) {
       is_completed: false,
       priority: parsed.priority,
       start_at: parsed.start_at,
+      time_kind: parsed.time_kind,
       due_at: parsed.due_at,
       is_all_day: parsed.is_all_day,
       rrule: parsed.rrule,

@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
 import { toast } from "sonner";
-import { resolveTaskDates } from "@/lib/task-schedule";
-import { rrulestr } from "rrule";
+import { createTaskDates, resolveTaskDates } from "@/lib/task-schedule";
+import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
+import { useUserPrefs } from "@/hooks/use-ai";
 
 export type TaskWithTags = Task & { tags: Tag[] };
 
@@ -168,20 +169,7 @@ export function useCreateTask() {
       // Strip the synthetic optimistic id (if the caller passed one) before
       // hitting Postgres — the DB assigns the real uuid.
       delete (taskInput as any).id;
-      // Enforce start ≤ end on creation
-      if (taskInput.start_at && taskInput.due_at) {
-        const s = new Date(taskInput.start_at).getTime();
-        const e = new Date(taskInput.due_at).getTime();
-        if (!Number.isNaN(s) && !Number.isNaN(e) && s > e) {
-          taskInput.due_at = taskInput.start_at;
-        }
-      }
-      // Auto-fill start_at when due_at is set but start_at is missing.
-      // Without this, tasks created from image scan or calendar sync
-      // show an empty "Starts" field in the detail panel.
-      if (!taskInput.start_at && taskInput.due_at) {
-        taskInput.start_at = taskInput.due_at;
-      }
+      Object.assign(taskInput, createTaskDates(taskInput));
       const { data: task, error } = await supabase
         .from("tasks")
         .insert({ ...taskInput, user_id: u.user.id })
@@ -225,7 +213,8 @@ export function useCreateTask() {
         notes: input.notes ?? null,
         is_completed: false,
         completed_at: null,
-        start_at: input.start_at ?? input.due_at ?? null,
+        start_at: input.start_at ?? null,
+        time_kind: createTaskDates(input).time_kind,
         due_at: input.due_at ?? null,
         is_all_day: input.is_all_day ?? false,
         priority: (input.priority ?? 0) as any,
@@ -317,14 +306,15 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   const qc = useQueryClient();
+  const { data: prefs } = useUserPrefs();
   return useMutation({
     mutationFn: async (p: Partial<Task> & { id: string }) => {
       const supabase = createClient();
       const { id, ...rest } = p;
-      if ("start_at" in rest || "due_at" in rest) {
-        const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,is_all_day").eq("id", id).single();
+      if ("start_at" in rest || "due_at" in rest || "time_kind" in rest || "is_all_day" in rest) {
+        const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,is_all_day,time_kind").eq("id", id).single();
         if (error) throw error;
-        Object.assign(rest, resolveTaskDates(current, rest));
+        Object.assign(rest, resolveTaskDates(current, rest, prefs?.timezone));
       }
       const { error } = await supabase.from("tasks").update(rest).eq("id", id);
       if (error) throw error;
@@ -350,25 +340,13 @@ export function useUpdateTask() {
   });
 }
 
-/** Compute next occurrence for a recurring task. Returns null if none. */
-function nextOccurrence(task: Task): Date | null {
-  if (!task.rrule || !task.due_at) return null;
-  try {
-    const dtstart = new Date(task.due_at);
-    const rule = rrulestr(`DTSTART:${dtstart.toISOString().replace(/[-:]|\.\d{3}/g, "")}\nRRULE:${task.rrule}`);
-    const next = rule.after(dtstart, false);
-    return next ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export function useToggleTask() {
   const update = useUpdateTask();
+  const { data: prefs } = useUserPrefs();
   return (task: Task) => {
     if (!task.is_completed) {
-      const next = nextOccurrence(task);
-      if (next) {
+      const recurrence = nextTaskRecurrence(task, prefs?.timezone);
+      if (recurrence) {
         // Slide BOTH ends of the meeting window forward by the same
         // delta so the duration is preserved on the next occurrence.
         // Without this, only due_at advanced — start_at stayed pinned
@@ -378,15 +356,8 @@ export function useToggleTask() {
         // ends 5/30".
         const patch: Partial<Task> & { id: string } = {
           id: task.id,
-          due_at: next.toISOString(),
+          ...recurrence.patch,
         };
-        if (task.start_at && task.due_at) {
-          const delta =
-            next.getTime() - new Date(task.due_at).getTime();
-          patch.start_at = new Date(
-            new Date(task.start_at).getTime() + delta
-          ).toISOString();
-        }
         // Log this occurrence as a completed historical record so streaks,
         // weekly retros, and the Completed view count the recurring
         // completion. The live row keeps its id and slides forward (below);
@@ -396,19 +367,7 @@ export function useToggleTask() {
             const sb = createClient();
             const { data: u } = await sb.auth.getUser();
             if (!u.user) return;
-            await sb.from("tasks").insert({
-              user_id: u.user.id,
-              project_id: task.project_id,
-              title: task.title,
-              notes: task.notes,
-              priority: task.priority,
-              due_at: task.due_at,
-              start_at: task.start_at,
-              is_all_day: task.is_all_day,
-              is_completed: true,
-              completed_at: new Date().toISOString(),
-              position: 0,
-            });
+            await sb.from("tasks").insert(completedTaskOccurrence(task, u.user.id, new Date().toISOString()));
           } catch (e) {
             console.error("[useToggleTask] recurring log clone failed", e);
           }
@@ -487,4 +446,3 @@ export function useReorderTasks() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
-
