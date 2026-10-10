@@ -369,24 +369,12 @@ export function useToggleTask() {
     if (!task.is_completed) {
       const next = nextOccurrence(task);
       if (next) {
-        // Slide BOTH ends of the meeting window forward by the same
-        // delta so the duration is preserved on the next occurrence.
-        // Without this, only due_at advanced — start_at stayed pinned
-        // to the very first occurrence, so a monthly meeting that
-        // started 4/30 10:15 AM would render as "starts 4/30, ends
-        // 5/30" after the first roll-over instead of "starts 5/30,
-        // ends 5/30".
+        // Use the same date policy as rescheduling. Blindly sliding both
+        // endpoints perpetuates a stale multi-day start on every recurrence.
         const patch: Partial<Task> & { id: string } = {
           id: task.id,
-          due_at: next.toISOString(),
+          ...resolveTaskDates(task, { due_at: next.toISOString() }),
         };
-        if (task.start_at && task.due_at) {
-          const delta =
-            next.getTime() - new Date(task.due_at).getTime();
-          patch.start_at = new Date(
-            new Date(task.start_at).getTime() + delta
-          ).toISOString();
-        }
         // Log this occurrence as a completed historical record so streaks,
         // weekly retros, and the Completed view count the recurring
         // completion. The live row keeps its id and slides forward (below);
@@ -396,7 +384,7 @@ export function useToggleTask() {
             const sb = createClient();
             const { data: u } = await sb.auth.getUser();
             if (!u.user) return;
-            await sb.from("tasks").insert({
+            const { error } = await sb.from("tasks").insert({
               user_id: u.user.id,
               project_id: task.project_id,
               title: task.title,
@@ -406,9 +394,11 @@ export function useToggleTask() {
               start_at: task.start_at,
               is_all_day: task.is_all_day,
               is_completed: true,
+              status: "done",
               completed_at: new Date().toISOString(),
               position: 0,
             });
+            if (error) throw error;
           } catch (e) {
             console.error("[useToggleTask] recurring log clone failed", e);
           }
