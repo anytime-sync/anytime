@@ -71,6 +71,9 @@ export async function pushPendingTasksForUser({
     .from("tasks")
     .select("id, user_id, title, notes, start_at, due_at, is_all_day, calendar_event_id, updated_at")
     .eq("user_id", userId)
+    .eq("is_completed", false)
+    .neq("status", "done")
+    .neq("status", "archived")
     .is("calendar_event_id", null)
     .not("start_at", "is", null)
     .not("due_at", "is", null)
@@ -85,6 +88,9 @@ export async function pushPendingTasksForUser({
     .from("tasks")
     .select("id, user_id, title, notes, start_at, due_at, is_all_day, calendar_event_id, updated_at")
     .eq("user_id", userId)
+    .eq("is_completed", false)
+    .neq("status", "done")
+    .neq("status", "archived")
     .not("calendar_event_id", "is", null)
     .not("start_at", "is", null)
     .not("due_at", "is", null)
@@ -92,8 +98,8 @@ export async function pushPendingTasksForUser({
     .order("updated_at", { ascending: false })
     .limit(25);
 
-  const needCreate = (needCreateRaw ?? []) as TaskRowForPush[];
-  const needPatch = (needPatchRaw ?? []) as TaskRowForPush[];
+  const needCreate = ((needCreateRaw ?? []) as TaskRowForPush[]).filter(validCalendarBlock);
+  const needPatch = ((needPatchRaw ?? []) as TaskRowForPush[]).filter(validCalendarBlock);
 
   let created = 0;
   let patched = 0;
@@ -221,6 +227,13 @@ export async function drainCalendarDeletions({
   }
 
   return { deleted, failed };
+}
+
+// Deadline markers and legacy stretched ranges are not calendar bookings.
+// All-day deadlines use the existing ICS feed until explicit task intent lands.
+export function validCalendarBlock(t: Pick<TaskRowForPush, 'start_at' | 'due_at' | 'is_all_day'>): boolean {
+  const duration = Date.parse(t.due_at) - Date.parse(t.start_at);
+  return !t.is_all_day && Number.isFinite(duration) && duration > 0 && duration < 86400000;
 }
 
 function buildEventInput(t: TaskRowForPush): GoogleCalendarEventInput {
