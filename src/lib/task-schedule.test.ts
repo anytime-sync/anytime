@@ -24,6 +24,18 @@ it('preserves explicit windows and nulls; rejects inversion without changing the
 it('keeps all-day deadlines on one day', () => {
   expect(calendarTask({ ...task, is_all_day: true }).start_at).toBeNull();
 });
+it('does not carry the legacy Prefigures multi-day range into later months', () => {
+  let current = { start_at: '2026-10-07T00:00:00Z' as string | null, due_at: '2026-10-08T00:30:00Z', is_all_day: true };
+  for (const month of ['11', '12']) {
+    current = { ...current, ...resolveTaskDates(current, { due_at: `2026-${month}-08T00:30:00Z` }) };
+    expect(current.start_at).toBeNull();
+    expect(current.due_at).toBe(`2026-${month}-08T00:30:00Z`);
+  }
+});
+it('clears a stretched routine without changing its next deadline', () => {
+  const stale = { ...task, due_at: '2026-10-04T09:00:00Z' };
+  expect(resolveTaskDates(stale, { due_at: '2026-10-11T09:00:00Z' })).toEqual({ start_at: null, due_at: '2026-10-11T09:00:00Z' });
+});
 it('snoozes old deadlines into the future, preserving local clock time', () => {
   const now = new Date(2026, 8, 12, 12);
   const due = new Date(2026, 6, 7, 9).toISOString();
