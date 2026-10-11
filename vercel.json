@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "fix/firstlight-scheduler-auth": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/x-promotion",
