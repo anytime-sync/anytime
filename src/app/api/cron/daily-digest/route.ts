@@ -7,7 +7,9 @@ import {
   renderDigestHtml,
   renderDigestText,
   type DigestTask,
+  type DigestPayload,
 } from "@/lib/email/daily-digest-template";
+import { loadDigestAgenda, type DigestAgendaItem } from "@/lib/email/digest-agenda";
 import { calendarDate, dayWindow } from "@/lib/day-window";
 import { safeTimezone } from "@/lib/ai/tz";
 import { isAuthorizedCron } from "@/lib/cron-auth";
@@ -123,6 +125,15 @@ async function handle(req: Request) {
       .slice(0, 3);
     const overdue = (overdueRaw ?? []) as DigestTask[];
 
+    let agenda: DigestAgendaItem[];
+    try {
+      agenda = await loadDigestAgenda(supabase, pref.user_id, localDate, tz,
+        new Set([...q1Today, ...topToday, ...overdue].map(task => task.id)));
+    } catch (e) {
+      sent.push({ user_id: pref.user_id, status: "calendar_query_error", detail: e instanceof Error ? e.message : String(e) });
+      continue;
+    }
+
     // Streak: read habit_logs for this user, walk back from yesterday,
     // count consecutive days with at least one habit logged.
     const streakDays = await computeStreak(supabase, pref.user_id, tz);
@@ -134,7 +145,7 @@ async function handle(req: Request) {
     const unsubToken = makeUnsubToken(pref.user_id);
     const unsubUrl = `${appUrl}/api/reminders/unsubscribe?token=${unsubToken}`;
 
-    const html = renderDigestHtml({
+    const payload: DigestPayload = {
       recipientName: profile.full_name ?? "",
       language: lang,
       locale: langDef.dateFnsLocale,
@@ -143,27 +154,15 @@ async function handle(req: Request) {
       topToday,
       q1Today,
       overdue,
+      agenda,
       habitsToday,
       streakDays,
       appUrl,
       unsubUrl,
       chrome,
-    });
-    const text = renderDigestText({
-      recipientName: profile.full_name ?? "",
-      language: lang,
-      locale: langDef.dateFnsLocale,
-      date: nowUtc,
-      timezone: tz,
-      topToday,
-      q1Today,
-      overdue,
-      habitsToday,
-      streakDays,
-      appUrl,
-      unsubUrl,
-      chrome,
-    });
+    };
+    const html = renderDigestHtml(payload);
+    const text = renderDigestText(payload);
 
     try {
       const { data: emailRes, error: sendErr } = await resend.emails.send({
@@ -276,6 +275,9 @@ function buildChrome(lang: LanguageCode, name: string) {
       sectionTopToday: "On the agenda",
       sectionQ1: "Urgent + important",
       sectionOverdue: "Carrying over",
+      sectionCalendar: "Today's calendar",
+      allDay: "All day",
+      untitledEvent: "Untitled event",
       cta: "Open today in First Light",
       footer: "First Light · Daily digest. You can change the send time or pause this in Settings.",
       unsubLabel: "Pause daily digest",
@@ -290,6 +292,9 @@ function buildChrome(lang: LanguageCode, name: string) {
       sectionTopToday: "今日要事",
       sectionQ1: "急且重要",
       sectionOverdue: "順延任務",
+      sectionCalendar: "今日行事曆",
+      allDay: "全天",
+      untitledEvent: "未命名活動",
       cta: "在 First Light 中開啟今天",
       footer: "First Light · 每日簡報。可在設定中調整寄送時間或暫停。",
       unsubLabel: "暫停每日簡報",
@@ -304,6 +309,9 @@ function buildChrome(lang: LanguageCode, name: string) {
       sectionTopToday: "今日要事",
       sectionQ1: "紧急且重要",
       sectionOverdue: "顺延任务",
+      sectionCalendar: "今日日历",
+      allDay: "全天",
+      untitledEvent: "未命名活动",
       cta: "在 First Light 中打开今天",
       footer: "First Light · 每日简报。可在设置中调整发送时间或暂停。",
       unsubLabel: "暂停每日简报",
@@ -318,6 +326,9 @@ function buildChrome(lang: LanguageCode, name: string) {
       sectionTopToday: "本日のテーマ",
       sectionQ1: "緊急かつ重要",
       sectionOverdue: "持ち越し",
+      sectionCalendar: "今日のカレンダー",
+      allDay: "終日",
+      untitledEvent: "無題の予定",
       cta: "First Light で今日を開く",
       footer: "First Light · デイリーブリーフ。送信時間や停止は設定から変更できます。",
       unsubLabel: "デイリーブリーフを停止",
@@ -332,6 +343,9 @@ function buildChrome(lang: LanguageCode, name: string) {
       sectionTopToday: "오늘의 의제",
       sectionQ1: "긴급 + 중요",
       sectionOverdue: "이월된 작업",
+      sectionCalendar: "오늘의 캘린더",
+      allDay: "종일",
+      untitledEvent: "제목 없는 일정",
       cta: "First Light에서 오늘 열기",
       footer: "First Light · 데일리 다이제스트. 발송 시간 변경이나 일시 중지는 설정에서 가능합니다.",
       unsubLabel: "데일리 다이제스트 일시 중지",
