@@ -243,7 +243,7 @@ describe("daily digest calendar integration", () => {
     await request();
     const email = mocks.send.mock.calls[0][0];
     expect(email.text).toContain(section.toUpperCase());
-    expect(email.html).toContain(section.replace("'", "&#39;"));
+    expect(email.html).toContain(section.replace(/'/g, "&#39;"));
     for (const body of [email.html, email.text]) {
       expect(body).toContain(allDay);
       expect(body).toContain(untitled);
