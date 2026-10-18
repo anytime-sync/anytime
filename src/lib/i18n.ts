@@ -5483,9 +5483,109 @@ export function setI18nOverrides(
   overrides[locale] = map;
 }
 
+const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
+  "en": {
+    "landing.heroBody": "Capture tasks and notes, plan around your calendar, and keep your commitments in one calm place.",
+    "pricing.hero.body": "Start with the free planner. Plus adds two-way Google Calendar sync. Pro adds API/MCP access and priority support.",
+    "landing.faq.q3": "How do I get started?",
+    "landing.faq.a3": "Add a task, choose its date and priority, and mark it complete when you finish.",
+    "landing.faq.a6": "The core planner is free. Plus adds Google Calendar editing. Pro adds API/MCP access and priority support. See Pricing for details.",
+    "landing.faq.a7": "After connecting Google Calendar, you can read events on Free. Creating and editing Google Calendar events requires Plus or Pro.",
+    "landing.faq.a8": "Use a mobile browser or install the PWA where supported. Saving and syncing require internet access. Push reminders require browser permission.",
+    "pricing.faq.q6": "What does Plus include?",
+    "pricing.faq.a6": "Plus includes the core planner and two-way Google Calendar sync.",
+    "features.subtitle": "Organize tasks, notes, habits and focus sessions. Compare the current features below.",
+    "landing.features.f6.desc": "Capture tasks from Telegram after linking your account.",
+    "landing.demo.subheading": "Your planner, at your pace.",
+    "pricing.faq.a5": "Use a mobile browser or install the PWA where supported. Saving and syncing require internet access. Push reminders require browser permission.",
+    "features.unlockTitle": "Your planner, at your pace.",
+    "features.unlockBody": "Start with the free planner. Plus adds two-way Google Calendar sync. Pro adds API/MCP access and priority support.",
+    "landing.features.subheading": "Organize tasks, notes, habits and focus sessions. Compare the current features below.",
+    "landing.ctaNote": "Start with the free planner. No credit card needed."
+  },
+  "zh-TW": {
+    "landing.heroBody": "記下任務與筆記，搭配行事曆安排時間，在清爽的空間裡掌握待辦事項。",
+    "pricing.hero.body": "免費方案提供核心規劃工具。Plus 增加 Google 日曆雙向同步；Pro 增加 API/MCP 存取與優先支援。",
+    "landing.faq.q3": "如何開始使用？",
+    "landing.faq.a3": "新增任務，設定日期與優先順序，完成後勾選即可。",
+    "landing.faq.a6": "核心規劃工具免費。Plus 增加 Google 日曆編輯；Pro 增加 API/MCP 存取與優先支援。詳情請見方案頁面。",
+    "landing.faq.a7": "連結 Google 日曆後，免費方案可讀取活動。建立與編輯 Google 日曆活動需要 Plus 或 Pro。",
+    "landing.faq.a8": "可使用手機瀏覽器，或在支援的裝置安裝 PWA。儲存與同步需要網路；推播提醒需要瀏覽器授權。",
+    "pricing.faq.q6": "Plus 包含什麼？",
+    "pricing.faq.a6": "Plus 包含核心規劃工具與 Google 日曆雙向同步。",
+    "features.subtitle": "整理任務、筆記與習慣，記錄專注時間。下方列出各方案目前提供的功能。",
+    "landing.features.f6.desc": "連結帳號後，可透過 Telegram 新增任務。",
+    "landing.demo.subheading": "依照自己的步調，安排每一天。",
+    "pricing.faq.a5": "可使用手機瀏覽器，或在支援的裝置安裝 PWA。儲存與同步需要網路；推播提醒需要瀏覽器授權。",
+    "features.unlockTitle": "依照自己的步調，安排每一天。",
+    "features.unlockBody": "免費方案提供核心規劃工具。Plus 增加 Google 日曆雙向同步；Pro 增加 API/MCP 存取與優先支援。",
+    "landing.features.subheading": "整理任務、筆記與習慣，記錄專注時間。下方列出各方案目前提供的功能。",
+    "landing.ctaNote": "免費開始使用，無須信用卡。"
+  },
+  "zh-CN": {
+    "landing.heroBody": "记下任务与笔记，搭配日历安排时间，在清爽的空间里掌握待办事项。",
+    "pricing.hero.body": "免费方案提供核心规划工具。Plus 增加 Google 日历双向同步；Pro 增加 API/MCP 访问与优先支持。",
+    "landing.faq.q3": "如何开始使用？",
+    "landing.faq.a3": "新增任务，设置日期与优先级，完成后勾选即可。",
+    "landing.faq.a6": "核心规划工具免费。Plus 增加 Google 日历编辑；Pro 增加 API/MCP 访问与优先支持。详情请见方案页面。",
+    "landing.faq.a7": "连接 Google 日历后，免费方案可读取活动。创建与编辑 Google 日历活动需要 Plus 或 Pro。",
+    "landing.faq.a8": "可使用手机浏览器，或在支持的设备安装 PWA。保存与同步需要网络；推送提醒需要浏览器授权。",
+    "pricing.faq.q6": "Plus 包含什么？",
+    "pricing.faq.a6": "Plus 包含核心规划工具与 Google 日历双向同步。",
+    "features.subtitle": "整理任务、笔记与习惯，记录专注时间。下方列出各方案目前提供的功能。",
+    "landing.features.f6.desc": "连接账号后，可通过 Telegram 新增任务。",
+    "landing.demo.subheading": "按照自己的节奏，安排每一天。",
+    "pricing.faq.a5": "可使用手机浏览器，或在支持的设备安装 PWA。保存与同步需要网络；推送提醒需要浏览器授权。",
+    "features.unlockTitle": "按照自己的节奏，安排每一天。",
+    "features.unlockBody": "免费方案提供核心规划工具。Plus 增加 Google 日历双向同步；Pro 增加 API/MCP 访问与优先支持。",
+    "landing.features.subheading": "整理任务、笔记与习惯，记录专注时间。下方列出各方案目前提供的功能。",
+    "landing.ctaNote": "免费开始使用，无需信用卡。"
+  },
+  "ja": {
+    "landing.heroBody": "タスクとメモを記録し、カレンダーで予定を確認。落ち着いた空間で日々のやることを管理できます。",
+    "pricing.hero.body": "基本のプランナーは無料。Plus は Google カレンダーの双方向同期、Pro は API/MCP アクセスと優先サポートを追加します。",
+    "landing.faq.q3": "どう始めればよいですか？",
+    "landing.faq.a3": "タスクを追加して日付と優先度を設定し、終わったら完了にします。",
+    "landing.faq.a6": "基本機能は無料です。Plus はカレンダー編集、Pro は API/MCP アクセスと優先サポートを追加します。詳しくは料金ページをご覧ください。",
+    "landing.faq.a7": "Google カレンダーに接続すると無料で予定を閲覧できます。予定の作成と編集には Plus または Pro が必要です。",
+    "landing.faq.a8": "モバイルブラウザーや対応端末の PWA で使えます。保存と同期にはインターネット接続、プッシュ通知にはブラウザーの許可が必要です。",
+    "pricing.faq.q6": "Plus には何が含まれますか？",
+    "pricing.faq.a6": "基本のプランナーと Google カレンダーの双方向同期が含まれます。",
+    "features.subtitle": "タスク、メモ、習慣、集中時間を管理。現在の機能を下の表で比較できます。",
+    "landing.features.f6.desc": "アカウントを連携すると Telegram からタスクを追加できます。",
+    "landing.demo.subheading": "自分のペースで毎日を計画。",
+    "pricing.faq.a5": "モバイルブラウザーや対応端末の PWA で使えます。保存と同期にはインターネット接続、プッシュ通知にはブラウザーの許可が必要です。",
+    "features.unlockTitle": "自分のペースで毎日を計画。",
+    "features.unlockBody": "基本のプランナーは無料。Plus は Google カレンダーの双方向同期、Pro は API/MCP アクセスと優先サポートを追加します。",
+    "landing.features.subheading": "タスク、メモ、習慣、集中時間を管理。現在の機能を下の表で比較できます。",
+    "landing.ctaNote": "無料で始められます。クレジットカードは不要です。"
+  },
+  "ko": {
+    "landing.heroBody": "할 일과 메모를 기록하고 캘린더로 시간을 계획하세요. 차분한 공간에서 약속과 할 일을 관리할 수 있습니다.",
+    "pricing.hero.body": "기본 플래너는 무료입니다. Plus는 Google 캘린더 양방향 동기화, Pro는 API/MCP 접근과 우선 지원을 추가합니다.",
+    "landing.faq.q3": "어떻게 시작하나요?",
+    "landing.faq.a3": "할 일을 추가하고 날짜와 우선순위를 정한 뒤, 끝나면 완료로 표시하세요.",
+    "landing.faq.a6": "기본 기능은 무료입니다. Plus는 캘린더 편집, Pro는 API/MCP 접근과 우선 지원을 추가합니다. 자세한 내용은 요금 페이지를 확인하세요.",
+    "landing.faq.a7": "Google 캘린더를 연결하면 무료로 일정을 볼 수 있습니다. 일정 생성과 편집에는 Plus 또는 Pro가 필요합니다.",
+    "landing.faq.a8": "모바일 브라우저나 지원 기기의 PWA로 사용할 수 있습니다. 저장과 동기화에는 인터넷이, 푸시 알림에는 브라우저 권한이 필요합니다.",
+    "pricing.faq.q6": "Plus에는 무엇이 포함되나요?",
+    "pricing.faq.a6": "기본 플래너와 Google 캘린더 양방향 동기화가 포함됩니다.",
+    "features.subtitle": "할 일, 메모, 습관과 집중 시간을 관리하세요. 아래 표에서 현재 제공되는 기능을 비교할 수 있습니다.",
+    "landing.features.f6.desc": "계정을 연결하면 Telegram에서 할 일을 추가할 수 있습니다.",
+    "landing.demo.subheading": "자신의 속도로 하루를 계획하세요.",
+    "pricing.faq.a5": "모바일 브라우저나 지원 기기의 PWA로 사용할 수 있습니다. 저장과 동기화에는 인터넷이, 푸시 알림에는 브라우저 권한이 필요합니다.",
+    "features.unlockTitle": "자신의 속도로 하루를 계획하세요.",
+    "features.unlockBody": "기본 플래너는 무료입니다. Plus는 Google 캘린더 양방향 동기화, Pro는 API/MCP 접근과 우선 지원을 추가합니다.",
+    "landing.features.subheading": "할 일, 메모, 습관과 집중 시간을 관리하세요. 아래 표에서 현재 제공되는 기능을 비교할 수 있습니다.",
+    "landing.ctaNote": "무료로 시작하세요. 신용카드는 필요하지 않습니다."
+  }
+};
+
 export function t(language: string | null | undefined, key: StringKey): string {
   const code = (LANGUAGES.find((l) => l.code === language)?.code ??
     DEFAULT_LANGUAGE) as LanguageCode;
+  if (CURRENT_PRODUCT_COPY[code]?.[key]) return CURRENT_PRODUCT_COPY[code][key];
+  if (['features.freeTip', 'features.matrixSubPlus'].includes(key)) return CURRENT_PRODUCT_COPY[code]['pricing.hero.body'];
   const localeOverrides = overrides[code];
   if (localeOverrides && localeOverrides[key]) return localeOverrides[key];
   return STRINGS[code][key] ?? STRINGS.en[key] ?? key;
@@ -5501,7 +5601,7 @@ export function getTranslations(
 ): Record<StringKey, string> {
   const code = (LANGUAGES.find((l) => l.code === language)?.code ??
     DEFAULT_LANGUAGE) as LanguageCode;
-  return STRINGS[code];
+  return { ...STRINGS[code], ...CURRENT_PRODUCT_COPY[code] };
 }
 
 /* ----------------------------------------------------------------- */

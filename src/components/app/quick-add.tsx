@@ -6,6 +6,7 @@ import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { useUIStore } from "@/store/ui";
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useParseTaskAI } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import {
@@ -344,6 +345,7 @@ export function QuickAdd() {
     if (localGotEnough) return;
 
     try {
+      if (!HOSTED_AI_ENABLED) return;
       const ai = await aiParse.mutateAsync(raw);
       if (!ai || !ai.title) return;
 
@@ -404,10 +406,10 @@ export function QuickAdd() {
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
             }}
-            onPaste={(e) => { const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
+            onPaste={(e) => { if (!HOSTED_AI_ENABLED) return; const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
           />
-          <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />
-          <button
+          {HOSTED_AI_ENABLED && <VoiceButton onTranscript={(t) => setText(t)} onFinal={(t) => setText(t)} />}
+          {HOSTED_AI_ENABLED && <button
             type="button"
             onClick={() => setScanOpen(true)}
             className="btn-ghost h-9 w-9 inline-flex items-center justify-center rounded-full border border-border text-muted-fg hover:text-fg shrink-0"
@@ -415,7 +417,7 @@ export function QuickAdd() {
             aria-label={tr(lang, "quickAdd.scanAria")}
           >
             <ScanLine className="size-4" />
-          </button>
+          </button>}
         </div>
 
         {/* Conversational preview */}

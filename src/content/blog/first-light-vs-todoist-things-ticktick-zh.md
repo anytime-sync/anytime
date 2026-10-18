@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "First Light vs Todoist vs Things vs TickTick：一個誠實的比較"
 description: "依官方資料比較任務流程、AI 連接與方案範圍。"
 date: "2026-06-04"

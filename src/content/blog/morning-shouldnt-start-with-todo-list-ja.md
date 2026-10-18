@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "朝は To-Do リストから始めるべきじゃない"
 description: "任意の要約を使い、タスクリストから次の行動を見つける。"
 date: "2026-06-04"

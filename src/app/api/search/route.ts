@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { embedOne } from "@/lib/voyage";
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
  * at ~150ms.
  */
 export async function GET(req: Request) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const supabase = createClient();
   const {
     data: { user },

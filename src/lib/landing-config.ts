@@ -44,102 +44,22 @@ export type LandingConfigResolved = {
 
 export const DEFAULT_LANDING_CONFIG: LandingConfigResolved = {
   pricing: {
-    hero: {
-      eyebrow: "PRICING",
-      title: "Built for the way you actually plan.",
-      subtitle:
-        "Free covers the full task system, indefinitely. Plus unlocks two-way calendar and unlimited daily editions. Pro adds the full AI co-pilot — Plan my day, Voice → Task, and the review suite.",
-    },
-    free: {
-      tagline: "The full task system, forever.",
-      features: [
-        "Today, Tomorrow, Next 7 / 90 days, Inbox",
-        "Calendar with Google Calendar (read)",
-        "Lists, Tags, Groups, Habits, Notes, Focus",
-        "Notes ↔ Task: convert either way",
-        "Daily Edition (1 / day)",
-        "Email-to-inbox, push, daily digest",
-        "Export your data, anytime",
-      ],
-    },
-    plus: {
-      tagline: "Two-way calendar sync, unlimited Daily Editions, smart reschedule, find time, and end-of-day reflection.",
-      features: [
-        "Everything in Free",
-        "Unlimited Daily Edition",
-        "Two-way Google Calendar sync",
-        "Smart reschedule & Find time",
-        "End-of-day Reflection",
-      ],
-    },
-    pro: {
-      badge: "Recommended",
-      tagline: "Add the AI co-pilot and two-way calendar.",
-      features: [
-        "Everything in Plus",
-        "Unlimited Daily Edition",
-        "Plan-my-day & Plan-my-week",
-        "Morning Co-pilot (conversational briefing)",
-        "Voice → Task & Snapshot → Task",
-        "Smart triage & AI Goal tracker",
-        "Reflection & Weekly review",
-        "Two-way Google Calendar sync",
-        "Semantic search across tasks & notes",
-        "Priority support",
-      ],
-    },
-    demos: [
-      { title: "Daily Edition",  subtitle: "Your morning briefing",        asset: "/screenshots/daily-edition.png" },
-      { title: "Plan my day",    subtitle: "Energy-aware sequencing",      asset: "/screenshots/plan-my-day.png" },
-      { title: "Calendar",       subtitle: "Tasks + events together",      asset: "/screenshots/calendar.png" },
-      { title: "Voice → Task",   subtitle: "Speak; we transcribe",         asset: "/screenshots/voice-capture.png" },
-      { title: "Snapshot → Task",subtitle: "Photo a sticky; we extract",   asset: "/screenshots/snapshot.png" },
-      { title: "Reflection",     subtitle: "End-of-day with prompts",      asset: "/screenshots/reflection.png" },
-    ],
+    hero: { eyebrow: "PRICING", title: "Built for the way you actually plan.", subtitle: "Start with the free planner. Plus adds two-way Google Calendar. Pro adds API/MCP access and priority support." },
+    free: { tagline: "The core task planner, free to use.", features: ["Tasks, lists and tags", "Notes, habits and focus", "Google Calendar (read)", "Email-to-inbox and reminders", "Data export"] },
+    plus: { tagline: "Two-way Google Calendar sync.", features: ["Everything in Free", "Two-way Google Calendar sync"] },
+    pro: { badge: "Pro", tagline: "Connect your tools and get priority support.", features: ["Everything in Plus", "API/MCP access", "Priority support"] },
+    demos: [],
     faq: [
-      { q: "Can I cancel anytime?", a: "Yes. Use the customer portal in Settings → Billing. Your subscription stays active until the end of the period you've already paid for." },
-      { q: "What happens to my data if I downgrade?", a: "Your data is yours. Tasks, notes, and calendar links keep working on Free; only the Pro-only AI features stop running." },
-      { q: "Is there a team plan?", a: "Not yet. We're focused on making the single-player experience excellent first." },
+      { q: "Can I cancel anytime?", a: "Use Settings → Billing to manage your subscription." },
+      { q: "What happens if I downgrade?", a: "Saved tasks and notes remain. Features above your new plan are no longer available." },
+      { q: "Is there a team plan?", a: "Not currently." }
     ],
-    finalCta: {
-      helper: "Free forever for the core task system. Cancel Pro anytime.",
-    },
+    finalCta: { helper: "Start free. No credit card needed." }
   },
-  features: {
-    headerSubtitle: "What's available on each plan, and what you have access to right now.",
-    unlockTitle: "What you unlock",
-  },
+  features: { headerSubtitle: "Current features and plan access.", unlockTitle: "What you unlock" }
 };
 
-/**
- * Merge config from DB on top of defaults. Each leaf is replaced atomically;
- * arrays replace whole, scalars replace, missing keys fall through.
- */
-export function withDefaults(c: LandingConfig | null | undefined): LandingConfigResolved {
-  const cfg = c ?? {};
-  const d = DEFAULT_LANDING_CONFIG;
-  return {
-    pricing: {
-      hero: { ...d.pricing.hero, ...(cfg.pricing?.hero ?? {}) },
-      free: {
-        ...d.pricing.free,
-        ...(cfg.pricing?.free ?? {}),
-        features: cfg.pricing?.free?.features ?? d.pricing.free.features,
-      },
-      plus: {
-        ...d.pricing.plus,
-        ...(cfg.pricing?.plus ?? {}),
-        features: cfg.pricing?.plus?.features ?? d.pricing.plus.features,
-      },
-      pro: {
-        ...d.pricing.pro,
-        ...(cfg.pricing?.pro ?? {}),
-        features: cfg.pricing?.pro?.features ?? d.pricing.pro.features,
-      },
-      demos: cfg.pricing?.demos ?? d.pricing.demos,
-      faq: cfg.pricing?.faq ?? d.pricing.faq,
-      finalCta: { ...d.pricing.finalCta, ...(cfg.pricing?.finalCta ?? {}) },
-    },
-    features: { ...d.features, ...(cfg.features ?? {}) },
-  };
+/** Old stored promotional arrays described retired capabilities. They cannot restore the offer. */
+export function withDefaults(_c: LandingConfig | null | undefined): LandingConfigResolved {
+  return DEFAULT_LANDING_CONFIG;
 }

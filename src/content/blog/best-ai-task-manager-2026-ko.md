@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "2026년 AI 할 일 관리 도구 선택하기"
 description: "작업 방식으로 AI 할 일 도구를 선택하는 가이드."
 date: "2026-06-04"

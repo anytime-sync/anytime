@@ -1,3 +1,5 @@
+import { RETIRED_FEATURE_IDS } from '@/lib/plans';
+import { isRetiredFeature } from '@/lib/product-availability';
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +30,7 @@ export async function GET() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
-      return NextResponse.json({ disabled: [] as string[] });
+      return NextResponse.json({ disabled: RETIRED_FEATURE_IDS });
     }
     const svc = createServiceClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -46,7 +48,8 @@ export async function GET() {
       enabled_pro: boolean | null;
       enabled_vip: boolean | null;
     }>;
-    const disabled = rows.filter((r) => r.disabled).map((r) => r.feature_id);
+    for (const row of rows) if (isRetiredFeature(row.feature_id)) row.disabled = true;
+    const disabled = [...new Set([...RETIRED_FEATURE_IDS, ...rows.filter((r) => r.disabled).map((r) => r.feature_id)])];
     // Per-plan rows leak the monetization matrix to anon callers — only
     // signed-in users get the full row set. Anon clients still receive the
     // disabled list (so the sidebar can hide kill-switched nav items).
@@ -70,7 +73,7 @@ export async function GET() {
     // Fail open: if we can't read the flags, behave as if nothing is disabled.
     // Better to over-show a link than to break the whole sidebar.
     return NextResponse.json(
-      { disabled: [] as string[], rows: [], error: msg },
+      { disabled: RETIRED_FEATURE_IDS, rows: [], error: msg },
       { status: 200 },
     );
   }

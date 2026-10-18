@@ -6,11 +6,11 @@ import { BlogIndexJsonLd } from "@/components/json-ld";
 export const metadata: Metadata = {
   title: "Blog — First Light",
   description:
-    "Thoughts on calm productivity, AI-assisted planning, and building a daily practice that sticks.",
+    "Thoughts on calm productivity, personal planning, and building a daily practice that sticks.",
   openGraph: {
     title: "Blog — First Light",
     description:
-      "Thoughts on calm productivity, AI-assisted planning, and building a daily practice.",
+      "Thoughts on calm productivity, personal planning, and building a daily practice.",
     url: "https://firstlight.to/blog",
   },
   alternates: { canonical: "/blog" },

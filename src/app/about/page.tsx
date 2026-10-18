@@ -49,7 +49,7 @@ export default function AboutPage() {
             <p>
               A daily planner that brings tasks, calendar, habits and a Pomodoro
               timer into one place. Capture commitments, choose the next action, and
-              request an optional AI briefing when you need help reviewing your tasks and calendar.
+              review your tasks and calendar to choose your next step.
             </p>
             <p>
               The interface supports English, Traditional and Simplified Chinese, Japanese,

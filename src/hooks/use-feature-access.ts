@@ -1,5 +1,6 @@
 "use client";
 
+import { isRetiredFeature } from '@/lib/product-availability';
 import { useQuery } from "@tanstack/react-query";
 import { useUserPlan } from "@/hooks/use-billing";
 import { getFeature, planSatisfies, type Plan } from "@/lib/plans";
@@ -85,6 +86,7 @@ function pickPlanCol(flag: FlagRow, plan: Plan): boolean | null {
 export function useCanUseFeature(featureId: string): boolean {
   const planQ = useUserPlan();
   const flagsQ = useFlagRows();
+  if (isRetiredFeature(featureId)) return false;
   if (planQ.isLoading || flagsQ.isLoading) return true;
   const plan = (planQ.data?.plan ?? "free") as Plan;
   const flags = flagsQ.data ?? [];

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
-import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { useStartCheckout } from "@/hooks/use-billing";
@@ -79,7 +78,6 @@ export default function PricingPage() {
                 "Today, Tomorrow, Next 7 / 90 days, Inbox",
                 "Calendar with Google Calendar (read)",
                 "Lists, Tags, Habits, Notes, Focus",
-                "Optional AI briefing (daily usage limits)",
                 "Email-to-inbox, push, daily digest",
                 "Export your data, anytime",
                 "Groups · free during beta",
@@ -118,10 +116,7 @@ export default function PricingPage() {
             <ul className="space-y-2 text-sm flex-1">
               {[
                 "Everything in Free",
-                "AI briefings with daily usage limits",
                 "Two-way Google Calendar sync",
-                "Smart reschedule & Find time",
-                "End-of-day Reflection",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
@@ -152,9 +147,6 @@ export default function PricingPage() {
 
           {/* Pro */}
           <div className="border-2 border-accent rounded-2xl p-6 flex flex-col relative">
-            <span className="absolute -top-3 left-6 bg-accent text-white text-[11px] px-2 py-0.5 rounded-full uppercase tracking-wide">
-              {t(lang, "pricing.plan.pro.badge")}
-            </span>
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight flex items-center gap-2">
                 {t(lang, "pricing.plan.pro.name")} <Sparkles className="size-5 text-accent" />
@@ -170,12 +162,6 @@ export default function PricingPage() {
             <ul className="space-y-2 text-sm flex-1">
               {[
                 "Everything in Plus",
-                "Plan-my-day & Plan-my-week",
-                "Morning Co-pilot (conversational briefing)",
-                "Voice → Task & Snapshot → Task",
-                "Smart triage (AI Eisenhower)",
-                "Weekly review + Goal tracker",
-                "Semantic search across tasks and notes",
                 "Public API + MCP access",
                 "Priority support",
               ].map((line) => (
@@ -201,10 +187,6 @@ export default function PricingPage() {
               )}
             </div>
           </div>
-        </section>
-
-        <section className="mb-16">
-          <DemoCarousel lang={lang} />
         </section>
 
                 {/* Full feature matrix */}

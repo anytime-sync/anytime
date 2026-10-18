@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "First Light를 만든 이유"
 description: "선택적 AI 지원으로 개인의 실행을 돕는 First Light의 목적."
 date: "2026-06-04"

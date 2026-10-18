@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImageIcon, Loader2, X, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -64,9 +65,9 @@ export function ScanTasksSheet({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
-  useEffect(() => { if (open && initialFile) void handleFile(initialFile); }, [open, initialFile]);
+  useEffect(() => { if (HOSTED_AI_ENABLED && open && initialFile) void handleFile(initialFile); }, [open, initialFile]);
 
-  if (!open) return null;
+  if (!HOSTED_AI_ENABLED || !open) return null;
 
   async function handleFile(file: File) {
     if (!file) return;

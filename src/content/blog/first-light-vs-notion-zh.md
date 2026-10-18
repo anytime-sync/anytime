@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "First Light 與 Notion：比較工作流程"
 description: "比較個人規劃與共享工作空間；First Light 與 Notion 都有 MCP 連接。"
 date: "2026-07-14"

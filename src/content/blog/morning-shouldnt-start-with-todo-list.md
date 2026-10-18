@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "Your Morning Shouldn't Start With a To-Do List"
 description: "When an optional briefing helps you turn a task list into a clear next action."
 date: "2026-06-04"

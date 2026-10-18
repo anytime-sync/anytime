@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from './product-availability';
 import Anthropic from "@anthropic-ai/sdk";
 
 /**
@@ -8,6 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 let _client: Anthropic | null | undefined;
 
 export function getAnthropic(): Anthropic | null {
+  if (!HOSTED_AI_ENABLED) return null;
   if (_client !== undefined) return _client;
   const key = process.env.ANTHROPIC_API_KEY;
   _client = key ? new Anthropic({ apiKey: key }) : null;

@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "2026 年如何選擇 AI 任務管理工具"
 description: "以工作流程選擇 AI 任務工具，說明 First Light 的能力與限制。"
 date: "2026-06-04"

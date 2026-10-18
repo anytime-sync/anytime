@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "First Light vs. Todoist, Things, and TickTick"
 description: "Compare task workflows, AI connections and plan boundaries using official product sources."
 date: "2026-06-28"

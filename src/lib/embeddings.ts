@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from './product-availability';
 /**
  * embeddings.ts — keep search_embeddings in sync with notes/tasks/comments.
  *
@@ -60,6 +61,7 @@ export async function syncEmbedding({
   sourceId: string;
   content: string;
 }): Promise<{ skipped: boolean }> {
+  if (!HOSTED_AI_ENABLED) return { skipped: true };
   const trimmed = content.trim();
   if (!trimmed) {
     // Empty content: drop any existing embedding for this row.

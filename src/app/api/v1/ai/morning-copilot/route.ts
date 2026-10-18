@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { resolveAiContext, jsonError, jsonOk } from "../_lib/ai-handler";
@@ -24,6 +25,7 @@ function localDateKey(d: Date, tz: string): string {
  * Returns: morning brief with suggested actions
  */
 export async function POST(req: NextRequest) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const resolved = await resolveAiContext(req, "morning_copilot");
   if (!resolved.ok) return resolved.response;
   const { ctx } = resolved;

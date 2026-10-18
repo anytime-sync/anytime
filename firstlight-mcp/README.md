@@ -35,12 +35,11 @@ On Windows, forward-slash paths such as `C:/path/to/anytime/firstlight-mcp/dist/
 
 ## Tools and behavior
 
-The authoritative tool list is exported from `src/tools/index.ts` and returned by `tools/list`. This source revision exposes 21 tools for task and event reads/edits, note search, tags, goals and daily summaries. In-app planning tools are separate; other configured connections may expose different tools.
+The authoritative tool list is exported from `src/tools/index.ts` and returned by `tools/list`. This source revision exposes 19 tools for task and event reads/edits, note links, tags, goals and daily summaries. Hosted AI and semantic search are retired. Older clients may still list their tools, but the server rejects those calls. External AI clients use their own service and billing.
 
 - `list_tasks` and `get_task` read tasks.
 - `create_task`, `update_task`, `complete_task` and `delete_task` save changes.
 - `list_events` reads calendar records; editing uses separate tools.
-- `search_notes` searches saved notes.
 - `daily_summary` reads structured daily records.
 - `get_active_goals` reads active goals.
 - `list_tags`, `create_tag`, `tag_task`, `untag_task` and `get_task_tags` manage labels.

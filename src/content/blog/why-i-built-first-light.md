@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "Why I Built First Light"
 description: "The purpose behind First Light: personal follow-through with optional AI assistance."
 date: "2026-06-28"

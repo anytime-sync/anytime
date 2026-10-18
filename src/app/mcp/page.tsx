@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "MCP Integration — Let Your AI Assistant Manage Your Tasks",
   description:
-    "Connect a compatible MCP client to First Light with Pro access. Read and edit tasks, review planning suggestions, and work with saved calendar context.",
+    "Connect a compatible MCP client to First Light with Pro access. Read and edit tasks and work with saved calendar context.",
   keywords: [
     "MCP task manager",
     "Model Context Protocol",
@@ -165,7 +165,6 @@ export default function McpPage() {
             { name: "complete_task", desc: "Mark a task as done" },
             { name: "delete_task", desc: "Remove a task" },
             { name: "daily_summary", desc: "Read a structured daily summary" },
-            { name: "search_notes", desc: "Search saved notes" },
             { name: "list_events", desc: "Read recorded calendar events" },
             { name: "get_active_goals", desc: "Read active goals" },
           ].map(({ name, desc }) => (
@@ -186,7 +185,7 @@ export default function McpPage() {
           Stop copy-pasting your tasks into AI.
         </h2>
         <p className="text-muted-fg text-sm mb-8 max-w-md mx-auto">
-          The core planner is free. API/MCP access requires Pro; AI usage limits apply.
+          The core planner is free. API/MCP access requires Pro. External clients run separately and may have their own fees; hosted AI is not included.
         </p>
         <Link
           href="/pricing"

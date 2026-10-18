@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "Choosing an AI Task Manager in 2026"
 description: "A workflow-based guide to choosing AI task tools, with First Light capabilities and limits explained."
 date: "2026-06-04"

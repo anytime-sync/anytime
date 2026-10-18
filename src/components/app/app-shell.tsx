@@ -67,8 +67,8 @@ export function AppShell({
       </div>
       <CommandPalette />
       <QuickAdd />
-      <GoalModal />
-      <ReflectionDialog />
+
+
       <Reminders />
     </div>
   );

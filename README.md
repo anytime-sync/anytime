@@ -1,3 +1,7 @@
+# Current product scope
+
+Hosted AI and semantic search were retired on 2026-10-18. See docs/PUBLIC_CONTENT_FACTS.md and src/lib/product-availability.ts. Earlier AI setup notes below are historical.
+
 # First Light
 
 Cloud engineering, isolated checks and release gates: [operating workflow](docs/OPERATIONS.md) | [prioritized backlog](docs/BACKLOG.md).

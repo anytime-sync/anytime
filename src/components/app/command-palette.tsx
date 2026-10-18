@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/store/ui";
 import { useTasks } from "@/hooks/use-tasks";
@@ -31,6 +32,7 @@ export function CommandPalette() {
   useEffect(() => { setAiMatches(null); }, [q]);
 
   async function runAiSearch() {
+    if (!HOSTED_AI_ENABLED) return;
     if (q.trim().length < 3) return;
     try {
       const r = await nlSearch.mutateAsync(q.trim());
@@ -102,7 +104,7 @@ export function CommandPalette() {
               }
             }}
           />
-          {q.trim().length >= 3 && (
+          {HOSTED_AI_ENABLED && q.trim().length >= 3 && (
             <button
               type="button"
               className="mr-2 btn-ghost h-8 px-3 text-xs inline-flex items-center gap-1.5 disabled:opacity-50"

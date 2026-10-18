@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "How to Build a Morning Routine That Actually Sticks (With AI)"
 description: "A small morning routine: check commitments, choose one task, and request an optional briefing."
 date: "2026-07-14"

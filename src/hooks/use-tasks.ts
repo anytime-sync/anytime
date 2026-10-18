@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
@@ -271,7 +272,7 @@ export function useCreateTask() {
       // no due date) — micro-tasks like "Eat" stay alone.
       try {
         if (
-          createdTask &&
+          HOSTED_AI_ENABLED && createdTask &&
           createdTask.id &&
           createdTask.title &&
           createdTask.title.length >= 8 &&
@@ -477,4 +478,3 @@ export function useReorderTasks() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
-

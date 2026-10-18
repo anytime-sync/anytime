@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { resolveAiContext, jsonError, jsonOk } from "../_lib/ai-handler";
@@ -36,6 +37,7 @@ const ResSchema = z.object({
  * Returns: { suggestions: [...], notes: string }
  */
 export async function POST(req: NextRequest) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const resolved = await resolveAiContext(req, "plan_week");
   if (!resolved.ok) return resolved.response;
   const { ctx } = resolved;

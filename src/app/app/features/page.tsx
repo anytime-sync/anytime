@@ -6,7 +6,6 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useUserPlan, useStartCheckout, useOpenBillingPortal } from "@/hooks/use-billing";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
-import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 
 /**
@@ -155,11 +154,6 @@ export default function FeaturesPage() {
               <p className="editorial-number text-[11px] mb-3">{t(lang, "features.unlockHeading")}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {[
-                  { title: "Daily Edition", body: "Unlimited briefings; today, not just one a day." },
-                  { title: "Plan my day", body: "AI sequences your day around energy peaks and capacity." },
-                  { title: "Plan my week", body: "Weekly plan that respects deadlines and goals." },
-                  { title: "Morning Co-pilot", body: "Conversational briefing that answers follow-ups." },
-                  { title: "Reflection", body: "End-of-day reflection with AI-assisted prompts." },
                   { title: "Two-way GCal", body: "Quick-add creates Google Calendar events." },
                 ].map((it) => (
                   <div key={it.title}>
@@ -172,9 +166,6 @@ export default function FeaturesPage() {
           ) : null}
 
           {/* Visual demo — same carousel as /pricing */}
-          <section>
-            <DemoCarousel lang={lang} />
-          </section>
 
           {/* Full matrix */}
           <section>

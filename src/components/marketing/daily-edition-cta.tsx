@@ -31,8 +31,7 @@ export function DailyEditionCta() {
         Give your next task a place
       </h2>
       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-fg">
-        Capture a task, choose when to work on it, and mark it done. Request an
-        optional AI briefing when it helps. Free to start, no credit card.
+        Capture a task, choose when to work on it, and mark it done. Free to start, no credit card.
       </p>
 
       <BlogEmailCapture />

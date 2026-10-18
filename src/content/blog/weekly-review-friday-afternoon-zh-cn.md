@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "让每周回顾带来明确下一步"
 description: "回顾已记录的工作、决定后续事项，需要时再使用 AI 每周回顾。"
 date: "2026-07-14"

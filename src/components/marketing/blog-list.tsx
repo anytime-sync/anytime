@@ -52,12 +52,12 @@ export function BlogList({ posts }: { posts: BlogPostMeta[] }) {
         </h1>
         <p className="mt-3 text-muted-fg text-base leading-relaxed max-w-lg">
           {lang.startsWith("zh")
-            ? "關於從容的生產力、AI 輔助的早晨、與刻意建立的日常習慣。"
+            ? "關於從容的生產力、每日規劃、與刻意建立的日常習慣。"
             : lang === "ja"
-            ? "穏やかな生産性、AIアシストの朝、意図的な日課づくりについて。"
+            ? "穏やかな生産性、毎日の計画、意図的な日課づくりについて。"
             : lang === "ko"
-            ? "차분한 생산성, AI 기반 아침 루틴, 의도적인 일상 습관에 대해."
-            : "On calm productivity, AI-assisted mornings, and building intentional daily practices."}
+            ? "차분한 생산성, 매일의 계획, 의도적인 일상 습관에 대해."
+            : "On calm productivity, daily planning, and building intentional daily practices."}
         </p>
       </div>
 

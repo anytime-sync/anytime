@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "First Light vs Notion: Compare the Workflow"
 description: "Compare personal planning with a shared workspace. Both First Light and Notion offer MCP connections."
 date: "2026-07-14"

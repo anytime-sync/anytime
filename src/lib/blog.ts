@@ -29,7 +29,8 @@ export function getAllSlugs(): string[] {
   return fs
     .readdirSync(POSTS_DIR)
     .filter((f) => f.endsWith(".md"))
-    .map((f) => f.replace(/\.md$/, ""));
+    .map((f) => f.replace(/\.md$/, ""))
+    .filter((slug) => getPost(slug) !== null);
 }
 
 /** Get metadata for all posts (sorted newest-first). */
@@ -47,6 +48,7 @@ export function getPost(slug: string): BlogPost | null {
 
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = matter(raw);
+  if (data.retired === true) return null;
   const stats = readingTime(content);
 
   return {

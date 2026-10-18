@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useMemo, useState } from "react";
 import { CalendarClock, Sparkles, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -128,6 +129,7 @@ export function TodayAiBar() {
     if(saved)toast.success(String(saved)+' task moves saved.');
   }
 
+  if (!HOSTED_AI_ENABLED) return null;
   return (
     <>
       {workload.hasEstimates && (

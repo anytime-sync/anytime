@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "為什麼我做了 First Light"
 description: "First Light 的設計目的：以個人行動與完成承諾為核心，AI 為選用協助。"
 date: "2026-06-04"

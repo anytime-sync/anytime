@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LanguagePicker } from "@/components/app/language-picker";
-import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
-import { AppScreenshot } from "@/components/marketing/app-screenshot";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DesignSlot } from "@/lib/design/slot";
 import { FloatingLayer } from "@/lib/design/floating-layer";
@@ -121,59 +119,17 @@ export default function Home() {
         </div>
       </DesignSlot>
 
-      <AppScreenshot />
+
 
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />
       </div>
 
-      <section className="px-6 py-16 max-w-6xl mx-auto w-full">
-        <div className="text-center mb-8">
-          <p className="editorial-number text-xs mb-3">{t(lang, "landing.demo.kicker")}</p>
-        </div>
-        <DemoCarousel lang={lang} />
-      </section>
+
 
       <div className="max-w-6xl w-full mx-auto px-6">
         <div className="h-px bg-border" />
       </div>
-
-      {/* ── Works with your AI ── */}
-      <section className="px-6 py-16 max-w-4xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <p className="editorial-number text-xs mb-3">{t(lang, "landing.ai.kicker")}</p>
-          <h2 className="font-display text-3xl md:text-4xl tracking-tight">
-            {t(lang, "landing.ai.heading")}
-          </h2>
-          <p className="text-muted-fg text-sm md:text-base max-w-xl mx-auto mt-3">
-            {t(lang, "landing.ai.subheading")}
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-6 text-center">
-          <div className="space-y-2">
-            <div className="size-12 mx-auto rounded-xl bg-violet-100 grid place-items-center">
-              <span className="text-violet-600 text-lg">🧠</span>
-            </div>
-            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item1.title")}</h3>
-            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item1.desc")}</p>
-          </div>
-          <div className="space-y-2">
-            <div className="size-12 mx-auto rounded-xl bg-amber-100 grid place-items-center">
-              <span className="text-amber-600 text-lg">📋</span>
-            </div>
-            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item2.title")}</h3>
-            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item2.desc")}</p>
-          </div>
-          <div className="space-y-2">
-            <div className="size-12 mx-auto rounded-xl bg-emerald-100 grid place-items-center">
-              <span className="text-emerald-600 text-lg">🔍</span>
-            </div>
-            <h3 className="font-medium text-sm">{t(lang, "landing.ai.item3.title")}</h3>
-            <p className="text-xs text-muted-fg">{t(lang, "landing.ai.item3.desc")}</p>
-          </div>
-        </div>
-      </section>
-
 
       {/* ── Task from anywhere ── */}
       <section className="px-6 py-16 max-w-4xl mx-auto w-full">
@@ -183,7 +139,7 @@ export default function Home() {
             {t(lang, "landing.capture.heading")}
           </h2>
         </div>
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="grid sm:grid-cols-2 gap-6 text-center">
           <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-[#2AABEE]/15 grid place-items-center">
               <span className="text-[#2AABEE] text-base">✈️</span>
@@ -192,25 +148,11 @@ export default function Home() {
             <p className="text-xs text-muted-fg">{t(lang, "landing.capture.telegram.desc")} <a href="https://t.me/Firstlightapp_bot" target="_blank" rel="noopener" className="underline hover:text-foreground">Try the bot</a></p>
           </div>
           <div className="space-y-2">
-            <div className="size-10 mx-auto rounded-lg bg-rose-100 grid place-items-center">
-              <span className="text-rose-500 text-base">🎤</span>
-            </div>
-            <h3 className="font-medium text-sm">{t(lang, "landing.capture.voice.title")}</h3>
-            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.voice.desc")}</p>
-          </div>
-          <div className="space-y-2">
             <div className="size-10 mx-auto rounded-lg bg-blue-100 grid place-items-center">
               <span className="text-blue-500 text-base">📧</span>
             </div>
             <h3 className="font-medium text-sm">{t(lang, "landing.capture.email.title")}</h3>
             <p className="text-xs text-muted-fg">{t(lang, "landing.capture.email.desc")}</p>
-          </div>
-          <div className="space-y-2">
-            <div className="size-10 mx-auto rounded-lg bg-stone-100 grid place-items-center">
-              <span className="text-stone-500 text-base">📸</span>
-            </div>
-            <h3 className="font-medium text-sm">{t(lang, "landing.capture.screenshot.title")}</h3>
-            <p className="text-xs text-muted-fg">{t(lang, "landing.capture.screenshot.desc")}</p>
           </div>
         </div>
       </section>

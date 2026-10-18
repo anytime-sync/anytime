@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "How to Manage Your Tasks with Claude Using MCP"
 description: "Set up First Light Pro with a compatible MCP client and distinguish planning suggestions from saved task edits."
 date: "2026-06-06"

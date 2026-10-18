@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "From Daily Edition to Brief me: Optional AI Help"
 description: "How First Light’s optional briefing works today, what it uses, and what it does not change."
 date: "2026-06-28"

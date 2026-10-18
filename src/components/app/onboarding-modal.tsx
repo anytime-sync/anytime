@@ -161,24 +161,7 @@ export function OnboardingModal() {
                 </div>
               </button>
 
-              <button
-                onClick={startGoalPath}
-                className="text-left surface border border-border rounded-lg p-4 hover:border-accent/60 transition-colors group"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
-                    <Target className="size-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-display text-base leading-tight">
-                      Plan a goal
-                    </p>
-                    <p className="text-xs text-muted-fg mt-1">
-                      Paste a goal sentence. AI breaks it into a weekly plan you can actually run.
-                    </p>
-                  </div>
-                </div>
-              </button>
+
             </div>
 
             <div className="mt-6 flex items-center justify-between">

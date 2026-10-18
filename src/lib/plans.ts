@@ -1,3 +1,4 @@
+import { isRetiredFeature } from '@/lib/product-availability';
 /**
  * First Light — feature-by-tier source of truth.
  *
@@ -50,12 +51,12 @@ export interface FeatureSpec {
   beta?: boolean;
 }
 
-export const FEATURES: FeatureSpec[] = [
+const ALL_FEATURES: FeatureSpec[] = [
   // ─── Tasks (the core experience) ─────────────────────────────────────────
   { id: "tasks_today",         label: "Today",            description: "Your tasks for today, with priority and scheduling controls.", category: "tasks", minPlan: "free", order: 10 },
   { id: "tasks_tomorrow",      label: "Tomorrow",         description: "Pre-stage tomorrow's work without losing today's focus.", category: "tasks", minPlan: "free", order: 20 },
   { id: "tasks_next7",         label: "Next 7 days",      description: "Week-ahead view that interleaves tasks and calendar events.", category: "tasks", minPlan: "free", order: 30 },
-  { id: "tasks_next90",        label: "Next 90 days",     description: "Quarter-ahead horizon for projects and goals.", category: "tasks", minPlan: "free", order: 40 },
+  { id: "tasks_next90",        label: "Next 90 days",     description: "See tasks due over the next 90 days.", category: "tasks", minPlan: "free", order: 40 },
   { id: "tasks_inbox",         label: "Inbox",            description: "Capture-first surface for anything undated.", category: "tasks", minPlan: "free", order: 50 },
   { id: "tasks_lists",         label: "Lists",            description: "Group tasks into projects with their own filters.", category: "tasks", minPlan: "free", order: 60 },
   { id: "tasks_tags",          label: "Tags",             description: "Cross-cutting labels to slice work any way you want.", category: "tasks", minPlan: "free", order: 70 },
@@ -107,13 +108,16 @@ export const FEATURES: FeatureSpec[] = [
   { id: "plat_email_digest",   label: "Email digest",     description: "Daily digest of what's on deck, by email.", category: "platform", minPlan: "free", order: 20 },
   { id: "plat_email_reminders",label: "Email reminders",  description: "Per-task email reminders for things you can't miss.", category: "platform", minPlan: "free", order: 30 },
   { id: "plat_priority_support", label: "Priority support", description: "Pro support requests receive priority.", category: "platform", minPlan: "pro", order: 40 },
-  { id: "plat_api_access",       label: "Public API + MCP",   description: "Issue access tokens and let Claude / OpenClaw / any MCP client read and edit your First Light.", category: "platform", minPlan: "pro", order: 50 },
+  { id: "plat_api_access",       label: "Public API + MCP",   description: "Connect compatible external clients to read and edit your records with authorized API tokens.", category: "platform", minPlan: "pro", order: 50 },
 ];
+
+export const RETIRED_FEATURE_IDS = ALL_FEATURES.filter(f => isRetiredFeature(f.id)).map(f => f.id);
+export const FEATURES = ALL_FEATURES.filter(f => !isRetiredFeature(f.id));
 
 export const PLANS: { plan: Plan; label: string; tagline: string }[] = [
   { plan: "free", label: "Free",  tagline: "The core task planner, free to use." },
-  { plan: "plus", label: "Plus",  tagline: "Two-way calendar sync, rescheduling suggestions, find time, and end-of-day reflection." },
-  { plan: "pro",  label: "Pro",   tagline: "Add the AI co-pilot — Plan my day, Voice → Task, and the full review suite." },
+  { plan: "plus", label: "Plus",  tagline: "Two-way Google Calendar sync." },
+  { plan: "pro",  label: "Pro",   tagline: "Calendar sync, API/MCP access, and priority support." },
 ];
 
 /**

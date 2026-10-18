@@ -18,7 +18,7 @@ export function SoftwareApplicationJsonLd({
     "@type": "SoftwareApplication",
     name: "First Light",
     description:
-      "A personal planner for tasks, notes, calendars, habits and focus, with optional AI briefings and paid planning and MCP features.",
+      "A personal planner for tasks, notes, calendars, habits and focus.",
     url: "https://firstlight.to",
     applicationCategory: "ProductivityApplication",
     operatingSystem: "Web",
@@ -49,19 +49,14 @@ export function SoftwareApplicationJsonLd({
     },
     inLanguage: ["en", "zh-TW", "zh-CN", "ja", "ko"],
     featureList: [
-      "MCP integration for AI assistants",
+      "API/MCP integration",
       "Telegram bot",
-      "AI morning briefings (Daily Edition)",
       "Google Calendar sync",
       "Eisenhower matrix",
-      "Voice-to-task",
-      "Screenshot-to-task",
       "Email-to-task",
       "Focus timer",
       "Habit tracker",
-      "Weekly reviews",
       "Share groups",
-      "Semantic search",
       "5 languages (EN, ZH-TW, ZH-CN, JA, KO)",
     ],
   };
@@ -83,7 +78,7 @@ export function BlogIndexJsonLd({
     "@context": "https://schema.org",
     "@type": "Blog",
     name: "First Light Blog",
-    description: "Thoughts on calm productivity, AI-assisted planning, and building a daily practice that sticks.",
+    description: "Thoughts on calm productivity, personal planning, and building a daily practice that sticks.",
     url: "https://firstlight.to/blog",
     publisher: {
       "@type": "Organization",
@@ -152,4 +147,3 @@ export function BlogPostJsonLd({
     />
   );
 }
-

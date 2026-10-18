@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "How to Plan Your Day With AI (Without Losing Your Mind)"
 description: "Use AI suggestions to review priorities while keeping control of deadlines and calendar changes."
 date: "2026-06-04"

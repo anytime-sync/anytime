@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { getUserPlan } from '@/lib/billing';
 import { canUseFeature } from '@/lib/feature-flags';
 import { NextRequest } from 'next/server';
@@ -8,6 +9,7 @@ import { fetchScheduleContext } from '@/lib/ai/schedule-context';
 import { findSlots,reserveSlot } from '@/lib/ai/slots';
 export const runtime='nodejs';
 export async function POST(req:NextRequest) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const ctx=await requireApiAuth(req,'write');if(!ctx.ok)return ctx.response;
   if(!(await canUseFeature(await getUserPlan(ctx.userId),'ai_reschedule_task')))return jsonError(403,'feature_unavailable','This planning feature is unavailable for this account.');
   const text=await req.text();let body:unknown={};

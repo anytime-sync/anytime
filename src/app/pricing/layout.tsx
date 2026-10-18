@@ -11,11 +11,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "Pricing \u2014 First Light",
-    description: "Free, Plus, and Pro plans for the calm daily productivity tool. Daily brief, AI plan-my-day, voice/snapshot/paste to task, Google Calendar sync, weekly review.",
+    description: "Free, Plus, and Pro plans for the calm daily productivity tool. Tasks, notes, Google Calendar sync, habits, focus, and API/MCP access.",
     alternates: { canonical: "/pricing" },
     openGraph: {
       title: "Pricing \u2014 First Light",
-      description: `Start free. Plus ${plus}/mo. Pro ${pro}/mo. Calm daily productivity with AI briefings, calendar sync, and focus tools.`,
+      description: `Start free. Plus ${plus}/mo. Pro ${pro}/mo. Calm daily productivity with tasks, calendar sync, and focus tools.`,
       url: "https://firstlight.to/pricing",
       images: ["/og.png"],
     },

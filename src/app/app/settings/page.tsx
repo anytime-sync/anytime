@@ -208,15 +208,6 @@ export default function SettingsPage() {
                   <p className="text-[11px] text-muted-fg leading-tight">Email, push, digest</p>
                 </div>
               </a>
-              <a href="#settings-aiFeatures" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
-                <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
-                  <Sparkles className="size-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium leading-tight">AI</p>
-                  <p className="text-[11px] text-muted-fg leading-tight">Behaviour, limits</p>
-                </div>
-              </a>
               <a href="#settings-yourData" className="surface border border-border rounded-lg p-3 hover:border-accent/60 transition-colors flex items-center gap-3 group">
                 <span className="size-9 rounded-md bg-accent/15 text-accent grid place-items-center shrink-0 group-hover:bg-accent/25 transition-colors">
                   <Database className="size-4" />
@@ -311,35 +302,6 @@ export default function SettingsPage() {
           </Section>
 
           {/* ---------- AI ---------- */}
-          <Section id="settings-aiFeatures" kicker={tr(lang, "view.settings.section.aiFeatures")}>
-            <Toggle
-              label={tr(lang, "view.settings.toggle.aiEnabled")}
-              hint={tr(lang, "view.settings.toggle.aiEnabledHint")}
-              checked={prefs?.ai_enabled ?? true}
-              onChange={(v) => setPref("ai_enabled", v)}
-            />
-            <Toggle
-              label={tr(lang, "view.settings.toggle.dailyEdition")}
-              hint={tr(lang, "view.settings.toggle.dailyEditionHint")}
-              checked={prefs?.ai_daily_edition ?? true}
-              onChange={(v) => setPref("ai_daily_edition", v)}
-              disabled={!(prefs?.ai_enabled ?? true)}
-            />
-            <Toggle
-              label={tr(lang, "view.settings.toggle.smartEisenhower")}
-              hint={tr(lang, "view.settings.toggle.smartEisenhowerHint")}
-              checked={prefs?.ai_auto_quadrant ?? false}
-              onChange={(v) => setPref("ai_auto_quadrant", v)}
-              disabled={!(prefs?.ai_enabled ?? true)}
-            />
-            <Toggle
-              label={tr(lang, "view.settings.toggle.voiceCapture")}
-              hint={tr(lang, "view.settings.toggle.voiceCaptureHint")}
-              checked={prefs?.ai_voice_enabled ?? true}
-              onChange={(v) => setPref("ai_voice_enabled", v)}
-              disabled={!(prefs?.ai_enabled ?? true)}
-            />
-          </Section>
 
           {/* ---------- Notifications ---------- */}
           <Section id="settings-notifications" kicker={tr(lang, "view.settings.section.notifications")}>

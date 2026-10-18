@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "A Weekly Review That Leads to a Next Step"
 description: "Review recorded work, decide what to carry forward, and use First Light AI reviews when helpful."
 date: "2026-07-14"

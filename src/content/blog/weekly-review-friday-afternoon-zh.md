@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "讓每週回顧帶來明確下一步"
 description: "回顧已記錄的工作、決定接續事項，需要時再使用 AI 每週回顧。"
 date: "2026-07-14"

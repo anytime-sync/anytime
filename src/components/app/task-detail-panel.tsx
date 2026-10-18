@@ -1,4 +1,5 @@
 "use client";
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { calendarTask, snoozedDue } from "@/lib/task-schedule";
 import { AiTaskActions } from "./ai-task-actions";
 import { TaskComments } from "./task-comments";
@@ -444,9 +445,9 @@ export function TaskDetailPanel() {
           <AttachmentList taskId={task.id} />
         </Field>
 
-        <Field label={t(lang, "taskPanel.aiShortcuts")} icon={undefined}>
+        {HOSTED_AI_ENABLED && <Field label={t(lang, "taskPanel.aiShortcuts")} icon={undefined}>
           <AiTaskActions task={task} />
-        </Field>
+        </Field>}
 
         <Field label={t(lang, "taskPanel.notes")}>
           <textarea

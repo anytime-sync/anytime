@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 /**
  * GET /api/v1/notes/search?q=...&limit=...&since=YYYY-MM-DD
  *
@@ -16,6 +17,7 @@ import { requireApiAuth, jsonError, jsonOk } from "../../_lib/auth";
 import { embedOne } from "@/lib/voyage";
 
 export async function GET(req: NextRequest) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const ctx = await requireApiAuth(req, "read");
   if (!ctx.ok) return ctx.response;
 
@@ -99,4 +101,3 @@ export async function GET(req: NextRequest) {
 
   return jsonOk({ q, count: results.length, results });
 }
-

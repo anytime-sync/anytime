@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "怎么用 AI 规划你的一天（又不会搞到崩溃）"
 description: "用 AI 建议查看优先顺序，同时保留期限与行程更改的决定权。"
 date: "2026-06-04"

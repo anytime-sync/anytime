@@ -1,3 +1,13 @@
+# Current product offer — 2026-10-18
+
+Hosted AI has been retired by owner decision. Do not advertise or re-enable AI briefings, planning, image/voice capture, parsing, estimates, translation, goal decomposition, reflection, weekly reviews, semantic search, or their background jobs. `src/lib/product-availability.ts` is the retirement policy. Credentials and admin flags cannot override it.
+
+Current offer: Free core task planner, notes, habits, focus, calendar reading, reminders and export/import. Plus adds two-way Google Calendar. Pro adds authorized API/MCP access and priority support. External clients are separate services; the connection does not include hosted AI. Existing saved records remain stored. No subscription prices or billing records were changed.
+
+Public copy, pricing, FAQ, feature matrix and app entry points reflect the retirement. Old AI-promotional articles are unpublished (`retired: true`); source remains in Git. Comparisons redirect to current pricing. The new daily-planning article covers the supported workflow.
+
+## Historical audit before retirement (superseded for AI availability)
+
 # Public content fact sheet
 
 Reviewed 2026-10-18 against source and live settings. Recheck before changing product claims.

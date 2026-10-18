@@ -1,4 +1,5 @@
 ---
+retired: true
 title: "2026年のAIタスク管理ツールの選び方"
 description: "作業の流れでAIタスクツールを選ぶためのガイド。"
 date: "2026-06-04"
