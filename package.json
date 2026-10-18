@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit",
     "lint:i18n": "node scripts/lint-i18n.mjs",
     "test": "vitest run",
-    "test:onboarding": "node scripts/qa/onboarding.cjs",
-    "test:watch": "vitest"
+    "test:smoke": "vitest run --maxWorkers=2 --minWorkers=1 src/lib/calendar-sync.test.ts src/lib/calendar-write.test.ts src/lib/cron-auth.test.ts src/lib/email/digest-agenda.test.ts src/lib/email/daily-digest-template.test.ts src/app/api/cron/auth.test.ts src/app/api/cron/calendar-sync/route.test.ts src/app/api/cron/daily-digest/route.test.ts",
+    "test:watch": "vitest",
+    "test:onboarding": "node scripts/qa/onboarding.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
