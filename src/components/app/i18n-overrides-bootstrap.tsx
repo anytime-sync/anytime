@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   LANGUAGES,
+  t,
+  type StringKey,
   readStoredLanguage,
   setI18nOverrides,
   type LanguageCode,
@@ -56,7 +58,8 @@ function patchTextDom(
   els.forEach((el) => {
     const key = el.dataset.designTextKey;
     if (!key) return;
-    const value = map[key];
+    // Resolve through the same current-offer policy as React and server rendering.
+    const value = map[key] ? t(code, key as StringKey) : undefined;
     // Only patch when there's an override for THIS locale AND it differs
     // from what's already rendered. We deliberately don't fall back to
     // the English override here — that would replace correctly-translated
