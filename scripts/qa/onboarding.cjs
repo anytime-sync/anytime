@@ -93,20 +93,20 @@ for (const [file, name] of Object.entries({
         if (mode === 'timeline') await context.addInitScript(() => localStorage.setItem('fl.dayMode', 'timeline'));
         await page.goto(origin);
         if (mode === 'list') assert.equal(await page.getByTestId('list').count(), 1);
-        await page.getByRole('heading', {name: 'Two ways to begin.'}).waitFor({timeout: 5000});
-        assert.equal(await page.getByRole('heading', {name: 'Two ways to begin.'}).count(), 1);
+        await page.getByRole('heading', {name: 'Start with one small task'}).waitFor({timeout: 5000});
+        assert.equal(await page.getByRole('heading', {name: 'Start with one small task'}).count(), 1);
         await page.getByRole('button', {name: dismiss, exact: true}).click();
         assert.equal(await page.evaluate(() => localStorage.getItem('fl.onboardingSeen')), '1');
         for (let login = 0; login < 2; login++) {
           await page.evaluate(() => { window.logoutFixture(); window.loginFixture(); });
           await page.waitForTimeout(350); // modal's documented 250ms first-visit delay
-          assert.equal(await page.getByRole('heading', {name: 'Two ways to begin.'}).count(), 0);
+          assert.equal(await page.getByRole('heading', {name: 'Start with one small task'}).count(), 0);
         }
         await page.getByRole('button', {name: mode === 'list' ? 'timeline' : 'list', exact: true}).click();
         await page.waitForTimeout(350);
-        assert.equal(await page.getByRole('heading', {name: 'Two ways to begin.'}).count(), 0);
+        assert.equal(await page.getByRole('heading', {name: 'Start with one small task'}).count(), 0);
         await page.reload(); await page.waitForTimeout(350);
-        assert.equal(await page.getByRole('heading', {name: 'Two ways to begin.'}).count(), 0);
+        assert.equal(await page.getByRole('heading', {name: 'Start with one small task'}).count(), 0);
         assert.deepEqual(await page.evaluate(() => window.fixtureTasks), []);
         assert.deepEqual(external, [], 'No external network request may escape the fixtures');
         assert.deepEqual(errors, []);

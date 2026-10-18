@@ -1,5 +1,7 @@
 "use client";
 
+import { FEATURES } from "@/lib/plans";
+import { featureCopy } from "@/lib/feature-copy";
 import { t, type LanguageCode } from "@/lib/i18n";
 
 /**
@@ -23,6 +25,16 @@ const features: Feature[] = [
 ];
 
 export function FeatureGrid({ lang = "en" }: { lang?: LanguageCode }) {
+  const ids: Record<string,string> = {f3:'cal_view',f4:'tasks_groups',f7:'tasks_habits',f8:'tasks_pomodoro',f9:'tasks_notes_to_task',f12:'plat_push',f13:'plat_email_digest',f14:'plat_email_reminders',f16:'plat_priority_support'};
+  function localized(f: Feature) {
+    const key = f.nameKey.split('.')[2];
+    const product = FEATURES.find(item => item.id === ids[key]);
+    const translated = product ? featureCopy(product, lang) : undefined;
+    return {
+      name: lang !== 'en' && translated ? translated.label : t(lang, f.nameKey as Parameters<typeof t>[1]),
+      description: lang !== 'en' && translated && ['f7','f8','f9','f13','f14'].includes(key) ? translated.description : t(lang, f.descKey as Parameters<typeof t>[1]),
+    };
+  }
   return (
     <section className="px-6 py-12 max-w-6xl mx-auto w-full">
       <div className="mb-8">
@@ -40,8 +52,8 @@ export function FeatureGrid({ lang = "en" }: { lang?: LanguageCode }) {
           >
             <span className="text-lg shrink-0 mt-0.5">{f.emoji}</span>
             <div className="min-w-0">
-              <p className="font-medium text-sm text-fg dark:text-white">{t(lang, f.nameKey as Parameters<typeof t>[1])}</p>
-              <p className="text-xs text-muted-fg dark:text-white/60">{t(lang, f.descKey as Parameters<typeof t>[1])}</p>
+              <p className="font-medium text-sm text-fg dark:text-white">{localized(f).name}</p>
+              <p className="text-xs text-muted-fg dark:text-white/60">{localized(f).description}</p>
             </div>
           </div>
         ))}

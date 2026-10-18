@@ -1,11 +1,14 @@
 "use client";
 
+import { useLanguage } from "@/lib/use-language";
+import { authCopy } from "@/lib/auth-copy";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Provider } from "@supabase/supabase-js";
 
 export function OAuthButtons({ next = "/app" }: { next?: string }) {
+  const copy = authCopy(useLanguage());
   const [loading, setLoading] = useState<Provider | null>(null);
 
   async function go(provider: Provider) {
@@ -28,10 +31,10 @@ export function OAuthButtons({ next = "/app" }: { next?: string }) {
         onClick={() => go("google")}
         disabled={loading !== null}
         className="btn-outline w-full gap-2"
-        aria-label="Continue with Google"
+        aria-label={copy.google}
       >
         <GoogleIcon />
-        {loading === "google" ? "Redirecting…" : "Continue with Google"}
+        {loading === "google" ? copy.redirect : copy.google}
       </button>
       <button
         type="button"

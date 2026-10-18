@@ -1,10 +1,11 @@
+import { authDestination } from "@/lib/auth-destination";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/app";
+  const next = authDestination(url.searchParams.get("next"));
   // Blog magic-link signups arrive with ?welcome=1 so the app can treat the
   // first /app load as a first-run (greet the user, highlight the pre-seeded
   // Daily Edition). Carry it through to the destination.

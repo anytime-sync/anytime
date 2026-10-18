@@ -57,7 +57,7 @@ const ALL_FEATURES: FeatureSpec[] = [
   { id: "tasks_tomorrow",      label: "Tomorrow",         description: "Pre-stage tomorrow's work without losing today's focus.", category: "tasks", minPlan: "free", order: 20 },
   { id: "tasks_next7",         label: "Next 7 days",      description: "Week-ahead view that interleaves tasks and calendar events.", category: "tasks", minPlan: "free", order: 30 },
   { id: "tasks_next90",        label: "Next 90 days",     description: "See tasks due over the next 90 days.", category: "tasks", minPlan: "free", order: 40 },
-  { id: "tasks_inbox",         label: "Inbox",            description: "Capture-first surface for anything undated.", category: "tasks", minPlan: "free", order: 50 },
+  { id: "tasks_inbox",         label: "Inbox",            description: "Collect tasks that have not yet been assigned to a list.", category: "tasks", minPlan: "free", order: 50 },
   { id: "tasks_lists",         label: "Lists",            description: "Group tasks into projects with their own filters.", category: "tasks", minPlan: "free", order: 60 },
   { id: "tasks_tags",          label: "Tags",             description: "Cross-cutting labels to slice work any way you want.", category: "tasks", minPlan: "free", order: 70 },
   { id: "tasks_groups",        label: "Groups",           description: "Bundle lists and tags into shared workspaces.", category: "tasks", minPlan: "free", order: 80, beta: true },

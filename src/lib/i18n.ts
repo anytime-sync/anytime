@@ -5503,7 +5503,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "landing.features.subheading": "Organize tasks, notes, habits and focus sessions. Compare the current features below.",
     "landing.ctaNote": "Start with the free planner. No credit card needed.",
     "auth.signup.passwordPlaceholder": "Password (10+ characters, a letter and a number)",
-    "pricing.faq.a7": "We use authentication and access controls to protect account data. Sharing and connected services can give others access to the content you choose. See the Privacy Policy for data processing and analytics details."
+    "pricing.faq.a7": "We use authentication and access controls to protect account data. Sharing and connected services can give others access to the content you choose. See the Privacy Policy for data processing and analytics details.",
+    "view.settings.cal.body": "Subscribe to the read-only ICS feed in Apple Calendar, Google Calendar, Outlook, or another compatible app. Refresh timing depends on that app. Edits there do not sync back through the feed. For Google Calendar editing, connect Google Calendar with Plus or Pro.",
+    "view.settings.gcal.description": "Connect Google Calendar to see your events alongside tasks. Free includes reading events; creating and editing Google events requires Plus or Pro and the appropriate Google permission."
   },
   "zh-TW": {
     "landing.heroBody": "記下任務與筆記，搭配行事曆安排時間，在清爽的空間裡掌握待辦事項。",
@@ -5528,7 +5530,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "pricing.faq.q1": "我可以隨時取消嗎？",
     "pricing.faq.q2": "降級後，我的資料會怎麼樣？",
     "pricing.faq.a4": "支援英文、繁體中文、簡體中文、日文與韓文。",
-    "pricing.faq.a7": "我們使用身分驗證與存取控制保護帳戶資料。分享及連接服務可能讓他人存取你選擇的內容。資料處理與分析工具詳情請見隱私政策。"
+    "pricing.faq.a7": "我們使用身分驗證與存取控制保護帳戶資料。分享及連接服務可能讓他人存取你選擇的內容。資料處理與分析工具詳情請見隱私政策。",
+    "view.settings.cal.body": "可在 Apple 行事曆、Google 行事曆、Outlook 或相容應用程式訂閱唯讀 ICS 訂閱源。更新時間依應用程式而定；在該應用程式中的修改不會透過訂閱源同步回來。如需編輯 Google 活動，請使用 Plus 或 Pro 連結 Google 行事曆。",
+    "view.settings.gcal.description": "連結 Google 行事曆，在任務旁查看活動。Free 可讀取活動；建立與編輯 Google 活動需要 Plus 或 Pro，以及適當的 Google 授權。"
   },
   "zh-CN": {
     "landing.heroBody": "记下任务与笔记，搭配日历安排时间，在清爽的空间里掌握待办事项。",
@@ -5549,7 +5553,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "landing.features.subheading": "整理任务、笔记与习惯，记录专注时间。下方列出各方案目前提供的功能。",
     "landing.ctaNote": "免费开始使用，无需信用卡。",
     "auth.signup.passwordPlaceholder": "密码（至少 10 个字符，含英文字母和数字）",
-    "pricing.faq.a7": "我们使用身份验证与访问控制保护账户数据。分享和连接服务可能让他人访问你选择的内容。数据处理与分析工具详情请见隐私政策。"
+    "pricing.faq.a7": "我们使用身份验证与访问控制保护账户数据。分享和连接服务可能让他人访问你选择的内容。数据处理与分析工具详情请见隐私政策。",
+    "view.settings.cal.body": "可在 Apple 日历、Google 日历、Outlook 或兼容应用订阅只读 ICS 订阅源。更新时间取决于应用；在该应用中的修改不会通过订阅源同步回来。如需编辑 Google 活动，请使用 Plus 或 Pro 连接 Google 日历。",
+    "view.settings.gcal.description": "连接 Google 日历，在任务旁查看活动。Free 可读取活动；创建与编辑 Google 活动需要 Plus 或 Pro，以及相应的 Google 授权。"
   },
   "ja": {
     "landing.heroBody": "タスクとメモを記録し、カレンダーで予定を確認。落ち着いた空間で日々のやることを管理できます。",
@@ -5570,7 +5576,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "landing.features.subheading": "タスク、メモ、習慣、集中時間を管理。現在の機能を下の表で比較できます。",
     "landing.ctaNote": "無料で始められます。クレジットカードは不要です。",
     "auth.signup.passwordPlaceholder": "パスワード（10文字以上、英字と数字を含む）",
-    "pricing.faq.a7": "認証とアクセス制御でアカウントのデータを保護しています。共有や外部サービスとの接続により、選択した内容へのアクセスを許可する場合があります。データ処理や解析の詳細はプライバシーポリシーをご覧ください。"
+    "pricing.faq.a7": "認証とアクセス制御でアカウントのデータを保護しています。共有や外部サービスとの接続により、選択した内容へのアクセスを許可する場合があります。データ処理や解析の詳細はプライバシーポリシーをご覧ください。",
+    "view.settings.cal.body": "Apple カレンダー、Google カレンダー、Outlook などで読み取り専用 ICS フィードを購読できます。更新間隔はアプリによって異なり、そこでの編集はフィード経由では戻りません。Google の予定を編集するには Plus または Pro で Google カレンダーを接続してください。",
+    "view.settings.gcal.description": "Google カレンダーを接続してタスクと一緒に予定を表示します。Free は閲覧に対応し、作成・編集には Plus または Pro と Google の適切なアクセス許可が必要です。"
   },
   "ko": {
     "landing.heroBody": "할 일과 메모를 기록하고 캘린더로 시간을 계획하세요. 차분한 공간에서 약속과 할 일을 관리할 수 있습니다.",
@@ -5591,7 +5599,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "landing.features.subheading": "할 일, 메모, 습관과 집중 시간을 관리하세요. 아래 표에서 현재 제공되는 기능을 비교할 수 있습니다.",
     "landing.ctaNote": "무료로 시작하세요. 신용카드는 필요하지 않습니다.",
     "auth.signup.passwordPlaceholder": "비밀번호 (10자 이상, 영문과 숫자 포함)",
-    "pricing.faq.a7": "인증과 접근 제어로 계정 데이터를 보호합니다. 공유 및 외부 서비스 연결 시 선택한 콘텐츠에 접근 권한이 부여될 수 있습니다. 데이터 처리와 분석에 관한 자세한 내용은 개인정보처리방침을 확인하세요."
+    "pricing.faq.a7": "인증과 접근 제어로 계정 데이터를 보호합니다. 공유 및 외부 서비스 연결 시 선택한 콘텐츠에 접근 권한이 부여될 수 있습니다. 데이터 처리와 분석에 관한 자세한 내용은 개인정보처리방침을 확인하세요.",
+    "view.settings.cal.body": "Apple 캘린더, Google 캘린더, Outlook 등에서 읽기 전용 ICS 피드를 구독할 수 있습니다. 갱신 간격은 앱에 따라 다르며 그 앱에서의 편집은 피드를 통해 돌아오지 않습니다. Google 일정을 편집하려면 Plus 또는 Pro에서 Google 캘린더를 연결하세요.",
+    "view.settings.gcal.description": "Google 캘린더를 연결하여 할 일 옆에서 일정을 확인하세요. Free는 읽기를 지원하며, 일정 생성과 편집에는 Plus 또는 Pro 및 적절한 Google 권한이 필요합니다."
   }
 };
 

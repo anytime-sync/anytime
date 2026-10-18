@@ -1,42 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sparkles, Target, ListChecks, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ListChecks, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useUIStore } from "@/store/ui";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
+import { useLanguage } from "@/lib/use-language";
+import { onboardingCopy } from "@/lib/onboarding-copy";
 import { useCreateTask } from "@/hooks/use-tasks";
 
-/**
- * First-run welcome — shows once, on the first visit to /app/today after
- * a brand-new sign-in. Two ways to start:
- *
- *   1. "Add three things" — pre-fills three inline inputs that map to
- *      tasks_today via useCreateTask. The "minimum viable First Light".
- *
- *   2. "Plan a goal" — opens the existing Goal modal (which already does
- *      the AI-decompose dance) so the user lands in a populated weekly
- *      plan immediately.
- *
- * The modal is fully dismissible (X button or "Skip"); we still set the
- * `fl.onboardingSeen` flag in either case so it never re-shows. If the
- * user wants it again, /app/settings can expose a "Replay the welcome
- * tour" button that clears the flag.
- *
- * Copy is English-only for v1 — the first-run window is short enough that
- * matching it to the rest of the app's i18n layer is a follow-up, not a
- * launch blocker.
- *
- * Why localStorage and not a server flag:
- *   - First-visit is per-device; new device = re-show is fine.
- *   - No round-trip on every page load.
- *   - If the user wipes storage we just show it again — harmless.
- */
-
+/** A dismissible first-run task capture flow. Saved fields clear before retry. */
 const SEEN_KEY = "fl.onboardingSeen";
 
 export function OnboardingModal() {
-  const setGoalModal = useUIStore((s) => s.setGoalModalOpen);
+  const copy = onboardingCopy(useLanguage());
+  const saving = useRef(false);
   const createTask = useCreateTask();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"intro" | "tasks">("intro");
@@ -65,80 +43,68 @@ export function OnboardingModal() {
   }
 
   function close() {
+    if (saving.current) return;
     markSeen();
     setOpen(false);
   }
 
   async function addThree() {
-    const cleaned = tasks.map((s) => s.trim()).filter(Boolean);
-    if (cleaned.length === 0) {
-      // Empty submission — just close without creating anything.
-      close();
-      return;
-    }
+    if (saving.current) return;
+    const pending = tasks.map((title, index) => ({ title: title.trim(), index })).filter(t => t.title);
+    if (!pending.length) return;
+    saving.current = true;
     setBusy(true);
     try {
-      // Sequential, not parallel — keeps the optimistic cache stable
-      // and avoids a thundering herd against the create endpoint on
-      // accounts with no rate-limit headroom yet.
-      for (const title of cleaned) {
-        await createTask.mutateAsync({
-          title,
-          // Default to 09:00 today — never right-now timestamp which
-          // would immediately show as "overdue" and breaks the timeline.
-          due_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })(),
-          start_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })(),
+      for (const { title, index } of pending) {
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+        await createTask.mutateAsync({ title, due_at: endOfToday.toISOString(), start_at: null, is_all_day: true });
+        setTasks(previous => {
+          const remaining = [...previous] as [string, string, string];
+          remaining[index] = "";
+          return remaining;
         });
       }
-      toast.success(
-        cleaned.length === 1
-          ? "Added 1 to Today"
-          : `Added ${cleaned.length} to Today`
-      );
-      close();
+      toast.success(copy.saved);
+      markSeen();
+      setOpen(false);
     } catch (e) {
-      toast.error("Couldn't save — try again?");
+      toast.error(copy.error);
       console.error("[onboarding] addThree failed", e);
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   }
 
-  function startGoalPath() {
-    markSeen();
-    setOpen(false);
-    // Defer one tick so the close animation completes before the Goal
-    // modal animates in — otherwise both backdrops fight for z-index.
-    window.setTimeout(() => setGoalModal(true), 120);
-  }
-
+  const dialogRef = useDialogFocus(open, close);
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4">
-      <div className="surface border border-border rounded-xl max-w-lg w-full p-0 relative shadow-xl overflow-hidden">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={copy.welcome} tabIndex={-1} className="surface border border-border rounded-xl max-w-lg w-full p-0 relative shadow-xl max-h-[90dvh] overflow-y-auto">
         {/* Editorial top rule — matches the rest of the app's chrome. */}
         <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
 
         <button
           onClick={close}
-          aria-label="Close"
+          aria-label={copy.close}
+          disabled={busy}
           className="absolute top-3 right-3 btn-ghost size-8 p-0 grid place-items-center text-muted-fg"
         >
           <X className="size-4" />
         </button>
 
         {mode === "intro" ? (
-          <div className="px-8 py-9">
+          <div className="px-5 sm:px-8 py-9">
             <p className="editorial-number text-[11px] mb-3">
-              Issue No. 01 · A welcome
+              {copy.welcome}
             </p>
             <h2 className="font-display text-3xl tracking-tight leading-[1.1]">
-              Two ways to begin
-              <em className="font-display">.</em>
+              {copy.title}
             </h2>
             <p className="text-sm text-muted-fg mt-3 font-display italic">
-              Pick the door that fits your morning.
+              {copy.subtitle}
             </p>
 
             <div className="mt-7 grid gap-3">
@@ -152,10 +118,10 @@ export function OnboardingModal() {
                   </span>
                   <div className="min-w-0">
                     <p className="font-display text-base leading-tight">
-                      Add three things
+                      {copy.action}
                     </p>
                     <p className="text-xs text-muted-fg mt-1">
-                      List what you&apos;d like to finish today — we&apos;ll drop them on the Today list.
+                      {copy.detail}
                     </p>
                   </div>
                 </div>
@@ -169,34 +135,26 @@ export function OnboardingModal() {
                 onClick={close}
                 className="text-xs text-muted-fg hover:text-fg underline underline-offset-2"
               >
-                Skip for now
+                {copy.skip}
               </button>
-              <span className="editorial-number text-[10px] text-muted-fg inline-flex items-center gap-1.5">
-                <Sparkles className="size-3" />
-                You can replay this from Settings
-              </span>
+
             </div>
           </div>
         ) : (
-          <div className="px-8 py-9">
+          <div className="px-5 sm:px-8 py-9">
             <p className="editorial-number text-[11px] mb-3">
-              Issue No. 01 · Today
+              {copy.welcome}
             </p>
             <h2 className="font-display text-3xl tracking-tight leading-[1.1]">
-              Three things for today
-              <em className="font-display">.</em>
+              {copy.tasksTitle}
             </h2>
             <p className="text-sm text-muted-fg mt-3 font-display italic">
-              Keep them small. Momentum is the only goal of day one.
+              {copy.hint}
             </p>
 
             <ol className="mt-6 space-y-2">
               {tasks.map((value, i) => {
-                const placeholders = [
-                  "e.g. Draft the email to the new team",
-                  "e.g. Block 25 minutes for deep work",
-                  "e.g. One thing you've been avoiding",
-                ];
+                const placeholders = copy.examples;
                 return (
                   <li key={i} className="flex items-center gap-3">
                     <span className="editorial-number text-[10px] text-muted-fg w-4 text-right shrink-0">
@@ -213,10 +171,12 @@ export function OnboardingModal() {
                         })
                       }
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && i === tasks.length - 1) addThree();
+                        if (e.key === "Enter") { e.preventDefault(); void addThree(); }
                       }}
                       placeholder={placeholders[i]}
-                      className="input flex-1 h-9 text-sm"
+                      aria-label={placeholders[i]}
+                      disabled={busy}
+                      className="input min-w-0 flex-1 h-9 text-sm"
                       maxLength={140}
                     />
                   </li>
@@ -224,19 +184,21 @@ export function OnboardingModal() {
               })}
             </ol>
 
-            <div className="mt-7 flex items-center justify-between gap-3">
+            <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
               <button
+                disabled={busy}
                 onClick={() => setMode("intro")}
                 className="text-xs text-muted-fg hover:text-fg underline underline-offset-2"
               >
-                Back
+                {copy.back}
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={close}
+                  disabled={busy}
                   className="btn-ghost h-9 px-3 text-sm"
                 >
-                  Skip for now
+                  {copy.skip}
                 </button>
                 <button
                   onClick={addThree}
@@ -246,7 +208,7 @@ export function OnboardingModal() {
                     busy && "opacity-70"
                   )}
                 >
-                  {busy ? "Adding…" : "Add to Today"}
+                  {busy ? copy.adding : copy.add}
                 </button>
               </div>
             </div>

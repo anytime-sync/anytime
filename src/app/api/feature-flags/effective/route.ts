@@ -2,7 +2,6 @@ import { RETIRED_FEATURE_IDS } from '@/lib/plans';
 import { isRetiredFeature } from '@/lib/product-availability';
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,14 +49,11 @@ export async function GET() {
     }>;
     for (const row of rows) if (isRetiredFeature(row.feature_id)) row.disabled = true;
     const disabled = [...new Set([...RETIRED_FEATURE_IDS, ...rows.filter((r) => r.disabled).map((r) => r.feature_id)])];
-    // Per-plan rows leak the monetization matrix to anon callers — only
-    // signed-in users get the full row set. Anon clients still receive the
-    // disabled list (so the sidebar can hide kill-switched nav items).
-    const sb = createClient();
-    const { data: u } = await sb.auth.getUser();
-    const includeRows = !!u.user;
+    // These are global product entitlements, already displayed in the public
+    // pricing matrix. Return the same projection to every visitor so marketing
+    // reflects admin changes, and the shared cache never varies by auth state.
     return NextResponse.json(
-      { disabled, rows: includeRows ? rows : [] },
+      { disabled, rows },
       {
         headers: {
           // Browsers can hold this for 30s; CDN can hold it too. The admin

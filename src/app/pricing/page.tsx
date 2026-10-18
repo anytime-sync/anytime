@@ -6,7 +6,7 @@ import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { useStartCheckout } from "@/hooks/use-billing";
-import { PLANS } from "@/lib/plans";
+import { pricingCopy } from "@/lib/pricing-copy";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +27,7 @@ export default function PricingPage() {
   const checkoutPro = useStartCheckout("pro");
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
   const [lang, setLang] = useState<LanguageCode>("en");
+  const copy = pricingCopy(lang);
 
   useEffect(() => {
     setLang(readStoredLanguage());
@@ -46,7 +47,7 @@ export default function PricingPage() {
 
   const proLabel = priceLoading
     ? t(lang, "pricing.plan.pro.name")
-    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? "See checkout"}`;
+    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? copy.checkout}`;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -72,16 +73,9 @@ export default function PricingPage() {
               <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.free.name")}</h2>
               <span className="text-2xl font-semibold">$0</span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[0].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.free}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Today, Tomorrow, Next 7 / 90 days, Inbox",
-                "Calendar with Google Calendar (read)",
-                "Lists, Tags, Habits, Notes, Focus",
-                "Email-to-inbox, push, daily digest",
-                "Export your data, anytime",
-                "Groups · free during beta",
-              ].map((line) => (
+              {copy.freeItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -106,18 +100,15 @@ export default function PricingPage() {
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.plus.name")}</h2>
               <span className="text-2xl font-semibold">
-                {plusLoading ? "-" : plus?.formatted ?? "See checkout"}
+                {plusLoading ? "-" : plus?.formatted ?? copy.checkout}
                 <span className="text-sm text-muted-fg font-normal">
-                  {" "}/ {plus?.interval ?? "month"}
+                  {" "}/ {plus?.interval === "month" || !plus?.interval ? copy.month : plus.interval}
                 </span>
               </span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.plus}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Everything in Free",
-                "Two-way Google Calendar sync",
-              ].map((line) => (
+              {copy.plusItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -152,19 +143,15 @@ export default function PricingPage() {
                 {t(lang, "pricing.plan.pro.name")} <Sparkles className="size-5 text-accent" />
               </h2>
               <span className="text-2xl font-semibold">
-                {priceLoading ? "-" : pro?.formatted ?? "See checkout"}
+                {priceLoading ? "-" : pro?.formatted ?? copy.checkout}
                 <span className="text-sm text-muted-fg font-normal">
-                  {" "}/ {pro?.interval ?? "month"}
+                  {" "}/ {pro?.interval === "month" || !pro?.interval ? copy.month : pro.interval}
                 </span>
               </span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[2].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.pro}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Everything in Plus",
-                "Public API + MCP access",
-                "Priority support",
-              ].map((line) => (
+              {copy.proItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -195,7 +182,7 @@ export default function PricingPage() {
           <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
             {t(lang, "pricing.matrix.subheading")}
           </p>
-          <FeatureMatrix />
+          <FeatureMatrix language={lang} />
         </section>
 
         {/* FAQ — expanded for SEO rich snippets */}
@@ -227,7 +214,7 @@ export default function PricingPage() {
               disabled={checkoutPro.isPending}
               className="btn-primary h-11 px-6"
             >
-              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? "See checkout"}`}
+              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? copy.checkout}`}
             </button>
           ) : (
             <Link href="/signup" className="btn-primary h-11 px-6">
