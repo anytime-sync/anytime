@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { loadTaskUpdateActivity, type TaskUpdateActivity } from "@/lib/task-update-activity";
 
 /**
- * Admin Insights — signup growth and current task-update activity.
+ * Admin Insights — global summary and access-scoped task-update activity.
  * Editorial spread: kicker + italic serif title, soft surfaces, gold rule.
  */
 
@@ -48,7 +48,7 @@ export default function InsightsPage() {
           Insights<em className="font-display">, in detail.</em>
         </h1>
         <p className="text-sm text-muted-fg mt-4 italic font-display">
-          Signup growth and a snapshot of task activity.
+          Signup growth, global usage totals, and task activity you can access.
         </p>
         <div className="mt-8 h-px bg-accent/40 w-24" />
       </header>
@@ -70,11 +70,14 @@ export default function InsightsPage() {
           <Rule />
 
           <Section
-            kicker="Task activity"
-            title="Tasks last updated"
-            subtitle="Existing tasks whose latest update falls in each rolling window. Includes automated updates; repeated edits count once."
+            kicker="Your accessible task activity"
+            title="Accessible tasks last updated"
+            subtitle="Counts cover only tasks visible to your signed-in account, including your own tasks and tasks shared through projects or groups. Includes automated updates; repeated edits count once."
           >
             <TaskActivityBars data={taskActivity} />
+            <p className="text-xs text-muted-fg mt-3">
+              Global rolling task activity is unavailable in this view. A zero means no accessible task has its latest update in that window.
+            </p>
             <p className="text-xs text-muted-fg mt-3">
               Member return rates and activation are not measured here. Historical cohort retention requires distinct-user activity history.
             </p>

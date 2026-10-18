@@ -3,7 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type TaskUpdateActivity = { days: number; count: number | null };
 const WINDOWS = [1, 3, 7, 14, 30];
 
-/** Snapshot of extant task rows by their latest update, including automation.
+/** Snapshot of task rows visible to this client under RLS, including automation.
+ * A browser client sees owned/project/group-shared tasks, not global activity.
  * This is neither distinct people nor edit events nor cohort retention.
  * Errors stay unavailable instead of silently becoming zero activity.
  */
