@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { loadTaskUpdateActivity, type TaskUpdateActivity } from "@/lib/task-update-activity";
 
 /**
- * Admin Insights — cohort retention, signup growth, feature usage.
+ * Admin Insights — global summary and access-scoped task-update activity.
  * Editorial spread: kicker + italic serif title, soft surfaces, gold rule.
  */
 
@@ -24,9 +25,7 @@ type Summary = {
 export default function InsightsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [retention, setRetention] = useState<
-    Array<{ day: number; pct: number }>
-  >([]);
+  const [taskActivity, setTaskActivity] = useState<TaskUpdateActivity[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -34,25 +33,7 @@ export default function InsightsPage() {
       const { data: s } = await supabase.rpc("admin_dashboard_summary");
       setSummary(s as Summary);
 
-      const { data: users } = await supabase
-        .from("profiles")
-        .select("id, created_at");
-      if (users) {
-        const cohorts = await Promise.all(
-          [1, 3, 7, 14, 30].map(async (n) => {
-            const { count } = await supabase
-              .from("tasks")
-              .select("user_id", { count: "exact", head: true })
-              .gte("updated_at", subDays(new Date(), n).toISOString());
-            const total = users.length;
-            return {
-              day: n,
-              pct: total > 0 ? Math.round(((count ?? 0) / total) * 100) : 0,
-            };
-          })
-        );
-        setRetention(cohorts);
-      }
+      setTaskActivity(await loadTaskUpdateActivity(supabase));
       setLoading(false);
     })();
   }, []);
@@ -67,7 +48,7 @@ export default function InsightsPage() {
           Insights<em className="font-display">, in detail.</em>
         </h1>
         <p className="text-sm text-muted-fg mt-4 italic font-display">
-          Cohort retention, growth, and the quiet shape of usage.
+          Signup growth, global usage totals, and task activity you can access.
         </p>
         <div className="mt-8 h-px bg-accent/40 w-24" />
       </header>
@@ -89,11 +70,17 @@ export default function InsightsPage() {
           <Rule />
 
           <Section
-            kicker="Retention"
-            title="Who came back"
-            subtitle="Share of all members who touched a task within N days"
+            kicker="Your accessible task activity"
+            title="Accessible tasks last updated"
+            subtitle="Counts cover only tasks visible to your signed-in account, including your own tasks and tasks shared through projects or groups. Includes automated updates; repeated edits count once."
           >
-            <RetentionBars data={retention} />
+            <TaskActivityBars data={taskActivity} />
+            <p className="text-xs text-muted-fg mt-3">
+              Global rolling task activity is unavailable in this view. A zero means no accessible task has its latest update in that window.
+            </p>
+            <p className="text-xs text-muted-fg mt-3">
+              Member return rates and activation are not measured here. Historical cohort retention requires distinct-user activity history.
+            </p>
           </Section>
 
           <Rule />
@@ -193,31 +180,32 @@ function SignupsBars({
   );
 }
 
-function RetentionBars({
+function TaskActivityBars({
   data,
 }: {
-  data: Array<{ day: number; pct: number }>;
+  data: TaskUpdateActivity[];
 }) {
   if (data.length === 0)
     return (
       <p className="text-sm text-muted-fg italic font-display">No data yet.</p>
     );
+  const max = Math.max(1, ...data.map(row => row.count ?? 0));
   return (
     <div className="surface border border-border rounded-lg p-6 space-y-3 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-accent/60" />
       {data.map((r) => (
-        <div key={r.day} className="flex items-center gap-4">
-          <span className="w-12 editorial-number text-[10px] tabular-nums">
-            D{r.day}
+        <div key={r.days} className="flex items-center gap-4">
+          <span className="w-20 editorial-number text-[10px] tabular-nums">
+            Past {r.days}d
           </span>
           <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-accent transition-all"
-              style={{ width: `${r.pct}%` }}
+              style={{ width: `${((r.count ?? 0) / max) * 100}%` }}
             />
           </div>
-          <span className="w-12 text-right text-xs tabular-nums text-muted-fg">
-            {r.pct}%
+          <span className="w-24 text-right text-xs tabular-nums text-muted-fg">
+            {r.count === null ? "Unavailable" : `${r.count.toLocaleString()} tasks`}
           </span>
         </div>
       ))}
