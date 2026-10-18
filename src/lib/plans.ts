@@ -52,7 +52,7 @@ export interface FeatureSpec {
 
 export const FEATURES: FeatureSpec[] = [
   // ─── Tasks (the core experience) ─────────────────────────────────────────
-  { id: "tasks_today",         label: "Today",            description: "Your task list for the day, with AI-aware sorting.", category: "tasks", minPlan: "free", order: 10 },
+  { id: "tasks_today",         label: "Today",            description: "Your tasks for today, with priority and scheduling controls.", category: "tasks", minPlan: "free", order: 10 },
   { id: "tasks_tomorrow",      label: "Tomorrow",         description: "Pre-stage tomorrow's work without losing today's focus.", category: "tasks", minPlan: "free", order: 20 },
   { id: "tasks_next7",         label: "Next 7 days",      description: "Week-ahead view that interleaves tasks and calendar events.", category: "tasks", minPlan: "free", order: 30 },
   { id: "tasks_next90",        label: "Next 90 days",     description: "Quarter-ahead horizon for projects and goals.", category: "tasks", minPlan: "free", order: 40 },
@@ -70,26 +70,26 @@ export const FEATURES: FeatureSpec[] = [
   // ─── Calendar ──────────────────────────────────────────────────────────
   { id: "cal_view",            label: "Calendar view",    description: "Month / week / day grid with tasks and events together.", category: "calendar", minPlan: "free", order: 10 },
   { id: "cal_gcal_read",       label: "Google Calendar (read)", description: "See your Google events alongside tasks across all views.", category: "calendar", minPlan: "free", order: 20 },
-  { id: "cal_drag",            label: "Drag-to-reschedule",description: "Drag tasks and events to new dates from any view.", category: "calendar", minPlan: "free", order: 30 },
+  { id: "cal_drag",            label: "Drag-to-reschedule",description: "Reschedule tasks and editable events in supported calendar views.", category: "calendar", minPlan: "free", order: 30 },
   { id: "cal_gcal_write",      label: "Google Calendar (two-way sync)", description: "Quick-add creates GCal events; edits propagate back.", category: "calendar", minPlan: "plus", order: 40 },
 
   // ─── AI co-pilot ───────────────────────────────────────────────────────
   // Goals live here — designing a tracker for a project is intellectual work
   // and the AI is the thing that makes goals worth tracking.
-  { id: "ai_daily_edition",    label: "Brief me",    description: "Source-linked commitments, decisions and suggested next actions, on request.", category: "ai", minPlan: "free", freeLimit: "1 / day", order: 10 },
-  { id: "ai_plan_my_day",      label: "Plan my day",      description: "AI sequences your day around energy peaks and capacity.", category: "ai", minPlan: "pro", order: 20 },
-  { id: "ai_plan_my_week",     label: "Plan my week",     description: "Weekly plan that respects deadlines, capacity, and goals.", category: "ai", minPlan: "pro", order: 30 },
+  { id: "ai_daily_edition",    label: "Brief me",    description: "Source-linked commitments, decisions and suggested next actions, on request.", category: "ai", minPlan: "free", order: 10 },
+  { id: "ai_plan_my_day",      label: "Plan my day",      description: "Review suggested priorities and urgency/importance quadrants using task and calendar context.", category: "ai", minPlan: "pro", order: 20 },
+  { id: "ai_plan_my_week",     label: "Plan my week",     description: "Review priority and quadrant suggestions for the coming week.", category: "ai", minPlan: "pro", order: 30 },
   { id: "ai_morning_copilot",  label: "Morning Co-pilot", description: "Conversational briefing that answers follow-up questions.", category: "ai", minPlan: "pro", order: 40 },
-  { id: "ai_voice_capture",    label: "Voice → Task",     description: "Speak tasks; we transcribe and structure them automatically.", category: "ai", minPlan: "pro", order: 50 },
-  { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 }, { id: "ai_paste_capture", label: "Paste → Task", description: "⌘V a screenshot of any whiteboard, doc, or meeting notes; we extract every task.", category: "ai", minPlan: "pro", order: 57 },
+  { id: "ai_voice_capture",    label: "Voice → Task",     description: "Dictate in a supported browser, then review the parsed task.", category: "ai", minPlan: "pro", order: 50 },
+  { id: "ai_snapshot_capture", label: "Snapshot → Task",  description: "Photo a sticky note, whiteboard, or napkin; we extract the tasks.", category: "ai", minPlan: "pro", order: 55 }, { id: "ai_paste_capture", label: "Paste → Task", description: "⌘V a screenshot of any whiteboard, doc, or meeting notes; review the extracted tasks before saving.", category: "ai", minPlan: "pro", order: 57 },
   { id: "ai_smart_eisenhower", label: "Smart triage",     description: "AI assigns Eisenhower quadrants based on context.", category: "ai", minPlan: "pro", order: 60 },
   { id: "ai_goal_tracker",     label: "Goal tracker",     description: "Review suggested steps for a goal, then track task progress.", category: "ai", minPlan: "pro", order: 70 },
   { id: "ai_parse_task",       label: "Smart task parsing",   description: "NLP understands natural language and structures your tasks automatically.", category: "ai", minPlan: "free", order: 5 },
   { id: "ai_estimate_task",    label: "Time estimates",       description: "AI predicts how long each task will take based on context.", category: "ai", minPlan: "free", order: 6 },
   { id: "ai_translate_task",   label: "Task translation",     description: "Auto-translate tasks across languages for multilingual workflows.", category: "ai", minPlan: "free", order: 7 },
-  { id: "ai_reschedule_task",  label: "Smart reschedule",     description: "AI finds the best new slot when you need to push tasks.", category: "ai", minPlan: "plus", order: 62 },
+  { id: "ai_reschedule_task",  label: "Smart reschedule",     description: "Review suggested new dates using recorded schedule context.", category: "ai", minPlan: "plus", order: 62 },
   { id: "ai_find_time",        label: "Find time",            description: "Calculate fitting slots from recorded calendar events and task blocks.", category: "ai", minPlan: "plus", order: 63 },
-  { id: "ai_prep_meeting",     label: "Meeting prep",         description: "Auto-generate agendas and context briefs before meetings.", category: "ai", minPlan: "pro", order: 65 },
+  { id: "ai_prep_meeting",     label: "Meeting prep",         description: "Request a meeting brief and suggested questions from saved context.", category: "ai", minPlan: "pro", order: 65 },
   { id: "ai_procrastination",  label: "Commitment review", description: "Review overdue and stale undated commitments without automatically changing their dates.", category: "ai", minPlan: "pro", order: 68 },
 
   // ─── Review ───────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ export const FEATURES: FeatureSpec[] = [
   { id: "review_weekly_retro", label: "Weekly review",    description: "Friday-style retro that surfaces patterns across the week.", category: "review", minPlan: "pro", order: 20 },
 
   // ─── Data ────────────────────────────────────────────────────────────
-  { id: "data_export",         label: "Export your data", description: "Download everything as JSON whenever you want.", category: "data", minPlan: "free", order: 10 },
+  { id: "data_export",         label: "Export your data", description: "Download a JSON export of tasks, lists, tags, habits, focus sessions and saved reviews.", category: "data", minPlan: "free", order: 10 },
   { id: "data_import",         label: "Import",           description: "Move in from TickTick, Todoist, ICS, and CSV.", category: "data", minPlan: "free", order: 20 },
   { id: "data_inbox_email",    label: "Email-to-inbox",   description: "Forward to your private alias to capture into Inbox.", category: "data", minPlan: "free", order: 30 },
   { id: "data_semantic_search",label: "Semantic search",  description: "Find anything across tasks, notes, and comments by meaning.", category: "data", minPlan: "pro", order: 40 },
@@ -106,13 +106,13 @@ export const FEATURES: FeatureSpec[] = [
   { id: "plat_push",           label: "Push notifications", description: "Browser and PWA push for reminders.", category: "platform", minPlan: "free", order: 10 },
   { id: "plat_email_digest",   label: "Email digest",     description: "Daily digest of what's on deck, by email.", category: "platform", minPlan: "free", order: 20 },
   { id: "plat_email_reminders",label: "Email reminders",  description: "Per-task email reminders for things you can't miss.", category: "platform", minPlan: "free", order: 30 },
-  { id: "plat_priority_support", label: "Priority support", description: "We respond to Pro requests within one business day.", category: "platform", minPlan: "pro", order: 40 },
+  { id: "plat_priority_support", label: "Priority support", description: "Pro support requests receive priority.", category: "platform", minPlan: "pro", order: 40 },
   { id: "plat_api_access",       label: "Public API + MCP",   description: "Issue access tokens and let Claude / OpenClaw / any MCP client read and edit your First Light.", category: "platform", minPlan: "pro", order: 50 },
 ];
 
 export const PLANS: { plan: Plan; label: string; tagline: string }[] = [
-  { plan: "free", label: "Free",  tagline: "The full task system, forever." },
-  { plan: "plus", label: "Plus",  tagline: "Two-way calendar sync, unlimited Daily Editions, smart reschedule, find time, and end-of-day reflection." },
+  { plan: "free", label: "Free",  tagline: "The core task planner, free to use." },
+  { plan: "plus", label: "Plus",  tagline: "Two-way calendar sync, rescheduling suggestions, find time, and end-of-day reflection." },
   { plan: "pro",  label: "Pro",   tagline: "Add the AI co-pilot — Plan my day, Voice → Task, and the full review suite." },
 ];
 

@@ -24,6 +24,17 @@ type Entry = {
 
 const CHANGELOG: Entry[] = [
   {
+    date: "2026-10-18",
+    title: "Public content aligned with the current planner",
+    tag: "fixed",
+    items: [
+      "Clarified optional Brief me, AI usage limits, and plan requirements",
+      "Corrected planning examples: suggestions are separate from saved task and calendar changes",
+      "Updated FAQs, blog guides, comparisons and MCP documentation; removed unsupported metrics and promises",
+      "Older entries below describe releases at their original dates, not current plan entitlements",
+    ],
+  },
+  {
     date: "2026-06-04",
     title: "Newsletter & Announcements",
     tag: "new",
@@ -59,7 +70,7 @@ const CHANGELOG: Entry[] = [
     tag: "improved",
     items: [
       "AI-powered morning briefing — your day as a newspaper editorial",
-      "Plan-my-day conversational planner (Pro)",
+      "Plan-my-day priority and quadrant suggestions (Pro)",
       "Voice-to-task and snapshot-to-task (Pro)",
       "Smart triage with AI Eisenhower matrix (Pro)",
     ],

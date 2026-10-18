@@ -7,18 +7,41 @@ import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 import { usePlusPrice } from "@/hooks/use-pricing";
 
 const featureRows = [
-  { feature: "AI task planning", fl: "✅ Built-in", comp: "⚠️ Basic AI" },
-  { feature: "MCP integration", fl: "✅ Native", comp: "❌ None" },
-  { feature: "Telegram bot", fl: "✅ Yes", comp: "❌ No" },
-  { feature: "Eisenhower matrix", fl: "✅ Built-in", comp: "✅ Built-in" },
-  { feature: "Focus timer", fl: "✅ Built-in", comp: "✅ Built-in" },
-  { feature: "Habit tracking", fl: "✅ Built-in", comp: "✅ Built-in" },
-  { feature: "Calendar view", fl: "✅ Built-in", comp: "✅ Built-in" },
-  { feature: "Native apps", fl: "Web/PWA", comp: "✅ All platforms" },
-  { feature: "Team collaboration", fl: "✅ Groups", comp: "✅ Shared lists" },
-  { feature: "Free tier", fl: "✅ Generous", comp: "✅ Generous" },
-  { feature: "Pricing", fl: "DYNAMIC", comp: "$35.99/yr" },
-  { feature: "Voice input", fl: "✅ AI-powered", comp: "✅ Built-in" },
+  {
+    "feature": "Task planning",
+    "fl": "Tasks with optional AI suggestions",
+    "comp": "Tasks and calendar planning"
+  },
+  {
+    "feature": "Focus and habits",
+    "fl": "Focus timer and habit tracking",
+    "comp": "Pomodoro and habit tracker"
+  },
+  {
+    "feature": "Calendar",
+    "fl": "Google events; editing on Plus/Pro",
+    "comp": "Calendar views; availability varies by plan"
+  },
+  {
+    "feature": "Integrations",
+    "fl": "API/MCP on Pro; setup required",
+    "comp": "See current integrations"
+  },
+  {
+    "feature": "Sharing",
+    "fl": "Groups (beta)",
+    "comp": "Shared lists"
+  },
+  {
+    "feature": "Platforms",
+    "fl": "Web/PWA; online saving and sync",
+    "comp": "Web and native apps"
+  },
+  {
+    "feature": "Price",
+    "fl": "Free; paid tiers on Pricing",
+    "comp": "See official pricing"
+  }
 ];
 
 const whenFL = ["compare.ticktick.whenFL.1","compare.ticktick.whenFL.2","compare.ticktick.whenFL.3","compare.ticktick.whenFL.4"] as const;
@@ -55,7 +78,7 @@ export default function CompareTickTickPage() {
         <p className="text-muted-fg text-base leading-relaxed mb-2">
           {t(lang, "compare.ticktick.body")}
         </p>
-        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")}</p>
+        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")} · <a href="https://ticktick.com/?language=en_us" className="underline">Official product documentation</a> · <Link href="/pricing" className="underline">First Light plans</Link></p>
       </section>
 
       <section className="px-6 pb-16 max-w-3xl mx-auto">

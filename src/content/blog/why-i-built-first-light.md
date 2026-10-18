@@ -1,69 +1,38 @@
 ---
 title: "Why I Built First Light"
-description: "The story behind building an AI-native daily planner — from the frustration with existing tools to the belief that mornings deserve better."
+description: "The purpose behind First Light: personal follow-through with optional AI assistance."
 date: "2026-06-28"
 author: "Aaron Cheng"
 tags: ["founder-story", "productivity", "ai"]
 lang: "en"
-image: "https://firstlight.to/og-image.png"
+image: "/og.png"
 imageAlt: "First Light — AI-native daily planner"
+
+updated: "2026-10-18"
 ---
 
-## The Problem with Morning Productivity
+## The problem First Light is built around
 
-For years, I started my day the same way: open a task app, stare at a list of 47 things, feel overwhelmed, and procrastinate by checking email. The tool that was supposed to help me focus was actually making me anxious.
+A place to collect tasks is useful only if it helps you return to them. First Light is built around that practical need: capture a commitment, keep the relevant context close, choose the next action and record progress.
 
-I tried everything. Todoist. Things. Notion. Sunsama. Each one added something — better design, more features, nicer animations — but none of them solved the core problem: **I didn't need a better list. I needed a better morning.**
+The aim is a calm personal planner. Today, Inbox, upcoming views, notes, a calendar, habits and a focus timer give you different ways to work without requiring an AI conversation.
 
-## What Mornings Should Feel Like
+## From the Daily Edition to optional assistance
 
-The best mornings have a rhythm. You wake up with clarity about what matters today. You know what's urgent, what's important, and what can wait. You have a sense of how your energy maps to your calendar. And you feel like someone — or something — has already done the hard thinking for you.
+Earlier First Light articles centered the product on the Daily Edition, an editorial morning briefing. The current experience puts your tasks first. **Brief me** is available when you want a source-linked summary of commitments and suggested next actions.
 
-This is what a good executive assistant does. They don't just list your meetings. They prepare you. They surface the context you need, flag the conflicts you missed, and suggest the priorities you should focus on.
+That distinction matters. A briefing can help you notice a deadline, but it should not become a prerequisite for starting work. It also cannot verify information that has never been recorded in First Light.
 
-I wanted that feeling, but I didn't want to hire an assistant. I wanted it at scale, for everyone, at a price that makes sense.
+## Connect when it helps
 
-## The Daily Edition Concept
+Google Calendar can bring recorded meetings alongside tasks. Pro includes API/MCP access for compatible clients, so an authorized assistant can read and edit tasks. The connection needs setup; the assistant does not automatically know your work. Planning tools suggest changes, while separate editing actions save them.
 
-First Light started with a simple question: what if your task app could think?
+## What to judge the product by
 
-Not just store and sort — actually think. Read your calendar, understand your goals, know your patterns, and generate a morning briefing that feels like it was written by someone who knows you.
+The useful test is whether you capture commitments more reliably, find the right next action and follow through. A large feature list, a generated briefing or an attractive screenshot is not evidence of that outcome.
 
-We call it the **Daily Edition**. Every morning, it pulls from:
+First Light is an independent product operated by Yulin Cheng in Taipei. See [About](/about) for the operator details and [Contact](/contact) to share a problem you encountered. Current features and limits are described below, rather than promises about an uncommitted roadmap.
 
-- Your tasks and deadlines
-- Your calendar events
-- Your goals and progress
-- Your past patterns (what you tend to defer, what you finish quickly)
+## Using First Light
 
-And produces a brief: here's what's happening today, here's what you should focus on, here's what you might be forgetting.
-
-## Why This Is Different
-
-Most productivity tools are passive. They're databases with a nice UI. You put things in, you take things out, and the tool just sits there.
-
-First Light is active. It reaches into your data, finds patterns, and surfaces insights. It doesn't wait for you to ask — it shows up every morning with something useful.
-
-This requires AI, obviously. But more than that, it requires **integration**. The AI needs to see your calendar, your tasks, your goals, all in one place. It needs to understand context across domains. And it needs to do this without compromising your privacy.
-
-## The MCP Connection
-
-We built First Light with MCP (Model Context Protocol) from day one. This means AI assistants — Claude, OpenClaw, whatever comes next — can read and write your First Light data with your permission. Your task app becomes part of your AI workflow, not a separate silo.
-
-This is where productivity is heading. Not apps that do one thing well, but systems that connect everything and let AI operate across them.
-
-## What We Learned Building This
-
-**Speed matters.** The Daily Edition generates in under 3 seconds. If it takes longer, people stop using it.
-
-**Accuracy matters more.** A wrong suggestion destroys trust. We validate everything against your actual data.
-
-**Tone matters most.** The briefing can't feel robotic. It needs to sound like a smart colleague who knows you well — direct, helpful, occasionally funny.
-
-## Where We're Going
-
-First Light is still early. We have a long roadmap: better goal tracking, smarter rescheduling, voice capture, team features. But the core idea won't change.
-
-**Your morning sets your day. Your day sets your life. And you deserve a tool that treats that seriously.**
-
-If this resonates, [try it free](https://firstlight.to). The Daily Edition is included on every plan.
+The core task planner is free. **Brief me** is optional and uses recorded tasks and calendar context; it does not change your tasks. Plus adds Google Calendar editing and reflection. Pro adds planning suggestions, voice/image capture, weekly reviews and API/MCP access. AI features have daily usage limits. Saving, syncing and AI require internet access. See [current plans](/pricing) before choosing an upgrade.

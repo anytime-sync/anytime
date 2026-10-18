@@ -6,18 +6,36 @@ import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 
 const featureRows = [
-  { feature: "AI task planning", fl: "✅ Built-in", comp: "❌ None" },
-  { feature: "MCP integration", fl: "✅ Native", comp: "❌ None" },
-  { feature: "Telegram bot", fl: "✅ Yes", comp: "❌ No" },
-  { feature: "Eisenhower matrix", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Focus timer", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Habit tracking", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Native Apple apps", fl: "❌ Web/PWA", comp: "✅ Mac, iPhone, iPad, Watch" },
-  { feature: "Offline support", fl: "⚠️ PWA cache", comp: "✅ Full offline" },
-  { feature: "One-time purchase", fl: "❌ Subscription", comp: "✅ $49.99 Mac + $9.99 iOS" },
-  { feature: "Cross-platform", fl: "✅ Any browser", comp: "❌ Apple only" },
-  { feature: "Areas & projects", fl: "✅ Projects", comp: "✅ Areas + Projects" },
-  { feature: "Quick entry", fl: "✅ AI + Telegram", comp: "✅ Quick Entry + Mail to Things" },
+  {
+    "feature": "Task planning",
+    "fl": "Tasks with optional AI suggestions",
+    "comp": "Today, Upcoming, Anytime and Someday"
+  },
+  {
+    "feature": "Calendar",
+    "fl": "Google events; editing on Plus/Pro",
+    "comp": "Apple Calendar events in Today and Upcoming"
+  },
+  {
+    "feature": "Focus and habits",
+    "fl": "Focus timer and habit tracking",
+    "comp": "See current product features"
+  },
+  {
+    "feature": "Integrations",
+    "fl": "API/MCP on Pro; setup required",
+    "comp": "Apple Shortcuts and other automation"
+  },
+  {
+    "feature": "Platforms",
+    "fl": "Web/PWA; online saving and sync",
+    "comp": "Apple devices"
+  },
+  {
+    "feature": "Price",
+    "fl": "Free and paid subscriptions",
+    "comp": "See official purchase options"
+  }
 ];
 
 const whenFL = ["compare.things.whenFL.1","compare.things.whenFL.2","compare.things.whenFL.3","compare.things.whenFL.4"] as const;
@@ -49,7 +67,7 @@ export default function CompareThingsPage() {
         <p className="text-muted-fg text-base leading-relaxed mb-2">
           {t(lang, "compare.things.body")}
         </p>
-        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")}</p>
+        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")} · <a href="https://culturedcode.com/things/features/" className="underline">Official product documentation</a> · <Link href="/pricing" className="underline">First Light plans</Link></p>
       </section>
 
       <section className="px-6 pb-16 max-w-3xl mx-auto">

@@ -7,19 +7,41 @@ import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 import { usePlusPrice } from "@/hooks/use-pricing";
 
 const featureRows = [
-  { feature: "AI task planning", fl: "✅ Built-in", comp: "⚠️ Basic AI" },
-  { feature: "MCP integration", fl: "✅ Native", comp: "❌ None" },
-  { feature: "Telegram bot", fl: "✅ Yes", comp: "❌ No" },
-  { feature: "Eisenhower matrix", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Focus timer", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Habit tracking", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Calendar view", fl: "✅ Built-in", comp: "❌ No" },
-  { feature: "Team collaboration", fl: "✅ Groups", comp: "✅ Full" },
-  { feature: "Integrations", fl: "✅ MCP + API", comp: "✅ 100+" },
-  { feature: "Natural language input", fl: "✅ AI-powered", comp: "✅ Built-in" },
-  { feature: "Free tier", fl: "✅ Generous", comp: "✅ Limited" },
-  { feature: "Pricing", fl: "DYNAMIC", comp: "$5/mo" },
-  { feature: "Platforms", fl: "Web, PWA", comp: "Web, iOS, Android, Desktop" },
+  {
+    "feature": "Task planning",
+    "fl": "Tasks, calendar and optional AI suggestions",
+    "comp": "Tasks and projects"
+  },
+  {
+    "feature": "MCP integration",
+    "fl": "API/MCP on Pro; setup required",
+    "comp": "Official MCP server"
+  },
+  {
+    "feature": "Focus and habits",
+    "fl": "Focus timer and habit tracking",
+    "comp": "See current product features"
+  },
+  {
+    "feature": "Calendar",
+    "fl": "Read on Free; Google event editing on Plus/Pro",
+    "comp": "See current calendar features and plans"
+  },
+  {
+    "feature": "Sharing",
+    "fl": "Groups (beta)",
+    "comp": "Shared projects"
+  },
+  {
+    "feature": "Price",
+    "fl": "Free; paid tiers on Pricing",
+    "comp": "See official pricing"
+  },
+  {
+    "feature": "Platforms",
+    "fl": "Web/PWA; online saving and sync",
+    "comp": "Web and native apps"
+  }
 ];
 
 const whenFL = ["compare.todoist.whenFL.1","compare.todoist.whenFL.2","compare.todoist.whenFL.3","compare.todoist.whenFL.4"] as const;
@@ -56,7 +78,7 @@ export default function CompareTodoistPage() {
         <p className="text-muted-fg text-base leading-relaxed mb-2">
           {t(lang, "compare.todoist.body")}
         </p>
-        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")}</p>
+        <p className="text-muted-fg text-sm">{t(lang, "compare.updated")} · <a href="https://developer.todoist.com/api/v1/" className="underline">Official product documentation</a> · <Link href="/pricing" className="underline">First Light plans</Link></p>
       </section>
 
       <section className="px-6 pb-16 max-w-3xl mx-auto">

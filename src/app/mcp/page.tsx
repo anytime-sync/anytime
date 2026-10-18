@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "MCP Integration — Let Your AI Assistant Manage Your Tasks",
   description:
-    "First Light is the first task manager with native MCP (Model Context Protocol) support. Claude, ChatGPT, and any AI assistant can read, create, and reorganize your tasks directly.",
+    "Connect a compatible MCP client to First Light with Pro access. Read and edit tasks, review planning suggestions, and work with saved calendar context.",
   keywords: [
     "MCP task manager",
     "Model Context Protocol",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MCP Integration — First Light",
     description:
-      "The first task manager with native MCP support. Your AI assistant manages your tasks directly.",
+      "Connect a compatible AI client to read and edit First Light tasks with Pro access.",
     url: "https://firstlight.to/mcp",
   },
   alternates: { canonical: "/mcp" },
@@ -32,24 +32,23 @@ export default function McpPage() {
           MCP Integration
         </p>
         <h1 className="font-display text-4xl md:text-5xl tracking-tight leading-[1.15] mb-6">
-          Your AI assistant already knows your tasks.
+          Connect your AI assistant to your tasks.
         </h1>
         <p className="text-muted-fg text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-          First Light is the first task manager with native{" "}
-          <strong>MCP (Model Context Protocol)</strong> support. Claude,
-          ChatGPT, or any MCP-compatible client can read, create, and
-          reorganize your tasks — no copy-pasting, no screenshots, no
-          integrations to configure.
+          First Light supports <strong>MCP (Model Context Protocol)</strong>.
+          With Pro, connect a compatible AI client and authorize access to your account.
+          The client can read and edit tasks through the available tools.
+          Your assistant can reason about those records; saving a change requires an editing tool.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <Link
-            href="/signup"
+            href="/pricing"
             className="px-6 py-3 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition"
           >
-            Get started free
+            See plans
           </Link>
           <a
-            href="https://github.com/anytime-sync/anytime/tree/main/mcp-server"
+            href="https://github.com/anytime-sync/anytime/tree/main/firstlight-mcp"
             target="_blank"
             rel="noopener"
             className="px-6 py-3 border border-border rounded-lg text-sm font-medium hover:bg-stone-50 transition"
@@ -69,7 +68,7 @@ export default function McpPage() {
             {
               prompt: "Plan my day around the 2pm meeting",
               result:
-                "AI reads your tasks, checks your calendar, and reorganizes everything — deep work before lunch, admin after the meeting.",
+                "Your assistant can read tasks and events, then propose priorities. Reading records does not create time blocks.",
             },
             {
               prompt: "What did I accomplish this week?",
@@ -84,12 +83,12 @@ export default function McpPage() {
             {
               prompt: "Move all overdue tasks to tomorrow and reprioritize",
               result:
-                "AI reschedules overdue items, sorts by importance, and adjusts your day.",
+                "Request overdue-date suggestions first, then ask your assistant to save the changes you choose.",
             },
             {
               prompt: "Prep me for tomorrow's board meeting",
               result:
-                "AI creates an agenda task, pulls related items, and stages follow-up actions.",
+                "Your assistant can use saved tasks and notes to draft an agenda. Creating follow-up tasks is a separate action.",
             },
             {
               prompt: "What's my highest priority right now?",
@@ -119,14 +118,15 @@ export default function McpPage() {
           {[
             {
               step: "1",
-              title: "Install the MCP server",
-              desc: "One command. Works with Claude Desktop, any MCP-compatible AI client, or your own setup.",
-              code: "npx firstlight-mcp",
+              title: "Build the MCP server from source",
+              desc: "Install Git and Node.js 20 or later. The server is available in the public repository; the old npx firstlight-mcp command is not a published package. Use a client that supports local stdio servers.",
+              code: "git clone https://github.com/anytime-sync/anytime.git\ncd anytime/firstlight-mcp\nnpm ci\nnpm run build",
             },
             {
               step: "2",
               title: "Connect your account",
-              desc: "Authenticate once with your First Light API key. The server handles everything else.",
+              desc: "On Pro, open firstlight.to/settings/api-tokens and create a token. Configure your client to run node with the absolute path to firstlight-mcp/dist/index.js. Set FIRSTLIGHT_API_KEY in its environment and keep the token private.",
+              code: '{ "command": "node", "args": ["/absolute/path/to/anytime/firstlight-mcp/dist/index.js"], "env": { "FIRSTLIGHT_API_KEY": "YOUR_PRIVATE_TOKEN" } }',
             },
             {
               step: "3",
@@ -164,10 +164,10 @@ export default function McpPage() {
             { name: "update_task", desc: "Edit title, date, priority, notes" },
             { name: "complete_task", desc: "Mark a task as done" },
             { name: "delete_task", desc: "Remove a task" },
-            { name: "plan_day", desc: "AI-reorganize today's schedule" },
-            { name: "search_tasks", desc: "Semantic search across all tasks" },
-            { name: "get_habits", desc: "Check habit streaks and progress" },
-            { name: "weekly_review", desc: "Generate a weekly summary" },
+            { name: "daily_summary", desc: "Read a structured daily summary" },
+            { name: "search_notes", desc: "Search saved notes" },
+            { name: "list_events", desc: "Read recorded calendar events" },
+            { name: "get_active_goals", desc: "Read active goals" },
           ].map(({ name, desc }) => (
             <div
               key={name}
@@ -186,13 +186,13 @@ export default function McpPage() {
           Stop copy-pasting your tasks into AI.
         </h2>
         <p className="text-muted-fg text-sm mb-8 max-w-md mx-auto">
-          Let your AI assistant work directly with your planner. Free to start.
+          The core planner is free. API/MCP access requires Pro; AI usage limits apply.
         </p>
         <Link
-          href="/signup"
+          href="/pricing"
           className="px-8 py-3 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition"
         >
-          Get started free
+          See plans
         </Link>
       </section>
     </main>

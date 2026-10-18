@@ -1,136 +1,68 @@
 ---
 title: "How to Manage Your Tasks with Claude Using MCP"
-description: "A step-by-step guide to connecting Claude (or any AI assistant) to your task manager using the Model Context Protocol. Stop copy-pasting your to-do list into chat."
+description: "Set up First Light Pro with a compatible MCP client and distinguish planning suggestions from saved task edits."
 date: "2026-06-06"
 author: "Aaron Cheng"
 tags: ["MCP", "Claude", "AI", "tutorial", "productivity"]
 lang: "en"
 image: "/og.png"
+updated: "2026-10-18"
 ---
 
-Every morning I open Claude and paste my task list into it. "Here's what I have today — help me prioritize." Claude gives me a great plan. Then I manually move tasks around in my planner to match.
+## Connect your planner deliberately
 
-This is stupid.
+MCP lets a compatible AI client use tools exposed by another service. First Light's API/MCP access is a Pro feature. It can let an authorized assistant read and edit your tasks, but it does not give every AI app access automatically.
 
-I'm using an AI that can reason about my entire week, but I'm the bottleneck — copying data between two apps like it's 2019. The AI can't see my calendar. It can't check what's overdue. It can't mark anything done.
+## Set up a local MCP client
 
-MCP fixes this.
+Use a client that supports local stdio MCP servers. Install Git and Node.js 20 or later. The server is available from the public source repository; the previously documented `npx firstlight-mcp` command does not resolve to a published npm package.
 
-## What is MCP?
+Build the server:
 
-MCP (Model Context Protocol) is an open standard that lets AI assistants connect to external tools. Instead of you telling Claude what's on your calendar, Claude checks your calendar itself. Instead of you pasting your task list, Claude reads it directly.
+```sh
+git clone https://github.com/anytime-sync/anytime.git
+cd anytime/firstlight-mcp
+npm ci
+npm run build
+```
 
-Think of it as USB for AI. You plug in a "server" (your task manager, your calendar, your codebase), and the AI can read from it and write to it.
-
-Anthropic released MCP in late 2024. It's now supported by Claude Desktop, Cursor, Windsurf, and a growing number of AI clients.
-
-## The problem with current task managers
-
-Todoist, Things, TickTick — they're all great apps. But none of them speak MCP natively. If you want AI to manage your tasks, you have three options:
-
-1. **Copy-paste** — Open your task manager, screenshot or type out your tasks, paste into Claude, get a response, manually update your tasks. This is what most people do. It works. It's also tedious and error-prone.
-
-2. **Zapier/Make integrations** — Set up automation flows between your AI and your task manager. Complex to configure, brittle, and limited to simple actions (usually just "create task").
-
-3. **MCP** — Your AI reads and writes your tasks directly. No middle layer. No copy-pasting. You just talk.
-
-## Setting up MCP with First Light
-
-[First Light](https://firstlight.to) is (as far as I know) the only task manager with a native MCP server. Here's how to set it up:
-
-### Step 1: Get your API token
-
-Sign up at [firstlight.to](https://firstlight.to) and go to **Settings → API Tokens**. Create a new token. Copy it — you'll need it in a moment.
-
-### Step 2: Configure Claude Desktop
-
-Open your Claude Desktop config file:
-
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-Add the First Light MCP server:
+On Pro, open [API Tokens](/settings/api-tokens), create a token and copy it securely. Configure your client with the following entry. Replace the path with the absolute location of your built server and enter the token privately. On Windows, forward slashes such as `C:/path/to/anytime/firstlight-mcp/dist/index.js` work in JSON paths.
 
 ```json
 {
   "mcpServers": {
     "firstlight": {
-      "command": "npx",
-      "args": ["firstlight-mcp"],
-      "env": {
-        "FIRSTLIGHT_API_KEY": "your-token-here"
-      }
+      "command": "node",
+      "args": ["/absolute/path/to/anytime/firstlight-mcp/dist/index.js"],
+      "env": { "FIRSTLIGHT_API_KEY": "YOUR_PRIVATE_TOKEN" }
     }
   }
 }
 ```
 
-Restart Claude Desktop. That's it.
+The location and format of client settings vary. Follow your client's current MCP instructions, reload the connection, and first ask it to list your tasks. Clients that support only remote servers need a different connection method; this configuration is not universal. Never paste a live token into a public issue or chat.
 
-### Step 3: Talk to Claude
+## Tools and their boundaries
 
-Now Claude can see your tasks. Try these:
+| Tool | Behavior |
+| --- | --- |
+| list_tasks / get_task | Read tasks |
+| create_task / update_task | Save task changes |
+| complete_task / delete_task | Complete or delete a task |
+| list_events | Read recorded calendar events |
+| search_notes | Search saved notes |
+| daily_summary | Read structured daily records |
+| get_active_goals | Read active goals |
+| list_tags / create_tag | Read or create task labels |
 
-- *"What's on my plate today?"*
-- *"Add a task: review the Q3 deck by Friday, high priority"*
-- *"Move all overdue tasks to tomorrow and reprioritize"*
-- *"What did I accomplish this week?"*
-- *"Plan my day around the 2pm meeting"*
+The source-built server exposes 21 tools at this revision. The earlier guide listed search_tasks, get_habits and weekly_review; those names are not exposed. In-app AI planning features are separate from this local server's tool list. Other configured connections may expose additional tools; inspect your client's list rather than assuming they are present.
 
-Claude reads your tasks, understands your calendar, and makes changes directly in First Light. No copy-pasting. No tab switching.
+## A workflow to try
 
-## What the MCP server can do
+Ask for today's tasks, then ask for priority suggestions. Review the result before requesting a specific update. Finally, ask the assistant to read the task again and verify the saved state. Planning output alone is not proof of a changed deadline or calendar booking.
 
-The First Light MCP server exposes these tools:
+First Light is not the only product with MCP support: [Todoist](https://developer.todoist.com/api/v1/) and [Notion](https://developers.notion.com/guides/mcp/overview) also provide official servers. Choose based on the records and workflow you want your assistant to use. See the [First Light setup page](/mcp) and [server source](https://github.com/anytime-sync/anytime/tree/main/firstlight-mcp).
 
-| Tool | What it does |
-|------|-------------|
-| `list_tasks` | Get tasks by date, status, or priority |
-| `create_task` | Add a new task with title, date, priority, notes |
-| `update_task` | Edit any field on an existing task |
-| `complete_task` | Mark a task as done |
-| `delete_task` | Remove a task |
-| `plan_day` | AI-reorganize today's schedule |
-| `search_tasks` | Semantic search across all your tasks |
-| `get_habits` | Check habit streaks and progress |
-| `weekly_review` | Generate a summary of your week |
+## Using First Light
 
-## A real morning workflow
-
-Here's what my actual morning looks like now:
-
-1. Open Claude Desktop
-2. Say: *"Good morning. What does today look like?"*
-3. Claude checks my First Light tasks, reads my Google Calendar events, and gives me a briefing
-4. I say: *"Move the design review to Thursday and add 30 minutes of deep work before the 11am call"*
-5. Claude reschedules the task and creates a time block — all inside First Light
-6. I open First Light and see my day, already planned
-
-Total time: about 90 seconds. No manual sorting. No dragging cards around. No forgetting the thing I meant to do before lunch.
-
-## Works with more than Claude
-
-MCP is an open protocol. First Light works with any MCP-compatible client:
-
-- **Claude Desktop** — the most polished experience
-- **Cursor / Windsurf** — if you code and plan in the same workspace
-- **OpenClaw** — for the self-hosted crowd
-- **Any custom client** — MCP is a simple JSON-RPC protocol
-
-## The bigger picture
-
-Today, most people use AI as a conversation partner. You talk to it, it talks back, and then you go do the thing manually.
-
-MCP changes this. Your AI doesn't just advise — it acts. It reads your real data. It makes real changes. The boundary between "planning with AI" and "doing with AI" disappears.
-
-Task management is one of the first places this matters, because the gap between knowing what to do and actually reorganizing your system is where most productivity breaks down.
-
-## Try it
-
-First Light is free to start. The MCP server is open source. Setup takes about two minutes.
-
-→ [firstlight.to](https://firstlight.to)
-→ [MCP setup guide](https://firstlight.to/mcp)
-→ [GitHub](https://github.com/anytime-sync/anytime)
-
-If you're already using Claude and a task manager, this is the bridge between them.
+The core task planner is free. **Brief me** is optional and uses recorded tasks and calendar context; it does not change your tasks. Plus adds Google Calendar editing and reflection. Pro adds planning suggestions, voice/image capture, weekly reviews and API/MCP access. AI features have daily usage limits. Saving, syncing and AI require internet access. See [current plans](/pricing) before choosing an upgrade.

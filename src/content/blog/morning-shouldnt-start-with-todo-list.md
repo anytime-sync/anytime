@@ -1,71 +1,35 @@
 ---
 title: "Your Morning Shouldn't Start With a To-Do List"
-description: "What if your phone showed you a morning briefing — like a newspaper written just for your day — instead of a list of things you're already behind on?"
+description: "When an optional briefing helps you turn a task list into a clear next action."
 date: "2026-06-04"
 author: "Aaron Cheng"
 tags: ["productivity", "morning routine", "AI", "daily planning"]
 lang: "en"
 image: "/og.png"
+
+updated: "2026-10-18"
 ---
 
-Here's how most people start their day:
+## A list is useful; context makes it actionable
 
-1. Wake up
-2. Open phone
-3. See 23 unread notifications, 4 overdue tasks, and a calendar that starts in 40 minutes
-4. Feel the cortisol hit
+A task list helps you remember commitments. It can still leave a difficult question unanswered: what deserves attention now? A short briefing can help you compare deadlines and appointments, but it should stay connected to the records you can inspect.
 
-We've accepted this as normal. It's not. It's a design failure.
+In First Light, you can work directly from Today without generating anything. When the list needs interpretation, **Brief me** offers suggested next actions linked to tasks and calendar records.
 
-## The newspaper test
+## What a useful suggestion looks like
 
-Imagine subscribing to a newspaper that just listed headlines in a column with checkboxes next to them. No context. No narrative. No editorial judgment about what matters and what doesn't.
+Here is an illustrative example, not a customer record or measured outcome:
 
-You'd cancel immediately. That's not a newspaper — it's a spreadsheet.
+> The proposal is due Wednesday. The next useful step may be to review the draft before the recorded afternoon meeting. Confirm the meeting agenda and decide whether the draft needs more work.
 
-And yet, that's exactly what every task manager does. Here are your tasks. They're ordered by due date, or priority, or the order you typed them in. Good luck.
+The important parts are the source, the uncertainty and the proposed next action. A briefing should not claim to know your entire inbox, your energy level or work that was never recorded. Missing calendar entries do not establish free time.
 
-A newspaper editor looks at the same information and asks: *What does this person need to understand about today?* They write a story. They create context. They tell you what happened, what's coming, and what it means.
+## Read, decide, then work
 
-Your morning deserves the same treatment.
+Check the referenced task. Decide whether the suggested action is appropriate. Save any changes yourself, or explicitly request them through a configured assistant. Reading a briefing does not move deadlines or create calendar blocks.
 
-## What a morning briefing actually looks like
+Some mornings a list is enough. Other mornings a summary helps. First Light offers both approaches; the point is to help you follow through, not require a reading ritual before every task.
 
-This is a real Daily Edition from First Light, written for a Tuesday with three meetings and a looming deadline:
+## Using First Light
 
-> "The SKP review at 2 PM is the anchor — everything else orbits it. Your morning is open, which means the pricing doc has a real window. Maya's note from Friday is still unanswered; a quick reply before lunch keeps that thread alive.
->
-> Three of your last five productive days started with deep work before 10 AM. Today has the same shape."
-
-Notice what's happening:
-
-- **It prioritizes.** The SKP review is the anchor, not one of twelve equal items.
-- **It notices patterns.** "Three of your last five productive days" — that's not a task manager talking. That's a coach.
-- **It's honest.** Maya's note is unanswered. The briefing doesn't shame you; it tells you when to handle it.
-- **It reads like writing.** Because it is.
-
-## Why this works better than lists
-
-Lists are democratic. Every item gets equal weight. But your day isn't democratic — some things matter enormously, and some things could wait a week without consequence.
-
-A briefing forces prioritization. It has to — you can't write a narrative about 47 tasks. The act of turning a list into a story is itself the planning.
-
-This is what good managers do. They don't hand you a spreadsheet of action items. They say: "Here's what matters today. Here's why. Here's what I'd do first." That's a briefing.
-
-## The calm factor
-
-There's a subtler benefit: a briefing is finite.
-
-A to-do list grows. You add items faster than you complete them. The scroll gets longer. The anxiety compounds.
-
-A Daily Edition is written once, in the morning. It's a page, not a feed. You read it, you understand your day, and you close it. Done.
-
-That finality is calming. It's the difference between a newspaper (you read it, you're done) and a social media feed (there is no done).
-
-## Try it
-
-[First Light](https://firstlight.to) writes you a Daily Edition every morning. It looks at your tasks, your calendar, your habits, and your patterns — and it writes you a briefing that reads like a morning column.
-
-It's free to start. The Daily Edition is part of the Plus plan.
-
-Because your morning deserves better than a checkbox.
+The core task planner is free. **Brief me** is optional and uses recorded tasks and calendar context; it does not change your tasks. Plus adds Google Calendar editing and reflection. Pro adds planning suggestions, voice/image capture, weekly reviews and API/MCP access. AI features have daily usage limits. Saving, syncing and AI require internet access. See [current plans](/pricing) before choosing an upgrade.

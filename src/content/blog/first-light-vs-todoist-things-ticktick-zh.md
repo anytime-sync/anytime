@@ -1,78 +1,32 @@
 ---
 title: "First Light vs Todoist vs Things vs TickTick：一個誠實的比較"
-description: "一個獨立開發者的真心話，聊聊 First Light 跟幾個大牌生產力 App 比起來怎麼樣。哪裡比較強、哪裡還不夠、到底適合誰。"
+description: "依官方資料比較任務流程、AI 連接與方案範圍。"
 date: "2026-06-04"
 author: "Aaron Cheng"
 tags: ["比較", "生產力", "todoist", "things", "ticktick"]
 lang: "zh-TW"
 image: "/og.png"
+updated: "2026-10-18"
 ---
 
-First Light 是我做的，所以你可以先打個折扣。但我也認真用過（或正在用）這四個 App。以下是一個誠實的比較。
+## 比較你真正需要完成的工作
 
-## 快速版本
+這篇比較由 First Light 撰寫，不是獨立實測，也不主張某個工具適合所有人。先問自己需要的是記錄承諾、整理專案、選擇下一步，還是多人協作。
 
-| 功能 | First Light | Todoist | Things | TickTick |
-|---|---|---|---|---|
-| **AI 每日簡報** | 有，編輯風格 | 沒有 | 沒有 | 基本 AI 摘要 |
-| **日曆同步** | Google Calendar | Google、Outlook | 無內建 | Google、Outlook |
-| **語言** | EN、ZH-TW、ZH-CN、JA、KO | 20+ | EN、DE 等 | 10+ |
-| **CJK 排版** | 每種語言客製化 | 通用 | 未特別處理 | 通用 |
-| **艾森豪矩陣** | 內建 | 透過標籤 | 沒有 | 透過標籤 |
-| **番茄鐘** | 內建 | 沒有 | 沒有 | 內建 |
-| **習慣追蹤** | 內建 | 沒有 | 沒有 | 內建 |
-| **每週回顧** | AI 撰寫 | 沒有 | 沒有 | 沒有 |
-| **設計哲學** | 編輯風格的寧靜感 | 功能性簡潔 | Apple 式極簡 | 功能豐富 |
-| **價格** | 免費 + $3/月 + $9/月 | 免費 + $5/月 | $50 一次買斷 | 免費 + $36/年 |
-| **平台** | Web (PWA) | 全平台 | 僅 Apple | 全平台 |
-| **團隊功能** | 沒有，僅個人使用 | 有 | 沒有 | 有 |
+**Todoist** 提供任務與專案整理、共享專案及多種視圖，也有官方 MCP 伺服器。連接 AI 助理並非 First Light 獨有。
 
-## First Light 贏在哪裡
+**Things** 專注 Apple 裝置上的任務管理，提供 Today、Upcoming 等視圖，可並列顯示 Apple Calendar 活動，也支援 Apple Shortcuts 等自動化。
 
-### Daily Edition（每日精選）
+**TickTick** 結合任務、行事曆視圖、番茄鐘與習慣追蹤。這些功能與 First Light 有重疊，應比較流程與方案，而不是假設某功能獨家。
 
-這是最核心的差異，而且差距不小。沒有任何其他 App 會幫你寫一篇像報紙專欄一樣的晨間簡報，用敘事的方式講你今天的一天。Todoist 給你看的「今天」是一個清單。Things 給你看的「今天」是一個更漂亮的清單。TickTick 最近加了 AI 功能，但它只是摘要，不是評論。
+**First Light** 結合個人任務視圖、筆記、行事曆、習慣、專注與急迫／重要矩陣。選用簡報及付費規劃工具協助檢視已記錄的工作。Groups 共享清單仍為測試版，不代表能取代所有團隊專案系統。
 
-First Light 的 Daily Edition 理解你的模式。它知道你空下來的早上通常比較有生產力。它知道你星期四的會議會擠在一起。它把這些變成讀起來舒服的文字，不是項目符號。
+## 換工具前先試一個真實任務
 
-### 設計的用心
+在候選工具記下相同承諾、確認日期、隔天找回它，再有意識地改期與完成。需要 AI 連接時，另行測試用戶端與權限。選擇最容易持續使用的流程；若切換只增加設定與重複工作，就保留現有系統。價格及方案請查目前定價與下方官方來源。
 
-Things 很美但極簡。Todoist 乾淨但偏功能性。TickTick 很強大但有點忙碌。First Light 不太一樣：它是編輯風格的。它的設計像雜誌，不像軟體工具。字體、間距、顏色都刻意營造一種平靜感。
+[Todoist features](https://www.todoist.com/features) · [Todoist MCP](https://developer.todoist.com/api/v1/) · [Things](https://culturedcode.com/things/features/) · [TickTick](https://ticktick.com/?language=en_us) · [Notion](https://www.notion.com/product) · [Notion MCP](https://developers.notion.com/guides/mcp/overview)
 
-這比聽起來更重要。一個你喜歡打開的工具，才是你真的會用的工具。
+## 在 First Light 中使用
 
-### CJK 是一等公民
-
-如果你用中文、日文或韓文工作，First Light 是為你而生的。不是翻譯過來的，是原生打造的。字體針對每種語言精心挑選。間距尊重 CJK 排版慣例。Daily Edition 用你的語言寫作，是真正流暢的語言，不是翻譯腔。
-
-## Todoist 贏在哪裡
-
-- **生態系。** 20 多種語言、全平台、上百個整合。First Light 目前還碰不到這個等級。
-- **共享專案。** First Light 只做個人使用。如果你需要團隊任務管理，Todoist 是更好的選擇。
-- **歷史紀錄。** Todoist 穩定運作了十年。First Light 這週才上線。
-
-## Things 贏在哪裡
-
-- **離線使用。** Things 是原生 App，不需要網路就能用。First Light 是 PWA，有離線能力，但程度不同。
-- **一次買斷。** 50 美元就永遠是你的。不用擔心訂閱疲勞。
-- **簡單。** 如果你不需要 AI、習慣追蹤、番茄鐘或日曆，只想要一個漂亮的任務清單，Things 無可匹敵。
-
-## TickTick 贏在哪裡
-
-- **功能密度。** TickTick 什麼都有：日曆、習慣、番茄鐘、筆記、看板，現在還有 AI。它是瑞士刀。
-- **價格。** 一年 36 美元，以你得到的功能來說很難找到更划算的。
-- **Android 體驗。** 原生 Android App，設計得很好。First Light 目前只有 PWA。
-
-## First Light 適合誰？
-
-說實話，它適合一種特定的人：
-
-- 你在乎美感，不只是功能
-- 你希望你的 App 跟你一起思考，而不只是存東西
-- 你用英文或東亞語言工作
-- 你是一個人在管理自己的生活，不是帶團隊做專案
-- 你試過那些大牌 App，但感覺......沒什麼
-
-如果你對以上三點以上有共鳴，[來試試看](https://firstlight.to)。可以免費開始。
-
-如果你用 Todoist 用得很開心，那就繼續用 Todoist。它是一個很棒的 App。我不是來勸已經滿意的人換的，我是為了那些還在尋找的人。
+核心任務規劃免費。**Brief me** 是選用的簡報功能，以已記錄的任務與行事曆為依據，不會修改任務。Plus 增加 Google Calendar 編輯與反思；Pro 增加規劃建議、語音／影像擷取、每週回顧及 API／MCP。AI 功能設有每日用量限制，儲存、同步與 AI 需要網路。升級前請查看[目前方案](/pricing)。

@@ -47,7 +47,7 @@ export default function PricingPage() {
 
   const proLabel = priceLoading
     ? t(lang, "pricing.plan.pro.name")
-    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? "2026"}`;
+    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? "See checkout"}`;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -79,7 +79,7 @@ export default function PricingPage() {
                 "Today, Tomorrow, Next 7 / 90 days, Inbox",
                 "Calendar with Google Calendar (read)",
                 "Lists, Tags, Habits, Notes, Focus",
-                "Daily Edition (1 / day)",
+                "Optional AI briefing (daily usage limits)",
                 "Email-to-inbox, push, daily digest",
                 "Export your data, anytime",
                 "Groups · free during beta",
@@ -103,12 +103,12 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Plus — calendar + unlimited Daily Edition. Most-popular middle tier. */}
+          {/* Plus — calendar editing and reflection. */}
           <div className="border border-border rounded-2xl p-6 flex flex-col">
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.plus.name")}</h2>
               <span className="text-2xl font-semibold">
-                {plusLoading ? "-" : plus?.formatted ?? "2026"}
+                {plusLoading ? "-" : plus?.formatted ?? "See checkout"}
                 <span className="text-sm text-muted-fg font-normal">
                   {" "}/ {plus?.interval ?? "month"}
                 </span>
@@ -118,7 +118,7 @@ export default function PricingPage() {
             <ul className="space-y-2 text-sm flex-1">
               {[
                 "Everything in Free",
-                "Unlimited Daily Edition",
+                "AI briefings with daily usage limits",
                 "Two-way Google Calendar sync",
                 "Smart reschedule & Find time",
                 "End-of-day Reflection",
@@ -160,7 +160,7 @@ export default function PricingPage() {
                 {t(lang, "pricing.plan.pro.name")} <Sparkles className="size-5 text-accent" />
               </h2>
               <span className="text-2xl font-semibold">
-                {priceLoading ? "-" : pro?.formatted ?? "2026"}
+                {priceLoading ? "-" : pro?.formatted ?? "See checkout"}
                 <span className="text-sm text-muted-fg font-normal">
                   {" "}/ {pro?.interval ?? "month"}
                 </span>
@@ -175,7 +175,8 @@ export default function PricingPage() {
                 "Voice → Task & Snapshot → Task",
                 "Smart triage (AI Eisenhower)",
                 "Weekly review + Goal tracker",
-                "Semantic search across everything",
+                "Semantic search across tasks and notes",
+                "Public API + MCP access",
                 "Priority support",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">
@@ -244,7 +245,7 @@ export default function PricingPage() {
               disabled={checkoutPro.isPending}
               className="btn-primary h-11 px-6"
             >
-              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? "2026"}`}
+              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? "See checkout"}`}
             </button>
           ) : (
             <Link href="/signup" className="btn-primary h-11 px-6">
