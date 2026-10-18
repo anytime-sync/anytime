@@ -5,32 +5,40 @@ Repository inspected 2026-10-18 at main `4ed85b3`; PR #30 (calendar agenda in di
 ## Task and release lifecycle
 
 1. **Ready:** write a user-visible acceptance criterion, observed evidence, affected journey and safe reproduction. Check open PRs before implementation. #26 already owns durable calendar write retries/time intent; #23 contains broader onboarding/activation changes.
-2. **In progress:** use this saved cloud checkout, activate `/workspace/.cloud-setup/activate.sh`, and branch from main. Keep one active project task. Fixtures must not load service-role/Google/Resend credentials or call live cron routes.
+2. **In progress:** use this saved cloud checkout, activate `/workspace/.cloud-setup/activate.sh`, and branch from main or a declared draft-PR dependency. Document a stack's base and release order. Keep one active project task. Fixtures must not load service-role/Google/Resend credentials or call live cron routes.
 3. **Draft / verified:** attach exact commands, results, commit, limitations and rollback plan. A failing production-evidence check stays open even if fixtures pass. The separate fixes PR #31 reuses #23's minimal list-view modal insertion; reconcile that overlapping hunk before merging either PR. It does not import #23's redesign or instrumentation.
 4. **Release approved:** Aaron explicitly approves exact commit/target, migration order if any, merge and release. A merge to main can trigger Vercel. This phase creates draft PRs only and introduces no database migration.
 5. **Observed / done:** after an approved release, observe the next existing scheduled invocation and its per-account domain outcome. Record deployment commit and evidence. Reopen the same task if criteria fail; propose rollback before executing it.
 
 At the start of each engineering session, review CI/open PRs and read-only scheduler evidence, then pick the highest incomplete criterion. End with verified changes, remaining gaps and the next concrete action. No new scheduled automation is established by this cadence.
 
-The phase-one branch has `git.deploymentEnabled["codex/cloud-ops-phase1-20261018"] = false`; its pushes must not deploy previews. Other branch behavior is preserved. Add a branch-specific guard before any future unapproved push; [Vercel documents the setting](https://vercel.com/docs/project-configuration/git-configuration).
+Both phase-one branches have exact `git.deploymentEnabled` entries set to `false`: `codex/cloud-ops-phase1-20261018` and `codex/firstlight-welcome-insights-20261018`. Their pushes must not deploy previews. Preserve both guards when combining or retargeting the PRs; existing cron definitions and other branch behavior remain unchanged. Add a branch-specific guard before any future unapproved push; [Vercel documents the setting](https://vercel.com/docs/project-configuration/git-configuration).
+
+## Phase-one PR stack and release order
+
+[Fixes #31](https://github.com/anytime-sync/anytime/pull/31) targets `main`. [Workflow #32](https://github.com/anytime-sync/anytime/pull/32) targets #31's branch, `codex/firstlight-welcome-insights-20261018`, and contains the combined fixes and operating workflow. Its comparison with #31 shows the workflow changes. Integration preserves both draft histories, both `test:onboarding` and `test:smoke`, and both preview guards. #23 remains separate; none of its broader modal design, dismissal-key or eligibility changes are imported.
+
+After explicit release approval, merge #31 to `main` first. Then retarget #32 to `main` before its release; do not merge #32 into its current draft-branch base. Keep #31's branch until retargeting is verified. If #31 is squash-merged or rebased, reconcile #32 against the resulting main history so its final diff contains only the workflow changes. Recheck its final diff, both guards and all checks at the resulting head before requesting or executing #32's approved merge. A retarget does not itself authorize a release, and no merge to main or deployment has been performed by this phase.
 
 ## Isolated verification
 
 ```sh
 source /workspace/.cloud-setup/activate.sh
 npm run test:smoke
+npm run test:onboarding
 npm test -- --maxWorkers=2 --minWorkers=1
 npm run typecheck
 npm run lint
+NODE_OPTIONS='--use-env-proxy --use-system-ca --max-old-space-size=3072' node /workspace/.cloud-setup/with-app-env.cjs anytime npm run build
 ```
 
 Smoke selects the existing calendar sync/write, authentication, agenda and digest suites plus the route-orchestration regressions. Providers and data are fixtures. The calendar route smoke checks drain ordering, per-account failures, unavailable tokens and continuation. Digest tests exercise the real query builder against intercepted fixture HTTP, local-day/DST windows, pagination, tenant isolation and email HTML/text. No mail is sent.
 
-The separately reviewable [PR #31](https://github.com/anytime-sync/anytime/pull/31) adds `npm run test:onboarding`; run it on that branch after activating the saved runtime. It uses this saved cloud runtime's `playwright-core` and Chromium (`PW_EXE`), plus esbuild already provided by Vitest. It bundles the real Today page, view-mode hook, welcome modal and UI store, fixtures unrelated panels/data hooks, blocks external browser traffic, and uses fresh contexts. It covers default list and stored timeline, both dismissal controls, two simulated logout/login remounts, switching views and reload. It does **not** prove real authentication, production rendering, cross-device behavior or task writes. No extra browser dependency/service is installed by this change.
+The combined branch also includes #31's `npm run test:onboarding`. It uses this saved cloud runtime's `playwright-core` and Chromium (`PW_EXE`), plus esbuild already provided by Vitest. It bundles the real Today and Insights pages, view-mode hook, welcome modal and UI store, fixtures unrelated panels/data hooks, blocks external browser traffic, and uses fresh contexts. Four scenarios cover default list and stored timeline, both dismissal controls, two simulated logout/login remounts, switching views and reload. Three more check actual visible Insights scope copy with zero, nonzero and unavailable accessible-task counts beside a nonzero global total. It does **not** prove real authentication, production rendering, cross-device behavior or task writes. No extra browser dependency/service is installed by this change.
 
-The welcome flag remains per-browser `fl.onboardingSeen`, not per-account. The default-list failure was reproduced in Chromium before PR #31's one-line fix; that PR preserves the existing two-choice welcome. Cohort retention is not recoverable from current task `updated_at`. PR #31 changes Insights to label bounded rolling counts of existing task rows; repeated edits count once, automated edits count, and failed counts show **Unavailable**, not zero. No profile denominator or invented percentages remain.
+The welcome flag remains per-browser `fl.onboardingSeen`, not per-account. The default-list failure was reproduced in Chromium before PR #31's one-line fix; that PR preserves the existing two-choice welcome. Cohort retention is not recoverable from current task `updated_at`. Insights labels bounded rolling counts of existing tasks visible to the signed-in account under RLS: owned tasks and tasks shared through projects or groups. Repeated edits count once, automated edits count, and failed counts show **Unavailable**, not zero. Global rolling task activity is unavailable; the privileged global summary remains separate. No profile denominator, invented percentages or expanded read access are introduced.
 
-CI already runs lint, typecheck, tests and build; its push-only job repeats the build. Existing Security checks include non-blocking dependency commands, so a green Security run alone is not a clean dependency audit. Main [CI run](https://github.com/anytime-sync/anytime/actions/runs/38996421782) passed before this phase. This work does not add another CI or scheduler system.
+CI already runs lint, typecheck, tests and build; its push-only job repeats the build. CI and Security PR filters include the exact #31 branch as well as their existing main/develop bases, so #32 remains checked while stacked. Push triggers, permissions and the existing weekly Security schedule are unchanged. Existing Security checks include non-blocking dependency commands, so a green Security run alone is not a clean dependency audit. Main [CI run](https://github.com/anytime-sync/anytime/actions/runs/38996421782) passed before this phase. This work does not add another CI or scheduler system.
 
 ## Scheduler evidence and recovery
 
