@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "fix/firstlight-scheduler-auth": false,
-      "codex/cloud-ops-phase1-20261018": false
+      "codex/cloud-ops-phase1-20261018": false,
+      "codex/firstlight-welcome-insights-20261018": false
     }
   },
   "crons": [
