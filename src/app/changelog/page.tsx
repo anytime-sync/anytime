@@ -28,9 +28,9 @@ const CHANGELOG: Entry[] = [
     title: "Public content aligned with the current planner",
     tag: "fixed",
     items: [
-      "Clarified optional Brief me, AI usage limits, and plan requirements",
-      "Corrected planning examples: suggestions are separate from saved task and calendar changes",
-      "Updated FAQs, blog guides, comparisons and MCP documentation; removed unsupported metrics and promises",
+      "Retired hosted AI and semantic search; removed their public offers and app controls",
+      "Kept the core task planner, calendar, notes, habits and focus tools",
+      "Updated pricing and FAQs, withdrew outdated AI promotions, and disabled background AI processing",
       "Older entries below describe releases at their original dates, not current plan entitlements",
     ],
   },
