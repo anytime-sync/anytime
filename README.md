@@ -1,5 +1,7 @@
 # First Light
 
+Cloud engineering, isolated checks and release gates: [operating workflow](docs/OPERATIONS.md) | [prioritized backlog](docs/BACKLOG.md).
+
 A calm place to get things done. Tasks, calendar, habits, Pomodoro — synced anywhere. task-manager–class, self-hosted, and yours. Web first; the architecture extends naturally to mobile (Capacitor) and desktop (Tauri / Electron) without changing the core code.
 
 ## What's in v1

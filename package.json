@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint:i18n": "node scripts/lint-i18n.mjs",
     "test": "vitest run",
+    "test:smoke": "vitest run --maxWorkers=2 --minWorkers=1 src/lib/calendar-sync.test.ts src/lib/calendar-write.test.ts src/lib/cron-auth.test.ts src/lib/email/digest-agenda.test.ts src/lib/email/daily-digest-template.test.ts src/app/api/cron/auth.test.ts src/app/api/cron/calendar-sync/route.test.ts src/app/api/cron/daily-digest/route.test.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
