@@ -17,7 +17,6 @@ import { loadPrices, formatPriceNumeric } from "@/lib/pricing";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
 import { generateClassOverridesCss } from "@/lib/design/class-css";
 import { fetchSiteOverrides } from "@/lib/i18n-server";
-import { setI18nOverrides, type LanguageCode } from "@/lib/i18n";
 
 // Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
@@ -127,17 +126,12 @@ export default async function RootLayout({
   // the rules are present on the very first paint.
   const classCss = generateClassOverridesCss(designMap);
 
-  // Pull admin-edited text overrides server-side so SSR HTML already
-  // has the saved strings. The same map is also serialized into a
-  // window var below so the client i18n module is seeded BEFORE
-  // hydration, which kills the flash of hardcoded defaults.
+  // Serialize CMS copy for application after client mount. Keep initial SSR
+  // and hydration on the same defaults; do not mutate a shared server map.
   const i18nOverrides = await fetchSiteOverrides();
 
   // Load dynamic prices for JSON-LD structured data
   const prices = await loadPrices();
-  for (const code of Object.keys(i18nOverrides) as LanguageCode[]) {
-    setI18nOverrides(code, i18nOverrides[code]!);
-  }
 
   return (
     <html

@@ -96,6 +96,8 @@ function LoginForm() {
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -104,6 +106,8 @@ function LoginForm() {
         <input
           type="password"
           placeholder={t(lang, "auth.login.passwordPlaceholder")}
+          aria-label={t(lang, "auth.login.passwordPlaceholder")}
+          autoComplete="current-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

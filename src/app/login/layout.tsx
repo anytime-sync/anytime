@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Log in — First Light",
+    title: "Log in",
     description: "Sign in to First Light — your calm space for clarity, focus, intentional progress.",
     alternates: { canonical: "/login" },
     openGraph: {

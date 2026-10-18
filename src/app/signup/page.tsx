@@ -101,8 +101,8 @@ export default function SignupPage() {
 
           <p className="text-xs text-muted-fg leading-relaxed">
             Signing in with Google gives First Light your name and email address
-            so we can create your account. We never read your Gmail, Drive or
-            Calendar, and we never post on your behalf.
+            so we can create your account. Calendar access is requested separately
+            when you choose to connect Google Calendar. We never post on your behalf.
           </p>
 
           <Divider>{t(lang, "auth.login.orEmail")}</Divider>
@@ -110,6 +110,8 @@ export default function SignupPage() {
           <form onSubmit={onSubmit} className="space-y-3">
             <input
               placeholder={t(lang, "auth.signup.namePlaceholder")}
+              aria-label={t(lang, "auth.signup.namePlaceholder")}
+              autoComplete="name"
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -117,6 +119,8 @@ export default function SignupPage() {
             <input
               type="email"
               placeholder={t(lang, "auth.login.emailPlaceholder")}
+              aria-label={t(lang, "auth.login.emailPlaceholder")}
+              autoComplete="email"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -125,12 +129,15 @@ export default function SignupPage() {
             <input
               type="password"
               placeholder={t(lang, "auth.signup.passwordPlaceholder")}
+              aria-label={t(lang, "auth.signup.passwordPlaceholder")}
+              autoComplete="new-password"
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
+              minLength={10}
               required
             />
+            <p className="text-xs text-muted-fg">{t(lang, "auth.signup.passwordPlaceholder")}</p>
             <button className="btn-primary w-full" disabled={loading}>
               {loading ? "…" : t(lang, "auth.signup.submit")}
             </button>

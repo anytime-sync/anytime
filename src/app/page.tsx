@@ -58,12 +58,6 @@ export default function Home() {
               {t(lang, "landing.nav.pricing")}
             </Link>
             <Link
-              href="/compare"
-              className="hover:text-fg transition-colors hidden sm:inline"
-            >
-              {t(lang, "landing.nav.compare")}
-            </Link>
-            <Link
               href="/blog"
               className="hover:text-fg transition-colors hidden sm:inline"
             >
@@ -118,12 +112,6 @@ export default function Home() {
           </DesignSlot>
         </div>
       </DesignSlot>
-
-
-
-      <div className="max-w-6xl w-full mx-auto px-6">
-        <div className="h-px bg-border" />
-      </div>
 
 
 

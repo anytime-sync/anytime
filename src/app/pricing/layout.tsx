@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pro = formatPrice(proCents, currency);
 
   return {
-    title: "Pricing \u2014 First Light",
+    title: "Pricing",
     description: "Free, Plus, and Pro plans for the calm daily productivity tool. Tasks, notes, Google Calendar sync, habits, focus, and API/MCP access.",
     alternates: { canonical: "/pricing" },
     openGraph: {

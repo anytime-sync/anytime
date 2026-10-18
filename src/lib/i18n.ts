@@ -5501,7 +5501,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "features.unlockTitle": "Your planner, at your pace.",
     "features.unlockBody": "Start with the free planner. Plus adds two-way Google Calendar sync. Pro adds API/MCP access and priority support.",
     "landing.features.subheading": "Organize tasks, notes, habits and focus sessions. Compare the current features below.",
-    "landing.ctaNote": "Start with the free planner. No credit card needed."
+    "landing.ctaNote": "Start with the free planner. No credit card needed.",
+    "auth.signup.passwordPlaceholder": "Password (10+ characters, a letter and a number)",
+    "pricing.faq.a7": "We use authentication and access controls to protect account data. Sharing and connected services can give others access to the content you choose. See the Privacy Policy for data processing and analytics details."
   },
   "zh-TW": {
     "landing.heroBody": "記下任務與筆記，搭配行事曆安排時間，在清爽的空間裡掌握待辦事項。",
@@ -5520,7 +5522,13 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "features.unlockTitle": "依照自己的步調，安排每一天。",
     "features.unlockBody": "免費方案提供核心規劃工具。Plus 增加 Google 日曆雙向同步；Pro 增加 API/MCP 存取與優先支援。",
     "landing.features.subheading": "整理任務、筆記與習慣，記錄專注時間。下方列出各方案目前提供的功能。",
-    "landing.ctaNote": "免費開始使用，無須信用卡。"
+    "landing.ctaNote": "免費開始使用，無須信用卡。",
+    "auth.signup.passwordPlaceholder": "密碼（至少 10 字元，含英文字母與數字）",
+    "pricing.kicker": "方案與價格",
+    "pricing.faq.q1": "我可以隨時取消嗎？",
+    "pricing.faq.q2": "降級後，我的資料會怎麼樣？",
+    "pricing.faq.a4": "支援英文、繁體中文、簡體中文、日文與韓文。",
+    "pricing.faq.a7": "我們使用身分驗證與存取控制保護帳戶資料。分享及連接服務可能讓他人存取你選擇的內容。資料處理與分析工具詳情請見隱私政策。"
   },
   "zh-CN": {
     "landing.heroBody": "记下任务与笔记，搭配日历安排时间，在清爽的空间里掌握待办事项。",
@@ -5539,7 +5547,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "features.unlockTitle": "按照自己的节奏，安排每一天。",
     "features.unlockBody": "免费方案提供核心规划工具。Plus 增加 Google 日历双向同步；Pro 增加 API/MCP 访问与优先支持。",
     "landing.features.subheading": "整理任务、笔记与习惯，记录专注时间。下方列出各方案目前提供的功能。",
-    "landing.ctaNote": "免费开始使用，无需信用卡。"
+    "landing.ctaNote": "免费开始使用，无需信用卡。",
+    "auth.signup.passwordPlaceholder": "密码（至少 10 个字符，含英文字母和数字）",
+    "pricing.faq.a7": "我们使用身份验证与访问控制保护账户数据。分享和连接服务可能让他人访问你选择的内容。数据处理与分析工具详情请见隐私政策。"
   },
   "ja": {
     "landing.heroBody": "タスクとメモを記録し、カレンダーで予定を確認。落ち着いた空間で日々のやることを管理できます。",
@@ -5558,7 +5568,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "features.unlockTitle": "自分のペースで毎日を計画。",
     "features.unlockBody": "基本のプランナーは無料。Plus は Google カレンダーの双方向同期、Pro は API/MCP アクセスと優先サポートを追加します。",
     "landing.features.subheading": "タスク、メモ、習慣、集中時間を管理。現在の機能を下の表で比較できます。",
-    "landing.ctaNote": "無料で始められます。クレジットカードは不要です。"
+    "landing.ctaNote": "無料で始められます。クレジットカードは不要です。",
+    "auth.signup.passwordPlaceholder": "パスワード（10文字以上、英字と数字を含む）",
+    "pricing.faq.a7": "認証とアクセス制御でアカウントのデータを保護しています。共有や外部サービスとの接続により、選択した内容へのアクセスを許可する場合があります。データ処理や解析の詳細はプライバシーポリシーをご覧ください。"
   },
   "ko": {
     "landing.heroBody": "할 일과 메모를 기록하고 캘린더로 시간을 계획하세요. 차분한 공간에서 약속과 할 일을 관리할 수 있습니다.",
@@ -5577,7 +5589,9 @@ const CURRENT_PRODUCT_COPY: Record<string, Record<string, string>> = {
     "features.unlockTitle": "자신의 속도로 하루를 계획하세요.",
     "features.unlockBody": "기본 플래너는 무료입니다. Plus는 Google 캘린더 양방향 동기화, Pro는 API/MCP 접근과 우선 지원을 추가합니다.",
     "landing.features.subheading": "할 일, 메모, 습관과 집중 시간을 관리하세요. 아래 표에서 현재 제공되는 기능을 비교할 수 있습니다.",
-    "landing.ctaNote": "무료로 시작하세요. 신용카드는 필요하지 않습니다."
+    "landing.ctaNote": "무료로 시작하세요. 신용카드는 필요하지 않습니다.",
+    "auth.signup.passwordPlaceholder": "비밀번호 (10자 이상, 영문과 숫자 포함)",
+    "pricing.faq.a7": "인증과 접근 제어로 계정 데이터를 보호합니다. 공유 및 외부 서비스 연결 시 선택한 콘텐츠에 접근 권한이 부여될 수 있습니다. 데이터 처리와 분석에 관한 자세한 내용은 개인정보처리방침을 확인하세요."
   }
 };
 

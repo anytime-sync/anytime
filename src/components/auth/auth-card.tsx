@@ -56,7 +56,7 @@ export function AuthCard({
       onClick={onClose}
     >
       <div
-        className="card surface-strong w-full max-w-md p-7 space-y-5 shadow-2xl relative"
+        className="card surface-strong w-full max-w-md p-7 space-y-5 shadow-2xl relative max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar — language picker (left) + close (right) */}
@@ -204,6 +204,8 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -212,6 +214,8 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
         <input
           type="password"
           placeholder={t(lang, "auth.login.passwordPlaceholder")}
+          aria-label={t(lang, "auth.login.passwordPlaceholder")}
+          autoComplete="current-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -293,6 +297,8 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           placeholder={t(lang, "auth.signup.namePlaceholder")}
+          aria-label={t(lang, "auth.signup.namePlaceholder")}
+          autoComplete="name"
           className="input"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -300,6 +306,8 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -308,12 +316,15 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
         <input
           type="password"
           placeholder={t(lang, "auth.signup.passwordPlaceholder")}
+          aria-label={t(lang, "auth.signup.passwordPlaceholder")}
+          autoComplete="new-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
+          minLength={10}
           required
         />
+            <p className="text-xs text-muted-fg">{t(lang, "auth.signup.passwordPlaceholder")}</p>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "…" : t(lang, "auth.signup.submit")}
         </button>
