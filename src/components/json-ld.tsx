@@ -18,7 +18,7 @@ export function SoftwareApplicationJsonLd({
     "@type": "SoftwareApplication",
     name: "First Light",
     description:
-      "The AI-native daily planner with MCP integration, Telegram bot, AI morning briefings, Google Calendar sync, habits, focus timer, and Eisenhower matrix — in 5 languages.",
+      "A personal planner for tasks, notes, calendars, habits and focus.",
     url: "https://firstlight.to",
     applicationCategory: "ProductivityApplication",
     operatingSystem: "Web",
@@ -34,14 +34,12 @@ export function SoftwareApplicationJsonLd({
         name: "Plus",
         price: plusPrice ?? "5.00",
         priceCurrency: "USD",
-        priceValidUntil: "2027-12-31",
       },
       {
         "@type": "Offer",
         name: "Pro",
         price: proPrice ?? "9.00",
         priceCurrency: "USD",
-        priceValidUntil: "2027-12-31",
       },
     ],
     author: {
@@ -51,19 +49,14 @@ export function SoftwareApplicationJsonLd({
     },
     inLanguage: ["en", "zh-TW", "zh-CN", "ja", "ko"],
     featureList: [
-      "MCP integration for AI assistants",
+      "API/MCP integration",
       "Telegram bot",
-      "AI morning briefings (Daily Edition)",
       "Google Calendar sync",
       "Eisenhower matrix",
-      "Voice-to-task",
-      "Screenshot-to-task",
       "Email-to-task",
       "Focus timer",
       "Habit tracker",
-      "Weekly reviews",
       "Share groups",
-      "Semantic search",
       "5 languages (EN, ZH-TW, ZH-CN, JA, KO)",
     ],
   };
@@ -85,7 +78,7 @@ export function BlogIndexJsonLd({
     "@context": "https://schema.org",
     "@type": "Blog",
     name: "First Light Blog",
-    description: "Thoughts on calm productivity, AI-assisted planning, and building a daily practice that sticks.",
+    description: "Thoughts on calm productivity, personal planning, and building a daily practice that sticks.",
     url: "https://firstlight.to/blog",
     publisher: {
       "@type": "Organization",
@@ -154,4 +147,3 @@ export function BlogPostJsonLd({
     />
   );
 }
-

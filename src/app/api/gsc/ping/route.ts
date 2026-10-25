@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 const INDEXNOW_KEY = "cd861ba1da38969a222b50f16bb764f1faf05e9e28e18f85752eee0207dab97a";
 
@@ -43,7 +44,11 @@ async function submitIndexNow(host: string, urls: string[]) {
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  if (!isAuthorizedCron(req.headers.get("authorization"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const results: Record<string, any> = {};
 
   // Submit First Light to IndexNow

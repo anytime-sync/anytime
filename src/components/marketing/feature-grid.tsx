@@ -1,5 +1,7 @@
 "use client";
 
+import { FEATURES } from "@/lib/plans";
+import { featureCopy } from "@/lib/feature-copy";
 import { t, type LanguageCode } from "@/lib/i18n";
 
 /**
@@ -10,26 +12,29 @@ import { t, type LanguageCode } from "@/lib/i18n";
 type Feature = { emoji: string; nameKey: string; descKey: string };
 
 const features: Feature[] = [
-  { emoji: "📋", nameKey: "landing.features.f1.name", descKey: "landing.features.f1.desc" },
-  { emoji: "🧭", nameKey: "landing.features.f2.name", descKey: "landing.features.f2.desc" },
   { emoji: "📅", nameKey: "landing.features.f3.name", descKey: "landing.features.f3.desc" },
   { emoji: "👥", nameKey: "landing.features.f4.name", descKey: "landing.features.f4.desc" },
-  { emoji: "📸", nameKey: "landing.features.f5.name", descKey: "landing.features.f5.desc" },
   { emoji: "🤖", nameKey: "landing.features.f6.name", descKey: "landing.features.f6.desc" },
   { emoji: "✅", nameKey: "landing.features.f7.name", descKey: "landing.features.f7.desc" },
   { emoji: "🎯", nameKey: "landing.features.f8.name", descKey: "landing.features.f8.desc" },
   { emoji: "📝", nameKey: "landing.features.f9.name", descKey: "landing.features.f9.desc" },
-  { emoji: "🎯", nameKey: "landing.features.f10.name", descKey: "landing.features.f10.desc" },
-  { emoji: "🔍", nameKey: "landing.features.f11.name", descKey: "landing.features.f11.desc" },
   { emoji: "🔔", nameKey: "landing.features.f12.name", descKey: "landing.features.f12.desc" },
   { emoji: "📧", nameKey: "landing.features.f13.name", descKey: "landing.features.f13.desc" },
   { emoji: "⏰", nameKey: "landing.features.f14.name", descKey: "landing.features.f14.desc" },
-  { emoji: "🌙", nameKey: "landing.features.f15.name", descKey: "landing.features.f15.desc" },
   { emoji: "💬", nameKey: "landing.features.f16.name", descKey: "landing.features.f16.desc" },
-  { emoji: "📰", nameKey: "landing.features.f17.name", descKey: "landing.features.f17.desc" },
 ];
 
 export function FeatureGrid({ lang = "en" }: { lang?: LanguageCode }) {
+  const ids: Record<string,string> = {f3:'cal_view',f4:'tasks_groups',f7:'tasks_habits',f8:'tasks_pomodoro',f9:'tasks_notes_to_task',f12:'plat_push',f13:'plat_email_digest',f14:'plat_email_reminders',f16:'plat_priority_support'};
+  function localized(f: Feature) {
+    const key = f.nameKey.split('.')[2];
+    const product = FEATURES.find(item => item.id === ids[key]);
+    const translated = product ? featureCopy(product, lang) : undefined;
+    return {
+      name: lang !== 'en' && translated ? translated.label : t(lang, f.nameKey as Parameters<typeof t>[1]),
+      description: lang !== 'en' && translated && ['f7','f8','f9','f13','f14'].includes(key) ? translated.description : t(lang, f.descKey as Parameters<typeof t>[1]),
+    };
+  }
   return (
     <section className="px-6 py-12 max-w-6xl mx-auto w-full">
       <div className="mb-8">
@@ -47,8 +52,8 @@ export function FeatureGrid({ lang = "en" }: { lang?: LanguageCode }) {
           >
             <span className="text-lg shrink-0 mt-0.5">{f.emoji}</span>
             <div className="min-w-0">
-              <p className="font-medium text-sm text-fg dark:text-white">{t(lang, f.nameKey as Parameters<typeof t>[1])}</p>
-              <p className="text-xs text-muted-fg dark:text-white/60">{t(lang, f.descKey as Parameters<typeof t>[1])}</p>
+              <p className="font-medium text-sm text-fg dark:text-white">{localized(f).name}</p>
+              <p className="text-xs text-muted-fg dark:text-white/60">{localized(f).description}</p>
             </div>
           </div>
         ))}

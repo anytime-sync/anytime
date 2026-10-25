@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -24,6 +25,7 @@ const ResSchema = z.object({
  * Pulls open tasks the user has had for >= 14 days with no recent edit.
  */
 export async function POST() {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const supabase = createClient();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

@@ -2,9 +2,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { authDestination } from "@/lib/auth-destination";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { authCopy } from "@/lib/auth-copy";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { FloatingLayer } from "@/lib/design/floating-layer";
@@ -13,7 +15,7 @@ import { readStoredLanguage, t, type LanguageCode } from "@/lib/i18n";
 function LoginForm() {
   const router = useRouter();
   const sp = useSearchParams();
-  const next = sp.get("next") ?? "/app";
+  const next = authDestination(sp.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ function LoginForm() {
   }
 
   async function onMagicLink() {
-    if (!email) return toast.error("Enter your email first");
+    if (!email) return toast.error(authCopy(lang).emailFirst);
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -59,7 +61,7 @@ function LoginForm() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Check your inbox for a magic link");
+    toast.success(authCopy(lang).magicSent);
   }
 
   return (
@@ -85,9 +87,7 @@ function LoginForm() {
           "Continue with Google" on a young domain is the classic phishing
           shape; naming the purpose is both honest and de-risking. */}
       <p className="text-xs text-muted-fg leading-relaxed">
-        Signing in with Google gives First Light your name and email address so
-        we can identify your account. We never post on your behalf and never
-        sell your data.
+{authCopy(lang).disclosure}
       </p>
 
       <Divider>{t(lang, "auth.login.orEmail")}</Divider>
@@ -96,6 +96,8 @@ function LoginForm() {
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -104,6 +106,8 @@ function LoginForm() {
         <input
           type="password"
           placeholder={t(lang, "auth.login.passwordPlaceholder")}
+          aria-label={t(lang, "auth.login.passwordPlaceholder")}
+          autoComplete="current-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -117,7 +121,7 @@ function LoginForm() {
             onChange={(e) => setStayLogged(e.target.checked)}
             className="size-3.5 accent-accent cursor-pointer"
           />
-          Stay signed in for 30 days
+          {authCopy(lang).stay}
         </label>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "…" : t(lang, "auth.login.submit")}
@@ -130,7 +134,7 @@ function LoginForm() {
 
       <p className="text-sm text-center text-muted-fg">
         {t(lang, "auth.login.newHere")}{" "}
-        <Link href="/signup" className="text-accent hover:underline">
+        <Link href={`/signup?next=${encodeURIComponent(next)}`} className="text-accent hover:underline">
           {t(lang, "auth.login.createAccount")}
         </Link>
       </p>

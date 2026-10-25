@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
-import { DemoCarousel } from "@/components/marketing/demo-carousel";
 import { FeatureMatrix } from "@/components/app/feature-matrix";
 import { useProPrice, usePlusPrice } from "@/hooks/use-pricing";
 import { useStartCheckout } from "@/hooks/use-billing";
-import { PLANS } from "@/lib/plans";
+import { pricingCopy } from "@/lib/pricing-copy";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { t, readStoredLanguage, type LanguageCode } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -28,6 +27,7 @@ export default function PricingPage() {
   const checkoutPro = useStartCheckout("pro");
   const [authState, setAuthState] = useState<"loading" | "out" | "in">("loading");
   const [lang, setLang] = useState<LanguageCode>("en");
+  const copy = pricingCopy(lang);
 
   useEffect(() => {
     setLang(readStoredLanguage());
@@ -47,7 +47,7 @@ export default function PricingPage() {
 
   const proLabel = priceLoading
     ? t(lang, "pricing.plan.pro.name")
-    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? "2026"}`;
+    : `${t(lang, "pricing.plan.pro.name")} - ${pro?.formattedPerMonth ?? copy.checkout}`;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -73,17 +73,9 @@ export default function PricingPage() {
               <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.free.name")}</h2>
               <span className="text-2xl font-semibold">$0</span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[0].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.free}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Today, Tomorrow, Next 7 / 90 days, Inbox",
-                "Calendar with Google Calendar (read)",
-                "Lists, Tags, Habits, Notes, Focus",
-                "Daily Edition (1 / day)",
-                "Email-to-inbox, push, daily digest",
-                "Export your data, anytime",
-                "Groups · free during beta",
-              ].map((line) => (
+              {copy.freeItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -103,26 +95,20 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Plus — calendar + unlimited Daily Edition. Most-popular middle tier. */}
+          {/* Plus — calendar editing and reflection. */}
           <div className="border border-border rounded-2xl p-6 flex flex-col">
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight">{t(lang, "pricing.plan.plus.name")}</h2>
               <span className="text-2xl font-semibold">
-                {plusLoading ? "-" : plus?.formatted ?? "2026"}
+                {plusLoading ? "-" : plus?.formatted ?? copy.checkout}
                 <span className="text-sm text-muted-fg font-normal">
-                  {" "}/ {plus?.interval ?? "month"}
+                  {" "}/ {plus?.interval === "month" || !plus?.interval ? copy.month : plus.interval}
                 </span>
               </span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[1].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.plus}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Everything in Free",
-                "Unlimited Daily Edition",
-                "Two-way Google Calendar sync",
-                "Smart reschedule & Find time",
-                "End-of-day Reflection",
-              ].map((line) => (
+              {copy.plusItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -152,32 +138,20 @@ export default function PricingPage() {
 
           {/* Pro */}
           <div className="border-2 border-accent rounded-2xl p-6 flex flex-col relative">
-            <span className="absolute -top-3 left-6 bg-accent text-white text-[11px] px-2 py-0.5 rounded-full uppercase tracking-wide">
-              {t(lang, "pricing.plan.pro.badge")}
-            </span>
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-display text-2xl tracking-tight flex items-center gap-2">
                 {t(lang, "pricing.plan.pro.name")} <Sparkles className="size-5 text-accent" />
               </h2>
               <span className="text-2xl font-semibold">
-                {priceLoading ? "-" : pro?.formatted ?? "2026"}
+                {priceLoading ? "-" : pro?.formatted ?? copy.checkout}
                 <span className="text-sm text-muted-fg font-normal">
-                  {" "}/ {pro?.interval ?? "month"}
+                  {" "}/ {pro?.interval === "month" || !pro?.interval ? copy.month : pro.interval}
                 </span>
               </span>
             </div>
-            <p className="text-sm text-muted-fg mb-6">{PLANS[2].tagline}</p>
+            <p className="text-sm text-muted-fg mb-6">{copy.pro}</p>
             <ul className="space-y-2 text-sm flex-1">
-              {[
-                "Everything in Plus",
-                "Plan-my-day & Plan-my-week",
-                "Morning Co-pilot (conversational briefing)",
-                "Voice → Task & Snapshot → Task",
-                "Smart triage (AI Eisenhower)",
-                "Weekly review + Goal tracker",
-                "Semantic search across everything",
-                "Priority support",
-              ].map((line) => (
+              {copy.proItems.map((line) => (
                 <li key={line} className="flex items-start gap-2">
                   <Check className="size-4 text-accent mt-0.5 shrink-0" />
                   <span>{line}</span>
@@ -202,17 +176,13 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <section className="mb-16">
-          <DemoCarousel lang={lang} />
-        </section>
-
                 {/* Full feature matrix */}
         <section className="mb-20">
           <h2 className="font-display text-3xl tracking-tight mb-2 text-center">{t(lang, "pricing.matrix.heading")}</h2>
           <p className="text-muted-fg text-center mb-10 max-w-xl mx-auto">
             {t(lang, "pricing.matrix.subheading")}
           </p>
-          <FeatureMatrix />
+          <FeatureMatrix language={lang} />
         </section>
 
         {/* FAQ — expanded for SEO rich snippets */}
@@ -244,7 +214,7 @@ export default function PricingPage() {
               disabled={checkoutPro.isPending}
               className="btn-primary h-11 px-6"
             >
-              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? "2026"}`}
+              {checkoutPro.isPending ? t(lang, "pricing.cta.openingCheckout") : `${t(lang, "pricing.cta.upgradePro")} — ${pro?.formattedPerMonth ?? copy.checkout}`}
             </button>
           ) : (
             <Link href="/signup" className="btn-primary h-11 px-6">

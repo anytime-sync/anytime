@@ -7,6 +7,10 @@ export type TaskDates = {
   time_kind?: TaskTimeKind | null;
 };
 
+type ResolvedTaskDates<T extends TaskDates> = Omit<T, 'is_all_day'>
+  & Pick<TaskDates, 'start_at' | 'due_at' | 'time_kind'>
+  & { is_all_day?: 'is_all_day' extends keyof T ? T['is_all_day'] | boolean : boolean };
+
 export function timestamp(value: string | null | undefined) {
   return typeof value === 'string' && value ? Date.parse(value) : NaN;
 }
@@ -32,7 +36,7 @@ export function calendarTask<T extends TaskDates>(task: T): T {
 
 /** Creation never fills an absent endpoint. Two supplied endpoints are an
  * explicit interval unless the caller specifies deadline intent. */
-export function createTaskDates<T extends TaskDates>(input: T): T & Pick<TaskDates, 'start_at' | 'due_at' | 'time_kind'> {
+export function createTaskDates<T extends TaskDates>(input: T): ResolvedTaskDates<T> {
   if (input.time_kind === 'work' && (!input.start_at || !input.due_at)) throw new Error('Scheduled work needs both dates.');
   const kind = input.time_kind ?? taskTimeKind(input);
   const task = { ...input, time_kind: kind, ...(kind === 'span' ? { is_all_day: true } : kind === 'work' ? { is_all_day: false } : {}) };
@@ -41,7 +45,7 @@ export function createTaskDates<T extends TaskDates>(input: T): T & Pick<TaskDat
 
 /** Single-boundary rescheduling preserves exact work/span duration. Editors
  * changing a boundary independently pass both fields. Explicit nulls clear. */
-export function resolveTaskDates<T extends TaskDates>(current: TaskDates, changes: T, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone): T & Pick<TaskDates, 'start_at' | 'due_at' | 'time_kind'> {
+export function resolveTaskDates<T extends TaskDates>(current: TaskDates, changes: T, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone): ResolvedTaskDates<T> {
   const patch = { ...changes };
   if (patch.time_kind != null && !['deadline', 'work', 'span'].includes(patch.time_kind)) throw new Error('Invalid time_kind');
   for (const key of ['start_at', 'due_at'] as const) {
@@ -70,7 +74,10 @@ export function resolveTaskDates<T extends TaskDates>(current: TaskDates, change
   if (Number.isFinite(start) && Number.isFinite(due) && start > due) throw new Error('Start must not be after due. Set both dates to move the interval.');
   if (kind === 'work' && (!Number.isFinite(start) || !Number.isFinite(due))) throw new Error('Scheduled work needs both dates.');
   if (kind === 'work' && start === due) throw new Error('Work needs an end after its start.');
-  return patch;
+  // Intent-only API/MCP conversions must agree with the editor's date mode.
+  if (patch.time_kind === 'work') patch.is_all_day = false;
+  if (patch.time_kind === 'span') patch.is_all_day = true;
+  return patch as ResolvedTaskDates<T>;
 }
 
 /** Snoozing an overdue task anchors N days from today. */

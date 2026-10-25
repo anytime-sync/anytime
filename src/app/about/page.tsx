@@ -48,14 +48,13 @@ export default function AboutPage() {
           <Section heading="What First Light is">
             <p>
               A daily planner that brings tasks, calendar, habits and a Pomodoro
-              timer into one place, and writes you a short Daily Edition
-              briefing each morning so you start the day knowing what matters
-              instead of staring at a list of forty things.
+              timer into one place. Capture commitments, choose the next action, and
+              review your tasks and calendar to choose your next step.
             </p>
             <p>
-              It speaks English and Traditional Chinese natively, and it exposes
-              an MCP server so an AI assistant you already use can read and
-              update your real tasks.
+              The interface supports English, Traditional and Simplified Chinese, Japanese,
+              and Korean. Pro includes API/MCP access so a compatible, authorized
+              AI client can read and update your tasks.
             </p>
           </Section>
 
@@ -67,7 +66,7 @@ export default function AboutPage() {
                 pricing
               </Link>
               . We do not sell data, we do not run advertising, and we do not
-              embed third-party tracking pixels. The full detail is in the{" "}
+              use advertising pixels. We use analytics to understand site usage. The details are in the{" "}
               <Link href="/privacy" className="text-accent hover:underline">
                 privacy policy
               </Link>

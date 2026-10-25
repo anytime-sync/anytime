@@ -1,5 +1,6 @@
 "use client";
 
+import { isRetiredFeature } from '@/lib/product-availability';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -155,6 +156,7 @@ function useFeatureFlags(): EffectiveFlags {
  * Checks per-plan booleans first, then override_plan, then hardcoded minPlan.
  */
 function canShowFeature(plan: Plan, featureId: string, flags: EffectiveFlags): boolean {
+  if (isRetiredFeature(featureId)) return false;
   if (flags.disabledIds.has(featureId)) return false;
   const base = getFeature(featureId);
   if (!base) return true; // unknown feature — don't hide

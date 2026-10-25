@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 /**
  * GET /api/v1/daily-edition?date=YYYY-MM-DD
  *
@@ -14,6 +15,7 @@ import { NextRequest } from "next/server";
 import { requireApiAuth, jsonError, jsonOk } from "../_lib/auth";
 
 export async function GET(req: NextRequest) {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const ctx = await requireApiAuth(req, "read");
   if (!ctx.ok) return ctx.response;
 
@@ -32,4 +34,3 @@ export async function GET(req: NextRequest) {
   if (!data) return jsonError(404, "no_edition", `No Daily Edition for ${date}.`);
   return jsonOk({ data });
 }
-

@@ -17,7 +17,7 @@ export function nextTaskRecurrence(task: TaskDates & { rrule?: string | null }, 
   if (!task.rrule || !task.due_at) return null;
   const zone = validTimezone(timezone);
   const kind = taskTimeKind(task);
-  const allDay = kind === 'span' || !!task.is_all_day;
+  const allDay = kind === 'span' || (kind === 'deadline' && !!task.is_all_day);
   const ruleText = calendarRecurrence(task.rrule, allDay, zone);
   if (!ruleText) return null;
   const count = /(?:^|;)COUNT=(\d+)(?:;|$)/i.exec(ruleText);

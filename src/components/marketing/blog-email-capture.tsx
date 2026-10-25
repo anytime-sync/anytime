@@ -56,8 +56,8 @@ export function BlogEmailCapture() {
         role="status"
       >
         Check your inbox — we sent a magic link to{" "}
-        <span className="font-medium">{email}</span>. Click it and your first
-        Daily Edition is ready, no password needed.
+        <span className="font-medium">{email}</span>. Follow it to open your
+        planner and add your first task, no password needed.
       </p>
     );
   }
@@ -94,7 +94,7 @@ export function BlogEmailCapture() {
           className="btn-primary h-10 px-5 text-sm"
           disabled={status === "loading"}
         >
-          {status === "loading" ? "Sending…" : "Start your Daily Edition — free"}
+          {status === "loading" ? "Sending…" : "Start your planner — free"}
         </button>
       </form>
       {status === "error" && message ? (

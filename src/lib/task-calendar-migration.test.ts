@@ -39,5 +39,8 @@ it('preserves legacy rows and queues only new or intentionally changed calendar 
     expect(projectTaskCalendar(history)).toBeNull();
     const pending = await db.query('select id from tasks where calendar_dirty and calendar_event_id is null and is_completed=false and status not in (\'done\',\'archived\') and (start_at is not null or due_at is not null)');
     expect(pending.rows).not.toContainEqual({ id: 'clone' });
+    const beforePreflight = await row('legacy');
+    await db.exec(readFileSync('scripts/qa/task-calendar-preflight.sql', 'utf8'));
+    expect(await row('legacy')).toEqual(beforePreflight);
   } finally { await db.close(); }
 }, 15000);

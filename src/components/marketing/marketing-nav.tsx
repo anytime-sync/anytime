@@ -41,11 +41,11 @@ export function MarketingNav({
 
   return (
     <header className="border-b border-border sticky top-0 z-50 bg-bg/95 backdrop-blur-sm">
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-14 py-2 flex flex-wrap items-center justify-between gap-2">
         {/* Left: wordmark + back-to-home */}
         <Link
           href="/"
-          className="wordmark text-[21px] flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity"
+          className="wordmark text-base sm:text-[21px] flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity"
           title={t(lang, "nav.backToHome")}
         >
           <img src="/logo-black.png" alt="" className="size-9 block dark:hidden" aria-hidden="true" />
@@ -60,12 +60,6 @@ export function MarketingNav({
             className={`hover:text-fg transition-colors ${activePage === "pricing" ? "text-fg font-medium" : ""}`}
           >
             {t(lang, "landing.nav.pricing")}
-          </Link>
-          <Link
-            href="/compare"
-            className={`hover:text-fg transition-colors ${activePage === "compare" ? "text-fg font-medium" : ""}`}
-          >
-            {t(lang, "landing.nav.compare")}
           </Link>
           <Link
             href="/blog"

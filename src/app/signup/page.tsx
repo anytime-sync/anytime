@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { authDestination } from "@/lib/auth-destination";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { authCopy } from "@/lib/auth-copy";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
 import { FloatingLayer } from "@/lib/design/floating-layer";
 import { readStoredLanguage, t, type LanguageCode } from "@/lib/i18n";
 import { isPasswordBreached, validatePasswordStrength } from "@/lib/password-security";
 
-export default function SignupPage() {
+function SignupFormPage() {
+  const params = useSearchParams();
+  const next = authDestination(params.get("next"));
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +53,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: name, preferred_language: readStoredLanguage() },
-        emailRedirectTo: `${location.origin}/auth/callback?next=/app`,
+        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     setLoading(false);
@@ -60,9 +64,9 @@ export default function SignupPage() {
     // them through /login a second time. Hard navigation so the just-
     // set auth cookies are committed before middleware runs.
     if (data.session) {
-      window.location.replace("/app");
+      window.location.replace(next);
     } else {
-      router.replace("/login");
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
   }
 
@@ -97,12 +101,10 @@ export default function SignupPage() {
             <p className="text-sm text-muted-fg">{t(lang, "auth.signup.subtitle")}</p>
           </div>
 
-          <OAuthButtons />
+          <OAuthButtons next={next} />
 
           <p className="text-xs text-muted-fg leading-relaxed">
-            Signing in with Google gives First Light your name and email address
-            so we can create your account. We never read your Gmail, Drive or
-            Calendar, and we never post on your behalf.
+{authCopy(lang).disclosure}
           </p>
 
           <Divider>{t(lang, "auth.login.orEmail")}</Divider>
@@ -110,6 +112,8 @@ export default function SignupPage() {
           <form onSubmit={onSubmit} className="space-y-3">
             <input
               placeholder={t(lang, "auth.signup.namePlaceholder")}
+              aria-label={t(lang, "auth.signup.namePlaceholder")}
+              autoComplete="name"
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -117,6 +121,8 @@ export default function SignupPage() {
             <input
               type="email"
               placeholder={t(lang, "auth.login.emailPlaceholder")}
+              aria-label={t(lang, "auth.login.emailPlaceholder")}
+              autoComplete="email"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -125,12 +131,15 @@ export default function SignupPage() {
             <input
               type="password"
               placeholder={t(lang, "auth.signup.passwordPlaceholder")}
+              aria-label={t(lang, "auth.signup.passwordPlaceholder")}
+              autoComplete="new-password"
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
+              minLength={10}
               required
             />
+            <p className="text-xs text-muted-fg">{t(lang, "auth.signup.passwordPlaceholder")}</p>
             <button className="btn-primary w-full" disabled={loading}>
               {loading ? "…" : t(lang, "auth.signup.submit")}
             </button>
@@ -138,7 +147,7 @@ export default function SignupPage() {
 
           <p className="text-sm text-center text-muted-fg">
             {t(lang, "auth.signup.haveAccount")}{" "}
-            <Link href="/login" className="text-accent hover:underline">
+            <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-accent hover:underline">
               {t(lang, "auth.signup.login")}
             </Link>
           </p>
@@ -146,13 +155,13 @@ export default function SignupPage() {
 
         <div className="text-center text-xs text-muted-fg space-y-2">
           <p>
-            By creating an account you agree to our{" "}
+            {authCopy(lang).termsIntro}{" "}
             <Link href="/terms" className="underline hover:text-fg">
-              Terms
+              {authCopy(lang).terms}
             </Link>{" "}
-            and{" "}
+            {authCopy(lang).and}{" "}
             <Link href="/privacy" className="underline hover:text-fg">
-              Privacy Policy
+              {authCopy(lang).privacy}
             </Link>
             .
           </p>
@@ -181,4 +190,8 @@ function Divider({ children }: { children: React.ReactNode }) {
       <div className="flex-1 h-px bg-border" />
     </div>
   );
+}
+
+export default function SignupPage() {
+  return <Suspense><SignupFormPage /></Suspense>;
 }

@@ -68,6 +68,15 @@ describe('explicit time intent', () => {
     const patch = nextTaskRecurrence(task, 'America/New_York')!.patch;
     expect(patch).toMatchObject({ start_at: '2026-11-07T05:00:00.000Z', due_at: '2026-11-09T05:00:00.000Z' });
   });
+  it('keeps intent-only span/work conversions consistent with date mode and recurrence', () => {
+    const span = { start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:00:00Z', time_kind: 'span' as const, is_all_day: true, rrule: 'FREQ=WEEKLY' };
+    const timed = { ...span, ...resolveTaskDates(span, { time_kind: 'work' }, 'America/New_York') };
+    expect(timed.is_all_day).toBe(false);
+    expect(nextTaskRecurrence(timed, 'America/New_York')!.patch.start_at).toBe('2026-11-01T14:00:00.000Z');
+    expect(resolveTaskDates(timed, { time_kind: 'span' }).is_all_day).toBe(true);
+    // Even a contradictory persisted flag cannot make explicit work recur at midnight.
+    expect(nextTaskRecurrence({ ...timed, is_all_day: true }, 'America/New_York')!.patch.start_at).toBe('2026-11-01T14:00:00.000Z');
+  });
   it('uses the start weekday for overnight work and the exact UTC UNTIL limit', () => {
     const task = { start_at: '2026-10-31T23:00:00Z', due_at: '2026-11-01T08:00:00Z', time_kind: 'work' as const, rrule: 'FREQ=WEEKLY;BYDAY=SA;UNTIL=20261108T000000Z' };
     const patch = nextTaskRecurrence(task, 'America/New_York')!.patch;

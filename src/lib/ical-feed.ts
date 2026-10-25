@@ -43,7 +43,7 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
   // component identifier must match the parameter used by this feed.
   if (vtimezone) lines.push(...vtimezone.trim().split(/\r?\n/).map(line => line.startsWith('TZID:') ? `TZID:${zone}` : line));
   // Bump old events once so subscribers replace cached pre-fix date ranges.
-  const feedRevision = Date.UTC(2026, 9, 5);
+  const feedRevision = Date.UTC(2026, 9, 25);
 
   for (const source of tasks) {
     const task = source;

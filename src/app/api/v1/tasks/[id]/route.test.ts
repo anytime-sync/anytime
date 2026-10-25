@@ -45,6 +45,12 @@ it.each(['deadline', 'span'] as const)('rejects a due-only %s becoming work befo
     expect(state.current.start_at).toBeNull();
   }
   expect((await PATCH(request({ time_kind: 'work', start_at: base.start_at }), { params: { id: 'task' } })).status).toBe(200);
+  expect(state.patch).toMatchObject({ time_kind: 'work', is_all_day: false });
+});
+
+it('canonicalizes date mode when converting a timed interval to a date span', async () => {
+  expect((await PATCH(request({ time_kind: 'span' }), { params: { id: 'task' } })).status).toBe(200);
+  expect(state.patch).toMatchObject({ time_kind: 'span', is_all_day: true });
 });
 
 it('reschedules spans with the stored account timezone instead of the server zone', async () => {

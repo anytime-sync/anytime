@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropic, MODELS } from "@/lib/anthropic";
@@ -21,6 +22,7 @@ export const dynamic = "force-dynamic";
  * Rate-limited like other AI routes.
  */
 export async function GET() {
+  if (!HOSTED_AI_ENABLED) return Response.json({ error: "feature_retired", message: "This feature is no longer offered." }, { status: 410 });
   const supabase = createClient();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

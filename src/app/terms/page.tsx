@@ -48,11 +48,12 @@ export default function TermsPage() {
         <Section heading="Your content">
           <p>
             Your tasks, notes, attachments — all of it — belong to you. We
-            host them so you can use them across devices. We don&apos;t look
-            at them or use them for training models. The only time content
-            leaves our servers is during AI feature requests, where it&apos;s
-            sent to Anthropic for a single inference and not retained under
-            their commercial agreement.
+            host them so you can use them across devices. AI features and
+            connected services process relevant content as described in our
+            <Link href="/privacy" className="underline"> Privacy Policy</Link>.
+            Provider retention is governed by the applicable provider terms;
+            we do not promise that all processing occurs only on First Light servers
+            or that providers retain no data.
           </p>
         </Section>
 

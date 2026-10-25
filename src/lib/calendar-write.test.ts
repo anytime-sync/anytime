@@ -75,6 +75,20 @@ it('does not acknowledge failed provider writes', async () => {
   expect((await run(c)).failed).toBe(1);
   expect(c.queries.some(q => q.write)).toBe(false);
 });
+
+it('limits creation to owned active top-level dirty tasks while retaining linked removal work', async () => {
+  const c = client([]);
+  await run(c);
+  const selection = c.queries.filter(q => q.table === 'tasks' && !q.write);
+  const create = selection[0].filters;
+  for (const filter of [['eq', 'user_id', 'owner'], ['eq', 'is_completed', false], ['neq', 'status', 'done'], ['neq', 'status', 'archived'], ['is', 'parent_id', null], ['eq', 'calendar_dirty', true]]) {
+    expect(create).toContainEqual(filter);
+  }
+  // Completed/archived linked rows must be selected so their own generated
+  // event can be removed, rather than being created or patched back to life.
+  expect(selection[1].filters).toContainEqual(['eq', 'user_id', 'owner']);
+  expect(selection[1].filters).not.toContainEqual(['eq', 'is_completed', false]);
+});
 it.each([{ saveError: true }, { changed: true }])('leaves persistence failures/concurrent edits pending: %j', async options => {
   const c = client([base], [], options);
   expect((await run(c)).failed).toBe(1);

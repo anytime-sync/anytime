@@ -1,8 +1,11 @@
 # Task time intent and calendar repair
 
-This change is based on verified `anytime-sync/anytime` main at
-`055dd08e5e5f62f6fc661be1f2e2ca6b7a9cac66`. Unpublished desktop changes were
-unavailable and were not used as implementation or validation evidence.
+This candidate reconciles PR #26 with verified `anytime-sync/anytime` main
+`eae82d43076597a5257330e731c8e8363e4ecba0`, preserving its onboarding, retired-AI,
+account access, cron authentication and shared-task changes. Original work began
+at `055dd08`; unpublished desktop changes were unavailable and were never used
+as implementation or validation evidence. See `task-calendar-release-candidate.md`
+for the current release gates, migration digest, rollback and verification scope.
 
 ## Meaning of task dates
 
@@ -110,7 +113,7 @@ projections; include those in a separately reviewed repair if needed.
 The migration's unchanged dates/null intent/dirty=false only prevent a Google
 bulk enqueue. ICS has no dirty gate: application release runs every selected
 historical row through the new projection and bumps `LAST-MODIFIED`. Compared
-with base main, legacy positive timed intervals of 24 hours or longer and
+with current main, legacy positive timed intervals of 24 hours or longer and
 multiday all-day intervals now retain their complete ranges instead of the old
 single marker. Some are legitimate work; some may be fabricated lifecycle ranges.
 This can increase crowding until reviewed per-id intent classification. No
@@ -165,10 +168,11 @@ is part of this draft PR.
 
 ## Validation in this cloud workspace
 
-- `npm test`: 177 passing tests across 22 files, including mounted editor/picker
+- `npm test`: 378 passing tests across 36 files, including mounted editor/picker
   behavior, lifecycle/ownership/notification regressions, independent ICS parsing
-  across DST and execution of actual migration/status-trigger SQL in local PostgreSQL.
-- The 49 schedule, API and ICS tests also pass with `TZ=Asia/Taipei`, while
+  across DST, execution of actual migration/status-trigger SQL, and synthetic
+  owner/shared/private RLS preservation in local PostgreSQL.
+- The 53 schedule, API and ICS tests also pass with `TZ=Asia/Taipei`, while
   exercising New York DST semantics independent of the host timezone.
 - `npm run typecheck` and `npm run lint`: passed; ESLint retains repository
   warnings in existing components.
@@ -179,6 +183,6 @@ is part of this draft PR.
   real Google CSS/WOFF2 files were fetched with the environment's supported
   transport and cached via Next's font-response hook. No substitute font bytes
   or production data were used. This does not validate production integrations.
-- Optional `npm run lint:i18n`: fails with the same 106 findings in 26 files as
-  verified base main. New intent/draft-action labels have all five translations;
+- Optional `npm run lint:i18n`: fails with the same 92 findings in 22 files as
+  current main `eae82d4` (only line offsets differ). New labels have all five translations;
   translation parity tests pass.

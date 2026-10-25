@@ -1,65 +1,34 @@
 ---
-title: "The Weekly Review: Why Friday Afternoon Changes Everything"
-description: "Most people end the week without looking back. The weekly review — done right — is the habit that makes every other habit work."
+retired: true
+title: "A Weekly Review That Leads to a Next Step"
+description: "Review recorded work, decide what to carry forward, and use First Light AI reviews when helpful."
 date: "2026-07-14"
 author: "Aaron Cheng"
 tags: ["weekly-review", "productivity", "AI", "planning"]
 lang: "en"
 image: "/og.png"
+
+updated: "2026-10-18"
 ---
 
-We're wired to plan forward. Monday morning: what do I need to do this week? But forward planning has a blind spot: it can't tell you what's actually working.
+## Review the evidence before planning next week
 
-Are you getting better at estimating how long things take? Are you consistently deferring the same type of task? Do you finish more in the morning or afternoon?
+A useful weekly review answers three questions: what finished, what remains, and what needs a different approach? Start with completed tasks and calendar records, not your impression of how busy the week felt.
 
-You can't answer these questions by staring at next week's calendar. You can only answer them by looking back at this week.
+For each open commitment, decide whether to finish it, break it into a smaller action, change its date or stop doing it. If the date changes, check whether it was a real external deadline or only your intended work day.
 
-## What a weekly review actually does
+## What First Light can help with
 
-Three questions. That's all:
+On Pro, open **Weekly review** to request an AI review of recorded work. It uses completed and open tasks and calendar context to suggest observations and next steps. It is not a promise of an automatically delivered Friday report, a full account of work done outside First Light, or a measurement of your personal energy.
 
-**1. What got done?** Not "what was on the list" — what actually got completed. Look at the evidence.
+An illustrative next step might be: “The proposal is still open. Define the missing section and reserve time to draft it.” That is a suggestion, not a saved calendar booking. Confirm the record before changing the plan.
 
-**2. What didn't?** What carried over? What got rescheduled three times? What did you avoid?
+## Close the review with a decision
 
-**3. What does next week need?** Given what you learned, how should next week be different?
+Choose a small number of commitments to carry forward. Write a concrete next action for each, verify its deadline, and reserve time where appropriate. You can do this manually on the free planner without generating an AI review.
 
-## Why people skip it
+A review is useful when it changes a decision. You do not need a long report or a perfect weekly streak. If the same task returns repeatedly, change the task or its priority instead of merely moving it another week.
 
-**It takes effort.** Most Friday afternoons, you're tired and just want the week to be over.
+## Using First Light
 
-**It feels pointless.** "I know what I did this week. I was there." But you actually don't. Research shows people overestimate their output on good weeks and underestimate it on bad ones.
-
-**There's no structure.** Where do you even do a weekly review? Most people don't have a system.
-
-## How AI fixes this
-
-[First Light](https://firstlight.to) runs your weekly review automatically every Friday. It pulls your data — tasks completed, tasks deferred, calendar events, habits tracked — and generates a structured retrospective:
-
-> **This week:** 14 tasks completed, 3 carried over. Your best day was Tuesday (5 tasks). Wednesday was your slowest — back-to-back meetings until 3 PM.
->
-> **Pattern:** You've deferred "update portfolio site" three weeks in a row. Consider breaking it into smaller steps, or dropping it.
->
-> **Next week preview:** 3 deep-work blocks pre-staged. Monday 10 AM, Wednesday 9 AM, Thursday 1 PM.
-
-You didn't compile this. The AI read your data and surfaced the patterns.
-
-## The compounding effect
-
-One weekly review doesn't change much. But 10 in a row change everything.
-
-After a month, you start noticing your rhythms. After two months, you start designing your weeks around these patterns. After three months, your weeks feel different — not because you're working harder, but because you're working with your patterns instead of against them.
-
-## The Friday-to-Monday bridge
-
-First Light adds a second piece: **next-week preview**. After looking back, the AI looks forward. It scans next week's calendar, checks upcoming deadlines, and pre-stages a rough plan.
-
-The week doesn't restart on Monday. It continues.
-
-## How to start
-
-**Manual (free, 10 minutes):** Every Friday at 4 PM, open your task app. Count completed tasks. List what carried over. Write one sentence about what next week needs.
-
-**AI-assisted (First Light, 2 minutes):** Open First Light on Friday. The weekly review is generated automatically. Read it. Done.
-
-Friday afternoon. Thirty minutes. The highest-leverage time you'll spend all week.
+The core task planner is free. **Brief me** is optional and uses recorded tasks and calendar context; it does not change your tasks. Plus adds Google Calendar editing and reflection. Pro adds planning suggestions, voice/image capture, weekly reviews and API/MCP access. AI features have daily usage limits. Saving, syncing and AI require internet access. See [current plans](/pricing) before choosing an upgrade.

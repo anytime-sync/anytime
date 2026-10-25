@@ -1,10 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { featureCopy } from "@/lib/feature-copy";
+import { pricingCopy } from "@/lib/pricing-copy";
+import { useLanguage } from "@/lib/use-language";
+import type { LanguageCode } from "@/lib/i18n";
 import { Check, Lock } from "lucide-react";
 import {
   FEATURES,
-  CATEGORY_LABELS,
   featuresByCategory,
   planSatisfies,
   type FeatureCategory,
@@ -35,9 +38,14 @@ type FlagRow = {
  */
 export function FeatureMatrix({
   currentPlan,
+  language,
 }: {
   currentPlan?: Plan;
+  language?: LanguageCode;
 }) {
+  const storedLanguage = useLanguage();
+  const lang = language ?? storedLanguage;
+  const copy = pricingCopy(lang);
   // Fetch admin flag overrides
   const flagsQ = useQuery<FlagRow[]>({
     queryKey: ["feature-flags", "effective"],
@@ -106,11 +114,11 @@ export function FeatureMatrix({
         return (
           <section key={cat}>
             <h3 className="editorial-number text-[11px] mb-4">
-              {CATEGORY_LABELS[cat]}
+              {copy.categories[cat]}
             </h3>
-            <div className="border border-border rounded-xl overflow-hidden">
-              <header className="grid grid-cols-[1fr_72px_72px_72px] items-center bg-muted/30 px-4 py-3 text-xs uppercase tracking-wide text-muted-fg">
-                <span>Feature</span>
+            <div role="region" aria-label={`${copy.categories[cat]}: ${copy.feature}`} tabIndex={0} className="border border-border rounded-xl overflow-x-auto">
+              <header className="grid min-w-[540px] grid-cols-[1fr_72px_72px_72px] items-center bg-muted/30 px-4 py-3 text-xs uppercase tracking-wide text-muted-fg">
+                <span>{copy.feature}</span>
                 {cols.map((c) => (
                   <span
                     key={c.plan}
@@ -124,18 +132,18 @@ export function FeatureMatrix({
                 {visibleFeatures.map((f) => (
                   <li
                     key={f.id}
-                    className="grid grid-cols-[1fr_72px_72px_72px] items-center px-4 py-3 text-sm"
+                    className="grid min-w-[540px] grid-cols-[1fr_72px_72px_72px] items-center px-4 py-3 text-sm"
                   >
                     <div>
-                      <p className="font-medium">{f.label}{f.beta && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wide">beta</span>}</p>
+                      <p className="font-medium">{featureCopy(f, lang).label}{f.beta && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wide">beta</span>}</p>
                       <p className="text-xs text-muted-fg mt-0.5">
-                        {f.description}
+                        {featureCopy(f, lang).description}
                       </p>
                     </div>
                     {cols.map((c) => {
                       const included = isIncluded(f.id, c.plan, f.minPlan);
                       return (
-                        <div key={c.plan} className="flex justify-center">
+                        <div key={c.plan} className="flex justify-center" role="img" aria-label={`${c.label}: ${included ? copy.included : copy.excluded}`}>
                           {included ? (
                             <span className="inline-flex items-center gap-1 text-xs">
                               <Check
@@ -165,11 +173,8 @@ export function FeatureMatrix({
         );
       })}
       <p className="text-xs text-muted-fg">
-        {FEATURES.filter((f) => !isDisabled(f.id)).length} features in total.{" "}
-        <span className="opacity-80">
-          A lock icon means the feature isn't included in that tier; a number
-          next to a check means there's a free-tier soft cap (e.g. one a day).
-        </span>
+        {FEATURES.filter((f) => !isDisabled(f.id)).length} {copy.total}.{" "}
+        <span className="opacity-80">{copy.legend}</span>
       </p>
     </div>
   );

@@ -1,128 +1,37 @@
 ---
-title: "Best AI Task Managers in 2026: What Actually Works"
-description: "We tested every AI-powered task manager worth trying in 2026. Here's what works, what's hype, and what changed about how people plan their days."
+retired: true
+title: "Choosing an AI Task Manager in 2026"
+description: "A workflow-based guide to choosing AI task tools, with First Light capabilities and limits explained."
 date: "2026-06-04"
 author: "Aaron Cheng"
 tags: ["AI", "task manager", "productivity", "2026", "comparison"]
 lang: "en"
 image: "/og.png"
+updated: "2026-10-18"
 ---
 
-The promise of AI task management has been around since GPT-3. But in 2026, something actually shifted: AI stopped being a gimmick bolted onto existing apps and started becoming the core planning experience.
+## Choose a workflow before choosing an AI tool
 
-I've spent years building and using productivity tools. Here's an honest look at where AI task management actually is right now.
+“Best” depends on the work you want to improve. This is First Light's selection guide, not an independent benchmark or a claim that we tested every product. Start by distinguishing capture, summarization, prioritization and automatic scheduling. They are different capabilities.
 
-## What "AI task manager" actually means in 2026
+For **capture**, check how quickly you can add a real task, correct its date and find it again. For **summarization**, check whether the output links to source records. For **prioritization**, ask whether you can review the rationale before applying changes. For **scheduling**, verify whether the tool merely suggests a time or actually saves a calendar event.
 
-Most apps claiming AI features fall into three tiers:
+## Where First Light fits
 
-**Tier 1: AI as autocomplete.** The app suggests task titles or auto-fills due dates. Todoist, TickTick, and most mainstream apps live here. Useful but not transformative.
+First Light is a personal task planner with optional AI assistance. Brief me summarizes recorded commitments on request. Pro's Plan my day and Plan my week suggest priorities and urgency/importance quadrants. They do not automatically fill your calendar. Pro also includes voice/image capture, weekly reviews and API/MCP access.
 
-**Tier 2: AI as summarizer.** The app reads your tasks and generates a summary or daily overview. Google Tasks, Notion AI, and some newer players offer this. Better, but still reactive.
+The app includes notes, habits, focus sessions and calendar views. Groups are shared lists in beta. It is a web/PWA product, with internet required for saving, synchronization and AI. These are practical boundaries to test, not footnotes to ignore.
 
-**Tier 3: AI as planner.** The app reads your calendar, tasks, habits, and deadlines — then actively plans your day, flags conflicts, and writes you a briefing. This is where things get interesting.
+## Consider the alternatives fairly
 
-## The apps worth looking at
+Todoist offers task/project workflows and official MCP support. Things offers task management on Apple devices and automation options. TickTick combines tasks, calendar, Pomodoro and habits. Notion combines documents, databases and shared work, with its own official MCP support. Check their current documentation below for capabilities and plan conditions.
 
-### First Light
+## Test the result, not the label
 
-Full disclosure: I built this. But here's why it belongs in this list.
+Use a small set of real tasks for a week. Count missed commitments, duplicate entries and unnecessary corrections. A tool that produces more text is not necessarily saving time. Keep the system that helps you follow through with the least maintenance. Prices change, so consult current pricing rather than relying on historical figures in a ranking.
 
-First Light treats your day like a morning newspaper. Instead of showing you a list, it writes you an editorial briefing every morning — what your calendar looks like, which tasks are urgent, what's been sitting too long, and what you should probably skip today.
+[Todoist features](https://www.todoist.com/features) · [Todoist MCP](https://developer.todoist.com/api/v1/) · [Things](https://culturedcode.com/things/features/) · [TickTick](https://ticktick.com/?language=en_us) · [Notion](https://www.notion.com/product) · [Notion MCP](https://developers.notion.com/guides/mcp/overview)
 
-**What it does well:**
-- AI Daily Edition — an actual written briefing, not a bullet list
-- Plan-my-day: conversational planner that schedules your tasks around your calendar
-- Voice → Task and Snapshot → Task (photograph a whiteboard, get tasks)
-- Weekly AI retrospective that actually reflects, not just tallies
-- CJK typography done right (5 languages)
+## Using First Light
 
-**Where it's limited:**
-- No team features (intentionally single-player for now)
-- Smaller ecosystem than Todoist or Notion
-- Still early — the community is growing but small
-
-**Pricing:** Free (full task system), Plus $3/mo, Pro $9/mo
-
-### Todoist
-
-The grandfather of task management. Todoist added AI features in 2025, mostly around smart scheduling suggestions and natural language improvements.
-
-**What it does well:**
-- Rock-solid task capture with natural language
-- Huge integration ecosystem
-- Works everywhere — every platform, every device
-
-**AI reality check:**
-- AI features feel added-on, not core
-- No daily briefing or planning conversation
-- Smart scheduling is useful but basic
-
-**Pricing:** Free, Pro $5/mo, Business $8/user/mo
-
-### Things 3
-
-Things remains the most beautiful task manager ever made. But it has no AI features whatsoever.
-
-**Why it's still relevant:**
-- If you don't want AI, Things is peak task management
-- Apple-only, but the design is unmatched
-- No subscription — one-time purchase
-
-**AI reality check:** None. Cultured Studios hasn't added any AI. Some people consider this a feature.
-
-**Pricing:** $49.99 (Mac), $19.99 (iPhone), $9.99 (iPad)
-
-### TickTick
-
-The feature-maximalist choice. TickTick has added AI task summaries and basic smart scheduling.
-
-**What it does well:**
-- Pomodoro timer, habit tracker, and calendar built in
-- Cross-platform everything
-- Generous free tier
-
-**AI reality check:**
-- AI summaries are basic
-- No conversational planning
-- Feature density can be overwhelming
-
-**Pricing:** Free, Premium $35.99/year
-
-### Notion AI
-
-Notion with AI is powerful for knowledge workers who already live in Notion. The AI can read your entire workspace and help plan projects.
-
-**What it does well:**
-- Deep context — AI reads all your docs, databases, wikis
-- Project-level planning, not just daily tasks
-- Flexible for teams
-
-**AI reality check:**
-- Not a daily planner — it's a knowledge tool with AI
-- Overkill for personal task management
-- Slow on mobile
-
-**Pricing:** Free, Plus $10/mo, AI add-on $10/mo
-
-## The verdict
-
-If you want **AI-first daily planning**: First Light. The morning briefing approach is genuinely different from everything else.
-
-If you want **proven reliability with light AI**: Todoist. It won't transform your workflow, but it won't break it either.
-
-If you want **zero AI, maximum craft**: Things 3. Sometimes the best AI feature is no AI.
-
-If you want **everything in one app**: TickTick. Feature density is its superpower and its curse.
-
-If you want **AI for teams and projects**: Notion AI. Best when your whole team is already in Notion.
-
-## What I actually use
-
-I built First Light because I wanted something none of these apps offered: a daily briefing that reads like a newspaper, not a dashboard. I use it every morning for my own planning (I run a consumer brands business with 60+ people), and it genuinely changed how I start my day.
-
-But I'm biased. Try the free tier of any of these and see which one clicks.
-
----
-
-*Last updated: June 2026. Prices and features may have changed since publication.*
+The core task planner is free. **Brief me** is optional and uses recorded tasks and calendar context; it does not change your tasks. Plus adds Google Calendar editing and reflection. Pro adds planning suggestions, voice/image capture, weekly reviews and API/MCP access. AI features have daily usage limits. Saving, syncing and AI require internet access. See [current plans](/pricing) before choosing an upgrade.

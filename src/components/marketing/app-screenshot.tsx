@@ -18,7 +18,7 @@ const screenshots: Screenshot[] = [
   {
     id: "today",
     label: "TODAY",
-    caption: "The Daily Edition — an AI briefing shaped by your calendar, tasks, and patterns.",
+    caption: "Your day: tasks, scheduled time, and what needs your attention.",
     light: "/screenshots/app-today-light.png",
     dark: "/screenshots/app-today-dark.png",
     width: 1920,
@@ -36,7 +36,7 @@ const screenshots: Screenshot[] = [
   {
     id: "quick-add",
     label: "QUICK ADD",
-    caption: "Type or speak naturally — AI parses time, list, tags, and reminders.",
+    caption: "Capture a task and check its parsed details. Voice input requires Pro and browser support.",
     light: "/screenshots/app-quick-add.png",
     dark: "/screenshots/app-quick-add-dark.png",
     width: 1920,
@@ -45,7 +45,7 @@ const screenshots: Screenshot[] = [
   {
     id: "weekly-review",
     label: "WEEKLY REVIEW",
-    caption: "Close last week. Pre-stage the next one.",
+    caption: "Pro: review recorded work and choose next steps.",
     light: "/screenshots/app-weekly-review.png",
     dark: "/screenshots/app-weekly-review-dark.png",
     width: 1920,
@@ -139,6 +139,9 @@ export function AppScreenshot() {
       {/* Caption */}
       <p className="text-center text-sm text-muted-fg mt-4">
         {shot.caption}
+      </p>
+      <p className="text-center text-xs text-muted-fg mt-2">
+        Interface examples. Some panels have changed; AI briefings are now optional.
       </p>
 
       {/* Dot indicators */}

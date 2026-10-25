@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { authCopy } from "@/lib/auth-copy";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { LanguagePicker } from "@/components/app/language-picker";
 import {
@@ -41,13 +43,9 @@ export function AuthCard({
   useEffect(() => {
     setMounted(true);
     setLang(readStoredLanguage());
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const dialogRef = useDialogFocus(mounted, onClose);
   if (!mounted) return null;
 
   return createPortal(
@@ -56,7 +54,12 @@ export function AuthCard({
       onClick={onClose}
     >
       <div
-        className="card surface-strong w-full max-w-md p-7 space-y-5 shadow-2xl relative"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t(lang, mode === "signup" ? "auth.signup.title" : "auth.login.title")}
+        tabIndex={-1}
+        className="card surface-strong w-full max-w-md p-7 space-y-5 shadow-2xl relative max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar — language picker (left) + close (right) */}
@@ -178,7 +181,7 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
   }
 
   async function onMagicLink() {
-    if (!email) return toast.error("Enter your email first");
+    if (!email) return toast.error(authCopy(lang).emailFirst);
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -187,7 +190,7 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Check your inbox for a magic link");
+    toast.success(authCopy(lang).magicSent);
   }
 
   return (
@@ -204,6 +207,8 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -212,6 +217,8 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
         <input
           type="password"
           placeholder={t(lang, "auth.login.passwordPlaceholder")}
+          aria-label={t(lang, "auth.login.passwordPlaceholder")}
+          autoComplete="current-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -225,7 +232,7 @@ function LoginForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =>
             onChange={(e) => setStayLogged(e.target.checked)}
             className="size-3.5 accent-accent cursor-pointer"
           />
-          Stay signed in for 30 days
+          {authCopy(lang).stay}
         </label>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "…" : t(lang, "auth.login.submit")}
@@ -293,6 +300,8 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           placeholder={t(lang, "auth.signup.namePlaceholder")}
+          aria-label={t(lang, "auth.signup.namePlaceholder")}
+          autoComplete="name"
           className="input"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -300,6 +309,8 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
         <input
           type="email"
           placeholder={t(lang, "auth.login.emailPlaceholder")}
+          aria-label={t(lang, "auth.login.emailPlaceholder")}
+          autoComplete="email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -308,16 +319,22 @@ function SignupForm({ lang, onLoggedIn }: { lang: LanguageCode; onLoggedIn: () =
         <input
           type="password"
           placeholder={t(lang, "auth.signup.passwordPlaceholder")}
+          aria-label={t(lang, "auth.signup.passwordPlaceholder")}
+          autoComplete="new-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
+          minLength={10}
           required
         />
+            <p className="text-xs text-muted-fg">{t(lang, "auth.signup.passwordPlaceholder")}</p>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "…" : t(lang, "auth.signup.submit")}
         </button>
       </form>
+      <p className="text-xs text-muted-fg">
+        {authCopy(lang).termsIntro}{" "}<a href="/terms" target="_blank" rel="noopener" className="underline">{authCopy(lang).terms}</a>{" "}{authCopy(lang).and}{" "}<a href="/privacy" target="_blank" rel="noopener" className="underline">{authCopy(lang).privacy}</a>.
+      </p>
     </div>
   );
 }

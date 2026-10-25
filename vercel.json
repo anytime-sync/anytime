@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "codex/task-calendar-intent": false,
+      "fix/firstlight-scheduler-auth": false,
+      "codex/cloud-ops-phase1-20261018": false,
+      "codex/firstlight-welcome-insights-20261018": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/x-promotion",
@@ -20,10 +28,6 @@
     {
       "path": "/api/cron/calendar-sync",
       "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/embeddings-sync",
-      "schedule": "*/15 * * * *"
     }
   ]
 }

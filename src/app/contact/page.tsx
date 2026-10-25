@@ -41,18 +41,18 @@ export default function ContactPage() {
             </p>
             <p>
               Use this for anything: support, billing, bug reports, privacy and
-              data requests, press, or partnership. Replies usually come within
-              two business days.
+              data requests, press, or partnership. Include the page or feature
+              involved so we can investigate.
             </p>
           </Section>
 
           <Section heading="Privacy and data requests">
             <p>
               To export or delete your data you do not need to email anyone —
-              Settings → Your data → Download as JSON gives you a complete
-              export, and Settings → Danger zone → Delete my account removes
-              everything tied to your account. If you would rather have a human
-              do it, email the address above and say so.
+              Settings → Your data → Download as JSON exports supported account
+              records. Settings → Danger zone → Delete my account starts permanent
+              account deletion. The export does not include every stored record or
+              attachment file; email us for additional data access or deletion questions.
             </p>
             <p>
               The full policy is at{" "}

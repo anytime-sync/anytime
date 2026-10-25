@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Sign up — First Light",
-    description: "Start free in 30 seconds. Calm daily productivity — daily brief, AI plan-my-day, snapshot/voice/paste to task, Google Calendar sync.",
+    title: "Sign up",
+    description: "Start free in 30 seconds. Calm daily productivity — tasks, notes, Google Calendar, habits, and focus.",
     alternates: { canonical: "/signup" },
     openGraph: {
           title: "Start free — First Light",

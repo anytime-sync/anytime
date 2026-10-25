@@ -74,7 +74,7 @@ export default function ChallengePage() {
               {[
                 { day: 'Day 1', title: 'No phone for 30 minutes', desc: 'Break the addiction. Feel the panic. Let it pass.' },
                 { day: 'Day 2', title: 'Write three things down', desc: 'What you are looking forward to, grateful for, and want to be true.' },
-                { day: 'Day 3', title: 'Your first Daily Edition', desc: 'See what a morning briefing feels like instead of a task dump.' },
+                { day: 'Day 3', title: 'Review your day', desc: 'Check your calendar and choose one task to focus on.' },
                 { day: 'Day 4', title: 'The 5-minute walk', desc: 'Movement as transition. Tell your brain: day is beginning.' },
                 { day: 'Day 5', title: 'Protect one hour', desc: 'Block it. Label it. Defend it. Your most important work lives here.' },
                 { day: 'Day 6', title: 'The Friday Review', desc: 'Three questions that save hours of Monday confusion.' },

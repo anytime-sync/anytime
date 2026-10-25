@@ -3,7 +3,7 @@ import { timingSafeEqual } from "crypto";
 /**
  * Vercel Cron / scheduled-task auth.
  *
- * Fail-closed if CRON_SECRET is unset. Uses a constant-time compare to
+ * Fail-closed if CRON_SECRET is unset or blank. Uses a constant-time compare to
  * avoid leaking the secret over response timing (Vercel's edge fronting
  * makes this a paranoid hardening, but cheap to do correctly).
  *
@@ -14,7 +14,7 @@ import { timingSafeEqual } from "crypto";
  */
 export function isAuthorizedCron(authHeader: string | null): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  if (!secret?.trim()) return false;
   if (!authHeader) return false;
   const expected = `Bearer ${secret}`;
   const a = Buffer.from(authHeader);

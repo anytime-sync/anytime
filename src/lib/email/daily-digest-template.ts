@@ -10,6 +10,7 @@ import { type Locale } from "date-fns";
 import { calendarDate } from "@/lib/day-window";
 import { safeTimezone } from "@/lib/ai/tz";
 import { type LanguageCode } from "@/lib/i18n";
+import { type DigestAgendaItem } from "./digest-agenda";
 
 export type DigestTask = {
   id: string;
@@ -28,6 +29,7 @@ export type DigestPayload = {
   topToday: DigestTask[];
   q1Today: DigestTask[];
   overdue: DigestTask[];
+  agenda: DigestAgendaItem[];
   habitsToday: number;
   streakDays: number;
   appUrl: string;
@@ -39,6 +41,9 @@ export type DigestPayload = {
     sectionTopToday: string;
     sectionQ1: string;
     sectionOverdue: string;
+    sectionCalendar: string;
+    allDay: string;
+    untitledEvent: string;
     cta: string;
     footer: string;
     unsubLabel: string;
@@ -72,6 +77,14 @@ export function renderDigestHtml(p: DigestPayload): string {
     `;
   };
 
+  const agenda = p.agenda.length ? `
+    <h3 style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.18em;color:#777;text-transform:uppercase;margin:28px 0 10px;">${escapeHtml(p.chrome.sectionCalendar)}</h3>
+    <ul style="list-style:none;padding:0;margin:0;font-size:15px;">${p.agenda.map(event => `
+      <li style="margin:0 0 8px 0;line-height:1.45;">
+        <span style="color:#888;font-size:13px;">${escapeHtml(agendaDate(event, p))}</span>
+        <span style="color:#222;"> · ${escapeHtml(event.title?.trim() || p.chrome.untitledEvent)}</span>
+      </li>`).join("")}</ul>` : "";
+
   return `<!doctype html>
 <html lang="${p.language}">
 <head>
@@ -97,6 +110,7 @@ export function renderDigestHtml(p: DigestPayload): string {
 
           ${section(p.chrome.sectionQ1, p.q1Today, p.chrome.noTasks)}
           ${section(p.chrome.sectionTopToday, p.topToday)}
+          ${agenda}
           ${section(p.chrome.sectionOverdue, p.overdue)}
 
           <table cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0;">
@@ -144,6 +158,13 @@ export function renderDigestText(p: DigestPayload): string {
   };
   section(p.chrome.sectionQ1, p.q1Today, p.chrome.noTasks);
   section(p.chrome.sectionTopToday, p.topToday);
+  if (p.agenda.length) {
+    lines.push("— " + p.chrome.sectionCalendar.toUpperCase() + " —");
+    for (const event of p.agenda) {
+      lines.push(`  • ${agendaDate(event, p)} · ${event.title?.trim() || p.chrome.untitledEvent}`);
+    }
+    lines.push("");
+  }
   section(p.chrome.sectionOverdue, p.overdue);
 
   lines.push(`${p.chrome.cta}: ${p.appUrl}/app/today`);
@@ -181,4 +202,32 @@ function taskDate(t: DigestTask, p: DigestPayload): string {
     ...(!sameDay ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
     ...(!t.is_all_day ? { hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko" } as const : {}),
   }).format(due);
+}
+
+/** One formatter for both MIME alternatives, including cross-midnight dates. */
+function agendaDate(event: DigestAgendaItem, p: DigestPayload): string {
+  const locale = p.language === "en" ? "en-US" : p.language;
+  if (event.isAllDay) {
+    const formatDate = (date: string) => new Intl.DateTimeFormat(locale, {
+      timeZone: "UTC", year: "numeric", month: "short", day: "numeric",
+    }).format(new Date(`${date}T00:00:00.000Z`));
+    const start = formatDate(event.start);
+    // Show the inclusive last date to readers, not Google's exclusive end.
+    const last = new Date(`${event.end ?? event.start}T00:00:00.000Z`);
+    if (event.end) last.setUTCDate(last.getUTCDate() - 1);
+    const lastDate = last.toISOString().slice(0, 10);
+    return `${p.chrome.allDay} · ${start}${lastDate > event.start ? ` – ${formatDate(lastDate)}` : ""}`;
+  }
+  const timeZone = safeTimezone(p.timezone);
+  const localDate = calendarDate(p.date, timeZone);
+  const formatTime = (value: string) => {
+    const date = new Date(value);
+    return new Intl.DateTimeFormat(locale, {
+      timeZone,
+      ...(calendarDate(date, timeZone) !== localDate
+        ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
+      hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko",
+    }).format(date);
+  };
+  return `${formatTime(event.start)}${event.end && event.end !== event.start ? ` – ${formatTime(event.end)}` : ""}`;
 }

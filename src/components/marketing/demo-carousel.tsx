@@ -79,11 +79,11 @@ export function DemoCarousel({ lang = "en" }: { lang?: LanguageCode }) {
                 </div>
                 <div className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-[10px] text-stone-700">
                   <span className="text-[8px] tracking-[0.18em] text-stone-400">CLAUDE → FIRST LIGHT</span>
-                  <p className="mt-0.5">Calling <span className="font-mono text-[9px] bg-stone-100 px-1 rounded">plan_day</span>...</p>
+                  <p className="mt-0.5">Calling <span className="font-mono text-[9px] bg-stone-100 px-1 rounded">list_tasks</span>...</p>
                 </div>
                 <div className="bg-accent/10 border border-accent/30 rounded-lg px-2.5 py-1.5 text-[10px]">
                   <span className="text-[8px] tracking-[0.18em] text-stone-500">RESULT</span>
-                  <p className="mt-0.5 text-stone-800">✓ 4 tasks reorganized. Deep work blocked 10-12am. Post-meeting admin at 3:30pm.</p>
+                  <p className="mt-0.5 text-stone-800">Task records returned. Ask your assistant for priorities, then choose any edits.</p>
                 </div>
               </div>
             </div>
@@ -138,13 +138,13 @@ export function DemoCarousel({ lang = "en" }: { lang?: LanguageCode }) {
               <p className="font-display text-base text-stone-800 leading-tight">{t(lang, "landing.demo.card4.title")}</p>
               <div className="bg-white border border-stone-200 rounded-md p-2 text-[10px]">
                 <p className="text-[7px] tracking-[0.2em] text-stone-400 mb-1">LAST WEEK</p>
-                <p className="text-stone-700 leading-snug">14 done · 3 carried · best morning Tue.</p>
+                <p className="text-stone-700 leading-snug">Example: 14 completed tasks · 3 still open.</p>
               </div>
               <div className="bg-accent/10 border border-accent/30 rounded-md p-2 text-[10px]">
                 <p className="text-[7px] tracking-[0.2em] text-stone-500 mb-1">NEXT WEEK · PREVIEW</p>
-                <p className="text-stone-700 leading-snug">3 deep-work blocks pre-staged. Mon 10am, Wed 9am, Thu 1pm.</p>
+                <p className="text-stone-700 leading-snug">Suggested next step: reserve time for the proposal. No calendar blocks created.</p>
               </div>
-              <p className="text-[9px] text-stone-500 italic mt-auto">A Friday-style retro that actually surfaces patterns.</p>
+              <p className="text-[9px] text-stone-500 italic mt-auto">Illustrative review, based on recorded work.</p>
             </div>
             <figcaption className="px-4 pt-3 pb-4 border-t border-stone-100 bg-white/40">
               <p className="font-medium text-sm">{t(lang, "landing.demo.card4.name")}</p>

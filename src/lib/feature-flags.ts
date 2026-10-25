@@ -1,3 +1,4 @@
+import { isRetiredFeature } from '@/lib/product-availability';
 /**
  * Round Z2: feature-flag resolver.
  *
@@ -117,6 +118,7 @@ export async function canUseFeature(
   userPlan: Plan,
   featureId: string
 ): Promise<boolean> {
+  if (isRetiredFeature(featureId)) return false;
   const flags = await loadFlags();
   const flag = flags.find((r) => r.feature_id === featureId);
   if (flag?.disabled) return false;

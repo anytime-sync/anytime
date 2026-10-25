@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Calendar, CalendarClock, ChevronDown, Flag, Folder, Hash, Repeat, Sparkles } from "lucide-react";
 import {
@@ -190,6 +191,7 @@ export function InlineTaskInput({
     if (localGotEnough) return;
 
     try {
+      if (!HOSTED_AI_ENABLED) return;
       const ai = await aiParse.mutateAsync(raw);
       if (!ai || !ai.title) return;
 
@@ -238,7 +240,7 @@ export function InlineTaskInput({
           placeholder={placeholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onPaste={(e) => { const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
+          onPaste={(e) => { if (!HOSTED_AI_ENABLED) return; const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
         />
         {gcalAvailable && (
           <button

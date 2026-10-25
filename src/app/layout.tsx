@@ -17,7 +17,6 @@ import { loadPrices, formatPriceNumeric } from "@/lib/pricing";
 import { fetchDesignMap } from "@/lib/design/fetch-server";
 import { generateClassOverridesCss } from "@/lib/design/class-css";
 import { fetchSiteOverrides } from "@/lib/i18n-server";
-import { setI18nOverrides, type LanguageCode } from "@/lib/i18n";
 
 // Inter — Söhne stand-in for English UI / body / labels.
 const inter = Inter({
@@ -55,14 +54,14 @@ export const metadata: Metadata = {
   // see their language in the browser tab and any Open Graph readers
   // that re-resolve after page load.
   description:
-    "First Light is the AI-native daily planner. MCP integration lets your AI assistant manage tasks natively. Telegram bot, morning briefings, Google Calendar sync, habits, Pomodoro, Eisenhower matrix — in 5 languages.",
+    "Capture tasks and notes, plan around your calendar, and follow through on your commitments. First Light is your personal planner.",
   metadataBase: new URL("https://firstlight.to"), alternates: { canonical: "/", types: { "application/rss+xml": "https://firstlight.to/feed.xml" } }, openGraph: { type: "website", siteName: "First Light", title: {
     default: "First Light — your space for clarity, focus, intentional progress",
     template: "%s — First Light",
-  }, description: "The AI-native daily planner with MCP integration, Telegram bot, morning briefings, and Google Calendar sync. Your AI assistant manages your tasks natively.", url: "https://firstlight.to", locale: "en_US", images: [{ url: "/og.png", width: 1200, height: 630, alt: "First Light" }] }, twitter: { card: "summary_large_image", title: {
+  }, description: "Capture tasks and notes, plan around your calendar, and follow through on your commitments. A personal planner.", url: "https://firstlight.to", locale: "en_US", images: [{ url: "/og.png", width: 1200, height: 630, alt: "First Light" }] }, twitter: { card: "summary_large_image", title: {
     default: "First Light — your space for clarity, focus, intentional progress",
     template: "%s — First Light",
-  }, description: "The AI-native daily planner with MCP integration, Telegram bot, morning briefings, and Google Calendar sync. Your AI assistant manages your tasks natively.", images: ["/og.png"] }, robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } }, keywords: ["productivity app", "task manager", "AI daily planner", "AI task manager", "Google Calendar sync", "Eisenhower matrix", "weekly review", "paste to task", "voice to task", "snapshot to task", "morning routine app", "daily planner", "AI productivity tool", "best task manager 2026", "calm productivity", "MCP integration", "AI assistant task management", "Telegram task bot", "Model Context Protocol", "daily briefing app", "focus timer", "pomodoro app", "habit tracker", "multilingual task manager", "CJK productivity app", "First Light"], authors: [{ name: "First Light" }], category: "productivity", verification: { google: "WIOio_NT9ylh9an2yaMZgJ30nhbmR_Pb0o4e9FDWxPY" }, manifest: "/manifest.webmanifest",
+  }, description: "Capture tasks and notes, plan around your calendar, and follow through on your commitments. A personal planner.", images: ["/og.png"] }, robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } }, keywords: ["productivity app", "task manager", "Google Calendar sync", "Eisenhower matrix", "morning routine app", "daily planner", "best task manager 2026", "calm productivity", "MCP integration", "AI assistant task management", "Telegram task bot", "Model Context Protocol", "focus timer", "pomodoro app", "habit tracker", "multilingual task manager", "CJK productivity app", "First Light"], authors: [{ name: "First Light" }], category: "productivity", verification: { google: "WIOio_NT9ylh9an2yaMZgJ30nhbmR_Pb0o4e9FDWxPY" }, manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/icons/icon.svg", type: "image/svg+xml" },
@@ -127,17 +126,12 @@ export default async function RootLayout({
   // the rules are present on the very first paint.
   const classCss = generateClassOverridesCss(designMap);
 
-  // Pull admin-edited text overrides server-side so SSR HTML already
-  // has the saved strings. The same map is also serialized into a
-  // window var below so the client i18n module is seeded BEFORE
-  // hydration, which kills the flash of hardcoded defaults.
+  // Serialize CMS copy for application after client mount. Keep initial SSR
+  // and hydration on the same defaults; do not mutate a shared server map.
   const i18nOverrides = await fetchSiteOverrides();
 
   // Load dynamic prices for JSON-LD structured data
   const prices = await loadPrices();
-  for (const code of Object.keys(i18nOverrides) as LanguageCode[]) {
-    setI18nOverrides(code, i18nOverrides[code]!);
-  }
 
   return (
     <html

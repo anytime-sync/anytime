@@ -4,36 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   LANGUAGES,
+  t,
+  type StringKey,
   readStoredLanguage,
   setI18nOverrides,
   type LanguageCode,
 } from "@/lib/i18n";
 
-// ---------------------------------------------------------------------
-// Synchronous client-side seed.
-//
-// The root layout (server component) fetches site_content and inlines
-// the result into a <script> tag as `window.__I18N_INITIAL_OVERRIDES`.
-// We read it here at module-load time — which runs before React renders
-// the tree — and feed it into the i18n module's overrides map. Result:
-// the very first hydration pass already has admin-edited text, so the
-// browser never paints the hardcoded defaults first.
-// ---------------------------------------------------------------------
+// CMS text is applied after mount. Seeding a mutable translation map at module
+// load produces different first-render text in the server and browser bundles.
 type ClientSeed = Partial<Record<LanguageCode, Record<string, string>>>;
 declare global {
   interface Window {
     __I18N_INITIAL_OVERRIDES?: ClientSeed;
-    __FL_OVERRIDES_SEEDED?: boolean;
-  }
-}
-if (typeof window !== "undefined" && !window.__FL_OVERRIDES_SEEDED) {
-  window.__FL_OVERRIDES_SEEDED = true;
-  const seed = window.__I18N_INITIAL_OVERRIDES;
-  if (seed && typeof seed === "object") {
-    for (const code of Object.keys(seed) as LanguageCode[]) {
-      const map = seed[code];
-      if (map) setI18nOverrides(code, map);
-    }
   }
 }
 
@@ -56,7 +39,8 @@ function patchTextDom(
   els.forEach((el) => {
     const key = el.dataset.designTextKey;
     if (!key) return;
-    const value = map[key];
+    // Resolve through the same current-offer policy as React and server rendering.
+    const value = map[key] ? t(code, key as StringKey) : undefined;
     // Only patch when there's an override for THIS locale AND it differs
     // from what's already rendered. We deliberately don't fall back to
     // the English override here — that would replace correctly-translated
@@ -90,6 +74,14 @@ export function I18nOverridesBootstrap() {
   // Initial load — pull every override row, group by locale, push to i18n.
   useEffect(() => {
     let cancelled = false;
+    const seed = window.__I18N_INITIAL_OVERRIDES;
+    if (seed) {
+      cacheRef.current = seed;
+      for (const code of Object.keys(seed) as LanguageCode[]) {
+        if (seed[code]) setI18nOverrides(code, seed[code]!);
+      }
+      window.dispatchEvent(new Event("fl.i18n.overrides-changed"));
+    }
     (async () => {
       try {
         const supabase = createClient();

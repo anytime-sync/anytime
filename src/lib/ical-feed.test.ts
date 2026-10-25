@@ -24,6 +24,7 @@ describe('Apple Calendar feed regressions', () => {
     const ics = feed({ time_kind: 'deadline', start_at: '2026-08-02T02:30:00Z', due_at: '2026-10-04T03:00:00Z', rrule: 'FREQ=DAILY' });
     expect(ics).toContain('DTSTART;VALUE=DATE:20261004\r\nDTEND;VALUE=DATE:20261005');
     expect(ics).toContain('UID:task-1@firstlight.to');
+    expect(ics).toContain('LAST-MODIFIED:20261025T000000Z');
     expect(ics).toContain('RRULE:FREQ=DAILY');
     expect(ics).toContain('TRANSP:TRANSPARENT');
   });

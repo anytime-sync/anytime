@@ -1,3 +1,4 @@
+import { HOSTED_AI_ENABLED } from './product-availability';
 /**
  * voyage.ts — Voyage AI embeddings client.
  * https://docs.voyageai.com/reference/embeddings-api
@@ -41,6 +42,7 @@ export async function embedBatch(
     model?: string;
   } = {}
 ): Promise<number[][]> {
+  if (!HOSTED_AI_ENABLED) throw new Error('feature_retired');
   if (texts.length === 0) return [];
   const model = opts.model ?? DEFAULT_MODEL;
   const inputType = opts.inputType ?? "document";

@@ -10,7 +10,7 @@
  *
  * Increment SW_VERSION when shipping changes so old caches get evicted.
  */
-const SW_VERSION = "fl-v54-2026-05-24-quickadd-paste";
+const SW_VERSION = "fl-v56-2026-10-18-retired-ai-copy";
 const SHELL_CACHE = `shell-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
@@ -65,6 +65,23 @@ self.addEventListener("fetch", (event) => {
     url.host.endsWith("googleapis.com") ||
     url.host.endsWith("anthropic.com")
   ) {
+    return;
+  }
+
+  // Retired AI must not be resurrected from an old offline response.
+  if (url.origin === self.location.origin && (
+    url.pathname.startsWith('/api/ai/') || url.pathname.startsWith('/api/v1/ai/') ||
+    ['/api/search', '/api/v1/notes/search', '/api/v1/daily-edition'].includes(url.pathname.replace(/\/$/, ''))
+  )) {
+    event.respondWith(Promise.resolve(new Response(JSON.stringify({ error: 'feature_retired' }), {
+      status: 410, headers: { 'content-type': 'application/json' }
+    })));
+    return;
+  }
+
+  // Online page navigations must show current offers, not a cached old release.
+  if (url.origin === self.location.origin && req.mode === 'navigate') {
+    event.respondWith(networkFirst(req));
     return;
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
 import { Mic, MicOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -86,7 +87,7 @@ export function VoiceButton({ onTranscript, onFinal, className }: Props) {
     };
   }, []);
 
-  if (!supported) return null;
+  if (!HOSTED_AI_ENABLED || !supported) return null;
   if (prefs && prefs.ai_voice_enabled === false) return null;
 
   function startRecording() {
