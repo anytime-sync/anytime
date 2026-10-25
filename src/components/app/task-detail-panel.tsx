@@ -178,10 +178,11 @@ export function TaskDetailPanel() {
         />
 
         <Field label={t(lang, "taskPanel.timeKind")}>
-          <select className="input w-full" value={taskTimeKind(task)} onChange={(e) => {
+          <select className="input w-full" value={task.time_kind ?? 'unknown'} onChange={(e) => {
             const kind = e.target.value as TaskTimeKind;
             update.mutate({ id: task.id, time_kind: kind, is_all_day: kind === 'span' ? true : kind === 'work' ? false : task.is_all_day });
           }}>
+            <option value="unknown" disabled>{t(lang, "taskPanel.timeUnknown")}</option>
             <option value="deadline">{t(lang, "taskPanel.timeDeadline")}</option>
             <option value="work" disabled={!task.start_at || !task.due_at || Date.parse(task.due_at) <= Date.parse(task.start_at)}>{t(lang, "taskPanel.timeWork")}</option>
             <option value="span">{t(lang, "taskPanel.timeSpan")}</option>
@@ -191,7 +192,7 @@ export function TaskDetailPanel() {
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={task.is_all_day} onChange={(e) => update.mutate({
             id: task.id, is_all_day: e.target.checked,
-            time_kind: taskTimeKind(task) === 'deadline' ? 'deadline' : e.target.checked ? 'span'
+            time_kind: taskTimeKind(task) == null || taskTimeKind(task) === 'deadline' ? 'deadline' : e.target.checked ? 'span'
               : task.start_at && task.due_at && Date.parse(task.due_at) > Date.parse(task.start_at) ? 'work' : 'deadline',
           })} />
           {t(lang, "taskPanel.allDay")}

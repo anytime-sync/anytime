@@ -39,6 +39,14 @@ it('preserves date-only intent when selecting a due date', () => {
   expect(state.mutate.mock.calls[0][0]).not.toHaveProperty('is_all_day'); act(() => tree.unmount());
 });
 
+it('shows unknown historical intent without selecting or writing an inferred kind', () => {
+  state.task = { ...base,time_kind:null,start_at:'2026-10-01T01:00:00Z' };
+  const tree = mount();
+  expect(tree.root.findAllByType('select')[0].props.value).toBe('unknown');
+  expect(state.mutate).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+
 it('keeps an interrupted deadline-to-span-to-timed flow valid across repeated edits', () => {
   const tree = mount();
   state.mutate.mockImplementation(({ id: _id, ...patch }) => { state.task = { ...state.task, ...resolveTaskDates(state.task, patch) }; });

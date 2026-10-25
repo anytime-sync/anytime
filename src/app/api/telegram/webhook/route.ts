@@ -25,7 +25,7 @@ import {
   isBotConfigured,
   verifyWebhookSecret,
 } from "@/lib/telegram";
-import { taskTimeKind } from "@/lib/task-schedule";
+import { newTaskTimeKind } from "@/lib/task-schedule";
 import { parseQuickInput } from "@/lib/quick-parse";
 
 // Service-role client for DB access
@@ -203,7 +203,7 @@ async function createTask(
       status: "open",
       priority: opts?.priority ?? 0,
       is_all_day: isAllDay,
-      time_kind: taskTimeKind({ start_at: startAt, due_at: dueAt, is_all_day: isAllDay }),
+      time_kind: newTaskTimeKind({ start_at: startAt, due_at: dueAt, is_all_day: isAllDay }),
       rrule: opts?.rrule ?? null,
     })
     .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")

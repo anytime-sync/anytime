@@ -2,6 +2,7 @@ import { rrulestr } from 'rrule';
 import { resolveTaskDates, taskTimeKind, type TaskDates } from './task-schedule';
 import { dayWindow, instantFromWallClock, taskDate, validTimezone, wallClock } from './day-window';
 import { calendarRecurrence } from './task-calendar';
+import { legacyRecurrenceDates } from './task-legacy-dates';
 
 /** The existing INSERT status trigger treats default status=open as canonical.
  * Set both aliases so completed history cannot become an active calendar task. */
@@ -15,9 +16,10 @@ export function completedTaskOccurrence<T extends TaskDates & { project_id?: str
  * completed one-off clone has no RRULE; never restart COUNT on every completion. */
 export function nextTaskRecurrence(task: TaskDates & { rrule?: string | null }, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   if (!task.rrule || !task.due_at) return null;
-  const zone = validTimezone(timezone);
-  const kind = taskTimeKind(task);
-  const allDay = kind === 'span' || (kind === 'deadline' && !!task.is_all_day);
+  const legacy = task.time_kind == null;
+  const zone = legacy ? 'UTC' : validTimezone(timezone);
+  const kind = taskTimeKind(task) ?? 'deadline';
+  const allDay = !legacy && (kind === 'span' || (kind === 'deadline' && !!task.is_all_day));
   const ruleText = calendarRecurrence(task.rrule, allDay, zone);
   if (!ruleText) return null;
   const count = /(?:^|;)COUNT=(\d+)(?:;|$)/i.exec(ruleText);
@@ -47,6 +49,8 @@ export function nextTaskRecurrence(task: TaskDates & { rrule?: string | null }, 
     }
     if (!next || (limit != null && +next > limit)) return null;
     const rrule = count ? ruleText.replace(/COUNT=\d+/i, `COUNT=${Number(count[1]) - 1}`) : ruleText;
-    return { next, patch: { ...resolveTaskDates(task, kind === 'deadline' ? { due_at: next.toISOString() } : { start_at: next.toISOString() }, zone), rrule } };
+    const dates = legacy ? legacyRecurrenceDates(task, next.toISOString())
+      : resolveTaskDates(task, kind === 'deadline' ? { due_at: next.toISOString() } : { start_at: next.toISOString() }, zone);
+    return { next, patch: { ...dates, rrule } };
   } catch { return null; }
 }

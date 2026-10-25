@@ -10,13 +10,13 @@ describe('explicit time intent', () => {
     expect(createTaskDates({ start_at: work.start_at })).toEqual({ start_at: work.start_at, time_kind: 'deadline' });
     expect(() => createTaskDates({ ...work, due_at: null })).toThrow();
   });
-  it('preserves long legacy and intentional work without a duration cutoff', () => {
-    for (const time_kind of [null, 'work'] as const) {
-      const task = { ...work, time_kind };
+  it('preserves intentional work without a duration cutoff', () => {
+    for (const due_at of ['2026-10-09T08:00:06.456Z','2026-10-19T08:00:06.456Z']) {
+      const task = { ...work, due_at };
       expect(taskTimeKind(task)).toBe('work');
-      expect(projectTaskCalendar(task)?.end).toEqual({ dateTime: work.due_at });
+      expect(projectTaskCalendar(task)?.end).toEqual({ dateTime: due_at });
       const patch = resolveTaskDates(task, { start_at: '2026-10-10T04:00:00.000Z' });
-      expect(Date.parse(patch.due_at!) - Date.parse(patch.start_at!)).toBe(Date.parse(work.due_at) - Date.parse(work.start_at));
+      expect(Date.parse(patch.due_at!) - Date.parse(patch.start_at!)).toBe(Date.parse(due_at) - Date.parse(work.start_at));
     }
   });
   it('keeps explicit lifecycle ranges at the deadline, transparent and date-only', () => {
@@ -39,7 +39,7 @@ describe('explicit time intent', () => {
   });
   it.each(['Asia/Taipei', 'America/Los_Angeles', 'America/New_York'])('preserves date-only single endpoints in %s', zone => {
     expect(projectTaskCalendar({ due_at: '2026-10-08', time_kind: 'deadline' }, zone)).toMatchObject({ start: { date: '2026-10-08' }, end: { date: '2026-10-09' } });
-    expect(projectTaskCalendar({ start_at: '2026-10-08', is_all_day: true }, zone)?.start).toEqual({ date: '2026-10-08' });
+    expect(projectTaskCalendar({ start_at: '2026-10-08', is_all_day: true, time_kind: 'deadline' }, zone)?.start).toEqual({ date: '2026-10-08' });
   });
   it('normalizes date-only input to Taipei midnight before timestamptz storage', () => {
     expect(normalizeTaskDate('2026-10-08', 'Asia/Taipei')).toBe('2026-10-07T16:00:00.000Z');

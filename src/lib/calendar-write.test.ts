@@ -4,7 +4,8 @@ vi.mock('./google-calendar', () => ({ createCalendarEvent: mocks.create, patchCa
 vi.mock('./calendar-token', () => ({ getValidAccessToken: mocks.token }));
 import { buildEventInput, drainCalendarDeletions, pushPendingTasksForUser, type TaskRowForPush } from './calendar-write';
 import { buildIcs } from './ical-feed';
-const base: TaskRowForPush = { id: 'task-one', user_id: 'owner', title: 'Task', notes: null, start_at: null, due_at: '2026-10-07T16:00:00Z', is_all_day: true, calendar_event_id: null, updated_at: '2026-09-01T00:00:00Z' };
+import { resolveTaskDates } from './task-schedule';
+const base: TaskRowForPush = { id: 'task-one', user_id: 'owner', title: 'Task', notes: null, start_at: null, due_at: '2026-10-07T16:00:00Z', time_kind: 'deadline', is_all_day: true, calendar_event_id: null, updated_at: '2026-09-01T00:00:00Z' };
 function client(creates: TaskRowForPush[], patches: TaskRowForPush[] = [], options: { saveError?: boolean; changed?: boolean; queryError?: boolean } = {}) {
   const queries: Array<{ table: string; filters: unknown[][]; write?: Record<string, unknown> }> = [];
   let taskReads = 0;
@@ -74,6 +75,31 @@ it('does not acknowledge failed provider writes', async () => {
   const c = client([], [{ ...base, calendar_event_id: 'linked' }]);
   expect((await run(c)).failed).toBe(1);
   expect(c.queries.some(q => q.write)).toBe(false);
+});
+
+it.each([null,'linked'])('retains old Google exclusion for unknown long/all-day/single-endpoint rows (%s)', async calendar_event_id => {
+  for (const dates of [{ start_at:null,due_at:base.due_at,is_all_day:true },
+    { start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:false },
+    { start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:true }]) {
+    const task = { ...base,...dates,time_kind:null,calendar_event_id };
+    const c = calendar_event_id ? client([], [task]) : client([task]);
+    expect(await run(c)).toEqual({ created:0,patched:0,failed:0 });
+    expect(c.queries.find(q => q.write)?.write).toMatchObject({ calendar_event_id,calendar_event_generation:0,calendar_dirty:false });
+  }
+  expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.patch).not.toHaveBeenCalled();
+  expect(mocks.remove).not.toHaveBeenCalled(); expect(mocks.get).not.toHaveBeenCalled();
+});
+
+it('updates and removes an owned event only after deliberate scheduling edits leave legacy compatibility', async () => {
+  const legacy = { ...base,time_kind:null,start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:false,calendar_event_id:'linked' };
+  await run(client([], [legacy]));
+  expect(mocks.patch).not.toHaveBeenCalled(); expect(mocks.remove).not.toHaveBeenCalled();
+  const edited = { ...legacy,...resolveTaskDates(legacy,{ due_at:'2026-11-02T01:00:00Z' }) };
+  expect((await run(client([], [edited]))).patched).toBe(1);
+  expect(mocks.patch.mock.calls[0][0]).toMatchObject({ sendUpdates:'none',patch:{ start:{ date:'2026-11-02' },end:{ date:'2026-11-03' } } });
+  const cleared = { ...edited,...resolveTaskDates(edited,{ start_at:null,due_at:null }) };
+  expect((await run(client([], [cleared]))).failed).toBe(0);
+  expect(mocks.remove).toHaveBeenCalledWith({ accessToken:'fixture-token',calendarId:'primary',eventId:'linked',sendUpdates:'none' });
 });
 
 it('limits creation to owned active top-level dirty tasks while retaining linked removal work', async () => {

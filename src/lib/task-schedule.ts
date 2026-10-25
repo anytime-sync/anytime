@@ -1,4 +1,5 @@
 import { addCalendarDays, dayWindow, taskDate, validDate, validTimezone } from "./day-window";
+import { legacyCalendarTask } from './task-legacy-dates';
 export type TaskTimeKind = 'deadline' | 'work' | 'span';
 export type TaskDates = {
   start_at?: string | null;
@@ -15,19 +16,20 @@ export function timestamp(value: string | null | undefined) {
   return typeof value === 'string' && value ? Date.parse(value) : NaN;
 }
 
-/** Null means legacy/unknown intent. Preserve positive intervals regardless of
- * length; duration alone cannot distinguish real work from a lifecycle range. */
-export function taskTimeKind(task: TaskDates): TaskTimeKind {
-  if (task.time_kind) return task.time_kind;
-  const start = timestamp(task.start_at), due = timestamp(task.due_at);
-  if (Number.isFinite(start) && Number.isFinite(due) && due > start) {
-    return task.is_all_day ? 'span' : 'work';
-  }
-  return 'deadline';
+/** Read recorded intent only. Historical interval length never classifies it. */
+export function taskTimeKind(task: TaskDates): TaskTimeKind | null {
+  return task.time_kind ?? null;
+}
+
+/** Intent from fresh user-supplied creation input, never from a stored row. */
+export function newTaskTimeKind(input: TaskDates): TaskTimeKind {
+  const paired = input.start_at && input.due_at && timestamp(input.due_at) > timestamp(input.start_at);
+  return input.time_kind ?? (paired ? input.is_all_day ? 'span' : 'work' : 'deadline');
 }
 
 /** Read-only calendar projection. Keep the actual due time on the task. */
 export function calendarTask<T extends TaskDates>(task: T): T {
+  if (task.time_kind == null) return legacyCalendarTask(task);
   const kind = taskTimeKind(task);
   if (kind === 'deadline') return { ...task, start_at: null, due_at: task.due_at ?? task.start_at, is_all_day: true };
   if (kind === 'span') return { ...task, is_all_day: true };
@@ -38,7 +40,8 @@ export function calendarTask<T extends TaskDates>(task: T): T {
  * explicit interval unless the caller specifies deadline intent. */
 export function createTaskDates<T extends TaskDates>(input: T): ResolvedTaskDates<T> {
   if (input.time_kind === 'work' && (!input.start_at || !input.due_at)) throw new Error('Scheduled work needs both dates.');
-  const kind = input.time_kind ?? taskTimeKind(input);
+  // These are newly supplied creation endpoints, not historical stored dates.
+  const kind = newTaskTimeKind(input);
   const task = { ...input, time_kind: kind, ...(kind === 'span' ? { is_all_day: true } : kind === 'work' ? { is_all_day: false } : {}) };
   return resolveTaskDates({}, task);
 }
@@ -53,9 +56,17 @@ export function resolveTaskDates<T extends TaskDates>(current: TaskDates, change
     if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date) && !validDate(date.slice(0, 10))) throw new Error(`${key} must be a valid calendar date`);
     if (key in patch && patch[key] != null && !Number.isFinite(timestamp(patch[key]))) throw new Error(`${key} must be a valid date`);
   }
+  if (current.time_kind == null && !('time_kind' in patch)
+    && ('start_at' in patch || 'due_at' in patch || 'is_all_day' in patch)) {
+    // A due/availability edit is a deadline. A new pair of endpoints can be a
+    // deliberate interval; copying an unchanged endpoint from an editor cannot.
+    const newPair = patch.start_at && patch.due_at
+      && timestamp(patch.start_at) !== timestamp(current.start_at) && timestamp(patch.due_at) !== timestamp(current.due_at);
+    patch.time_kind = newPair ? (patch.is_all_day ?? current.is_all_day) ? 'span' : 'work' : 'deadline';
+  }
   const oldStart = timestamp(current.start_at), oldDue = timestamp(current.due_at);
   const duration = oldDue - oldStart;
-  let kind = patch.time_kind ?? taskTimeKind(current);
+  let kind = patch.time_kind ?? taskTimeKind(current) ?? 'deadline';
   if (kind === 'work' && (patch.start_at === null || patch.due_at === null) && patch.time_kind !== 'work') {
     patch.time_kind = kind = 'deadline';
   }

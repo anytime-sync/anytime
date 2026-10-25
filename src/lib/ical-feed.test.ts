@@ -29,7 +29,7 @@ describe('Apple Calendar feed regressions', () => {
     expect(ics).toContain('TRANSP:TRANSPARENT');
   });
   it('preserves real same-day meeting times and weekly recurrence', () => {
-    const ics = feed({ rrule: 'FREQ=WEEKLY;BYDAY=SU' });
+    const ics = feed({ time_kind: 'work', rrule: 'FREQ=WEEKLY;BYDAY=SU' });
     expect(ics).toContain('DTSTART;TZID=Asia/Taipei:20261004T090000\r\nDURATION:PT1800S');
     expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=SU');
     expect(ics).toContain('TRANSP:OPAQUE');
@@ -75,7 +75,7 @@ describe('Apple Calendar feed regressions', () => {
     expect(feed({ notes: 'a,b;c\nEND:VEVENT' })).toContain('DESCRIPTION:a\\,b\\;c\\nEND:VEVENT');
   });
   it('emits a timezone definition and local recurrence that agrees with Google across DST', () => {
-    const task = { ...base, user_id: 'owner', calendar_event_id: null, start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:00:00Z', rrule: 'FREQ=WEEKLY;COUNT=3' };
+    const task = { ...base, time_kind: 'work' as const, user_id: 'owner', calendar_event_id: null, start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:00:00Z', rrule: 'FREQ=WEEKLY;COUNT=3' };
     const ics = buildIcs([task], 'America/New_York');
     expect(ics).toContain('BEGIN:VTIMEZONE\r\nTZID:America/New_York');
     expect(ics).toContain('TZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500');

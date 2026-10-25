@@ -15,6 +15,7 @@ import {
 import { createHash } from "node:crypto";
 import { projectTaskCalendar, taskCalendarDescription, validTimezone } from "./task-calendar";
 import { taskTimeKind, type TaskTimeKind } from "./task-schedule";
+import { legacyGoogleBlock } from './task-legacy-dates';
 
 const FIRSTLIGHT_TAG_KEY = "firstlightTaskId";
 
@@ -107,24 +108,28 @@ export async function pushPendingTasksForUser({ supabase, userId, primaryCalenda
   let created = 0, patched = 0, failed = 0;
   for (const t of [...(needCreateRaw ?? []), ...(needPatchRaw ?? [])] as TaskRowForPush[]) {
     try {
-      const event = buildEventInput(t, timezone);
+      const active = !t.is_completed && t.status !== 'done' && t.status !== 'archived' && !t.parent_id;
+      // Main never wrote these unclassified rows to Google. A metadata edit
+      // must not create/delete an old event or silently classify its interval.
+      const preserveLegacy = t.time_kind == null && active && !legacyGoogleBlock(t);
+      const event = preserveLegacy ? null : buildEventInput(t, timezone);
       let eventId = t.calendar_event_id;
       let generation = t.calendar_event_generation ?? 0;
       let didCreate = false;
-      const linked = eventId ? await loadEvent(accessToken, primaryCalendarId, eventId) : null;
-      if (!event) {
+      const linked = !preserveLegacy && eventId ? await loadEvent(accessToken, primaryCalendarId, eventId) : null;
+      if (!preserveLegacy && !event) {
         if (linked && linked.status !== 'cancelled') {
           assertTaskOwner(linked, t.id);
           await deleteCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId: eventId!, sendUpdates: 'none' });
         }
         if (eventId) generation++;
         eventId = null;
-      } else if (eventId && linked?.status !== 'cancelled') {
+      } else if (!preserveLegacy && event && eventId && linked?.status !== 'cancelled') {
         if (!linked) throw new Error('Linked calendar event is missing; review its source before recreating.');
         assertTaskOwner(linked, t.id);
         const result = await patchCalendarEvent({ accessToken, calendarId: primaryCalendarId, eventId, patch: event, sendUpdates: 'none' });
         if (result.status === 'cancelled') throw new Error('Linked calendar event is missing; review its source before recreating.');
-      } else {
+      } else if (!preserveLegacy && event) {
         if (eventId) {
           // A concurrent reopen can happen after Google deletion but before
           // the removal acknowledgement. Only replace a provably generated id.
@@ -242,6 +247,14 @@ export async function drainCalendarDeletions({
 }
 
 export function buildEventInput(t: TaskRowForPush, timezone = 'UTC'): GoogleCalendarEventInput | null {
+  if (t.time_kind == null) {
+    if (t.is_completed || t.status === 'done' || t.status === 'archived' || t.parent_id || !legacyGoogleBlock(t)) return null;
+    // Match main's payload: no recurrence/timezone/transparency rewrite for an
+    // unknown historical booking. Explicit intent uses the shared projection.
+    return { summary: t.title || 'Untitled task', description: t.notes ?? undefined,
+      start: { dateTime: t.start_at! }, end: { dateTime: t.due_at! },
+      extendedProperties: { private: { [FIRSTLIGHT_TAG_KEY]: t.id, source: 'first-light' } } };
+  }
   const projection = projectTaskCalendar(t, timezone);
   if (!projection) {
     if (!t.is_completed && t.status !== 'done' && t.status !== 'archived' && !t.parent_id && taskTimeKind(t) === 'work') {

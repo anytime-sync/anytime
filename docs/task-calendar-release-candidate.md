@@ -3,7 +3,8 @@
 This is a review package, not authorization to merge, deploy, apply SQL or repair
 customer calendars. Candidate changes are relative to main
 `eae82d43076597a5257330e731c8e8363e4ecba0`. The branch keeps the original PR commits
-and merges current main without rewriting history. The exact tested head and CI
+and merges current main without rewriting history. The staged boundary supersedes the earlier candidate's legacy-inference release gate.
+The exact tested head and CI
 links belong in the PR description so this document cannot contain its own hash.
 
 ## Current evidence and preserved work
@@ -21,7 +22,7 @@ links belong in the PR description so this document cannot contain its own hash.
   (opening five malformed/incomplete or short fixtures and clearing a valid interval).
   They pass on the candidate, including a legitimate five-minute slot. This
   reproduces code behavior, not a real user's iPhone calendar.
-- Current full local suite: 378 tests in 36 files. The 53 schedule/API/ICS cases
+- Current full local suite: 393 tests in 37 files. The 64 schedule/API/ICS/compatibility cases
   also pass with host timezone Asia/Taipei while exercising New York DST.
   Coverage includes missing endpoints, date-only/timed transitions, explicit
   apply/cancel, exact work duration, recurrence COUNT/UNTIL, all-day exclusive
@@ -74,40 +75,48 @@ Apply only this reviewed migration, before the new code. Do not run an unscoped
 Recheck the columns/defaults, invoker trigger, constraints/index and unchanged
 RLS/policy definitions afterward. Local SQL success is not production acceptance.
 
-## Policy and historical-data decisions before release
+## Conservative legacy compatibility boundary
 
-The candidate replaces main's duration-based interim safeguard from PRs #27/#28
-with explicit deadline/work/span intent. The main-branch routine tests now assert
-explicit deadline projection, without rewriting an availability start during an
-ordinary reschedule. Explicit work and spans preserve long/multiday ranges;
-imported Google meetings stay in `calendar_events`.
+Null/omitted intent keeps current-main `eae82d4` output until legitimately
+classified. No deployment-time task update, duration-based intent inference or
+bulk enqueue occurs. The compatibility tests import unmodified old-main ICS/date
+source and compare complete output for long/short/all-day/single/zero/inverted
+intervals, estimates, date-only values, recurrence and inactive rows in Taipei and
+New York. Mixed feeds also keep legacy UTC recurrence unchanged alongside
+explicit timezone-aware work. Legacy revision timestamps are not bumped.
 
-Unknown historical positive intervals still infer work/span irrespective of
-duration. This is a deliberate compatibility decision to preserve possible real
-work, not a claim that old fabricated ranges are repaired. **It differs from
-current main:** ICS immediately reprojects selected legacy rows after polling;
-previously collapsed >=24-hour/all-day ranges can become full ranges again.
-Google's new dirty queue does not bulk-enqueue existing rows, but an intentional
-calendar-affecting edit can enqueue one. Neither migration nor deployment alone
-resolves this ambiguity. This is a release gate, not a reason to delete records.
+The bounded duration/fallback rules remain only in the frozen legacy display
+adapter. Unknown all-day/long ranges remain collapsed in ICS and ineligible for
+Google writes as on main; an existing linked event is retained, not deleted by a
+metadata edit. Enclosing-window feed selection is broadened only for explicit
+intent. This closes the immediate re-expansion risk without discarding stored
+endpoints or newly explicit legitimate long work/spans. Existing Google events
+are not repaired merely by deploying this boundary.
 
-Required decision: approve that legacy projection policy and a narrowly scoped
-inventory/classification plan, or revise the compatibility policy in a reviewed
-follow-up before release. Identify calendar/account and match owned event ids,
-task tags and stable ICS UIDs. Review each ambiguous interval; a title, color,
-30-minute length or multiday length cannot prove intent. Any customer-row read,
-intent update, enqueue or provider cleanup must have its separately approved
-scope. No data classification or historical cleanup is included here.
+New creation records intent from fresh supplied endpoints/date mode. A deliberate
+due/availability edit on an unknown task records deadline intent without moving
+its old availability start; a genuinely new pair can record work/span. An
+unchanged copied endpoint cannot turn an old range into scheduled work. Explicit
+selection enables work/span with valid endpoints regardless of duration. Opening,
+cancelling, metadata edits and automatic recurrence do not classify a legacy row.
+Future explicit completion/unscheduling retains the verified-owned-event removal
+lifecycle. There is no requirement to classify historical rows before releasing
+this conservative code fix.
+
+Historical repair is still separate optional work: identify the calendar/account,
+match owned ids/tags/UIDs and obtain a narrowly scoped inventory/classification or
+cleanup authorization. No customer data classification, deletion or provider
+repair is included, and no source is guessed from a title, color or duration.
 
 ## Separately approved rollout order
 
 1. Reverify main/head, schema metadata, hosting project, backup and rollback
-   deployment; approve exact migration and release scope. Decide the legacy gate.
+   deployment; approve exact migration and release scope. Keep legacy compatibility enabled.
 2. Pause calendar write scheduling using an approved operational action. Apply
    the reviewed migration first and compare metadata/security snapshots. Account
    for writes from older clients during the transition; do not assume a read-only
    application window unless it has been explicitly arranged.
-3. Perform only separately approved classifications/enqueues, if any. Build and
+3. No historical classification/backfill is required. Build and
    release the tested application only after schema verification. Preview or
    staging testing against a shared database needs explicit fixture/access scope.
 4. Verify synthetic/local checks again; then, with separate authorization, verify
@@ -120,7 +129,8 @@ scope. No data classification or historical cleanup is included here.
 On a release failure, pause task sync first. Restore the verified pre-release
 application deployment only with release authority; retain additive columns and
 metadata for investigation. Old code ignores those columns but reintroduces the
-old editor fabrication and duration-cutoff behavior. Do not drop columns while
+old editor fabrication. Unknown projections already match the old release;
+explicit intent would lose its corrected behavior on rollback. Do not drop columns while
 new clients use them. A database rollback requires a separate backup/impact plan.
 
 Google events already written are not reversed by an application rollback.

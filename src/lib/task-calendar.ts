@@ -1,8 +1,14 @@
 import { RRule } from 'rrule';
-import { taskDate, validDate, dayWindow, validTimezone } from './day-window';
+import { calendarDate, taskDate, validDate, dayWindow, validTimezone } from './day-window';
 import { taskTimeKind, timestamp, type TaskDates } from './task-schedule';
+import { legacyCalendarTask } from './task-legacy-dates';
 
 export { validTimezone } from './day-window';
+
+/** Broaden overlap selection only for explicitly classified ranges. */
+export function taskCalendarWindowFilter(min: string, max: string): string {
+  return `and(start_at.gte.${min},start_at.lte.${max}),and(due_at.gte.${min},due_at.lte.${max}),and(time_kind.not.is.null,start_at.lt.${min},due_at.gt.${max}),rrule.not.is.null`;
+}
 
 /** Date-only values are civil dates, never UTC instants to be shifted. */
 export function taskCalendarDate(value: string, timezone: string): string {
@@ -39,12 +45,37 @@ export type TaskCalendarProjection = {
   transparency: 'transparent' | 'opaque';
   recurrence: string | null;
   deadline: string | null;
+  legacy?: true;
 };
+
+type CalendarTask = TaskDates & { is_completed?: boolean; status?: string | null; parent_id?: string | null; rrule?: string | null; estimated_minutes?: number | null };
+
+/** eae82d4 ICS compatibility only. Its bounded fallback is deliberately kept
+ * separate from intent semantics: this never classifies or writes a task. */
+function projectLegacyIcs(task: CalendarTask, timezone: string): TaskCalendarProjection | null {
+  const display = legacyCalendarTask(task);
+  const anchor = display.start_at ?? display.due_at ?? task.start_at;
+  const start = timestamp(anchor);
+  if (!Number.isFinite(start)) return null;
+  const due = timestamp(display.due_at);
+  const minutes = display.estimated_minutes && Number.isFinite(display.estimated_minutes) && display.estimated_minutes > 0
+    ? Math.min(display.estimated_minutes, 23 * 60 + 59) : 30;
+  const end = display.start_at && display.due_at && due > start ? due : start + minutes * 60000;
+  const allDay = !!display.is_all_day;
+  const date = calendarDate(new Date(start), validTimezone(timezone));
+  return {
+    start: allDay ? { date } : { dateTime: new Date(start).toISOString() },
+    end: allDay ? { date: nextDate(date) } : { dateTime: new Date(end).toISOString() },
+    allDay, transparency: allDay || !display.start_at ? 'transparent' : 'opaque',
+    recurrence: calendarRecurrence(display.rrule, allDay, timezone), deadline: null, legacy: true,
+  };
+}
 
 /** Shared ICS/Google projection. Task span ends are inclusive; calendar DATE
  * ends are exclusive. Effort estimates never create occupied calendar time. */
-export function projectTaskCalendar(task: TaskDates & { is_completed?: boolean; status?: string | null; parent_id?: string | null; rrule?: string | null }, timezone = 'UTC'): TaskCalendarProjection | null {
+export function projectTaskCalendar(task: CalendarTask, timezone = 'UTC'): TaskCalendarProjection | null {
   if (task.parent_id || task.is_completed || task.status === 'done' || task.status === 'archived') return null;
+  if (task.time_kind == null) return projectLegacyIcs(task, timezone);
   const kind = taskTimeKind(task);
   const start = timestamp(task.start_at), due = timestamp(task.due_at);
   const anchor = Number.isFinite(due) ? task.due_at! : Number.isFinite(start) ? task.start_at! : null;

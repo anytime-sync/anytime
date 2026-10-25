@@ -14,7 +14,7 @@ for the current release gates, migration digest, rollback and verification scope
 | `deadline` | A commitment due at `due_at`; an optional `start_at` is availability, not occupied time | One transparent date marker at the deadline in the user's timezone. Exact timed deadline is retained in storage and included in the event description. A start-only task uses its start date. |
 | `work` | Deliberately scheduled work, with a start and an end | An opaque timed event with exactly the supplied interval, including short, overnight, and multiday work. No duration cutoff or estimate-derived slot. |
 | `span` | A date range including both endpoint dates | A transparent all-day range. The task's inclusive last date becomes the exclusive `DTEND`/Google `end.date`. |
-| `null`/omitted (historical rows) | Intent was not recorded | Positive timed intervals are retained as work, positive all-day intervals as spans, and single/zero/inverted endpoints as deadline markers. Duration is never used to guess intent. |
+| `null`/omitted (historical rows) | Intent is unknown | Frozen current-main UI/ICS/Google behavior, without assigning intent or changing stored dates. Long/all-day ranges stay collapsed in ICS; legacy Google eligibility stays unchanged. |
 
 A single clock time from Quick Add, inline input, Telegram, or the AI parser is a
 deadline, not an invented 30-minute appointment. New two-endpoint input defaults
@@ -49,7 +49,7 @@ appointments into tasks.
 
 ## Export and Google synchronization
 
-`projectTaskCalendar` provides both exports with the same date boundaries,
+For explicit intent, `projectTaskCalendar` provides both exports with the same date boundaries,
 transparency, validated recurrence and deadline description. Civil date strings
 are preserved as dates. API date-only input is converted to the user's local
 midnight before timestamptz storage. For example, Taipei `2026-10-08` is stored as
@@ -77,8 +77,11 @@ guaranteed by that dataset; check/update it before supporting those cases.
 ICS date-times have RFC 5545 second precision; storage, Google and work
 rescheduling retain the original millisecond precision.
 
-Google creation accepts either endpoint, including a date-only deadline or
-start-only task. Linked edits use a persistent `calendar_dirty` flag instead of
+For explicit intent, Google creation accepts either endpoint, including a date-only
+deadline or start-only task. Unknown legacy rows retain main's Google eligibility;
+an ineligible unknown row is never turned into a new event or a deletion request
+by an unrelated metadata edit. Its event link stays unchanged. Future deliberate
+completion/unscheduling still removes a verified owned event. Linked edits use a persistent `calendar_dirty` flag instead of
 a ten-minute timestamp window, so downtime does not lose updates. Successful
 acknowledgement is scoped to the user's id and the exact `updated_at` version
 sent; concurrent edits remain pending. Unscheduling, completion, archiving or
@@ -109,27 +112,33 @@ must pass `time_kind=work` when converting an explicit deadline to scheduled wor
 Changing a user's timezone does not automatically enqueue historical Google
 projections; include those in a separately reviewed repair if needed.
 
-**ICS rollout changes historical subscribed events immediately after polling.**
-The migration's unchanged dates/null intent/dirty=false only prevent a Google
-bulk enqueue. ICS has no dirty gate: application release runs every selected
-historical row through the new projection and bumps `LAST-MODIFIED`. Compared
-with current main, legacy positive timed intervals of 24 hours or longer and
-multiday all-day intervals now retain their complete ranges instead of the old
-single marker. Some are legitimate work; some may be fabricated lifecycle ranges.
-This can increase crowding until reviewed per-id intent classification. No
-duration heuristic can safely decide which is which. This PR does not claim
-historical calendars stay visually unchanged or that the screenshot is fixed.
+**Unknown historical tasks do not re-expand on deployment.** The candidate now
+freezes main `eae82d4` output for null/omitted intent. `task-legacy-dates.ts` keeps
+its UI projection/Google eligibility, and the ICS adapter retains its dates,
+recurrence basis, bounded fallback, transparency, notes and revision timestamp.
+The old duration threshold exists only inside that compatibility adapter, never
+as a stored-intent classifier or a limit on explicit work/spans. The widened ICS
+overlap query applies only to explicitly classified intervals. Unknown rows are
+not bulk-enqueued and there is no release requirement to classify old tasks.
 
-Before an approved release, inventory the affected subscribed ICS rows and
-review ambiguous intent per id, while preserving actual appointments. Apply the
-additive migration first, then any separately approved targeted classification,
-then release the code and verify subscription refresh plus owned Google writes.
-If verification fails, pause task sync before reverting application code; keep
-the additive columns and original values for investigation. The prior binary
-ignores the columns but restores its old date fabrication/export behavior, and
-Google events already written will not be reversed by a code rollback. ICS can
-revert on the next provider poll, subject to its cache; provider restoration and
-any reversal of approved data changes require separate reviewed per-id actions.
+New creation input records intent from supplied endpoints and date mode. On an
+unknown task, a due/availability edit records deadline intent without shifting
+its old availability start; supplying a genuinely new pair can record work/span.
+Copying one unchanged endpoint from the editor does not count as a new pair.
+The user can always explicitly choose work/span when both endpoints are valid.
+Opening/cancelling, title/note edits and automatic recurrence never classify a
+legacy row. Legacy recurrence keeps its UTC basis/old short-window behavior and
+retains long availability starts while advancing the due date. Explicit intent
+uses the corrected local recurrence and projection semantics.
+
+Before an approved release, apply the additive migration first, verify its
+metadata/security state, then release only the tested application. Legacy
+classification and historical repair remain separate optional work requiring
+source attribution and narrowly scoped approval; they are not prerequisites to
+preventing re-expansion. If verification fails, pause task sync before reverting
+application code; retain additive columns for investigation. Existing Google
+writes are not reversed by a code rollback. Subscriber caches/polling can delay
+ICS changes. See the release candidate document for the exact sequence.
 
 The Supabase CLI could not initialize its read-only home configuration in this
 cloud environment. The migration file was prepared directly and validated by
@@ -168,11 +177,12 @@ is part of this draft PR.
 
 ## Validation in this cloud workspace
 
-- `npm test`: 378 passing tests across 36 files, including mounted editor/picker
+- `npm test`: 393 passing tests across 37 files, including mounted editor/picker
   behavior, lifecycle/ownership/notification regressions, independent ICS parsing
-  across DST, execution of actual migration/status-trigger SQL, and synthetic
+  across DST, comparison against frozen old-main source for unknown intent,
+  execution of actual migration/status-trigger SQL, and synthetic
   owner/shared/private RLS preservation in local PostgreSQL.
-- The 53 schedule, API and ICS tests also pass with `TZ=Asia/Taipei`, while
+- The 64 schedule, API and ICS/compatibility tests also pass with `TZ=Asia/Taipei`, while
   exercising New York DST semantics independent of the host timezone.
 - `npm run typecheck` and `npm run lint`: passed; ESLint retains repository
   warnings in existing components.

@@ -35,7 +35,7 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
   const stamp = formatUtc(now);
   const hasRecurringWork = tasks.some(task => {
     const p = projectTaskCalendar(task, zone);
-    return p?.recurrence && !p.allDay;
+    return p?.recurrence && !p.allDay && !p.legacy;
   });
   const vtimezone = hasRecurringWork && zone !== 'UTC' ? getVtimezoneComponent(zone) : null;
   if (hasRecurringWork && zone !== 'UTC' && !vtimezone) throw new Error(`ICS recurrence timezone is unsupported: ${zone}`);
@@ -54,13 +54,14 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
     lines.push(`UID:${task.id}@firstlight.to`);
     lines.push(`DTSTAMP:${stamp}`);
     lines.push(`CREATED:${formatUtc(new Date(task.created_at))}`);
-    lines.push(`LAST-MODIFIED:${formatUtc(new Date(Math.max(Date.parse(task.updated_at) || 0, feedRevision)))}`);
+    const revision = projection.legacy ? Date.UTC(2026, 9, 4, 6, 48) : feedRevision;
+    lines.push(`LAST-MODIFIED:${formatUtc(new Date(Math.max(Date.parse(task.updated_at) || 0, revision)))}`);
 
     if ('date' in projection.start && 'date' in projection.end) {
       lines.push(`DTSTART;VALUE=DATE:${projection.start.date.replace(/-/g, '')}`);
       lines.push(`DTEND;VALUE=DATE:${projection.end.date.replace(/-/g, '')}`);
     } else if ('dateTime' in projection.start && 'dateTime' in projection.end) {
-      if (projection.recurrence && vtimezone) {
+      if (projection.recurrence && vtimezone && !projection.legacy) {
         lines.push(`DTSTART;TZID=${zone}:${formatUtc(wallClock(new Date(projection.start.dateTime), zone)).slice(0, -1)}`);
         // DURATION preserves elapsed work time even on an occurrence that
         // crosses a DST transition; a local DTEND would change its duration.
@@ -72,7 +73,8 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
       }
     }
     lines.push(`SUMMARY:${escapeText(task.title || "(untitled)")}`);
-    const description = taskCalendarDescription(task.notes, projection, zone);
+    const description = projection.legacy ? task.notes?.trim() ? task.notes : undefined
+      : taskCalendarDescription(task.notes, projection, zone);
     if (description) lines.push(`DESCRIPTION:${escapeText(description)}`);
     if (projection.recurrence) lines.push(`RRULE:${projection.recurrence}`);
     lines.push("STATUS:CONFIRMED");

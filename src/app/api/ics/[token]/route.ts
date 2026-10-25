@@ -1,4 +1,5 @@
 import { buildIcs, type IcsTaskRow } from "@/lib/ical-feed";
+import { taskCalendarWindowFilter } from '@/lib/task-calendar';
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
@@ -69,7 +70,7 @@ export async function GET(
       .eq("is_completed", false)
       .neq("status", "done")
       .neq("status", "archived")
-      .or(`and(start_at.gte.${minIso},start_at.lte.${maxIso}),and(due_at.gte.${minIso},due_at.lte.${maxIso}),and(start_at.lt.${minIso},due_at.gt.${maxIso}),rrule.not.is.null`)
+      .or(taskCalendarWindowFilter(minIso,maxIso))
       .order("id", { ascending: true })
       .range(offset, offset + 999);
     if (error) return NextResponse.json({ error: "calendar_fetch_failed" }, { status: 500 });

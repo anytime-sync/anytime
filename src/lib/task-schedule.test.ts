@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { calendarTask, resolveTaskDates, snoozedDue, type TaskDates } from './task-schedule';
 import { projectTaskCalendar } from './task-calendar';
-const task = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', is_all_day: false };
+const task = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', time_kind: 'work' as const, is_all_day: false };
 it('moves both ends when an overdue block gets a new due date', () => {
   expect(resolveTaskDates(task, { due_at: '2026-09-14T09:00:00Z' })).toEqual({ start_at: '2026-09-14T08:30:00.000Z', due_at: '2026-09-14T09:00:00Z' });
 });

@@ -1,5 +1,5 @@
 import * as chrono from "chrono-node";
-import { taskTimeKind, type TaskTimeKind } from "./task-schedule";
+import { newTaskTimeKind, type TaskTimeKind } from "./task-schedule";
 
 export type ParsedQuickInput = {
   title: string;
@@ -400,7 +400,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     start_at,
     due_at,
     is_all_day,
-    time_kind: taskTimeKind({ start_at, due_at, is_all_day }),
+    time_kind: newTaskTimeKind({ start_at, due_at, is_all_day }),
     priority: finalPriority,
     tagNames,
     projectName,

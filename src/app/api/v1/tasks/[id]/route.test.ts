@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { TaskDates } from '@/lib/task-schedule';
-const base = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', is_all_day: false };
+const base = { start_at: '2026-09-07T08:30:00Z', due_at: '2026-09-07T09:00:00Z', time_kind: 'work' as const, is_all_day: false };
 const state = vi.hoisted(() => ({ current: {} as TaskDates, timezone: 'Asia/Taipei', patch: null as Record<string, unknown> | null, filters: [] as unknown[], authorized: true }));
 vi.mock('../../_lib/auth', () => ({
   requireApiAuth: async () => state.authorized ? { ok: true, userId: 'owner', supabase: { from: (table: string) => {
