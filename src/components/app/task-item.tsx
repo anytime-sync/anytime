@@ -471,6 +471,7 @@ function FindTimeTray({ task, onDone }: { task: TaskWithTags; onDone: () => void
       start_at: s.start_at,
       due_at: s.end_at,
       is_all_day: false,
+      time_kind: "work",
     } as any);
     toast.success(`Scheduled — ${s.label}`);
     onDone();

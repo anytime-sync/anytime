@@ -26,7 +26,7 @@ it('merges overlapping meetings instead of subtracting twice', () => {
 });
 it('ignores stale task ranges and counts real task blocks', () => {
   const [day] = buildScheduleDays(['2026-09-12'], 'UTC', [], [
-    { start_at: '2026-09-01T09:00:00Z', due_at: '2026-09-12T17:00:00Z' },
+    { time_kind: 'deadline', start_at: '2026-09-01T09:00:00Z', due_at: '2026-09-12T17:00:00Z' },
     { start_at: '2026-09-12T09:00:00Z', due_at: '2026-09-12T12:00:00Z' },
   ], prefs, now);
   expect(day.busyBlocks).toHaveLength(1);

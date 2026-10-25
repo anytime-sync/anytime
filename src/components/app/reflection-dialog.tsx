@@ -74,8 +74,7 @@ export function ReflectionDialog() {
   function carryForward(id: string) {
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(9, 0, 0, 0);
-    const tomorrowEnd = new Date(tomorrow); tomorrowEnd.setHours(9, 30, 0, 0);
-    update.mutate({ id, start_at: tomorrow.toISOString(), due_at: tomorrowEnd.toISOString() } as any);
+    update.mutate({ id, due_at: tomorrow.toISOString() });
     toast.message(tr(lang, "reflect.toastRolled"));
   }
   function dropTask(id: string) {

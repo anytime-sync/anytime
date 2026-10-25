@@ -70,7 +70,7 @@ export function AiTaskActions({ task }: { task: Task }) {
     if(update.isPending)return;
     try {
       if(Date.parse(s.start_at)<Date.now())throw new Error('Slot has passed. Find a new time.');
-      await update.mutateAsync({id:task.id,start_at:s.start_at,due_at:s.end_at,is_all_day:false});
+      await update.mutateAsync({id:task.id,start_at:s.start_at,due_at:s.end_at,is_all_day:false,time_kind:"work"});
       toast.success('Task dates updated.');setSlots(null);
     } catch(e) {toast.error(e instanceof Error ? e.message : 'Could not save this slot.');}
   }

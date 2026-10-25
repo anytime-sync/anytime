@@ -71,8 +71,8 @@ export type GoogleCalendarEvent = {
   description?: string;
   location?: string;
   htmlLink?: string;
-  start?: GoogleCalendarEventDateTime;
-  end?: GoogleCalendarEventDateTime;
+  start?: { date?: string | null; dateTime?: string | null; timeZone?: string | null };
+  end?: { date?: string | null; dateTime?: string | null; timeZone?: string | null };
   organizer?: { email?: string; displayName?: string; self?: boolean };
   attendees?: GoogleAttendee[];
   /** Set on instances of a recurring event. Points to the master event id. */
@@ -92,11 +92,13 @@ export type GoogleCalendarEvent = {
 };
 
 export type GoogleCalendarEventInput = {
+  id?: string;
+  transparency?: "transparent" | "opaque";
   summary?: string;
   description?: string;
   location?: string;
-  start?: GoogleCalendarEventDateTime;
-  end?: GoogleCalendarEventDateTime;
+  start?: { date?: string | null; dateTime?: string | null; timeZone?: string | null };
+  end?: { date?: string | null; dateTime?: string | null; timeZone?: string | null };
   /** Pass an empty array to clear all attendees. Each item needs at minimum an email. */
   attendees?: Pick<GoogleAttendee, "email" | "displayName" | "optional">[];
   /** Master-event RRULEs. Don't set on instance edits. */

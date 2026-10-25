@@ -46,10 +46,9 @@ export function AntiOverloadBanner() {
     const next = candidate.due_at
       ? addDays(new Date(candidate.due_at), 1)
       : addDays(new Date(), 1);
-    // Always normalize to 09:00–09:30 on the target day (never inherit a stale 23:59 time).
+    // Deferral moves the deadline; the shared resolver preserves real work.
     next.setHours(9, 0, 0, 0);
-    const nextEnd = new Date(next); nextEnd.setHours(9, 30, 0, 0);
-    update.mutate({ id: candidate.id, start_at: next.toISOString(), due_at: nextEnd.toISOString() } as any);
+    update.mutate({ id: candidate.id, due_at: next.toISOString() });
   }
 
   return (

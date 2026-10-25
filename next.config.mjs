@@ -3,6 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     typedRoutes: false,
+    serverComponentsExternalPackages: ["@touch4it/ical-timezones"],
+    outputFileTracingIncludes: {
+      "/api/ics/*": ["./node_modules/@touch4it/ical-timezones/zones/**/*"],
+    },
   },
   images: {
     remotePatterns: [

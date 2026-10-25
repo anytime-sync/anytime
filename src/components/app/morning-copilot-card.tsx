@@ -1,4 +1,5 @@
 "use client";
+import { resolveTaskDates } from "@/lib/task-schedule";
 
 /**
  * Morning Co-pilot card — Round E.
@@ -124,29 +125,13 @@ export function MorningCopilotCard() {
           // Fetch current task to preserve duration when shifting dates
           const { data: task } = await supabase
             .from("tasks")
-            .select("start_at, due_at")
+            .select("start_at, due_at, is_all_day, time_kind")
             .eq("id", action.task_id)
             .single();
 
-          const patch: Record<string, unknown> = { is_all_day: false };
-
-          if (task?.start_at && task?.due_at) {
-            // Shift to tomorrow 09:00; cap duration at 2h to avoid cross-day overflow.
-            const durationMs = Math.min(
-              new Date(task.due_at).getTime() - new Date(task.start_at).getTime(),
-              2 * 60 * 60 * 1000,
-            );
-            const newStart = tomorrowAt9;
-            const newEnd = new Date(newStart.getTime() + Math.max(durationMs, 30 * 60 * 1000));
-            patch.start_at = newStart.toISOString();
-            patch.due_at = newEnd.toISOString();
-          } else if (task?.start_at && !task?.due_at) {
-            // Has start but no end — shift start, leave end null
-            patch.start_at = tomorrowIso;
-          } else {
-            // No start — just set due_at (original behavior)
-            patch.due_at = tomorrowIso;
-          }
+          if (!task) continue;
+          const patch = resolveTaskDates(task, task.start_at && !task.due_at
+            ? { start_at: tomorrowIso } : { due_at: tomorrowIso }, prefs?.timezone);
 
           const { error } = await supabase
             .from("tasks")
@@ -156,7 +141,7 @@ export function MorningCopilotCard() {
         } else if (action.kind === "drop") {
           const { error } = await supabase
             .from("tasks")
-            .update({ priority: 0, due_at: null })
+            .update({ priority: 0, due_at: null, start_at: null, time_kind: "deadline" })
             .eq("id", action.task_id);
           if (!error) applied += 1;
         } else if (action.kind === "batch") {
