@@ -7,7 +7,9 @@
  * pre-translated chrome object built from i18n.ts.
  */
 import { type Locale } from "date-fns";
-import { calendarDate } from "@/lib/day-window";
+import { calendarDate, validDate } from "@/lib/day-window";
+import { legacyCalendarTask } from "@/lib/task-legacy-dates";
+import { type TaskTimeKind } from "@/lib/task-schedule";
 import { safeTimezone } from "@/lib/ai/tz";
 import { type LanguageCode } from "@/lib/i18n";
 import { type DigestAgendaItem } from "./digest-agenda";
@@ -15,7 +17,9 @@ import { type DigestAgendaItem } from "./digest-agenda";
 export type DigestTask = {
   id: string;
   title: string;
+  start_at?: string | null;
   due_at: string | null;
+  time_kind?: TaskTimeKind | null;
   priority: number | null;
   is_all_day?: boolean;
 };
@@ -191,17 +195,50 @@ function digestDate(p: DigestPayload): string {
 }
 
 function taskDate(t: DigestTask, p: DigestPayload): string {
-  if (!t.due_at) return "";
-  const due = new Date(t.due_at);
-  if (!Number.isFinite(due.getTime())) return "";
+  const due = taskEndpoint(t.due_at);
+  if (!due || !t.due_at) return "";
   const timeZone = safeTimezone(p.timezone);
-  const sameDay = calendarDate(due, timeZone) === calendarDate(p.date, timeZone);
-  if (t.is_all_day && sameDay) return "";
+  const dateOf = (value: string, date: Date) => validDate(value) ? value : calendarDate(date, timeZone);
+  const formatDate = (date: string) => new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
+    timeZone: "UTC", year: "numeric", month: "short", day: "numeric",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+  const dueDate = dateOf(t.due_at, due);
+  const dateBased = t.is_all_day || t.time_kind === "span" || validDate(t.due_at);
+  // Unknown rows retain the existing read-only display compatibility. Never
+  // infer or persist intent from duration; explicit work has no duration cap.
+  const display = t.time_kind == null ? legacyCalendarTask(t) : t;
+  const start = taskEndpoint(display.start_at);
+  if (t.time_kind !== "deadline" && start && display.start_at && +due > +start) {
+    if (dateBased || validDate(display.start_at)) {
+      const startDate = dateOf(display.start_at, start);
+      // Task span ends are inclusive, unlike Google all-day event ends.
+      if (startDate < dueDate) return `${formatDate(startDate)} – ${formatDate(dueDate)}`;
+      if (startDate === dueDate) return formatDate(dueDate);
+    } else {
+      return `${timedDate(start, p)} – ${timedDate(due, p)}`;
+    }
+  }
+  if (dateBased) return dueDate === calendarDate(p.date, timeZone) ? "" : formatDate(dueDate);
+  return timedDate(due, p);
+}
+
+/** Reject invalid civil dates and zone-less timestamps instead of normalizing
+ * them or interpreting them in the mail server's timezone. */
+function taskEndpoint(value: string | null | undefined): Date | null {
+  if (!value || !validDate(value.slice(0, 10))) return null;
+  if (!validDate(value) && !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)) return null;
+  const date = new Date(value);
+  return Number.isFinite(+date) ? date : null;
+}
+
+function timedDate(date: Date, p: DigestPayload): string {
+  const timeZone = safeTimezone(p.timezone);
   return new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
     timeZone,
-    ...(!sameDay ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
-    ...(!t.is_all_day ? { hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko" } as const : {}),
-  }).format(due);
+    ...(calendarDate(date, timeZone) !== calendarDate(p.date, timeZone)
+      ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
+    hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko",
+  }).format(date);
 }
 
 /** One formatter for both MIME alternatives, including cross-midnight dates. */
@@ -218,16 +255,6 @@ function agendaDate(event: DigestAgendaItem, p: DigestPayload): string {
     const lastDate = last.toISOString().slice(0, 10);
     return `${p.chrome.allDay} · ${start}${lastDate > event.start ? ` – ${formatDate(lastDate)}` : ""}`;
   }
-  const timeZone = safeTimezone(p.timezone);
-  const localDate = calendarDate(p.date, timeZone);
-  const formatTime = (value: string) => {
-    const date = new Date(value);
-    return new Intl.DateTimeFormat(locale, {
-      timeZone,
-      ...(calendarDate(date, timeZone) !== localDate
-        ? { year: "numeric", month: "short", day: "numeric" } as const : {}),
-      hour: "numeric", minute: "2-digit", hour12: p.language === "en" || p.language === "ko",
-    }).format(date);
-  };
+  const formatTime = (value: string) => timedDate(new Date(value), p);
   return `${formatTime(event.start)}${event.end && event.end !== event.start ? ` – ${formatTime(event.end)}` : ""}`;
 }

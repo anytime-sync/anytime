@@ -93,7 +93,7 @@ async function handle(req: Request) {
 
     const { data: dueToday, error: dueError } = await supabase
       .from("tasks")
-      .select("id, title, due_at, priority, is_all_day")
+      .select("id, title, start_at, due_at, time_kind, priority, is_all_day")
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
       .neq("status", "archived")
@@ -104,7 +104,7 @@ async function handle(req: Request) {
       .limit(20);
     const { data: overdueRaw, error: overdueError } = await supabase
       .from("tasks")
-      .select("id, title, due_at, priority, is_all_day")
+      .select("id, title, start_at, due_at, time_kind, priority, is_all_day")
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
       .neq("status", "archived")
