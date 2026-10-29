@@ -91,6 +91,31 @@ afterEach(() => {
 });
 
 describe("daily digest calendar integration", () => {
+  it.each([false, true])("renders the reported legacy task interval with a synthetic linked event: %s", async linkedEvent => {
+    vi.setSystemTime(new Date("2026-10-29T23:00:00Z"));
+    dueToday = [{ id: "legacy-meeting", title: "Legacy meeting", priority: 4, is_all_day: false,
+      time_kind: null, start_at: "2026-10-30T02:30:00Z", due_at: "2026-10-30T08:00:00Z" }];
+    overdue = [{ ...dueToday[0], id: "overdue-work", title: "Overdue work", time_kind: "work",
+      start_at: "2026-10-28T02:30:00Z", due_at: "2026-10-29T08:00:00Z" }];
+    events = linkedEvent ? [event("Synthetic calendar copy", { task_id: "legacy-meeting",
+      start_at: dueToday[0].start_at!, end_at: dueToday[0].due_at })] : [];
+    await request();
+    const taskQueries = calls.filter(c => c.url.pathname.endsWith("/tasks"));
+    expect(taskQueries).toHaveLength(2);
+    for (const { url } of taskQueries) {
+      // The HTTP fixture returns whole task objects. Assert the actual wire
+      // projection so missing selected columns cannot falsely pass this test.
+      expect(url.searchParams.get("select")?.split(","))
+        .toEqual(["id", "title", "start_at", "due_at", "time_kind", "priority", "is_all_day"]);
+    }
+    expect(mocks.send).toHaveBeenCalledOnce();
+    for (const body of [mocks.send.mock.calls[0][0].html, mocks.send.mock.calls[0][0].text]) {
+      expect(body).toContain("10:30 AM – 4:00 PM");
+      expect(body).toContain("Oct 28, 2026, 10:30 AM – Oct 29, 2026, 4:00 PM");
+      expect(body).not.toContain("Synthetic calendar copy");
+    }
+  });
+
   it("includes the reported Taipei occurrence in both MIME alternatives and logs the local date", async () => {
     events = [event("Calendar lesson")];
     const response = await request();
