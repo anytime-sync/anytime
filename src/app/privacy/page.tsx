@@ -48,8 +48,7 @@ export default function PrivacyPage() {
         <Section heading="What we don't do">
           <p>
             We don&apos;t sell your data. We don&apos;t serve advertising. We
-            don&apos;t share your tasks with third parties for marketing. We
-            use your task content for advertising.
+            don&apos;t share your tasks with third parties for marketing.
           </p>
         </Section>
 
