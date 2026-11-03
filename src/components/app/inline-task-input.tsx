@@ -40,14 +40,18 @@ const EVENT_TRIGGER_RE =
 export function InlineTaskInput({
   defaultProjectId = null,
   defaultDueAt = null,
+  disabled = false,
   placeholder = 'Add task — try "Email Sam tomorrow 9am, urgent #work"',
 }: {
   defaultProjectId?: string | null;
   defaultDueAt?: string | null;
+  disabled?: boolean;
   placeholder?: string;
 }) {
   const lang = useLanguage();
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   // Round F v4.7: when GCal is connected, allow user to create the
   // input as a Google Calendar event instead of a native task.
   const [mode, setMode] = useState<"task" | "event">("task");
@@ -62,7 +66,7 @@ export function InlineTaskInput({
   const create = useCreateTask();
   const update = useUpdateTask();
   const createProject = useCreateProject();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isPending: projectsPending, isError: projectsError } = useProjects();
   // Resolve known tag colors so #tag in the preview pills matches the
   // sidebar / task-row look. New tag names (no row yet) fall back to the
   // accent gold so they still read as a tag, not a generic chip.
@@ -88,35 +92,31 @@ export function InlineTaskInput({
   }, [text]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
-  /**
-   * Submit philosophy — make Enter feel instant.
-   *
-   * Old flow blocked the user for the entire Anthropic round-trip
-   * (~700-1500ms) before clearing the input or showing the new task.
-   *
-   * New flow:
-   *   1. Clear the input synchronously so the user can type the next task.
-   *   2. Insert immediately using the local chrono-based parse (it
-   *      handles 90%+ of inputs correctly). useCreateTask now does an
-   *      optimistic cache insert so the row paints in the same frame.
-   *   3. Fire the AI parse in the background. If it returns extra
-   *      structure the local parser missed, patch the new task.
-   */
-  function submit(e: React.FormEvent) {
+  /** Preserve failed drafts and serialize capture while its list/task is saved. */
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const raw = text.trim();
-    if (!raw) return;
-    const localP = parsed;
+    if (!raw || disabled || savingRef.current) return;
+    const localP = { ...parsed };
     if (!localP.title) localP.title = raw;
-    setText("");
-    manualOverrideRef.current = null;
     if (mode === "event" && gcalAvailable) {
-      // Strip the calendar trigger words from the title before saving.
+      setText("");
+      manualOverrideRef.current = null;
       const stripped = (localP.title || raw).replace(EVENT_TRIGGER_RE, "").replace(/\s+/g, " ").trim();
       if (stripped) localP.title = stripped;
       void createGCalEvent(raw, localP);
     } else {
-      void instantInsertAndRefine(raw, localP);
+      savingRef.current = true;
+      setSaving(true);
+      try {
+        if (await instantInsertAndRefine(raw, localP)) {
+          setText("");
+          manualOverrideRef.current = null;
+        }
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   }
 
@@ -158,15 +158,16 @@ export function InlineTaskInput({
 
   async function instantInsertAndRefine(raw: string, p: ParsedQuickInput) {
     let projectId: string | null = defaultProjectId;
-    if (p.projectName) {
-      const found = projects.find(
-        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
-      );
-      if (found) projectId = found.id;
-    }
-
     let createdTask: any;
     try {
+      if (p.projectName) {
+        if (projectsPending || projectsError) {
+          toast.error(t(lang, 'capture.listsUnavailable'));
+          return false;
+        }
+        const found = projects.find(pr => pr.name.toLowerCase() === p.projectName!.toLowerCase());
+        projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
+      }
       createdTask = await create.mutateAsync({
         title: p.title,
         start_at: p.start_at,
@@ -180,20 +181,20 @@ export function InlineTaskInput({
         reminder_at: p.reminder_at,
       } as any);
     } catch {
-      return;
+      return false;
     }
-    if (!createdTask?.id) return;
+    if (!createdTask?.id) return false;
 
     // Skip the AI hop when local parse already captured a date AND the
     // input is plain ASCII (no need for multilingual title rewriting).
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
-    if (localGotEnough) return;
+    if (localGotEnough) return true;
 
     try {
-      if (!HOSTED_AI_ENABLED) return;
+      if (!HOSTED_AI_ENABLED) return true;
       const ai = await aiParse.mutateAsync(raw);
-      if (!ai || !ai.title) return;
+      if (!ai || !ai.title) return true;
 
       let aiProjectId = projectId;
       if (ai.projectName && !aiProjectId) {
@@ -226,6 +227,7 @@ export function InlineTaskInput({
     } catch {
       // AI failure is silent — the locally-parsed task is already saved.
     }
+    return true;
   }
 
   return (
@@ -239,6 +241,9 @@ export function InlineTaskInput({
           className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-fg"
           placeholder={placeholder}
           value={text}
+          disabled={disabled}
+          readOnly={saving}
+          aria-busy={saving}
           onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { if (!HOSTED_AI_ENABLED) return; const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
         />

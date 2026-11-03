@@ -79,6 +79,8 @@ export function QuickAdd() {
   const open = useUIStore((s) => s.quickAddOpen);
   const setOpen = useUIStore((s) => s.setQuickAddOpen);
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [now, setNow] = useState(() => new Date());
   const inputRef = useRef<HTMLInputElement>(null);
   // Which chip's options panel is currently revealed (null = none).
@@ -119,6 +121,7 @@ export function QuickAdd() {
     phrase: string,
     kind?: keyof typeof STRIP_PATTERNS | null
   ) {
+    if (savingRef.current) return;
     const sep = (cur: string) => (cur && !cur.endsWith(" ") ? " " : "");
     if (kind) {
       // Replace mode: strip prior attribute then append the new phrase.
@@ -158,7 +161,7 @@ export function QuickAdd() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const createProject = useCreateProject();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isPending: projectsPending, isError: projectsError } = useProjects();
   // Tag color lookup so parsed #tag pills match the sidebar pill style.
   const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
@@ -236,7 +239,7 @@ export function QuickAdd() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && !savingRef.current) setOpen(false);
       if (!open && e.key.toLowerCase() === "q" && !isTyping(e)) {
         e.preventDefault();
         setOpen(true);
@@ -248,21 +251,11 @@ export function QuickAdd() {
 
   if (!open) return null;
 
-  /**
-   * Quick-add submit — instant feel, AI refinement in the background.
-   *
-   * Flow:
-   *   1. Close the modal synchronously so the user is back to their list.
-   *   2. Insert with the local chrono-based parse via the optimistic
-   *      useCreateTask path; the row paints in the same frame.
-   *   3. Run the Anthropic parser in the background. If it picks up
-   *      structure the local parser missed (multilingual title rewrite,
-   *      "the Friday before the offsite", etc.), patch the new task.
-   */
-  function submit() {
+  /** Keep the draft until its task is confirmed; list routing is part of capture. */
+  async function submit() {
     const raw = text.trim();
-    if (!raw) return;
-    const localP = parsed;
+    if (!raw || savingRef.current) return;
+    const localP = { ...parsed };
     if (!localP.title) localP.title = raw;
     if (eventMode) {
       setOpen(false);
@@ -270,8 +263,14 @@ export function QuickAdd() {
       void createGoogleEvent(cleanTitle || localP.title, localP.start_at ?? localP.due_at);
       return;
     }
-    setOpen(false);
-    void instantCreateAndRefine(raw, localP);
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      if (await instantCreateAndRefine(raw, localP)) setOpen(false);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   /** Round a Date up to the next 15-minute boundary. */
@@ -309,19 +308,17 @@ export function QuickAdd() {
   }
 
   async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
-    // Resolve project id locally only if it already exists; defer
-    // creating a fresh project to the AI-refine step so the optimistic
-    // insert doesn't wait on a round-trip.
     let projectId: string | null = null;
-    if (p.projectName) {
-      const found = projects.find(
-        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
-      );
-      if (found) projectId = found.id;
-    }
-
     let createdTask: any;
     try {
+      if (p.projectName) {
+        if (projectsPending || projectsError) {
+          toast.error(tr(lang, 'capture.listsUnavailable'));
+          return false;
+        }
+        const found = projects.find(pr => pr.name.toLowerCase() === p.projectName!.toLowerCase());
+        projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
+      }
       createdTask = await createTask.mutateAsync({
         title: p.title,
         start_at: p.start_at,
@@ -335,20 +332,20 @@ export function QuickAdd() {
         reminder_at: p.reminder_at,
       } as any);
     } catch {
-      return; // useCreateTask shows a toast and rolls back optimistically.
+      return false; // The mutation reports failure; preserve the entire draft.
     }
-    if (!createdTask?.id) return;
+    if (!createdTask?.id) return false;
 
     // Skip the AI hop when local parse already captured everything
     // obvious — saves an Anthropic call when the user typed plain English.
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
-    if (localGotEnough) return;
+    if (localGotEnough) return true;
 
     try {
-      if (!HOSTED_AI_ENABLED) return;
+      if (!HOSTED_AI_ENABLED) return true;
       const ai = await aiParse.mutateAsync(raw);
-      if (!ai || !ai.title) return;
+      if (!ai || !ai.title) return true;
 
       let aiProjectId = projectId;
       if (ai.projectName && !aiProjectId) {
@@ -381,12 +378,13 @@ export function QuickAdd() {
     } catch {
       // AI failure is silent — local-parsed task is already saved.
     }
+    return true;
   }
 
   return (
     <div
       className="fixed inset-0 z-[100] grid place-items-center px-4 bg-black/30 backdrop-blur-sm animate-fade-in"
-      onClick={() => setOpen(false)}
+      onClick={() => { if (!savingRef.current) setOpen(false); }}
     >
       <div
         className="card surface-strong w-full max-w-2xl p-4 md:p-5 space-y-3 md:space-y-4 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto"
@@ -404,6 +402,8 @@ export function QuickAdd() {
             className="flex-1 min-w-0 bg-transparent outline-none text-base md:text-lg placeholder:text-muted-fg"
             placeholder={tr(lang, "quickAdd.placeholder")}
             value={text}
+            readOnly={saving}
+            aria-busy={saving}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
@@ -434,6 +434,7 @@ export function QuickAdd() {
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => { const next = !eventMode; manualOverrideRef.current = next; setEventMode(next); }}
                 aria-pressed={eventMode}
                 className={cn(
@@ -548,6 +549,7 @@ export function QuickAdd() {
                   "text-[11px] text-muted-fg hover:text-fg border border-border rounded-full px-2 py-0.5",
                   i >= 2 && "hidden md:inline-flex"
                 )}
+                disabled={saving}
                 onClick={() => setText(ex)}
               >
                 {ex.length > 56 ? ex.slice(0, 54) + "…" : ex}

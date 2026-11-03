@@ -15,10 +15,11 @@
  */
 
 import { useMemo } from "react";
-import { startOfDay, endOfDay, addDays } from "date-fns";
 import { useTasks, type TaskWithTags, type TasksFilter } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import type { CalendarEvent } from "@/lib/db.types";
+import { useAccountDay } from './use-account-day';
+import { taskViewWindow } from '@/lib/task-view-window';
 
 export type ViewItem =
   | {
@@ -43,39 +44,23 @@ export type ViewItem =
  * view shows upcoming events; we don't show past events outside the
  * Today bucket because they would otherwise pile up forever.
  */
-function eventWindowForView(filter: TasksFilter): { from: Date; to: Date } | null {
-  const now = new Date();
-  const today = startOfDay(now);
-  switch (filter.view) {
-    case "today":
-      return { from: today, to: endOfDay(now) };
-    case "tomorrow": {
-      const tomorrow = addDays(today, 1);
-      return { from: tomorrow, to: endOfDay(tomorrow) };
-    }
-    case "next7":
-      return { from: today, to: endOfDay(addDays(today, 6)) };
-    case "next90":
-      return { from: today, to: endOfDay(addDays(today, 89)) };
-    case "inbox":
-      return { from: now, to: endOfDay(addDays(today, 89)) };
-    case "completed":
-    case "all":
-      return null;
-    default:
-      return null;
-  }
+function eventWindowForView(view: TasksFilter['view'], date: string, timeZone: string): { from: Date; to: Date } | null {
+  if (view === 'inbox') return { from: new Date(), to: taskViewWindow('next90', date, timeZone)!.to };
+  return taskViewWindow(view, date, timeZone);
 }
 
 export function useViewItems(filter: TasksFilter): {
   items: ViewItem[];
   isLoading: boolean;
+  isError: boolean;
 } {
   const tasksQuery = useTasks(filter);
-  const win = eventWindowForView(filter);
+  const day = useAccountDay();
+  const win = useMemo(() => eventWindowForView(filter.view, day.date, day.timeZone), [filter.view, day.date, day.timeZone]);
 
   const eventsQuery = useCalendarEvents(
-    win ?? { from: new Date(0), to: new Date(0) }
+    win ?? { from: new Date(0), to: new Date(0) },
+    !!win && !day.isPending && !day.error
   );
 
   const items = useMemo<ViewItem[]>(() => {
@@ -101,11 +86,12 @@ export function useViewItems(filter: TasksFilter): {
     }));
 
     return [...taskItems, ...eventItems];
-  }, [tasksQuery.data, eventsQuery.data, win ? 1 : 0]);
+  }, [tasksQuery.data, eventsQuery.data, win]);
 
   return {
     items,
-    isLoading: tasksQuery.isLoading || (win ? eventsQuery.isLoading : false),
+    isLoading: tasksQuery.isLoading || (win ? day.isPending || eventsQuery.isLoading : false),
+    isError: tasksQuery.isError || !!(win && (day.error || eventsQuery.isError)),
   };
 }
 

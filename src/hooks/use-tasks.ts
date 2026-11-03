@@ -1,6 +1,7 @@
 "use client";
 
 import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
@@ -8,6 +9,10 @@ import { toast } from "sonner";
 import { createTaskDates, resolveTaskDates } from "@/lib/task-schedule";
 import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
 import { useUserPrefs } from "@/hooks/use-ai";
+import { useAccountDay } from '@/hooks/use-account-day';
+import { taskViewWindow } from '@/lib/task-view-window';
+import { attachCapturedTags } from '@/lib/capture-tags';
+import { readStoredLanguage, t } from '@/lib/i18n';
 
 export type TaskWithTags = Task & { tags: Tag[] };
 
@@ -19,9 +24,13 @@ export type TasksFilter = {
 };
 
 export function useTasks(filter: TasksFilter = {}) {
+  const day = useAccountDay();
+  const win = useMemo(() => taskViewWindow(filter.view, day.date, day.timeZone), [filter.view, day.date, day.timeZone]);
   return useQuery({
-    queryKey: ["tasks", filter],
+    queryKey: win ? ["tasks", filter, day.timeZone, day.date] : ["tasks", filter],
+    enabled: !win || !day.isPending,
     queryFn: async () => {
+      if (win && day.error) throw day.error;
       const supabase = createClient();
       let q = supabase
         .from("tasks")
@@ -54,25 +63,12 @@ export function useTasks(filter: TasksFilter = {}) {
       }
       if (filter.view === "inbox") q = q.is("project_id", null);
 
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfTomorrow = new Date(startOfToday);
-      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-      const endOfTomorrow = new Date(startOfTomorrow);
-      endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
-      const endOf7 = new Date(startOfToday);
-      endOf7.setDate(endOf7.getDate() + 7);
-      const endOf90 = new Date(startOfToday);
-      endOf90.setDate(endOf90.getDate() + 90);
-
-      if (filter.view === "today") {
-        q = q.or(`due_at.lt.${startOfTomorrow.toISOString()},and(due_at.is.null,start_at.lt.${startOfTomorrow.toISOString()})`);
-      } else if (filter.view === "tomorrow") {
-        q = q.or(`and(due_at.gte.${startOfTomorrow.toISOString()},due_at.lt.${endOfTomorrow.toISOString()}),and(due_at.is.null,start_at.gte.${startOfTomorrow.toISOString()},start_at.lt.${endOfTomorrow.toISOString()})`);
-      } else if (filter.view === "next7") {
-        q = q.or(`due_at.lt.${endOf7.toISOString()},and(due_at.is.null,start_at.lt.${endOf7.toISOString()})`);
-      } else if (filter.view === "next90") {
-        q = q.or(`due_at.lt.${endOf90.toISOString()},and(due_at.is.null,start_at.lt.${endOf90.toISOString()})`);
+      if (win) {
+        const from = win.from.toISOString(), to = win.to.toISOString();
+        // Keep existing overdue membership and due/start precedence.
+        q = filter.view === 'tomorrow'
+          ? q.or(`and(due_at.gte.${from},due_at.lt.${to}),and(due_at.is.null,start_at.gte.${from},start_at.lt.${to})`)
+          : q.or(`due_at.lt.${to},and(due_at.is.null,start_at.lt.${to})`);
       }
 
       const { data, error } = await q;
@@ -161,6 +157,8 @@ export function useTask(id: string | null) {
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
+    // The initial INSERT is not idempotent. Only metadata has a retry action.
+    retry: false,
     mutationFn: async (input: Partial<Task> & { title: string; tagNames?: string[] }) => {
       const supabase = createClient();
       const { data: u } = await supabase.auth.getUser();
@@ -178,32 +176,24 @@ export function useCreateTask() {
         .single();
       if (error) throw error;
 
-      if (tagNames && tagNames.length) {
-        const rows = tagNames.map((name) => ({ user_id: u.user!.id, name }));
-        const { data: tags, error: tagErr } = await supabase
-          .from("tags")
-          .upsert(rows, { onConflict: "user_id,name" })
-          .select();
-        if (tagErr) throw tagErr;
-        const links = (tags ?? []).map((t: any) => ({ task_id: task.id, tag_id: t.id }));
-        if (links.length) {
-          const { error: linkErr } = await supabase.from("task_tags").insert(links);
-          if (linkErr) throw linkErr;
-        }
+      const captured = { ...(task as Task), tags: [] as Tag[], pendingTagNames: [] as string[] };
+      try {
+        captured.tags = await attachCapturedTags(supabase, u.user.id, task.id, tagNames ?? []);
+      } catch {
+        // The task is durable. Do not roll it back or repeat its INSERT.
+        captured.pendingTagNames = [...new Set(tagNames)];
       }
-      return task as Task;
+      return captured;
     },
     /**
      * Optimistic insert — the new task appears in every visible list
      * the instant the user hits Enter, before the server responds.
-     * The server roundtrip (~200-500ms) becomes invisible. Any error
-     * rolls back to the prior list and surfaces a toast.
+     * Only task-insert failures remove this row. Later metadata failures
+     * preserve the saved task and offer a tag-only retry.
      */
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: ["tasks"] });
-      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
-      const tempId =
-        (input as any).id ?? `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const now = new Date().toISOString();
       const optimistic: TaskWithTags = {
         id: tempId,
@@ -243,13 +233,41 @@ export function useCreateTask() {
       qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
         old ? [optimistic, ...old] : old
       );
-      return { prev, tempId };
+      return { tempId };
     },
     onError: (e: Error, _input, ctx) => {
-      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old => old?.filter(task => task.id !== ctx?.tempId));
       toast.error(e.message);
     },
-    onSuccess: (createdTask) => {
+    onSuccess: (createdTask, _input, ctx) => {
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old =>
+        old?.some(task => task.id === ctx?.tempId)
+          ? old.filter(task => task.id !== createdTask.id).map(task => task.id === ctx?.tempId ? createdTask : task)
+          : old
+      );
+      if (createdTask.pendingTagNames.length) {
+        const id = `capture-tags-${createdTask.id}`;
+        let retrying = false;
+        const warn = () => toast.warning(t(readStoredLanguage(), 'capture.tagsPending'), {
+          id, duration: Infinity,
+          description: `${createdTask.title} — ${createdTask.pendingTagNames.map(name => `#${name}`).join(' ')}`,
+          action: { label: t(readStoredLanguage(), 'capture.retryTags'), onClick: async event => {
+            event?.preventDefault();
+            if (retrying) return;
+            retrying = true;
+            try {
+              const tags = await attachCapturedTags(createClient(), createdTask.user_id, createdTask.id, createdTask.pendingTagNames);
+              qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old => old?.map(task => task.id === createdTask.id ? { ...task, tags } : task));
+              qc.invalidateQueries({ queryKey: ['tasks'] });
+              qc.invalidateQueries({ queryKey: ['task', createdTask.id] });
+              qc.invalidateQueries({ queryKey: ['tags'] });
+              toast.success(t(readStoredLanguage(), 'capture.tagsSaved'), { id, action: undefined, description: undefined, duration: 4000 });
+            } catch { warn(); }
+            finally { retrying = false; }
+          } },
+        });
+        warn();
+      }
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
