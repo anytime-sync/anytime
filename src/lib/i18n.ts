@@ -879,6 +879,11 @@ export type StringKey =
   | "taskList.sortByDate"
   | "taskList.loading"
   | "taskList.emptyHint"
+  | "taskList.loadError"
+  | "capture.tagsPending"
+  | "capture.retryTags"
+  | "capture.tagsSaved"
+  | "capture.listsUnavailable"
   | "taskList.revertSort"
   | "view.list.shareAria"
   | "view.list.kanbanHint"
@@ -1807,6 +1812,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskList.sortByDate": "Sort by date",
     "taskList.loading": "Loading…",
     "taskList.emptyHint": "Nothing here yet. Add your first task above.",
+    "taskList.loadError": "Couldn't load this view. Reload the page to try again.",
+    "capture.tagsPending": "Task saved. Tags couldn't be saved.",
+    "capture.retryTags": "Retry tags",
+    "capture.tagsSaved": "Tags saved",
+    "capture.listsUnavailable": "Lists aren't available yet. Please try again.",
     "taskList.revertSort": "Revert to sort by due date",
     "view.list.shareAria": "Share list",
     "view.list.kanbanHint": "Drag cards between columns to change priority.",
@@ -2723,6 +2733,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskList.sortByDate": "依日期排序",
     "taskList.loading": "載入中…",
     "taskList.emptyHint": "還沒有任務。在上方輸入第一個吧。",
+    "taskList.loadError": "無法載入此檢視。請重新整理頁面再試一次。",
+    "capture.tagsPending": "任務已儲存，但標籤未能儲存。",
+    "capture.retryTags": "重試儲存標籤",
+    "capture.tagsSaved": "標籤已儲存",
+    "capture.listsUnavailable": "清單尚未就緒。請稍後再試。",
     "taskList.revertSort": "回到日期排序",
     "view.list.shareAria": "分享清單",
     "view.list.kanbanHint": "在欄位之間拖曳卡片以調整優先順序。",
@@ -3632,6 +3647,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskList.sortByDate": "按日期排序",
     "taskList.loading": "加载中…",
     "taskList.emptyHint": "还没有任务。在上方输入第一个吧。",
+    "taskList.loadError": "无法加载此视图。请刷新页面后重试。",
+    "capture.tagsPending": "任务已保存，但标签未能保存。",
+    "capture.retryTags": "重试保存标签",
+    "capture.tagsSaved": "标签已保存",
+    "capture.listsUnavailable": "清单尚未就绪。请稍后重试。",
     "taskList.revertSort": "改回按日期排序",
     "view.list.shareAria": "分享清单",
     "view.list.kanbanHint": "在列之间拖动卡片以调整优先级。",
@@ -4541,6 +4561,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskList.sortByDate": "日付順",
     "taskList.loading": "読み込み中…",
     "taskList.emptyHint": "まだ何もありません。上から最初のタスクを追加してください。",
+    "taskList.loadError": "このビューを読み込めませんでした。ページを再読み込みしてください。",
+    "capture.tagsPending": "タスクは保存されましたが、タグを保存できませんでした。",
+    "capture.retryTags": "タグを再保存",
+    "capture.tagsSaved": "タグを保存しました",
+    "capture.listsUnavailable": "リストをまだ読み込めません。もう一度お試しください。",
     "taskList.revertSort": "日付順に戻す",
     "view.list.shareAria": "リストを共有",
     "view.list.kanbanHint": "カードを列の間でドラッグして優先度を変更。",
@@ -5450,6 +5475,11 @@ const STRINGS: Record<LanguageCode, Record<StringKey, string>> = {
     "taskList.sortByDate": "날짜순",
     "taskList.loading": "불러오는 중…",
     "taskList.emptyHint": "아직 아무것도 없어요. 위에서 첫 작업을 추가하세요.",
+    "taskList.loadError": "이 화면을 불러오지 못했습니다. 페이지를 새로고침해 주세요.",
+    "capture.tagsPending": "작업은 저장했지만 태그를 저장하지 못했습니다.",
+    "capture.retryTags": "태그 다시 저장",
+    "capture.tagsSaved": "태그를 저장했습니다",
+    "capture.listsUnavailable": "목록을 아직 불러올 수 없습니다. 다시 시도해 주세요.",
     "taskList.revertSort": "다시 날짜순으로",
     "view.list.shareAria": "리스트 공유",
     "view.list.kanbanHint": "카드를 열 사이로 끌어 우선순위를 변경.",

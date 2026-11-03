@@ -42,7 +42,9 @@ export function useCreateProject() {
       if (error) throw error;
       return data as Project;
     },
-    onSuccess: () => {
+    onSuccess: (project) => {
+      // If the following task insert fails, retry can reuse this saved list.
+      qc.setQueryData<Project[]>(['projects'], old => old?.some(p => p.id === project.id) ? old : [...(old ?? []), project]);
       qc.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (e: Error) => toast.error(e.message),

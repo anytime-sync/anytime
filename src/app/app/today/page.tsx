@@ -39,7 +39,6 @@ export default function TodayPage() {
           title={t(lang, "view.today.heading")}
           subtitle={format(new Date(), "EEEE, MMMM d")}
           filter={{ view: "today" }}
-          defaults={{ due_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })() }}
           showDailyEdition
           sortBy="due_at"
           sortKey="today"

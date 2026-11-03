@@ -45,11 +45,12 @@ export function useCalendarConnection() {
   });
 }
 
-export function useCalendarEvents({ from, to }: { from: Date; to: Date }) {
+export function useCalendarEvents({ from, to }: { from: Date; to: Date }, enabled = true) {
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
   return useQuery({
     queryKey: ["calendarEvents", fromIso, toIso],
+    enabled,
     queryFn: async () => {
       const supabase = createClient();
       // Cancelled events stay in the table for audit; hide them in the
