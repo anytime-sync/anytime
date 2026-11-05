@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { parseQuickInput, describeParsed, describeNow, type ParsedQuickInput } from "@/lib/quick-parse";
+import { useQueryClient } from '@tanstack/react-query';
+import { captureEventDates } from '@/lib/capture-event-dates';
+import { formatDue, parseQuickInput, describeParsed, describeNow, type ParsedQuickInput } from "@/lib/quick-parse";
 import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
 import { useUIStore } from "@/store/ui";
 import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
-import { useParseTaskAI } from "@/hooks/use-ai";
+import { useParseTaskAI, useUserPrefs } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import {
   Bell, CalendarClock, CalendarPlus, Flag, Folder, Hash, Repeat, Sparkles, ChevronDown,
@@ -15,7 +17,7 @@ import {
 } from "lucide-react";
 import { ScanTasksSheet } from "./scan-tasks-sheet";
 import { toast } from "sonner";
-import { addDays, isPast, isToday } from "date-fns";
+import { addCalendarDays, calendarDate } from '@/lib/day-window';
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
@@ -75,10 +77,13 @@ function stripExisting(text: string, kind: keyof typeof STRIP_PATTERNS): string 
 }
 
 export function QuickAdd() {
+  const qc = useQueryClient();
   const lang = useLanguage();
   const open = useUIStore((s) => s.quickAddOpen);
   const setOpen = useUIStore((s) => s.setQuickAddOpen);
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [now, setNow] = useState(() => new Date());
   const inputRef = useRef<HTMLInputElement>(null);
   // Which chip's options panel is currently revealed (null = none).
@@ -119,6 +124,7 @@ export function QuickAdd() {
     phrase: string,
     kind?: keyof typeof STRIP_PATTERNS | null
   ) {
+    if (savingRef.current) return;
     const sep = (cur: string) => (cur && !cur.endsWith(" ") ? " " : "");
     if (kind) {
       // Replace mode: strip prior attribute then append the new phrase.
@@ -158,10 +164,12 @@ export function QuickAdd() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const createProject = useCreateProject();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isPending: projectsPending, isError: projectsError } = useProjects();
   // Tag color lookup so parsed #tag pills match the sidebar pill style.
   const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
+  const { data: accountPrefs, isPending: timezonePending, error: timezoneError } = useUserPrefs();
+  const accountZone = accountPrefs?.timezone || 'UTC';
 
   // Admin-curated priority phrases (`site_priority_keywords`) that
   // extend the parser's built-in list. Loaded once when the panel
@@ -208,11 +216,12 @@ export function QuickAdd() {
   // mentioned in plain prose. Same context the inline input uses.
   const parseCtx = useMemo(
     () => ({
+      timezone: accountZone,
       existingTags: existingTags.map((t: any) => t.name),
       existingProjects: projects.map((p: any) => p.name),
       extraPhrases,
     }),
-    [existingTags, projects, extraPhrases]
+    [existingTags, projects, extraPhrases, accountZone]
   );
   const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
   const preview = useMemo(() => describeParsed(parsed, now), [parsed, now]);
@@ -236,7 +245,7 @@ export function QuickAdd() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && !savingRef.current) setOpen(false);
       if (!open && e.key.toLowerCase() === "q" && !isTyping(e)) {
         e.preventDefault();
         setOpen(true);
@@ -248,30 +257,34 @@ export function QuickAdd() {
 
   if (!open) return null;
 
-  /**
-   * Quick-add submit — instant feel, AI refinement in the background.
-   *
-   * Flow:
-   *   1. Close the modal synchronously so the user is back to their list.
-   *   2. Insert with the local chrono-based parse via the optimistic
-   *      useCreateTask path; the row paints in the same frame.
-   *   3. Run the Anthropic parser in the background. If it picks up
-   *      structure the local parser missed (multilingual title rewrite,
-   *      "the Friday before the offsite", etc.), patch the new task.
-   */
-  function submit() {
+  /** Keep the draft until its task is confirmed; list routing is part of capture. */
+  async function submit() {
     const raw = text.trim();
-    if (!raw) return;
-    const localP = parsed;
+    if (!raw || savingRef.current) return;
+    if (timezonePending || timezoneError) { toast.error('Account timezone is unavailable. Please retry.'); return; }
+    if (parsed.error) { toast.error(parsed.error); return; }
+    const localP = { ...parsed };
     if (!localP.title) localP.title = raw;
     if (eventMode) {
-      setOpen(false);
       const cleanTitle = stripEventTriggers(localP.title);
-      void createGoogleEvent(cleanTitle || localP.title, localP.start_at ?? localP.due_at);
+      savingRef.current = true;
+      setSaving(true);
+      try {
+        if (await createGoogleEvent(cleanTitle || localP.title, localP)) setOpen(false);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
       return;
     }
-    setOpen(false);
-    void instantCreateAndRefine(raw, localP);
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      if (await instantCreateAndRefine(raw, localP)) setOpen(false);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   /** Round a Date up to the next 15-minute boundary. */
@@ -281,25 +294,25 @@ export function QuickAdd() {
   }
 
   /** POST a Google Calendar event from the Quick Add input. */
-  async function createGoogleEvent(title: string, startIso: string | null | undefined) {
-    let start: Date;
-    if (startIso) start = new Date(startIso);
-    else start = roundUpQuarterHour(new Date(Date.now() + 60 * 60 * 1000));
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+  async function createGoogleEvent(title: string, parsed: ParsedQuickInput) {
+    const fallback = roundUpQuarterHour(new Date(Date.now() + 60 * 60 * 1000)).toISOString();
     try {
       const res = await fetch("/api/calendar/google/event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, start_at: start.toISOString(), end_at: end.toISOString(), is_all_day: false }),
+        body: JSON.stringify({ title, ...captureEventDates(parsed, fallback) }),
       });
       if (!res.ok) {
         const msg = await res.text().catch(() => "");
         toast.error(msg || "Could not create event on Google Calendar");
-        return;
+        return false;
       }
+      void qc.invalidateQueries({ queryKey: ['calendarEvents'] });
       toast.success("Event created on Google Calendar");
+      return true;
     } catch (err: any) {
       toast.error(err?.message || "Could not create event on Google Calendar");
+      return false;
     }
   }
 
@@ -309,22 +322,24 @@ export function QuickAdd() {
   }
 
   async function instantCreateAndRefine(raw: string, p: ParsedQuickInput) {
-    // Resolve project id locally only if it already exists; defer
-    // creating a fresh project to the AI-refine step so the optimistic
-    // insert doesn't wait on a round-trip.
     let projectId: string | null = null;
-    if (p.projectName) {
-      const found = projects.find(
-        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
-      );
-      if (found) projectId = found.id;
-    }
-
     let createdTask: any;
     try {
+      if (p.projectName) {
+        if (projectsPending || projectsError) {
+          toast.error(tr(lang, 'capture.listsUnavailable'));
+          return false;
+        }
+        const found = projects.find(pr => pr.name.toLowerCase() === p.projectName!.toLowerCase());
+        projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
+      }
       createdTask = await createTask.mutateAsync({
         title: p.title,
         start_at: p.start_at,
+        start_date: p.start_date,
+        due_date: p.due_date ?? undefined,
+        schedule_timezone: p.schedule_timezone,
+        reminder_offset_min: p.reminder_offset_min,
         time_kind: p.time_kind,
         due_at: p.due_at,
         is_all_day: p.is_all_day,
@@ -335,20 +350,20 @@ export function QuickAdd() {
         reminder_at: p.reminder_at,
       } as any);
     } catch {
-      return; // useCreateTask shows a toast and rolls back optimistically.
+      return false; // The mutation reports failure; preserve the entire draft.
     }
-    if (!createdTask?.id) return;
+    if (!createdTask?.id) return false;
 
     // Skip the AI hop when local parse already captured everything
     // obvious — saves an Anthropic call when the user typed plain English.
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
-    if (localGotEnough) return;
+    if (localGotEnough) return true;
 
     try {
-      if (!HOSTED_AI_ENABLED) return;
+      if (!HOSTED_AI_ENABLED) return true;
       const ai = await aiParse.mutateAsync(raw);
-      if (!ai || !ai.title) return;
+      if (!ai || !ai.title) return true;
 
       let aiProjectId = projectId;
       if (ai.projectName && !aiProjectId) {
@@ -381,12 +396,13 @@ export function QuickAdd() {
     } catch {
       // AI failure is silent — local-parsed task is already saved.
     }
+    return true;
   }
 
   return (
     <div
       className="fixed inset-0 z-[100] grid place-items-center px-4 bg-black/30 backdrop-blur-sm animate-fade-in"
-      onClick={() => setOpen(false)}
+      onClick={() => { if (!savingRef.current) setOpen(false); }}
     >
       <div
         className="card surface-strong w-full max-w-2xl p-4 md:p-5 space-y-3 md:space-y-4 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto"
@@ -395,7 +411,7 @@ export function QuickAdd() {
         {/* "Now" anchor */}
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-fg min-w-0">
           <span className="editorial-number uppercase tracking-[0.18em] shrink-0">{tr(lang, "quickAdd.kicker")}</span>
-          <span className="truncate">{describeNow(now)}</span>
+          <span className="truncate">{describeNow(now, accountZone)}</span>
         </div>
 
         <div className="flex items-center gap-2 min-w-0">
@@ -404,6 +420,8 @@ export function QuickAdd() {
             className="flex-1 min-w-0 bg-transparent outline-none text-base md:text-lg placeholder:text-muted-fg"
             placeholder={tr(lang, "quickAdd.placeholder")}
             value={text}
+            readOnly={saving}
+            aria-busy={saving}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
@@ -434,6 +452,7 @@ export function QuickAdd() {
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => { const next = !eventMode; manualOverrideRef.current = next; setEventMode(next); }}
                 aria-pressed={eventMode}
                 className={cn(
@@ -453,7 +472,7 @@ export function QuickAdd() {
                 open={activeChip === "time"}
                 onClick={() => setActiveChip(activeChip === "time" ? null : "time")}
                 icon={<CalendarClock className="size-3.5" />}
-                label={parsed.due_at ? formatDueShort(parsed.due_at, parsed.is_all_day) : tr(lang, "quickAdd.chipTime")}
+                label={parsed.due_at ? formatDueShort(parsed.due_date || parsed.due_at, parsed.is_all_day, accountZone) : tr(lang, "quickAdd.chipTime")}
               />
               <Chip
                 kind="repeat"
@@ -469,7 +488,7 @@ export function QuickAdd() {
                 open={activeChip === "reminder"}
                 onClick={() => setActiveChip(activeChip === "reminder" ? null : "reminder")}
                 icon={<Bell className="size-3.5" />}
-                label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at) : tr(lang, "quickAdd.chipReminder")}
+                label={parsed.reminder_at ? reminderShort(parsed.reminder_at, parsed.due_at, accountZone) : tr(lang, "quickAdd.chipReminder")}
               />
               <Chip
                 kind="priority"
@@ -548,6 +567,7 @@ export function QuickAdd() {
                   "text-[11px] text-muted-fg hover:text-fg border border-border rounded-full px-2 py-0.5",
                   i >= 2 && "hidden md:inline-flex"
                 )}
+                disabled={saving}
                 onClick={() => setText(ex)}
               >
                 {ex.length > 56 ? ex.slice(0, 54) + "…" : ex}
@@ -631,13 +651,9 @@ function classifyQuadrant(p: ParsedQuickInput, now: Date): Quadrant {
   else q = "q4";
   // A near-term date (today / tomorrow / past) adds the urgency layer:
   // Schedule (q2) → Do first (q1), Eliminate (q4) → Delegate (q3).
-  const tomorrow = addDays(now, 1);
-  const dateUrgent = p.due_at
-    ? (() => {
-        const d = new Date(p.due_at);
-        return isToday(d) || isPast(d) || d <= tomorrow;
-      })()
-    : false;
+  const zone = p.schedule_timezone || 'UTC';
+  const tomorrow = addCalendarDays(calendarDate(now, zone), 1);
+  const dateUrgent = p.due_at ? (p.due_date || calendarDate(new Date(p.due_at), zone)) <= tomorrow : false;
   if (dateUrgent) {
     if (q === "q2") q = "q1";
     else if (q === "q4") q = "q3";
@@ -860,10 +876,10 @@ function rruleShort(rule: string) {
   if (/FREQ=YEARLY/i.test(rule)) return "Yearly";
   return "Repeats";
 }
-function reminderShort(reminderIso: string, dueIso: string | null) {
-  if (!dueIso) return new Date(reminderIso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+function reminderShort(reminderIso: string, dueIso: string | null, zone: string) {
+  if (!dueIso) return new Date(reminderIso).toLocaleTimeString(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit" });
   const offsetMs = new Date(dueIso).getTime() - new Date(reminderIso).getTime();
-  if (offsetMs <= 0) return new Date(reminderIso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  if (offsetMs <= 0) return new Date(reminderIso).toLocaleTimeString(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit" });
   const min = Math.round(offsetMs / 60_000);
   if (min >= 60 && min % 60 === 0) {
     const h = min / 60;
@@ -871,20 +887,9 @@ function reminderShort(reminderIso: string, dueIso: string | null) {
   }
   return `${min}m before`;
 }
-function formatDueShort(iso: string, allDay: boolean) {
-  const d = new Date(iso);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
-  const dayPart =
-    d >= today && d < tomorrow
-      ? "Today"
-      : d >= tomorrow && d < dayAfter
-      ? "Tomorrow"
-      : d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  if (allDay) return dayPart;
-  return `${dayPart} ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+function formatDueShort(iso: string, allDay: boolean, zone: string) {
+  const label = formatDue(iso, allDay, new Date(), zone);
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function isTyping(e: KeyboardEvent) {

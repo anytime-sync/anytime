@@ -7,12 +7,15 @@ import { toast } from "sonner";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useLanguage } from "@/lib/use-language";
 import { onboardingCopy } from "@/lib/onboarding-copy";
+import { useAccountDay } from "@/hooks/use-account-day";
+import { dayWindow } from "@/lib/day-window";
 import { useCreateTask } from "@/hooks/use-tasks";
 
 /** A dismissible first-run task capture flow. Saved fields clear before retry. */
 const SEEN_KEY = "fl.onboardingSeen";
 
 export function OnboardingModal() {
+  const account = useAccountDay();
   const copy = onboardingCopy(useLanguage());
   const saving = useRef(false);
   const createTask = useCreateTask();
@@ -50,15 +53,14 @@ export function OnboardingModal() {
 
   async function addThree() {
     if (saving.current) return;
+    if (account.isPending || account.error) { toast.error('Account timezone is unavailable.'); return; }
     const pending = tasks.map((title, index) => ({ title: title.trim(), index })).filter(t => t.title);
     if (!pending.length) return;
     saving.current = true;
     setBusy(true);
     try {
       for (const { title, index } of pending) {
-        const endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
-        await createTask.mutateAsync({ title, due_at: endOfToday.toISOString(), start_at: null, is_all_day: true });
+        await createTask.mutateAsync({ title, due_date: account.date, due_at: dayWindow(account.date, account.timeZone).start.toISOString(), schedule_timezone: account.timeZone, start_at: null, is_all_day: true });
         setTasks(previous => {
           const remaining = [...previous] as [string, string, string];
           remaining[index] = "";

@@ -1,5 +1,7 @@
 "use client";
 
+import { useAccountDay } from './use-account-day';
+import { calendarDate } from '@/lib/day-window';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -45,11 +47,14 @@ export function useCalendarConnection() {
   });
 }
 
-export function useCalendarEvents({ from, to }: { from: Date; to: Date }) {
+export function useCalendarEvents({ from, to }: { from: Date; to: Date }, enabled = true) {
+  const { timeZone } = useAccountDay();
+  const fromDate = calendarDate(from, timeZone), toDate = calendarDate(to, timeZone);
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
   return useQuery({
-    queryKey: ["calendarEvents", fromIso, toIso],
+    queryKey: ["calendarEvents", fromIso, toIso, timeZone],
+    enabled,
     queryFn: async () => {
       const supabase = createClient();
       // Cancelled events stay in the table for audit; hide them in the
@@ -62,8 +67,7 @@ export function useCalendarEvents({ from, to }: { from: Date; to: Date }) {
           "id, user_id, provider, external_id, calendar_id, title, description, location, start_at, end_at, is_all_day, status, html_link, organizer_email, attendees_count, raw, fetched_at, cancelled"
         )
         .eq("cancelled", false)
-        .lt("start_at", toIso)
-        .gt("end_at", fromIso)
+        .or(`and(is_all_day.eq.true,raw->start->>date.lt.${toDate},raw->end->>date.gt.${fromDate}),and(raw->start->>date.is.null,start_at.lt.${toIso},end_at.gt.${fromIso})`)
         .order("start_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as CalendarEvent[];
@@ -92,13 +96,15 @@ export function useSyncCalendarNow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchJson<{ ok: boolean; count: number }>(
+      fetchJson<import("@/lib/calendar-sync-now").SyncNowResult>(
         "/api/calendar/google/sync-now",
         { method: "POST" }
       ),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["calendarEvents"] });
-      qc.invalidateQueries({ queryKey: ["calendarConnection"] });
+    onSuccess: result => {
+      if (!result.ok) toast.error(`Calendar sync incomplete: ${result.pending ?? '?'} tasks pending, ${result.pending_deletions ?? '?'} deletions pending, ${result.conflicts ?? '?'} conflicts. ${result.inbound.error || result.outbound.error || result.deletions.error || result.error || ''}`);
+    },
+    onSettled: () => {
+      for (const key of ['calendarEvents', 'calendarConnection', 'tasks', 'task', 'subtasks', 'subtaskCounts', 'calendarSyncIssues', 'upcoming-reminders']) void qc.invalidateQueries({ queryKey: [key] });
     },
     onError: (e: Error) => {
       toast.error(e.message);

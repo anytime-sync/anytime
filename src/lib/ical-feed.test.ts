@@ -90,3 +90,15 @@ describe('Apple Calendar feed regressions', () => {
     expect(buildEventInput(task, 'America/New_York')).toMatchObject({ start: { dateTime: '2026-10-25T13:00:00.000Z', timeZone: 'America/New_York' }, recurrence: [`RRULE:${task.rrule}`] });
   });
 });
+
+it('saved series zones survive account travel and coexist in one ICS feed', () => {
+  const newYork = { ...base, id: 'ny', time_kind: 'work' as const, schedule_timezone: 'America/New_York', start_at: '2026-10-25T13:00:00Z', due_at: '2026-10-25T14:00:00Z', rrule: 'FREQ=WEEKLY;COUNT=3' };
+  const taipei = { ...newYork, id: 'taipei', schedule_timezone: 'Asia/Taipei', start_at: '2026-10-25T01:00:00Z', due_at: '2026-10-25T02:00:00Z' };
+  const text = buildIcs([newYork, taipei], 'Pacific/Pago_Pago');
+  const component = new ICAL.Component(ICAL.parse(text));
+  const events = component.getAllSubcomponents('vevent').map(c => new ICAL.Event(c));
+  expect(component.getAllSubcomponents('vtimezone').map(c => c.getFirstPropertyValue('tzid')).sort()).toEqual(['America/New_York','Asia/Taipei']);
+  const ny = events[0].iterator(), tw = events[1].iterator();
+  expect([ny.next(),ny.next()].map(d => d!.toJSDate().toISOString())).toEqual(['2026-10-25T13:00:00.000Z','2026-11-01T14:00:00.000Z']);
+  expect([tw.next(),tw.next()].map(d => d!.toJSDate().toISOString())).toEqual(['2026-10-25T01:00:00.000Z','2026-11-01T01:00:00.000Z']);
+});

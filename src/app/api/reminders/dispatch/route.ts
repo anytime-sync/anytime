@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getResend, getFromAddress } from "@/lib/resend";
-import { format } from "date-fns";
-import { getLanguage, t, type LanguageCode } from "@/lib/i18n";
+import { taskNotificationDate } from "@/lib/task-notification";
+import type { TaskDates } from "@/lib/task-schedule";
+import { t, type LanguageCode } from "@/lib/i18n";
 import { makeUnsubToken } from "@/lib/unsub-token";
 import webpush from "web-push";
 import { isAuthorizedCron } from "@/lib/cron-auth";
@@ -73,7 +74,7 @@ async function handle(req: Request) {
   function dueQuery(withFailGuard: boolean) {
     let q = supabase
       .from("tasks")
-      .select("id, user_id, title, due_at, reminder_at, project_id")
+      .select("id, user_id, title, start_at, due_at, start_date, due_date, time_kind, is_all_day, schedule_timezone, reminder_at, project_id")
       .lte("reminder_at", nowIso)
       .is("reminder_sent_at", null)
       .eq("is_completed", false);
@@ -109,15 +110,18 @@ async function handle(req: Request) {
   }
 
   // Resolve preferences (language + email_reminders).
-  const { data: prefRows } = await supabase
+  const { data: prefRows, error: prefError } = await supabase
     .from("user_preferences")
-    .select("user_id, email_reminders, language")
+    .select("user_id, email_reminders, push_reminders, language, timezone")
     .in("user_id", userIds);
-  const prefByUser = new Map<string, { language: string; email_reminders: boolean }>();
+  if (prefError) return NextResponse.json({ error: "preferences_unavailable" }, { status: 503 });
+  const prefByUser = new Map<string, { language: string; email_reminders: boolean; push_reminders: boolean; timezone: string }>();
   for (const r of prefRows ?? []) {
     prefByUser.set(r.user_id, {
       language: r.language ?? "en",
       email_reminders: r.email_reminders ?? true,
+      push_reminders: r.push_reminders ?? true,
+      timezone: r.timezone ?? "UTC",
     });
   }
 
@@ -226,7 +230,8 @@ async function handle(req: Request) {
         subject,
         html: emailHtml({
           title: task.title,
-          dueAt: task.due_at,
+          task,
+          timezone: pref?.timezone ?? "UTC",
           lang,
           appUrl,
           unsubUrl: `${appUrl}/api/reminders/unsubscribe?t=${makeUnsubToken(task.user_id)}`,
@@ -274,7 +279,7 @@ async function handle(req: Request) {
       // Skip if feature is disabled globally or user opted out of push.
       if (!emailRemindersEnabled) continue;
       if (!claimedTaskIds.has(task.id)) continue;
-      const pushFlag = (pref as any)?.push_reminders;
+      const pushFlag = pref?.push_reminders;
       if (pushFlag === false) continue;
       const list = subsByUser.get(task.user_id) ?? [];
       for (const s of list) {
@@ -328,21 +333,20 @@ async function handle(req: Request) {
 
 function emailHtml({
   title,
-  dueAt,
+  task,
+  timezone,
   lang,
   appUrl,
   unsubUrl,
 }: {
   title: string;
-  dueAt: string | null;
+  task: TaskDates;
+  timezone: string;
   lang: LanguageCode;
   appUrl: string;
   unsubUrl: string;
 }): string {
-  const locale = getLanguage(lang).dateFnsLocale;
-  const dueStr = dueAt
-    ? format(new Date(dueAt), "EEEE, MMMM d · HH:mm", { locale })
-    : "";
+  const dueStr = taskNotificationDate(task, timezone, lang);
 
   // Brand-aligned: cream bg, serif headline, warm gold accent.
   return `<!doctype html>

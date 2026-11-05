@@ -7,8 +7,8 @@
  * pre-translated chrome object built from i18n.ts.
  */
 import { type Locale } from "date-fns";
-import { calendarDate, validDate } from "@/lib/day-window";
-import { legacyCalendarTask } from "@/lib/task-legacy-dates";
+import { calendarDate } from "@/lib/day-window";
+import { taskNotificationDate } from "@/lib/task-notification";
 import { type TaskTimeKind } from "@/lib/task-schedule";
 import { safeTimezone } from "@/lib/ai/tz";
 import { type LanguageCode } from "@/lib/i18n";
@@ -18,6 +18,9 @@ export type DigestTask = {
   id: string;
   title: string;
   start_at?: string | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  schedule_timezone?: string | null;
   due_at: string | null;
   time_kind?: TaskTimeKind | null;
   priority: number | null;
@@ -195,40 +198,7 @@ function digestDate(p: DigestPayload): string {
 }
 
 function taskDate(t: DigestTask, p: DigestPayload): string {
-  const due = taskEndpoint(t.due_at);
-  if (!due || !t.due_at) return "";
-  const timeZone = safeTimezone(p.timezone);
-  const dateOf = (value: string, date: Date) => validDate(value) ? value : calendarDate(date, timeZone);
-  const formatDate = (date: string) => new Intl.DateTimeFormat(p.language === "en" ? "en-US" : p.language, {
-    timeZone: "UTC", year: "numeric", month: "short", day: "numeric",
-  }).format(new Date(`${date}T00:00:00.000Z`));
-  const dueDate = dateOf(t.due_at, due);
-  const dateBased = t.is_all_day || t.time_kind === "span" || validDate(t.due_at);
-  // Unknown rows retain the existing read-only display compatibility. Never
-  // infer or persist intent from duration; explicit work has no duration cap.
-  const display = t.time_kind == null ? legacyCalendarTask(t) : t;
-  const start = taskEndpoint(display.start_at);
-  if (t.time_kind !== "deadline" && start && display.start_at && +due > +start) {
-    if (dateBased || validDate(display.start_at)) {
-      const startDate = dateOf(display.start_at, start);
-      // Task span ends are inclusive, unlike Google all-day event ends.
-      if (startDate < dueDate) return `${formatDate(startDate)} – ${formatDate(dueDate)}`;
-      if (startDate === dueDate) return formatDate(dueDate);
-    } else {
-      return `${timedDate(start, p)} – ${timedDate(due, p)}`;
-    }
-  }
-  if (dateBased) return dueDate === calendarDate(p.date, timeZone) ? "" : formatDate(dueDate);
-  return timedDate(due, p);
-}
-
-/** Reject invalid civil dates and zone-less timestamps instead of normalizing
- * them or interpreting them in the mail server's timezone. */
-function taskEndpoint(value: string | null | undefined): Date | null {
-  if (!value || !validDate(value.slice(0, 10))) return null;
-  if (!validDate(value) && !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)) return null;
-  const date = new Date(value);
-  return Number.isFinite(+date) ? date : null;
+  return taskNotificationDate(t, p.timezone, p.language, p.date);
 }
 
 function timedDate(date: Date, p: DigestPayload): string {

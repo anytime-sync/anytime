@@ -22,9 +22,10 @@ export function Reminders() {
   const [perm, setPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
-  const timeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const timeouts = useRef<Map<string, { timer: ReturnType<typeof setTimeout>; revision: string }>>(new Map());
 
-  const { data: upcoming = [] } = useQuery({
+  const [resume, setResume] = useState(0);
+  const { data: upcoming = [], refetch } = useQuery({
     queryKey: ["upcoming-reminders"],
     queryFn: async () => {
       const supabase = createClient();
@@ -32,13 +33,13 @@ export function Reminders() {
       const end = new Date(now.getTime() + 60 * 60 * 1000); // +1h
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, reminder_at, due_at")
+        .select("id, title, reminder_at, due_at, updated_at")
         .eq("is_completed", false)
         .not("reminder_at", "is", null)
         .gte("reminder_at", now.toISOString())
         .lte("reminder_at", end.toISOString());
       if (error) throw error;
-      return (data ?? []) as Pick<Task, "id" | "title" | "reminder_at" | "due_at">[];
+      return (data ?? []) as Pick<Task, "id" | "title" | "reminder_at" | "due_at" | "updated_at">[];
     },
     refetchInterval: 60_000,
   });
@@ -46,12 +47,10 @@ export function Reminders() {
   // (Re)schedule timeouts whenever the upcoming list changes.
   useEffect(() => {
     const map = timeouts.current;
-    // clear stale
-    for (const [id, timer] of map) {
-      if (!upcoming.find((u) => u.id === id)) {
-        clearTimeout(timer);
-        map.delete(id);
-      }
+    const revision = (u: typeof upcoming[number]) => JSON.stringify([u.reminder_at, u.title, u.updated_at]);
+    for (const [id, saved] of map) {
+      const row = upcoming.find(u => u.id === id);
+      if (!row || saved.revision !== revision(row)) { clearTimeout(saved.timer); map.delete(id); }
     }
     // add new
     for (const u of upcoming) {
@@ -73,22 +72,35 @@ export function Reminders() {
         }
         map.delete(u.id);
       }, ms);
-      map.set(u.id, t);
+      map.set(u.id, { timer: t, revision: revision(u) });
     }
     return () => {
       // don't clear on every render; only on unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [upcoming]);
+  }, [upcoming, resume, setSelected]);
 
   // Cleanup all on unmount.
   useEffect(() => {
     const map = timeouts.current;
     return () => {
-      for (const t of map.values()) clearTimeout(t);
+      for (const t of map.values()) clearTimeout(t.timer);
       map.clear();
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () => {
+      for (const saved of timeouts.current.values()) clearTimeout(saved.timer);
+      timeouts.current.clear();
+      void Promise.resolve(refetch()).then(() => { if (mounted) setResume(v => v + 1); }).catch(() => { /* Keep stale timers cancelled until a successful refresh. */ });
+    };
+    const visible = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', visible);
+    return () => { mounted = false; window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', visible); };
+  }, [refetch]);
 
   if (perm === "unsupported") return null;
 

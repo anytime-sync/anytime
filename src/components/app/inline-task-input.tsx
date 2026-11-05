@@ -1,10 +1,11 @@
 "use client";
 
 import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
+import { captureEventDates } from '@/lib/capture-event-dates';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Calendar, CalendarClock, ChevronDown, Flag, Folder, Hash, Repeat, Sparkles } from "lucide-react";
 import {
-  parseQuickInput,
+  formatDue, parseQuickInput,
   describeParsed,
   type ParsedQuickInput,
 } from "@/lib/quick-parse";
@@ -14,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateProject, useProjects } from "@/hooks/use-projects";
 import { useTags } from "@/hooks/use-tags";
-import { useParseTaskAI } from "@/hooks/use-ai";
+import { useParseTaskAI, useUserPrefs } from "@/hooks/use-ai";
 import { VoiceButton } from "./voice-button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/use-language";
@@ -40,14 +41,18 @@ const EVENT_TRIGGER_RE =
 export function InlineTaskInput({
   defaultProjectId = null,
   defaultDueAt = null,
+  disabled = false,
   placeholder = 'Add task — try "Email Sam tomorrow 9am, urgent #work"',
 }: {
   defaultProjectId?: string | null;
   defaultDueAt?: string | null;
+  disabled?: boolean;
   placeholder?: string;
 }) {
   const lang = useLanguage();
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   // Round F v4.7: when GCal is connected, allow user to create the
   // input as a Google Calendar event instead of a native task.
   const [mode, setMode] = useState<"task" | "event">("task");
@@ -62,22 +67,25 @@ export function InlineTaskInput({
   const create = useCreateTask();
   const update = useUpdateTask();
   const createProject = useCreateProject();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isPending: projectsPending, isError: projectsError } = useProjects();
   // Resolve known tag colors so #tag in the preview pills matches the
   // sidebar / task-row look. New tag names (no row yet) fall back to the
   // accent gold so they still read as a tag, not a generic chip.
   const { data: existingTags = [] } = useTags();
   const aiParse = useParseTaskAI();
+  const { data: accountPrefs, isPending: timezonePending, error: timezoneError } = useUserPrefs();
+  const accountZone = accountPrefs?.timezone || 'UTC';
 
   // Pass the user's existing tags and lists in so the parser can
   // auto-detect them in plain prose (e.g. "biz review meeting" picks
   // up the "biz review" + "meeting" tags without typing #).
   const parseCtx = useMemo(
     () => ({
+      timezone: accountZone,
       existingTags: existingTags.map((t: any) => t.name),
       existingProjects: projects.map((p: any) => p.name),
     }),
-    [existingTags, projects]
+    [existingTags, projects, accountZone]
   );
   const parsed = useMemo(() => parseQuickInput(text, parseCtx), [text, parseCtx]);
   // Auto-flip mode based on whether the text contains a calendar trigger.
@@ -88,35 +96,41 @@ export function InlineTaskInput({
   }, [text]);
   const showPreview = text.trim().length > 0 && hasAnyExtraction(parsed);
 
-  /**
-   * Submit philosophy — make Enter feel instant.
-   *
-   * Old flow blocked the user for the entire Anthropic round-trip
-   * (~700-1500ms) before clearing the input or showing the new task.
-   *
-   * New flow:
-   *   1. Clear the input synchronously so the user can type the next task.
-   *   2. Insert immediately using the local chrono-based parse (it
-   *      handles 90%+ of inputs correctly). useCreateTask now does an
-   *      optimistic cache insert so the row paints in the same frame.
-   *   3. Fire the AI parse in the background. If it returns extra
-   *      structure the local parser missed, patch the new task.
-   */
-  function submit(e: React.FormEvent) {
+  /** Preserve failed drafts and serialize capture while its list/task is saved. */
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const raw = text.trim();
-    if (!raw) return;
-    const localP = parsed;
+    if (!raw || disabled || savingRef.current) return;
+    if (timezonePending || timezoneError) { toast.error('Account timezone is unavailable. Please retry.'); return; }
+    if (parsed.error) { toast.error(parsed.error); return; }
+    const localP = { ...parsed };
     if (!localP.title) localP.title = raw;
-    setText("");
-    manualOverrideRef.current = null;
     if (mode === "event" && gcalAvailable) {
-      // Strip the calendar trigger words from the title before saving.
       const stripped = (localP.title || raw).replace(EVENT_TRIGGER_RE, "").replace(/\s+/g, " ").trim();
       if (stripped) localP.title = stripped;
-      void createGCalEvent(raw, localP);
+      savingRef.current = true;
+      setSaving(true);
+      try {
+        if (await createGCalEvent(localP)) {
+          setText('');
+          manualOverrideRef.current = null;
+        }
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
     } else {
-      void instantInsertAndRefine(raw, localP);
+      savingRef.current = true;
+      setSaving(true);
+      try {
+        if (await instantInsertAndRefine(raw, localP)) {
+          setText("");
+          manualOverrideRef.current = null;
+        }
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   }
 
@@ -124,23 +138,15 @@ export function InlineTaskInput({
   // creates a Google Calendar event instead of a native task. Uses
   // the same chrono parse to determine start_at; falls back to "now"
   // if no date was typed (the user can adjust on the calendar page).
-  async function createGCalEvent(raw: string, p: ParsedQuickInput) {
-    const startIso =
-      p.start_at ||
-      p.due_at ||
-      defaultDueAt ||
-      new Date(Date.now() + 60 * 60_000).toISOString();
-    const endIso = p.due_at || undefined;
-    const isAllDay = p.is_all_day && !!p.due_at;
+  async function createGCalEvent(p: ParsedQuickInput) {
+    const fallback = defaultDueAt || new Date(Date.now() + 60 * 60_000).toISOString();
     try {
       const res = await fetch("/api/calendar/google/event", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title: p.title,
-          start_at: startIso,
-          end_at: endIso,
-          is_all_day: isAllDay,
+          ...captureEventDates(p, fallback),
         }),
       });
       if (!res.ok) {
@@ -149,27 +155,34 @@ export function InlineTaskInput({
       }
       qc.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Added to Google Calendar");
+      return true;
     } catch (e) {
       toast.error(
         "Couldn't create event: " + (e instanceof Error ? e.message : "unknown")
       );
+      return false;
     }
   }
 
   async function instantInsertAndRefine(raw: string, p: ParsedQuickInput) {
     let projectId: string | null = defaultProjectId;
-    if (p.projectName) {
-      const found = projects.find(
-        (pr: any) => pr.name.toLowerCase() === p.projectName!.toLowerCase()
-      );
-      if (found) projectId = found.id;
-    }
-
     let createdTask: any;
     try {
+      if (p.projectName) {
+        if (projectsPending || projectsError) {
+          toast.error(t(lang, 'capture.listsUnavailable'));
+          return false;
+        }
+        const found = projects.find(pr => pr.name.toLowerCase() === p.projectName!.toLowerCase());
+        projectId = found ? found.id : (await createProject.mutateAsync({ name: p.projectName })).id;
+      }
       createdTask = await create.mutateAsync({
         title: p.title,
         start_at: p.start_at,
+        start_date: p.start_date,
+        due_date: p.due_date ?? undefined,
+        schedule_timezone: p.schedule_timezone,
+        reminder_offset_min: p.reminder_offset_min,
         time_kind: p.time_kind,
         due_at: p.due_at ?? defaultDueAt,
         is_all_day: p.due_at ? p.is_all_day : !!defaultDueAt,
@@ -180,20 +193,20 @@ export function InlineTaskInput({
         reminder_at: p.reminder_at,
       } as any);
     } catch {
-      return;
+      return false;
     }
-    if (!createdTask?.id) return;
+    if (!createdTask?.id) return false;
 
     // Skip the AI hop when local parse already captured a date AND the
     // input is plain ASCII (no need for multilingual title rewriting).
     const localGotEnough =
       !!p.due_at && /^[\x00-\x7F]*$/.test(raw) && raw.length < 80;
-    if (localGotEnough) return;
+    if (localGotEnough) return true;
 
     try {
-      if (!HOSTED_AI_ENABLED) return;
+      if (!HOSTED_AI_ENABLED) return true;
       const ai = await aiParse.mutateAsync(raw);
-      if (!ai || !ai.title) return;
+      if (!ai || !ai.title) return true;
 
       let aiProjectId = projectId;
       if (ai.projectName && !aiProjectId) {
@@ -226,6 +239,7 @@ export function InlineTaskInput({
     } catch {
       // AI failure is silent — the locally-parsed task is already saved.
     }
+    return true;
   }
 
   return (
@@ -239,13 +253,16 @@ export function InlineTaskInput({
           className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-fg"
           placeholder={placeholder}
           value={text}
+          disabled={disabled}
+          readOnly={saving}
+          aria-busy={saving}
           onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { if (!HOSTED_AI_ENABLED) return; const items = e.clipboardData?.items; if (!items) return; for (const it of Array.from(items)) { if (it.kind === "file" && it.type.startsWith("image/")) { const f = it.getAsFile(); if (f) { e.preventDefault(); setScanFile(f); setScanOpen(true); return; } } } }}
         />
         {gcalAvailable && (
           <button
             type="button"
-            onClick={() => () => { const next = mode === "task" ? "event" : "task"; manualOverrideRef.current = next; setMode(next); }}
+            onClick={() => { const next = mode === "task" ? "event" : "task"; manualOverrideRef.current = next; setMode(next); }}
             title={
               mode === "event"
                 ? "Creates a Google Calendar event on Enter — click to switch back to Task"
@@ -283,7 +300,7 @@ export function InlineTaskInput({
             {parsed.due_at && (
               <PreviewChip
                 icon={<CalendarClock className="size-3" />}
-                label={shortDue(parsed.due_at, parsed.is_all_day)}
+                label={shortDue(parsed.due_date || parsed.due_at, parsed.is_all_day, accountZone)}
               />
             )}
             {parsed.rrule && (
@@ -292,7 +309,7 @@ export function InlineTaskInput({
             {parsed.reminder_at ? (
               <PreviewChip
                 icon={<Bell className="size-3" />}
-                label={shortReminder(parsed.reminder_at, parsed.due_at)}
+                label={shortReminder(parsed.reminder_at, parsed.due_at, accountZone)}
               />
             ) : parsed.reminder_offset_min ? (
               // Offset parsed but no date yet — show "30m before · needs date"
@@ -407,12 +424,12 @@ function formatOffset(min: number): string {
   }
   return `${min}m`;
 }
-function shortReminder(reminderIso: string, dueIso: string | null) {
+function shortReminder(reminderIso: string, dueIso: string | null, zone: string) {
   if (!dueIso)
-    return new Date(reminderIso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return new Date(reminderIso).toLocaleTimeString(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit" });
   const offsetMs = new Date(dueIso).getTime() - new Date(reminderIso).getTime();
   if (offsetMs <= 0)
-    return new Date(reminderIso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return new Date(reminderIso).toLocaleTimeString(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit" });
   const min = Math.round(offsetMs / 60_000);
   if (min >= 60 && min % 60 === 0) {
     const h = min / 60;
@@ -420,18 +437,7 @@ function shortReminder(reminderIso: string, dueIso: string | null) {
   }
   return `${min}m before`;
 }
-function shortDue(iso: string, allDay: boolean) {
-  const d = new Date(iso);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
-  const dayPart =
-    d >= today && d < tomorrow
-      ? "Today"
-      : d >= tomorrow && d < dayAfter
-      ? "Tomorrow"
-      : d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  if (allDay) return dayPart;
-  return `${dayPart} ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+function shortDue(iso: string, allDay: boolean, zone: string) {
+  const label = formatDue(iso, allDay, new Date(), zone);
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }

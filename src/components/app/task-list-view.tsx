@@ -13,6 +13,8 @@ import { ActionBrief } from "./action-brief";
 
 import { useLanguage } from "@/lib/use-language";
 import { t as tr } from "@/lib/i18n";
+import { useAccountDay } from '@/hooks/use-account-day';
+import { taskViewWindow } from '@/lib/task-view-window';
 
 type Props = {
   title: string;
@@ -73,8 +75,13 @@ export function TaskListView({
   sortKey,
   groupByDate = false,
 }: Props) {
-  const { items, isLoading } = useViewItems(filter);
+  const { items, isLoading, isError } = useViewItems(filter);
   const lang = useLanguage();
+  const day = useAccountDay();
+  const win = useMemo(() => taskViewWindow(filter.view, day.date, day.timeZone), [filter.view, day.date, day.timeZone]);
+  const daySubtitle = win && (filter.view === 'today' || filter.view === 'tomorrow')
+    ? new Intl.DateTimeFormat(lang, { timeZone: day.timeZone, weekday: 'long', month: 'long', day: 'numeric' }).format(win.from)
+    : subtitle;
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -154,7 +161,7 @@ export function TaskListView({
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl md:text-4xl tracking-tight truncate leading-tight">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-fg mt-1 truncate">{subtitle}</p>}
+            {daySubtitle && <p className="text-sm text-muted-fg mt-1 truncate">{daySubtitle}{win ? ` · ${day.timeZone}` : ''}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {showRevertChip && (
@@ -191,11 +198,14 @@ export function TaskListView({
         )}
         {prelude && <div className="px-3">{prelude}</div>}
         <InlineTaskInput
+          disabled={!!win && (day.isPending || !!day.error)}
           defaultProjectId={defaults?.project_id ?? null}
-          defaultDueAt={defaults?.due_at ?? null}
+          defaultDueAt={defaults?.due_at ?? (filter.view === 'today' ? win?.from.toISOString() : null)}
         />
 
-        {isLoading ? (
+        {isError ? (
+          <div role="alert" className="text-sm text-muted-fg px-3">{tr(lang, 'taskList.loadError')}</div>
+        ) : isLoading ? (
           <div className="text-sm text-muted-fg px-3">{tr(lang, "taskList.loading")}</div>
         ) : renderItems.length === 0 && completedTasks.length === 0 ? (
           <div className="px-3 py-12 text-center text-muted-fg">
@@ -258,16 +268,10 @@ function GroupedSections({
   lang: import("@/lib/i18n").LanguageCode | string;
   onManualReorder?: () => void;
 }) {
-  const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startTomorrow = new Date(startToday);
-  startTomorrow.setDate(startTomorrow.getDate() + 1);
-  const startDayAfter = new Date(startTomorrow);
-  startDayAfter.setDate(startDayAfter.getDate() + 1);
-  const startIn7 = new Date(startToday);
-  startIn7.setDate(startIn7.getDate() + 7);
-  const startIn90 = new Date(startToday);
-  startIn90.setDate(startIn90.getDate() + 90);
+  const { date, timeZone } = useAccountDay();
+  const [startTomorrow, startDayAfter, startIn7, startIn90] = useMemo(() =>
+    ['today', 'tomorrow', 'next7', 'next90'].map(view => taskViewWindow(view, date, timeZone)!.to),
+  [date, timeZone]);
 
   const today: ViewItem[] = [];
   const tomorrow: ViewItem[] = [];

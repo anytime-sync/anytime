@@ -62,7 +62,7 @@ beforeEach(() => {
       case "profiles": return json({ email: `${url.searchParams.get("id")?.slice(3)}@example.invalid`, full_name: "Reader" });
       case "tasks":
         if (taskError) return json({ message: "tasks unavailable" }, 400);
-        return json(url.searchParams.getAll("due_at").some(v => v.startsWith("gte."))
+        return json((url.searchParams.getAll("due_at").some(v => v.startsWith("gte.")) || (url.searchParams.get("or") ?? "").includes(".gte."))
           ? scopedRows(tasksByUser, url, dueToday) : overdue);
       case "calendar_events": {
         const offset = Number(url.searchParams.get("offset") ?? 0);
@@ -106,7 +106,7 @@ describe("daily digest calendar integration", () => {
       // The HTTP fixture returns whole task objects. Assert the actual wire
       // projection so missing selected columns cannot falsely pass this test.
       expect(url.searchParams.get("select")?.split(","))
-        .toEqual(["id", "title", "start_at", "due_at", "time_kind", "priority", "is_all_day"]);
+        .toEqual(["id", "title", "start_at", "due_at", "start_date", "due_date", "schedule_timezone", "time_kind", "priority", "is_all_day"]);
     }
     expect(mocks.send).toHaveBeenCalledOnce();
     for (const body of [mocks.send.mock.calls[0][0].html, mocks.send.mock.calls[0][0].text]) {
@@ -274,4 +274,21 @@ describe("daily digest calendar integration", () => {
       expect(body).toContain(untitled);
     }
   });
+});
+
+it('renders overnight work, a civil span and a start-only task with canonical selectors', async () => {
+  dueToday = [
+    { id: 'night', title: 'Overnight work', time_kind: 'work', is_all_day: false, start_at: '2026-10-17T14:00Z', due_at: '2026-10-17T18:00Z', priority: 0 },
+    { id: 'span', title: 'Civil span', time_kind: 'span', is_all_day: true, start_date: '2026-10-16', due_date: '2026-10-18', due_at: '2026-10-17T16:00Z', schedule_timezone: 'Asia/Taipei', priority: 0 },
+    { id: 'start', title: 'Starts today', time_kind: 'deadline', start_at: '2026-10-17T02:00Z', due_at: null, priority: 0 },
+  ];
+  await request();
+  const q = calls.find(c => c.url.pathname.endsWith('/tasks'))!.url;
+  expect(q.searchParams.get('or')).toContain('time_kind.eq.work');
+  expect(q.searchParams.get('or')).toContain('start_date');
+  for (const body of [mocks.send.mock.calls[0][0].html, mocks.send.mock.calls[0][0].text]) {
+    expect(body).toContain('10:00 PM – Oct 18, 2026, 2:00 AM');
+    expect(body).toContain('Oct 16, 2026 – Oct 18, 2026');
+    expect(body).toContain('Starts today'); expect(body).toContain('10:00 AM');
+  }
 });

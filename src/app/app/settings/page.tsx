@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarSyncReview } from '@/components/app/calendar-sync-review';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -877,7 +878,8 @@ function GoogleCalendarSection({ lang }: { lang: string }) {
 
   function onSyncNow() {
     sync.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: result => {
+        if (!result.ok) return;
         toast.success(tr(lang, "view.settings.gcal.toast.synced"));
       },
       onError: (e: Error) => {
@@ -931,6 +933,11 @@ function GoogleCalendarSection({ lang }: { lang: string }) {
           <Row label={tr(lang, "view.settings.gcal.lastSync")}>
             <span className="text-sm text-muted-fg">{lastSyncLabel}</span>
           </Row>
+          <CalendarSyncReview />
+          {sync.data && <p role="status" className="text-sm text-muted-fg">
+            Inbound: {sync.data.inbound.status} ({sync.data.inbound.tasks_updated ?? 0} tasks updated). Outbound: {sync.data.outbound.created} created, {sync.data.outbound.patched} acknowledged, {sync.data.outbound.failed} failed.
+            Pending: {sync.data.pending ?? '?'} tasks, {sync.data.pending_deletions ?? '?'} deletions. Conflicts requiring review: {sync.data.conflicts ?? '?'}.
+          </p>}
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               type="button"

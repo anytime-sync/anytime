@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { syncUserCalendar } from "@/lib/calendar-sync";
+import { syncCalendarNow } from "@/lib/calendar-sync-now";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,16 +34,8 @@ export async function POST() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const result = await syncUserCalendar({
-    supabase: service,
-    userId: user.id,
-  });
-
-  if (result.status === "error") {
-    return NextResponse.json(
-      { ok: false, error: result.error, count: result.count },
-      { status: 500 }
-    );
-  }
-  return NextResponse.json({ ok: true, count: result.count });
+  const result = await syncCalendarNow(service, user.id);
+  // A partial response is data: the client must refresh both task and calendar
+  // caches even if one direction or the final status read failed.
+  return NextResponse.json(result);
 }

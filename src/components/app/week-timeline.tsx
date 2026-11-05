@@ -1,4 +1,8 @@
 "use client";
+import { civilDay, civilTime, civilKey, civilWindow, taskDays } from '@/lib/calendar-civil';
+import { resolveLocalInput } from '@/lib/day-window';
+import { useAccountDay } from '@/hooks/use-account-day';
+import { toast } from 'sonner';
 import { calendarTask } from "@/lib/task-schedule";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -88,6 +92,8 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
 }
 
 export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
+  const account = useAccountDay();
+  const zone = account.timeZone;
   const update = useUpdateTask();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: false });
@@ -101,8 +107,8 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
   }, []);
 
   const weekStart = useMemo(
-    () => addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), weekOffset * 7),
-    [now.toDateString(), weekOffset]
+    () => addDays(startOfWeek(civilDay(account.date, zone), { weekStartsOn: 1 }), weekOffset * 7),
+    [account.date, zone, weekOffset]
   );
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -115,19 +121,19 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const m = minutesFromRailStart(now);
+    const m = minutesFromRailStart(civilTime(now, zone));
     const target = Math.max(0, m * PX_PER_MIN - 200);
     containerRef.current.scrollTo({ top: target });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function tasksForDay(day: Date): TaskWithTags[] {
-    const ds = startOfDay(day).getTime();
-    const de = ds + 24 * 60 * 60_000 - 1;
+    const win = civilWindow(day, zone);
+    const ds = +win.start, de = +win.nextStart;
     return tasks.filter((t) => {
       if (t.is_all_day || !t.start_at || !t.due_at || Date.parse(t.due_at) <= Date.parse(t.start_at)) return false;
       const a = new Date(t.start_at ?? t.due_at).getTime();
-      return a <= de && Date.parse(t.due_at) > ds;
+      return a < de && Date.parse(t.due_at) > ds;
     });
   }
 
@@ -135,17 +141,14 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
   // covers this day. Rendered as colored chips in the strip above the
   // hourly grid so multi-day spans like 5/5-5/7 are visible across cells.
   function allDayTasksForDay(day: Date): TaskWithTags[] {
-    const ds = startOfDay(day).getTime();
-    const de = ds + 24 * 60 * 60_000 - 1;
-    return tasks.filter((t) => {
-      if (!t.is_all_day || !(t.due_at ?? t.start_at)) return false;
-      const dueMs = startOfDay(new Date((t.due_at ?? t.start_at)!)).getTime();
-      const startMs = t.start_at ? startOfDay(new Date(t.start_at)).getTime() : dueMs;
-      return startMs <= de && dueMs >= ds;
+    return tasks.filter(task => {
+      const range = taskDays(task, zone);
+      return task.is_all_day && !!range && +range.first <= +day && +range.last >= +startOfDay(day);
     });
   }
 
   function onDragEnd(e: DragEndEvent) {
+    if (account.isPending || account.error) return;
     const { active, over, delta } = e;
     if (!over) return;
     const taskId = String(active.id);
@@ -156,12 +159,10 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const parts = dayKey.split("-").map((s) => parseInt(s, 10));
     if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return;
     const [yy, mm, dd] = parts as [number, number, number];
-    const newDay = new Date(yy, mm - 1, dd);
+    const newDay = civilDay(dayKey, zone);
 
     const origDue = new Date(task.due_at);
-    const origStart = task.start_at
-      ? new Date(task.start_at)
-      : new Date(origDue);
+    const origStart = civilTime(task.start_at || task.due_at, zone);
     const origHour = origStart.getHours();
     const origMin = origStart.getMinutes();
 
@@ -175,8 +176,9 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
     const newHour = Math.floor(clamped / 60);
     const newMinute = clamped % 60;
 
-    const newStart = new Date(newDay);
-    newStart.setHours(newHour, newMinute, 0, 0);
+    let newStart: Date;
+    try { newStart = new Date(resolveLocalInput(`${dayKey}T${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`, zone)); }
+    catch (error) { toast.error((error as Error).message); return; }
 
     if (!task.start_at) return;
     const durationMs = origDue.getTime() - Date.parse(task.start_at);
@@ -185,7 +187,7 @@ export function WeekTimeline({ weekOffset = 0 }: { weekOffset?: number } = {}) {
 
     if (
       isSameDay(newDay, origStart) &&
-      newStart.getTime() === origStart.getTime()
+      newStart.getTime() === Date.parse(task.start_at || task.due_at)
     )
       return;
 
@@ -275,13 +277,14 @@ function DayColumn({
   now: Date;
   onSelect: (id: string) => void;
 }) {
+  const { timeZone: zone } = useAccountDay();
   const dayKey = format(day, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: `day-${dayKey}` });
 
   const timed = tasks
     .map((t) => {
-      const due = new Date(t.due_at!);
-      const start = new Date(t.start_at!);
+      const due = civilTime(t.due_at!, zone);
+      const start = civilTime(t.start_at!, zone);
       const startMin = Math.max(0, (start.getTime() - startOfDay(day).getTime()) / 60000 - RAIL_START_HOUR * 60);
       const endMin = Math.min((RAIL_END_HOUR - RAIL_START_HOUR) * 60, (due.getTime() - startOfDay(day).getTime()) / 60000 - RAIL_START_HOUR * 60);
       return { task: t, start, due, startMin, endMin };
@@ -290,7 +293,7 @@ function DayColumn({
 
   const taskLayout = layoutColumns(timed);
 
-  const nowTop = isToday ? minutesFromRailStart(now) * PX_PER_MIN : null;
+  const nowTop = isToday ? minutesFromRailStart(civilTime(now, zone)) * PX_PER_MIN : null;
 
   return (
     <div

@@ -1,5 +1,8 @@
 "use client";
 
+import { civilDay, civilTime, civilKey } from "@/lib/calendar-civil";
+import { resolveLocalInput } from "@/lib/day-window";
+import { useAccountDay } from "@/hooks/use-account-day";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDays,
@@ -30,11 +33,12 @@ import { useLanguage } from "@/lib/use-language";
  *   - Compact 12-hour time row: HH : MM + AM/PM toggle
  *   - Today / Tomorrow / Clear chips
  *
- * Returns ISO strings via onChange; null when cleared.
+ * Returns a civil YYYY-MM-DD for all-day input, an ISO instant for timed input,
+ * or null when cleared.
  */
 
 type Props = {
-  value: string | null; // ISO
+  value: string | null; // civil date or ISO instant
   onChange: (iso: string | null) => void;
   placeholder?: string;
   className?: string;
@@ -64,6 +68,9 @@ export function DateTimePicker({
   allDay = false,
 }: Props) {
   const lang = useLanguage();
+  const account = useAccountDay();
+  const today = civilDay(account.date, account.timeZone);
+  const [error, setError] = useState('');
   const { data: prefs } = useUserPrefs();
   const locale = getLanguage(prefs?.language).dateFnsLocale;
   const resolvedPlaceholder = placeholder ?? t(lang, "dateTimePicker.pick");
@@ -78,7 +85,7 @@ export function DateTimePicker({
     return { AM: am, PM: pm };
   }, [locale]);
 
-  const current = value ? new Date(value) : null;
+  const current = value ? (allDay ? civilDay(value, account.timeZone) : civilTime(value, account.timeZone)) : null;
   const [open, setOpen] = useState(false);
   const [draftDay, setDraftDay] = useState<Date | null>(current);
   const [dirty, setDirty] = useState(false);
@@ -86,7 +93,7 @@ export function DateTimePicker({
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Draft changes are written only by Apply; dismissal discards them.
-  const [viewMonth, setViewMonth] = useState<Date>(() => current ?? new Date());
+  const [viewMonth, setViewMonth] = useState<Date>(() => current ?? today);
   const initial12 = to12h(current?.getHours() ?? 9);
   const [h12, setH12] = useState<number>(initial12.h12);
   const [mm, setMm] = useState<number>(current?.getMinutes() ?? 0);
@@ -95,13 +102,13 @@ export function DateTimePicker({
   // Re-sync local state when external value changes (e.g. parent reset).
   useEffect(() => {
     if (!value) return;
-    const d = new Date(value);
+    const d = allDay ? civilDay(value, account.timeZone) : civilTime(value, account.timeZone);
     const t = to12h(d.getHours());
     setH12(t.h12);
     setMeridiem(t.meridiem);
     setMm(d.getMinutes());
     setViewMonth(d);
-  }, [value]);
+  }, [value, allDay, account.timeZone]);
 
   // Click-outside to dismiss.
   useEffect(() => {
@@ -117,9 +124,12 @@ export function DateTimePicker({
 
   function commit(day: Date, hours12 = h12, minutes = mm, mer = meridiem) {
     const h24 = from12h(hours12, mer);
-    const d = new Date(day);
-    d.setHours(allDay ? 0 : h24, allDay ? 0 : minutes, 0, 0);
-    onChange(d.toISOString());
+    if (account.isPending || account.error) { setError('Account timezone is unavailable.'); return false; }
+    try {
+      const date = civilKey(day);
+      onChange(allDay ? date : resolveLocalInput(`${date}T${String(h24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`, account.timeZone));
+      setError(''); return true;
+    } catch (error) { setError((error as Error).message); return false; }
   }
 
   function selectDay(day: Date) {
@@ -131,18 +141,18 @@ export function DateTimePicker({
     setH12(nextH12);
     setMm(nextMm);
     setMeridiem(nextMer);
-    if (!draftDay) setDraftDay(new Date());
+    if (!draftDay) setDraftDay(today);
     setDirty(true);
   }
 
   function pickToday() {
-    const t = new Date();
+    const t = today;
     setViewMonth(t);
     selectDay(t);
   }
 
   function pickTomorrow() {
-    const t = addDays(new Date(), 1);
+    const t = addDays(today, 1);
     setViewMonth(t);
     selectDay(t);
   }
@@ -172,7 +182,7 @@ export function DateTimePicker({
         ref={triggerRef}
         onClick={() => {
           if (!open) {
-            setDraftDay(current); setDirty(false); setViewMonth(current ?? new Date());
+            setDraftDay(current); setDirty(false); setViewMonth(current ?? today);
             const time = to12h(current?.getHours() ?? 9);
             setH12(time.h12); setMeridiem(time.meridiem); setMm(current?.getMinutes() ?? 0);
           }
@@ -235,7 +245,7 @@ export function DateTimePicker({
           <div className="grid grid-cols-7 gap-0.5">
             {days.map((d) => {
               const sel = draftDay ? isSameDay(d, draftDay) : false;
-              const today = isSameDay(d, new Date());
+              const isToday = isSameDay(d, today);
               const inMonth = isSameMonth(d, viewMonth);
               return (
                 <button
@@ -248,7 +258,7 @@ export function DateTimePicker({
                       ? "bg-accent text-bg font-medium"
                       : "hover:bg-muted",
                     !inMonth && "text-muted-fg/40",
-                    today && !sel && "ring-1 ring-accent/50"
+                    isToday && !sel && "ring-1 ring-accent/50"
                   )}
                 >
                   {format(d, "d")}
@@ -329,6 +339,7 @@ export function DateTimePicker({
             </div>
           </div>}
 
+          {error && <p role="alert" className="text-xs text-red-500 mt-2">{error}</p>}
           {/* Quick presets and draft actions */}
           <div className="mt-2 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1">
@@ -359,7 +370,7 @@ export function DateTimePicker({
             </button>
             <button
               type="button"
-              onClick={() => { if (dirty && draftDay) commit(draftDay); setOpen(false); }}
+              onClick={() => { if (dirty && draftDay && !commit(draftDay)) return; setOpen(false); }}
               className="btn-ghost px-2 h-7"
             >
               {t(lang, "dateTimePicker.apply")}

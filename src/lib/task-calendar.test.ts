@@ -50,7 +50,7 @@ describe('explicit time intent', () => {
   it('advances recurrence without inventing starts or restarting COUNT', () => {
     const first = { due_at: '2026-10-08T01:00:00Z', time_kind: 'deadline' as const, rrule: 'FREQ=DAILY;COUNT=2' };
     const next = nextTaskRecurrence(first)!;
-    expect(next.patch).toEqual({ due_at: '2026-10-09T01:00:00.000Z', rrule: 'FREQ=DAILY;COUNT=1' });
+    expect(next.patch).toEqual({ due_at: '2026-10-09T01:00:00.000Z', rrule: 'FREQ=DAILY;COUNT=1', schedule_timezone: 'UTC', due_date: null });
     expect(nextTaskRecurrence({ ...first, ...next.patch })).toBeNull();
     const moved = nextTaskRecurrence({ ...work, rrule: 'FREQ=WEEKLY' })!.patch;
     expect(Date.parse(moved.due_at!) - Date.parse(moved.start_at!)).toBe(Date.parse(work.due_at) - Date.parse(work.start_at));

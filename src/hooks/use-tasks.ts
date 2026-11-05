@@ -1,13 +1,18 @@
 "use client";
 
 import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Tag } from "@/lib/db.types";
 import { toast } from "sonner";
 import { createTaskDates, resolveTaskDates } from "@/lib/task-schedule";
-import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
+import { completeTaskOccurrence } from "@/lib/task-completion";
 import { useUserPrefs } from "@/hooks/use-ai";
+import { useAccountDay } from '@/hooks/use-account-day';
+import { taskViewFilter, taskViewWindow } from '@/lib/task-view-window';
+import { attachCapturedTags } from '@/lib/capture-tags';
+import { readStoredLanguage, t } from '@/lib/i18n';
 
 export type TaskWithTags = Task & { tags: Tag[] };
 
@@ -19,9 +24,13 @@ export type TasksFilter = {
 };
 
 export function useTasks(filter: TasksFilter = {}) {
+  const day = useAccountDay();
+  const win = useMemo(() => taskViewWindow(filter.view, day.date, day.timeZone), [filter.view, day.date, day.timeZone]);
   return useQuery({
-    queryKey: ["tasks", filter],
+    queryKey: win ? ["tasks", filter, day.timeZone, day.date] : ["tasks", filter],
+    enabled: !win || !day.isPending,
     queryFn: async () => {
+      if (win && day.error) throw day.error;
       const supabase = createClient();
       let q = supabase
         .from("tasks")
@@ -54,25 +63,8 @@ export function useTasks(filter: TasksFilter = {}) {
       }
       if (filter.view === "inbox") q = q.is("project_id", null);
 
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfTomorrow = new Date(startOfToday);
-      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-      const endOfTomorrow = new Date(startOfTomorrow);
-      endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
-      const endOf7 = new Date(startOfToday);
-      endOf7.setDate(endOf7.getDate() + 7);
-      const endOf90 = new Date(startOfToday);
-      endOf90.setDate(endOf90.getDate() + 90);
-
-      if (filter.view === "today") {
-        q = q.or(`due_at.lt.${startOfTomorrow.toISOString()},and(due_at.is.null,start_at.lt.${startOfTomorrow.toISOString()})`);
-      } else if (filter.view === "tomorrow") {
-        q = q.or(`and(due_at.gte.${startOfTomorrow.toISOString()},due_at.lt.${endOfTomorrow.toISOString()}),and(due_at.is.null,start_at.gte.${startOfTomorrow.toISOString()},start_at.lt.${endOfTomorrow.toISOString()})`);
-      } else if (filter.view === "next7") {
-        q = q.or(`due_at.lt.${endOf7.toISOString()},and(due_at.is.null,start_at.lt.${endOf7.toISOString()})`);
-      } else if (filter.view === "next90") {
-        q = q.or(`due_at.lt.${endOf90.toISOString()},and(due_at.is.null,start_at.lt.${endOf90.toISOString()})`);
+      if (win) {
+        q = q.or(taskViewFilter(filter.view, win, day.timeZone));
       }
 
       const { data, error } = await q;
@@ -160,7 +152,10 @@ export function useTask(id: string | null) {
 
 export function useCreateTask() {
   const qc = useQueryClient();
+  const { data: prefs, isPending: prefsPending, error: prefsError } = useUserPrefs();
   return useMutation({
+    // The initial INSERT is not idempotent. Only metadata has a retry action.
+    retry: false,
     mutationFn: async (input: Partial<Task> & { title: string; tagNames?: string[] }) => {
       const supabase = createClient();
       const { data: u } = await supabase.auth.getUser();
@@ -170,7 +165,8 @@ export function useCreateTask() {
       // Strip the synthetic optimistic id (if the caller passed one) before
       // hitting Postgres — the DB assigns the real uuid.
       delete (taskInput as any).id;
-      Object.assign(taskInput, createTaskDates(taskInput));
+      if (prefsPending || prefsError) throw new Error('Account timezone is unavailable.');
+      Object.assign(taskInput, createTaskDates(taskInput, prefs?.timezone || 'UTC'));
       const { data: task, error } = await supabase
         .from("tasks")
         .insert({ ...taskInput, user_id: u.user.id })
@@ -178,32 +174,24 @@ export function useCreateTask() {
         .single();
       if (error) throw error;
 
-      if (tagNames && tagNames.length) {
-        const rows = tagNames.map((name) => ({ user_id: u.user!.id, name }));
-        const { data: tags, error: tagErr } = await supabase
-          .from("tags")
-          .upsert(rows, { onConflict: "user_id,name" })
-          .select();
-        if (tagErr) throw tagErr;
-        const links = (tags ?? []).map((t: any) => ({ task_id: task.id, tag_id: t.id }));
-        if (links.length) {
-          const { error: linkErr } = await supabase.from("task_tags").insert(links);
-          if (linkErr) throw linkErr;
-        }
+      const captured = { ...(task as Task), tags: [] as Tag[], pendingTagNames: [] as string[] };
+      try {
+        captured.tags = await attachCapturedTags(supabase, u.user.id, task.id, tagNames ?? []);
+      } catch {
+        // The task is durable. Do not roll it back or repeat its INSERT.
+        captured.pendingTagNames = [...new Set(tagNames)];
       }
-      return task as Task;
+      return captured;
     },
     /**
      * Optimistic insert — the new task appears in every visible list
      * the instant the user hits Enter, before the server responds.
-     * The server roundtrip (~200-500ms) becomes invisible. Any error
-     * rolls back to the prior list and surfaces a toast.
+     * Only task-insert failures remove this row. Later metadata failures
+     * preserve the saved task and offer a tag-only retry.
      */
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: ["tasks"] });
-      const prev = qc.getQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] });
-      const tempId =
-        (input as any).id ?? `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const now = new Date().toISOString();
       const optimistic: TaskWithTags = {
         id: tempId,
@@ -214,6 +202,7 @@ export function useCreateTask() {
         notes: input.notes ?? null,
         is_completed: false,
         completed_at: null,
+        start_date: input.start_date, due_date: input.due_date, schedule_timezone: input.schedule_timezone,
         start_at: input.start_at ?? null,
         time_kind: createTaskDates(input).time_kind,
         due_at: input.due_at ?? null,
@@ -243,14 +232,44 @@ export function useCreateTask() {
       qc.setQueriesData<TaskWithTags[]>({ queryKey: ["tasks"] }, (old) =>
         old ? [optimistic, ...old] : old
       );
-      return { prev, tempId };
+      return { tempId };
     },
     onError: (e: Error, _input, ctx) => {
-      ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old => old?.filter(task => task.id !== ctx?.tempId));
       toast.error(e.message);
     },
-    onSuccess: (createdTask) => {
+    onSuccess: (createdTask, _input, ctx) => {
+      qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old =>
+        old?.some(task => task.id === ctx?.tempId)
+          ? old.filter(task => task.id !== createdTask.id).map(task => task.id === ctx?.tempId ? createdTask : task)
+          : old
+      );
+      if (createdTask.pendingTagNames.length) {
+        const id = `capture-tags-${createdTask.id}`;
+        let retrying = false;
+        const warn = () => toast.warning(t(readStoredLanguage(), 'capture.tagsPending'), {
+          id, duration: Infinity,
+          description: `${createdTask.title} — ${createdTask.pendingTagNames.map(name => `#${name}`).join(' ')}`,
+          action: { label: t(readStoredLanguage(), 'capture.retryTags'), onClick: async event => {
+            event?.preventDefault();
+            if (retrying) return;
+            retrying = true;
+            try {
+              const tags = await attachCapturedTags(createClient(), createdTask.user_id, createdTask.id, createdTask.pendingTagNames);
+              qc.setQueriesData<TaskWithTags[]>({ queryKey: ['tasks'] }, old => old?.map(task => task.id === createdTask.id ? { ...task, tags } : task));
+              qc.invalidateQueries({ queryKey: ['tasks'] });
+              qc.invalidateQueries({ queryKey: ['task', createdTask.id] });
+              qc.invalidateQueries({ queryKey: ['tags'] });
+              toast.success(t(readStoredLanguage(), 'capture.tagsSaved'), { id, action: undefined, description: undefined, duration: 4000 });
+            } catch { warn(); }
+            finally { retrying = false; }
+          } },
+        });
+        warn();
+      }
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
@@ -307,15 +326,16 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   const qc = useQueryClient();
-  const { data: prefs } = useUserPrefs();
+  const { data: prefs, isPending: timezonePending, error: timezoneError } = useUserPrefs();
   return useMutation({
     mutationFn: async (p: Partial<Task> & { id: string }) => {
       const supabase = createClient();
       const { id, ...rest } = p;
-      if ("start_at" in rest || "due_at" in rest || "time_kind" in rest || "is_all_day" in rest) {
-        const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,is_all_day,time_kind").eq("id", id).single();
+      if ("start_date" in rest || "due_date" in rest || "start_at" in rest || "due_at" in rest || "time_kind" in rest || "is_all_day" in rest) {
+        if (timezonePending || timezoneError) throw new Error('Account timezone is unavailable. Please retry.');
+        const { data: current, error } = await supabase.from("tasks").select("start_at,due_at,start_date,due_date,schedule_timezone,reminder_offset_min,is_all_day,time_kind").eq("id", id).single();
         if (error) throw error;
-        Object.assign(rest, resolveTaskDates(current, rest, prefs?.timezone));
+        Object.assign(rest, resolveTaskDates(current, rest, prefs?.timezone || 'UTC'));
       }
       const { error } = await supabase.from("tasks").update(rest).eq("id", id);
       if (error) throw error;
@@ -330,10 +350,12 @@ export function useUpdateTask() {
     },
     onError: (_e, _p, ctx) => {
       ctx?.prev.forEach(([key, val]) => qc.setQueryData(key, val));
-      toast.error("Update failed");
+      toast.error(_e instanceof Error ? _e.message : 'Update failed');
     },
     onSettled: (_d, _e, p) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["task", p.id] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
@@ -343,46 +365,22 @@ export function useUpdateTask() {
 
 export function useToggleTask() {
   const update = useUpdateTask();
-  const { data: prefs } = useUserPrefs();
+  const qc = useQueryClient();
+  const { data: prefs, isPending: timezonePending, error: timezoneError } = useUserPrefs();
+  const complete = useMutation({
+    retry: false,
+    mutationFn: (task: Task) => {
+      if (timezonePending || timezoneError) throw new Error('Account timezone is unavailable. Please retry.');
+      return completeTaskOccurrence(createClient(), task, prefs?.timezone || 'UTC');
+    },
+    onError: (error: Error) => toast.error(error.message),
+    onSettled: () => {
+      for (const key of ['tasks', 'task', 'subtasks', 'subtaskCounts', 'calendarEvents', 'calendarSyncIssues', 'upcoming-reminders']) void qc.invalidateQueries({ queryKey: [key] });
+    },
+  });
   return (task: Task) => {
-    if (!task.is_completed) {
-      const recurrence = nextTaskRecurrence(task, prefs?.timezone);
-      if (recurrence) {
-        // Slide BOTH ends of the meeting window forward by the same
-        // delta so the duration is preserved on the next occurrence.
-        // Without this, only due_at advanced — start_at stayed pinned
-        // to the very first occurrence, so a monthly meeting that
-        // started 4/30 10:15 AM would render as "starts 4/30, ends
-        // 5/30" after the first roll-over instead of "starts 5/30,
-        // ends 5/30".
-        const patch: Partial<Task> & { id: string } = {
-          id: task.id,
-          ...recurrence.patch,
-        };
-        // Log this occurrence as a completed historical record so streaks,
-        // weekly retros, and the Completed view count the recurring
-        // completion. The live row keeps its id and slides forward (below);
-        // the clone is a one-off without rrule.
-        void (async () => {
-          try {
-            const sb = createClient();
-            const { data: u } = await sb.auth.getUser();
-            if (!u.user) return;
-            const { error } = await sb.from("tasks").insert(completedTaskOccurrence(task, u.user.id, new Date().toISOString()));
-            if (error) throw error;
-          } catch (e) {
-            console.error("[useToggleTask] recurring log clone failed", e);
-          }
-        })();
-        update.mutate(patch);
-        return;
-      }
-    }
-    update.mutate({
-      id: task.id,
-      is_completed: !task.is_completed,
-      completed_at: !task.is_completed ? new Date().toISOString() : null,
-    });
+    if (!task.is_completed && task.rrule) { complete.mutate(task); return; }
+    update.mutate({ id: task.id, is_completed: !task.is_completed, status: task.is_completed ? 'open' : 'done', completed_at: task.is_completed ? null : new Date().toISOString() });
   };
 }
 
@@ -408,6 +406,8 @@ export function useDeleteTask() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
     },
@@ -445,6 +445,7 @@ export function useReorderTasks() {
     onError: (_e, _v, ctx) => {
       ctx?.prev.forEach(([k, v]) => qc.setQueryData(k, v));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSettled: () => { void qc.invalidateQueries({ queryKey: ["tasks"] }); void qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] }); },
   });
 }

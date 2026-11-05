@@ -64,7 +64,7 @@ export async function GET(
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await admin
       .from("tasks")
-      .select("id, title, notes, start_at, due_at, time_kind, is_all_day, is_completed, status, rrule, updated_at, created_at, estimated_minutes")
+      .select("id, title, notes, start_at, due_at, start_date, due_date, schedule_timezone, time_kind, is_all_day, is_completed, status, rrule, updated_at, created_at, estimated_minutes")
       .eq("user_id", pref.user_id)
       .is("parent_id", null)
       .eq("is_completed", false)

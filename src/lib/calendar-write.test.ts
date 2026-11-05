@@ -1,259 +1,478 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ create: vi.fn(), patch: vi.fn(), remove: vi.fn(), get: vi.fn(), token: vi.fn() }));
-vi.mock('./google-calendar', () => ({ createCalendarEvent: mocks.create, patchCalendarEvent: mocks.patch, deleteCalendarEvent: mocks.remove, getCalendarEvent: mocks.get }));
+const mocks = vi.hoisted(() => ({
+  create: vi.fn(),
+  patch: vi.fn(),
+  remove: vi.fn(),
+  get: vi.fn(),
+  token: vi.fn(),
+}));
+vi.mock('./google-calendar', () => ({
+  createCalendarEvent: mocks.create,
+  patchCalendarEvent: mocks.patch,
+  deleteCalendarEvent: mocks.remove,
+  getCalendarEvent: mocks.get,
+}));
 vi.mock('./calendar-token', () => ({ getValidAccessToken: mocks.token }));
-import { buildEventInput, drainCalendarDeletions, pushPendingTasksForUser, type TaskRowForPush } from './calendar-write';
+import {
+  buildEventInput,
+  drainCalendarDeletions,
+  pushPendingTasksForUser,
+  taskEventId,
+} from './calendar-write';
+import {
+  fixtureDatabase,
+  fixtureProvider,
+} from './__fixtures__/worldwide/calendar';
 import { buildIcs } from './ical-feed';
-import { resolveTaskDates } from './task-schedule';
-const base: TaskRowForPush = { id: 'task-one', user_id: 'owner', title: 'Task', notes: null, start_at: null, due_at: '2026-10-07T16:00:00Z', time_kind: 'deadline', is_all_day: true, calendar_event_id: null, updated_at: '2026-09-01T00:00:00Z' };
-function client(creates: TaskRowForPush[], patches: TaskRowForPush[] = [], options: { saveError?: boolean; changed?: boolean; queryError?: boolean } = {}) {
-  const queries: Array<{ table: string; filters: unknown[][]; write?: Record<string, unknown> }> = [];
-  let taskReads = 0;
-  const supabase = { from: (table: string) => {
-    const log: typeof queries[number] = { table, filters: [] }; queries.push(log);
-    const result = () => table === 'user_preferences' ? { data: { timezone: 'Asia/Taipei' }, error: null }
-      : log.write ? { data: options.changed ? [] : [{ id: 'task-one' }], error: options.saveError ? { message: 'save failed' } : null }
-      : { data: taskReads++ === 0 ? creates : patches, error: options.queryError ? { message: 'read failed' } : null };
-    const q: any = { then: (resolve: any) => Promise.resolve(result()).then(resolve), maybeSingle: async () => result() };
-    for (const name of ['select','eq','is','not','neq','or','order','limit','gte']) q[name] = (...args: unknown[]) => { log.filters.push([name,...args]); return q; };
-    q.update = (write: Record<string, unknown>) => { log.write = write; return q; };
-    return q;
-  } };
-  return { supabase: supabase as any, queries };
-}
-const run = (c: ReturnType<typeof client>) => pushPendingTasksForUser({ supabase: c.supabase, userId: 'owner', primaryCalendarId: 'primary', accessToken: 'fixture-token' });
-afterEach(() => vi.restoreAllMocks());
+const base = {
+  id: 'task-one',
+  user_id: 'owner',
+  title: 'Fixture',
+  notes: null,
+  start_at: null,
+  due_at: '2026-10-07T16:00:00Z',
+  time_kind: 'deadline' as const,
+  is_all_day: true,
+  is_completed: false,
+  status: 'open',
+  calendar_event_id: null,
+  calendar_dirty: true,
+  updated_at: '2026-09-01T00:00:00Z',
+};
+let p: ReturnType<typeof fixtureProvider>;
+const run = (f: ReturnType<typeof fixtureDatabase>) =>
+  pushPendingTasksForUser({
+    supabase: f.db,
+    userId: 'owner',
+    primaryCalendarId: 'primary',
+    accessToken: 'fixture-token',
+  });
 beforeEach(() => {
-  vi.spyOn(console, 'error').mockImplementation(() => {}); vi.resetAllMocks();
-  mocks.create.mockResolvedValue({ id: 'created' }); mocks.patch.mockResolvedValue({ id: 'linked' }); mocks.remove.mockResolvedValue(undefined);
-  mocks.get.mockImplementation(async ({ eventId }) => ({ id: eventId, status: 'confirmed', extendedProperties: { private: { firstlightTaskId: base.id } } }));
+  vi.resetAllMocks();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   mocks.token.mockResolvedValue('fixture-token');
+  p = fixtureProvider(mocks);
 });
-it.each([{ due_at: base.due_at, start_at: null }, { due_at: null, start_at: base.due_at }])('pushes date-only single endpoints %j', async dates => {
-  const c = client([{ ...base, ...dates }]);
-  expect(await run(c)).toMatchObject({ created: 1, failed: 0 });
-  expect(mocks.create.mock.calls[0][0].event).toMatchObject({ start: { date: '2026-10-08' }, end: { date: '2026-10-09' }, transparency: 'transparent' });
-  const selection = c.queries.find(q => q.table === 'tasks' && !q.write)!;
-  expect(selection.filters).toContainEqual(['or', 'start_at.not.is.null,due_at.not.is.null']);
-  expect(selection.filters).not.toContainEqual(['not','start_at','is',null]);
-  expect(selection.filters).not.toContainEqual(['not','due_at','is',null]);
-});
-it('selects dirty linked tasks regardless of when they were edited', async () => {
-  const c = client([], [{ ...base, calendar_event_id: 'linked' }]);
-  expect(await run(c)).toMatchObject({ patched: 1, failed: 0 });
-  expect(c.queries.some(q => q.filters.some(f => f[0] === 'gte'))).toBe(false);
-  expect(c.queries[2].filters).toContainEqual(['eq','calendar_dirty',true]);
-  const saved = c.queries.find(q => q.write)!;
-  expect(saved.filters).toContainEqual(['eq','updated_at',base.updated_at]);
-  expect(saved.filters).toContainEqual(['eq','user_id','owner']);
-  expect(saved.write).toEqual({ calendar_event_id: 'linked', calendar_event_generation: 0, calendar_dirty: false });
-});
-it('keeps Google and ICS span boundaries, recurrence and transparency aligned', () => {
-  const task = { ...base, start_at: '2026-10-07T16:00:00Z', due_at: '2026-10-09T16:00:00Z', time_kind: 'span' as const, rrule: 'FREQ=DAILY;UNTIL=20261030T160000Z;BYHOUR=9' };
-  const input = buildEventInput(task, 'Asia/Taipei')!;
-  const ics = buildIcs([{ ...task, is_all_day: true, is_completed: false, created_at: base.updated_at!, updated_at: base.updated_at!, estimated_minutes: null }], 'Asia/Taipei');
-  expect(input).toMatchObject({ start: { date: '2026-10-08', dateTime: null }, end: { date: '2026-10-11', dateTime: null }, recurrence: ['RRULE:FREQ=DAILY;UNTIL=20261031'] });
-  expect(ics).toContain('DTSTART;VALUE=DATE:20261008\r\nDTEND;VALUE=DATE:20261011');
-  expect(ics).toContain('TRANSP:TRANSPARENT');
-  expect(ics).toContain(input.recurrence![0]);
-});
-it('preserves multiday work exactly and clears old DATE fields', () => {
-  const input = buildEventInput({ ...base, start_at: '2026-10-07T16:00:00Z', due_at: '2026-10-10T17:00:00Z', time_kind: 'work', is_all_day: false }, 'Asia/Taipei')!;
-  expect(input).toMatchObject({ start: { date: null, dateTime: '2026-10-07T16:00:00.000Z', timeZone: 'Asia/Taipei' }, end: { dateTime: '2026-10-10T17:00:00.000Z' }, transparency: 'opaque' });
-});
-it('removes linked events after unscheduling or completion and acknowledges the version', async () => {
-  for (const patch of [{ start_at: null, due_at: null }, { is_completed: true }, { status: 'done' }, { status: 'archived' }, { parent_id: 'parent-task' }]) {
-    const c = client([], [{ ...base, ...patch, calendar_event_id: 'linked' }]);
-    expect((await run(c)).failed).toBe(0);
-    expect(c.queries.find(q => q.write)?.write).toEqual({ calendar_event_id: null, calendar_event_generation: 1, calendar_dirty: false });
-  }
-  expect(mocks.remove).toHaveBeenCalledTimes(5);
-  for (const [args] of mocks.remove.mock.calls) expect(args).toEqual({ accessToken: 'fixture-token', calendarId: 'primary', eventId: 'linked', sendUpdates: 'none' });
-});
-it('does not acknowledge failed provider writes', async () => {
-  mocks.patch.mockRejectedValue(new Error('offline'));
-  const c = client([], [{ ...base, calendar_event_id: 'linked' }]);
-  expect((await run(c)).failed).toBe(1);
-  expect(c.queries.some(q => q.write)).toBe(false);
-});
-
-it.each([null,'linked'])('retains old Google exclusion for unknown long/all-day/single-endpoint rows (%s)', async calendar_event_id => {
-  for (const dates of [{ start_at:null,due_at:base.due_at,is_all_day:true },
-    { start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:false },
-    { start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:true }]) {
-    const task = { ...base,...dates,time_kind:null,calendar_event_id };
-    const c = calendar_event_id ? client([], [task]) : client([task]);
-    expect(await run(c)).toEqual({ created:0,patched:0,failed:0 });
-    expect(c.queries.find(q => q.write)?.write).toMatchObject({ calendar_event_id,calendar_event_generation:0,calendar_dirty:false });
-  }
-  expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.patch).not.toHaveBeenCalled();
-  expect(mocks.remove).not.toHaveBeenCalled(); expect(mocks.get).not.toHaveBeenCalled();
-});
-
-it('updates and removes an owned event only after deliberate scheduling edits leave legacy compatibility', async () => {
-  const legacy = { ...base,time_kind:null,start_at:'2026-10-01T01:00:00Z',due_at:'2026-11-01T01:00:00Z',is_all_day:false,calendar_event_id:'linked' };
-  await run(client([], [legacy]));
-  expect(mocks.patch).not.toHaveBeenCalled(); expect(mocks.remove).not.toHaveBeenCalled();
-  const edited = { ...legacy,...resolveTaskDates(legacy,{ due_at:'2026-11-02T01:00:00Z' }) };
-  expect((await run(client([], [edited]))).patched).toBe(1);
-  expect(mocks.patch.mock.calls[0][0]).toMatchObject({ sendUpdates:'none',patch:{ start:{ date:'2026-11-02' },end:{ date:'2026-11-03' } } });
-  const cleared = { ...edited,...resolveTaskDates(edited,{ start_at:null,due_at:null }) };
-  expect((await run(client([], [cleared]))).failed).toBe(0);
-  expect(mocks.remove).toHaveBeenCalledWith({ accessToken:'fixture-token',calendarId:'primary',eventId:'linked',sendUpdates:'none' });
-});
-
-it('limits creation to owned active top-level dirty tasks while retaining linked removal work', async () => {
-  const c = client([]);
-  await run(c);
-  const selection = c.queries.filter(q => q.table === 'tasks' && !q.write);
-  const create = selection[0].filters;
-  for (const filter of [['eq', 'user_id', 'owner'], ['eq', 'is_completed', false], ['neq', 'status', 'done'], ['neq', 'status', 'archived'], ['is', 'parent_id', null], ['eq', 'calendar_dirty', true]]) {
-    expect(create).toContainEqual(filter);
-  }
-  // Completed/archived linked rows must be selected so their own generated
-  // event can be removed, rather than being created or patched back to life.
-  expect(selection[1].filters).toContainEqual(['eq', 'user_id', 'owner']);
-  expect(selection[1].filters).not.toContainEqual(['eq', 'is_completed', false]);
-});
-it.each([{ saveError: true }, { changed: true }])('leaves persistence failures/concurrent edits pending: %j', async options => {
-  const c = client([base], [], options);
-  expect((await run(c)).failed).toBe(1);
-  expect(c.queries.find(q => q.write)?.filters).toContainEqual(['eq','updated_at',base.updated_at]);
-});
-it('uses stable provider identity and recovers a successful create whose link save failed', async () => {
-  await run(client([base]));
-  const id = mocks.create.mock.calls[0][0].event.id;
-  expect(id).toMatch(/^[0-9a-v]+$/);
-  mocks.create.mockRejectedValue(new Error('google_create_event_failed: 409 conflict'));
-  expect((await run(client([base]))).failed).toBe(0);
-  expect(mocks.create.mock.calls[1][0].event.id).toBe(id);
-  expect(mocks.patch.mock.calls[0][0]).toMatchObject({ eventId: id, sendUpdates: 'none' });
-});
-it('reports database selection errors without calling Google', async () => {
-  await expect(run(client([], [], { queryError: true }))).rejects.toMatchObject({ message: 'read failed' });
-  expect(mocks.create).not.toHaveBeenCalled();
-});
-it('does not silently acknowledge missing linked events', async () => {
-  mocks.patch.mockResolvedValue({ status: 'cancelled' });
-  const c = client([], [{ ...base, calendar_event_id: 'missing' }]);
-  expect((await run(c)).failed).toBe(1);
-  expect(c.queries.some(q => q.write)).toBe(false);
-});
-
-function calendarStore() {
-  const events = new Map<string, any>();
-  mocks.create.mockImplementation(async ({ event }) => {
-    if (events.has(event.id)) throw new Error('google_create_event_failed: 409 conflict');
-    events.set(event.id, { ...event, status: 'confirmed' }); return events.get(event.id);
-  });
-  mocks.get.mockImplementation(async ({ eventId }) => {
-    if (!events.has(eventId)) throw new Error('google_get_event_failed: 404 missing');
-    return events.get(eventId);
-  });
-  mocks.remove.mockImplementation(async ({ eventId }) => { events.set(eventId, { id: eventId, status: 'cancelled' }); });
-  mocks.patch.mockImplementation(async ({ eventId, patch }) => {
-    // Google PATCH does not implicitly restore a cancelled resource.
-    const updated = { ...events.get(eventId), ...patch }; events.set(eventId, updated); return updated;
-  });
-  return events;
+afterEach(() => vi.restoreAllMocks());
+async function linked() {
+  const f = fixtureDatabase([base]);
+  expect(await run(f)).toMatchObject({ created: 1, failed: 0 });
+  return f;
 }
-
-it.each(['completion', 'unscheduling'])('supports repeated %s/reopen cycles without patching tombstones', async reason => {
-  const events = calendarStore();
-  let task = { ...base };
-  const sync = async () => {
-    const c = task.calendar_event_id ? client([], [task]) : client([task]);
-    expect((await run(c)).failed).toBe(0);
-    task = { ...task, ...c.queries.find(q => q.write)!.write } as TaskRowForPush;
-  };
-  await sync();
-  const ids = [task.calendar_event_id];
-  for (let i = 0; i < 4; i++) {
-    const lastId = task.calendar_event_id!;
-    task = { ...task, ...(reason === 'completion' ? { is_completed: true, status: 'done' } : { start_at: null, due_at: null }), updated_at: `2026-10-0${i + 1}T01:00:00Z` };
-    await sync();
-    expect(task.calendar_event_id).toBeNull(); expect(events.get(lastId).status).toBe('cancelled');
-    task = { ...task, is_completed: false, status: 'open', due_at: base.due_at, updated_at: `2026-10-0${i + 1}T02:00:00Z` };
-    await sync(); ids.push(task.calendar_event_id);
-    expect(task.calendar_event_generation).toBe(i + 1);
-  }
-  expect(new Set(ids).size).toBe(5); expect(mocks.patch).not.toHaveBeenCalled();
-  for (const [args] of [...mocks.create.mock.calls, ...mocks.remove.mock.calls]) expect(args.sendUpdates).toBe('none');
+it.each([
+  { due_at: base.due_at, start_at: null },
+  { due_at: null, start_at: base.due_at },
+])('pushes single endpoints with stable identity %j', async (dates) => {
+  const f = fixtureDatabase([{ ...base, ...dates }]);
+  expect(await run(f)).toMatchObject({ created: 1, failed: 0 });
+  expect(mocks.create.mock.calls[0][0].event).toMatchObject({
+    id: taskEventId(base.id, 0),
+    start: { date: '2026-10-08' },
+    end: { date: '2026-10-09' },
+    transparency: 'transparent',
+  });
+  expect(f.tables.tasks[0]).toMatchObject({
+    calendar_dirty: false,
+    calendar_id: 'primary',
+    calendar_etag: expect.any(String),
+    calendar_baseline: expect.any(Object),
+  });
 });
-
-it('recovers a concurrent reopen after deletion but before acknowledgement', async () => {
-  calendarStore();
-  const initial = client([base]); await run(initial);
-  const linked = { ...base, ...initial.queries.find(q => q.write)!.write } as TaskRowForPush;
-  expect((await run(client([], [{ ...linked, is_completed: true }], { changed: true }))).failed).toBe(1);
-  const reopened = client([], [{ ...linked, updated_at: '2026-10-08T01:00:00Z' }]);
-  expect(await run(reopened)).toMatchObject({ created: 1, failed: 0 });
-  expect(reopened.queries.find(q => q.write)?.write).toMatchObject({ calendar_event_generation: 1 });
+it('selects only owned active dirty creates and all dirty linked removals without a freshness cutoff', async () => {
+  const f = fixtureDatabase([]);
+  await run(f);
+  const queries = f.reads.filter((q) => q.table === 'tasks');
+  for (const filter of [
+    ['eq', 'user_id', 'owner'],
+    ['eq', 'calendar_dirty', true],
+    ['is', 'parent_id', null],
+    ['eq', 'is_completed', false],
+    ['neq', 'status', 'done'],
+    ['neq', 'status', 'archived'],
+  ])
+    expect(queries[0].filters).toContainEqual(filter);
+  expect(queries[1].filters).not.toContainEqual(['eq', 'is_completed', false]);
+  expect(JSON.stringify(queries)).not.toContain('gte');
+});
+it('patches a deliberate edit using the acknowledged baseline and If-Match', async () => {
+  const f = await linked();
+  const before = f.tables.tasks[0].calendar_etag;
+  f.edit(base.id, { title: 'Changed' });
+  expect(await run(f)).toMatchObject({ patched: 1, failed: 0 });
+  expect(mocks.patch).toHaveBeenCalledWith(
+    expect.objectContaining({
+      ifMatch: before,
+      sendUpdates: 'none',
+      patch: expect.objectContaining({ summary: 'Changed' }),
+    }),
+  );
+  expect(f.tables.tasks[0].calendar_dirty).toBe(false);
+});
+it.each([
+  { start_at: null, due_at: null },
+  { is_completed: true },
+  { status: 'done' },
+  { status: 'archived' },
+  { parent_id: 'child' },
+])('removes only acknowledged owned mirrors %j', async (edit) => {
+  const f = await linked();
+  f.edit(base.id, edit);
+  expect(await run(f)).toMatchObject({ failed: 0 });
+  expect(f.tables.tasks[0]).toMatchObject({
+    calendar_event_id: null,
+    calendar_event_generation: 1,
+    calendar_dirty: false,
+  });
+  expect(mocks.remove).toHaveBeenCalledWith(
+    expect.objectContaining({
+      ifMatch: expect.any(String),
+      sendUpdates: 'none',
+    }),
+  );
+});
+it.each(['completion', 'unscheduling'])(
+  'preserves generations through four %s/reopen cycles',
+  async (reason) => {
+    const f = await linked();
+    const ids = [f.tables.tasks[0].calendar_event_id];
+    for (let i = 0; i < 4; i++) {
+      f.edit(
+        base.id,
+        reason === 'completion' ? { is_completed: true } : { due_at: null },
+      );
+      await run(f);
+      expect(f.tables.tasks[0].calendar_event_id).toBeNull();
+      f.edit(base.id, { is_completed: false, due_at: base.due_at });
+      expect(await run(f)).toMatchObject({ created: 1, failed: 0 });
+      ids.push(f.tables.tasks[0].calendar_event_id);
+    }
+    expect(new Set(ids).size).toBe(5);
+    expect(mocks.patch).not.toHaveBeenCalled();
+  },
+);
+it('recovers lost create response without a duplicate or blind patch', async () => {
+  const f = fixtureDatabase([base]);
+  p.state.createLost = true;
+  expect((await run(f)).failed).toBe(1);
+  expect((await run(f)).created).toBe(1);
+  expect(p.events.size).toBe(1);
   expect(mocks.patch).not.toHaveBeenCalled();
 });
-
-it('skips a generation-zero tombstone and recovers an unacknowledged replacement', async () => {
-  const events = calendarStore();
-  await run(client([base], [], { saveError: true }));
-  const firstId = mocks.create.mock.calls[0][0].event.id;
-  events.set(firstId, { id: firstId, status: 'cancelled' });
-  expect((await run(client([base], [], { saveError: true }))).failed).toBe(1);
-  const replacement = mocks.create.mock.calls[2][0].event.id;
-  const retry = client([base]);
-  expect((await run(retry)).failed).toBe(0);
-  expect(retry.queries.find(q => q.write)?.write).toMatchObject({ calendar_event_id: replacement, calendar_event_generation: 1 });
-  expect(mocks.patch.mock.calls[0][0].eventId).toBe(replacement);
-});
-
-it.each([{}, { due_at: null }])('preserves unowned linked appointments on task writes: %j', patch => {
-  mocks.get.mockResolvedValue({ id: 'appointment', status: 'confirmed', extendedProperties: { private: { firstlightTaskId: 'someone-else' } } });
-  const c = client([], [{ ...base, ...patch, calendar_event_id: 'appointment' }]);
-  return run(c).then(result => {
-    expect(result.failed).toBe(1); expect(mocks.patch).not.toHaveBeenCalled(); expect(mocks.remove).not.toHaveBeenCalled();
-    expect(c.queries.some(q => q.write)).toBe(false);
+it('recovers lost PATCH response without losing a subsequent local edit', async () => {
+  const f = await linked();
+  f.edit(base.id, { title: 'First edit' });
+  p.state.patchLost = true;
+  expect((await run(f)).failed).toBe(1);
+  f.edit(base.id, { title: 'Later edit' });
+  await run(f);
+  expect(f.tables.tasks[0]).toMatchObject({
+    title: 'Later edit',
+    calendar_dirty: true,
   });
+  await run(f);
+  expect(p.events.get(f.tables.tasks[0].calendar_event_id).summary).toBe(
+    'Later edit',
+  );
 });
-
-it('does not overwrite an unrelated event when a generated id conflicts', async () => {
-  mocks.create.mockRejectedValue(new Error('google_create_event_failed: 409 conflict'));
-  mocks.get.mockResolvedValue({ id: 'unrelated', status: 'confirmed', summary: 'Real appointment' });
-  expect((await run(client([base]))).failed).toBe(1);
-  expect(mocks.patch).not.toHaveBeenCalled(); expect(mocks.remove).not.toHaveBeenCalled();
+it('overlapping workers retain one stable Google identity', async () => {
+  const f = fixtureDatabase([base]);
+  await Promise.all([run(f), run(f)]);
+  await run(f);
+  expect(p.events.size).toBe(1);
+  expect(f.tables.tasks[0].calendar_dirty).toBe(false);
 });
-
-it('leaves an invalid persisted work interval pending instead of deleting its event', async () => {
-  const c = client([], [{ ...base, time_kind: 'work', calendar_event_id: 'linked' }]);
-  expect((await run(c)).failed).toBe(1);
-  expect(mocks.remove).not.toHaveBeenCalled(); expect(mocks.patch).not.toHaveBeenCalled();
-  expect(c.queries.some(q => q.write)).toBe(false);
+it('edit during push fails exact-version acknowledgement and remains pending', async () => {
+  const f = await linked();
+  f.edit(base.id, { title: 'Sent edit' });
+  p.state.beforePatch = () => {
+    p.state.beforePatch = null;
+    f.edit(base.id, { title: 'New local edit' });
+  };
+  expect((await run(f)).failed).toBe(1);
+  expect(f.tables.tasks[0]).toMatchObject({
+    title: 'New local edit',
+    calendar_dirty: true,
+  });
+  await run(f);
+  await run(f);
+  expect(p.events.get(f.tables.tasks[0].calendar_event_id).summary).toBe(
+    'New local edit',
+  );
 });
-
-it('does not recreate a cancelled linked appointment without provable task ownership', async () => {
-  mocks.get.mockResolvedValue({ id: 'appointment', status: 'cancelled' });
-  expect((await run(client([], [{ ...base, calendar_event_id: 'appointment' }]))).failed).toBe(1);
-  expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.patch).not.toHaveBeenCalled();
+it('reopen during deletion recovers its pending removal then creates a new generation', async () => {
+  const f = await linked();
+  const first = f.tables.tasks[0].calendar_event_id;
+  f.edit(base.id, { is_completed: true });
+  p.state.beforeDelete = () => {
+    p.state.beforeDelete = null;
+    f.edit(base.id, { is_completed: false });
+  };
+  expect((await run(f)).failed).toBe(1);
+  await run(f);
+  expect(f.tables.tasks[0]).toMatchObject({
+    calendar_event_id: null,
+    calendar_dirty: true,
+    calendar_event_generation: 1,
+  });
+  await run(f);
+  expect(f.tables.tasks[0].calendar_event_id).not.toBe(first);
+  expect(p.events.get(first).status).toBe('cancelled');
 });
-
-function deletionQueue() {
-  const rpc = vi.fn().mockResolvedValue({ data: [{ id: 'queue-one', user_id: 'owner', calendar_id: 'calendar', event_id: 'queued', attempts: 1 }], error: null });
-  const remove = vi.fn(), update = vi.fn(), eq = vi.fn().mockResolvedValue({ error: null });
-  const q = { delete: remove.mockReturnValue({ eq }), update: update.mockReturnValue({ eq }) };
-  return { supabase: { rpc, from: vi.fn().mockReturnValue(q) } as any, rpc, remove, update, eq };
+it.each(['google_patch_event_failed: 429', 'google_patch_event_failed: 503'])(
+  'keeps %s pending',
+  async (error) => {
+    const f = await linked();
+    f.edit(base.id, { title: 'Edit' });
+    p.state.fail = error;
+    expect((await run(f)).failed).toBe(1);
+    expect(f.tables.tasks[0].calendar_dirty).toBe(true);
+  },
+);
+it.each(['patch', 'delete'])(
+  '412 %s refetches and stages a conflict without retrying overwrite',
+  async (operation) => {
+    const f = await linked();
+    f.edit(
+      base.id,
+      operation === 'patch' ? { title: 'Local' } : { is_completed: true },
+    );
+    const change = (id: string) =>
+      p.save({ ...p.events.get(id), summary: 'Remote edit' });
+    if (operation === 'patch') p.state.beforePatch = change;
+    else p.state.beforeDelete = change;
+    expect((await run(f)).conflicts).toBe(1);
+    expect(f.tables.tasks[0].calendar_conflict.reason).toBe(
+      'remote_changed_during_write',
+    );
+    expect(p.events.get(f.tables.tasks[0].calendar_event_id).summary).toBe(
+      'Remote edit',
+    );
+    expect(mocks.get.mock.calls.length).toBeGreaterThanOrEqual(2);
+  },
+);
+it('remote edit since acknowledged baseline conflicts even when latest ETag is fetched', async () => {
+  const f = await linked();
+  const id = f.tables.tasks[0].calendar_event_id;
+  p.save({ ...p.events.get(id), summary: 'Remote' });
+  f.edit(base.id, { title: 'Local' });
+  expect((await run(f)).conflicts).toBe(1);
+  expect(mocks.patch).not.toHaveBeenCalled();
+});
+it('missing baseline cannot authorize overwriting a tagged event', async () => {
+  const f = await linked();
+  delete f.tables.tasks[0].calendar_baseline;
+  f.edit(base.id, { title: 'Local' });
+  expect((await run(f)).conflicts).toBe(1);
+  expect(mocks.patch).not.toHaveBeenCalled();
+});
+it('exact echo bootstraps an old mapping without rewriting provider data', async () => {
+  const f = await linked();
+  delete f.tables.tasks[0].calendar_baseline;
+  delete f.tables.tasks[0].calendar_etag;
+  f.edit(base.id, {});
+  expect((await run(f)).patched).toBe(1);
+  expect(mocks.patch).not.toHaveBeenCalled();
+});
+it('remote deletion retains the native task and stages review, never auto-completes it', async () => {
+  const f = await linked();
+  const id = f.tables.tasks[0].calendar_event_id;
+  p.save({ id, status: 'cancelled' });
+  f.edit(base.id, {});
+  expect((await run(f)).conflicts).toBe(1);
+  expect(f.tables.tasks[0].is_completed).toBe(false);
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+});
+it('does not overwrite unrelated tags, IDs or invalid work intervals', async () => {
+  const f = await linked();
+  const id = f.tables.tasks[0].calendar_event_id;
+  p.save({
+    ...p.events.get(id),
+    extendedProperties: { private: { firstlightTaskId: 'other' } },
+  });
+  f.edit(base.id, { title: 'Edit' });
+  expect((await run(f)).failed).toBe(1);
+  expect(mocks.patch).not.toHaveBeenCalled();
+  f.edit(base.id, { time_kind: 'work', start_at: null });
+  expect((await run(f)).failed).toBe(1);
+  expect(mocks.remove).not.toHaveBeenCalled();
+});
+it.each([null, 'linked'])(
+  'preserves unknown legacy exclusions (%s)',
+  async (calendar_event_id) => {
+    for (const dates of [
+      { start_at: null, due_at: base.due_at, is_all_day: true },
+      {
+        start_at: '2026-10-01T01:00Z',
+        due_at: '2026-11-01T01:00Z',
+        is_all_day: false,
+      },
+    ]) {
+      const f = fixtureDatabase([
+        { ...base, ...dates, time_kind: null, calendar_event_id },
+      ]);
+      expect(await run(f)).toMatchObject({
+        created: 0,
+        patched: 0,
+        failed: 0,
+        conflicts: 0,
+      });
+    }
+    expect(mocks.get).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  },
+);
+it('preserves Google/ICS inclusive task spans and exclusive DATE ends', () => {
+  const t = {
+    ...base,
+    start_at: '2026-10-07T16:00Z',
+    due_at: '2026-10-09T16:00Z',
+    time_kind: 'span' as const,
+    rrule: 'FREQ=DAILY;UNTIL=20261030T160000Z;BYHOUR=9',
+  };
+  const input = buildEventInput(t, 'Asia/Taipei')!;
+  expect(input).toMatchObject({
+    start: { date: '2026-10-08' },
+    end: { date: '2026-10-11' },
+    recurrence: ['RRULE:FREQ=DAILY;UNTIL=20261031'],
+  });
+  expect(
+    buildIcs(
+      [{ ...t, created_at: base.updated_at, estimated_minutes: null }],
+      'Asia/Taipei',
+    ),
+  ).toContain('DTEND;VALUE=DATE:20261011');
+});
+it('surfaces database selection and acknowledgement failures as pending', async () => {
+  const f = fixtureDatabase([base]);
+  f.state.fail = 'tasks:read';
+  await expect(run(f)).rejects.toMatchObject({ message: 'fixture_db_failure' });
+  f.state.fail = 'tasks:update';
+  expect((await run(f)).failed).toBe(1);
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+async function queue() {
+  const f = await linked();
+  const t = f.tables.tasks[0];
+  f.tables.pending_calendar_deletions.push({
+    id: 'queue',
+    user_id: 'owner',
+    calendar_id: 'primary',
+    event_id: t.calendar_event_id,
+    attempts: 1,
+  });
+  f.tables.task_calendar_deletion_baselines.push({
+    user_id: 'owner',
+    event_id: t.calendar_event_id,
+    calendar_id: 'primary',
+    task_id: base.id,
+    etag: t.calendar_etag,
+    baseline: t.calendar_baseline,
+  });
+  return f;
 }
-
-it('drains owned task deletions silently and acknowledges only the claimed row', async () => {
-  const c = deletionQueue();
-  expect(await drainCalendarDeletions(c)).toEqual({ deleted: 1, failed: 0 });
-  expect(mocks.remove).toHaveBeenCalledWith({ accessToken: 'fixture-token', calendarId: 'calendar', eventId: 'queued', sendUpdates: 'none' });
-  expect(c.rpc).toHaveBeenCalledWith('claim_pending_calendar_deletions', { batch_size: 50 });
-  expect(c.eq).toHaveBeenCalledWith('id', 'queue-one'); expect(c.remove).toHaveBeenCalledTimes(1);
+it('drains claimed owned deletions conditionally and silently', async () => {
+  const f = await queue();
+  expect(await drainCalendarDeletions({ supabase: f.db })).toEqual({
+    deleted: 1,
+    failed: 0,
+  });
+  expect(f.db.rpc).toHaveBeenCalledWith('claim_pending_calendar_deletions', {
+    batch_size: 50,
+  });
+  expect(mocks.remove).toHaveBeenCalledWith(
+    expect.objectContaining({
+      ifMatch: expect.any(String),
+      sendUpdates: 'none',
+    }),
+  );
+});
+it.each(['no baseline', 'remote edit', 'provider failure'])(
+  'retains queue after %s',
+  async (reason) => {
+    const f = await queue();
+    if (reason === 'no baseline')
+      f.tables.task_calendar_deletion_baselines = [];
+    else if (reason === 'remote edit') {
+      const id = f.tables.tasks[0].calendar_event_id;
+      p.save({ ...p.events.get(id), summary: 'Remote' });
+    } else p.state.fail = '503';
+    expect(await drainCalendarDeletions({ supabase: f.db })).toEqual({
+      deleted: 0,
+      failed: 1,
+    });
+    expect(f.tables.pending_calendar_deletions).toHaveLength(1);
+  },
+);
+it('Sync now scopes deletion work to its user and reports failed claims', async () => {
+  const f = await queue();
+  f.tables.pending_calendar_deletions.push({
+    id: 'other',
+    user_id: 'other',
+    event_id: 'private',
+  });
+  await drainCalendarDeletions({ supabase: f.db, userId: 'owner' });
+  expect(f.tables.pending_calendar_deletions).toEqual([
+    expect.objectContaining({ id: 'other' }),
+  ]);
+  f.state.fail = 'rpc';
+  await expect(drainCalendarDeletions({ supabase: f.db })).rejects.toThrow(
+    'fixture_rpc_failed',
+  );
 });
 
-it.each(['provider failure', 'unowned appointment'])('retains queued deletions after %s', async reason => {
-  if (reason === 'provider failure') mocks.remove.mockRejectedValue(new Error('offline'));
-  else mocks.get.mockResolvedValue({ id: 'queued', status: 'confirmed', summary: 'Real appointment' });
-  const c = deletionQueue();
-  expect(await drainCalendarDeletions(c)).toEqual({ deleted: 0, failed: 1 });
-  expect(c.remove).not.toHaveBeenCalled(); expect(c.update).toHaveBeenCalledWith({ last_error: expect.any(String) });
-  if (reason === 'unowned appointment') expect(mocks.remove).not.toHaveBeenCalled();
+it('lost create response followed by a local edit keeps one event and retries only the later revision', async () => {
+  const f = fixtureDatabase([base]);
+  p.state.createLost = true;
+  expect((await run(f)).failed).toBe(1);
+  f.edit(base.id, { title: 'Later title' });
+  expect((await run(f)).created).toBe(1);
+  expect(f.tables.tasks[0].calendar_dirty).toBe(true);
+  expect(mocks.patch).not.toHaveBeenCalled();
+  await run(f);
+  expect(p.events.size).toBe(1);
+  expect(p.events.get(f.tables.tasks[0].calendar_event_id).summary).toBe(
+    'Later title',
+  );
+});
+
+it('queued deletion 412 refetches and retains a remote edit instead of retrying deletion', async () => {
+  const f = await queue();
+  p.state.beforeDelete = (id) =>
+    p.save({ ...p.events.get(id), summary: 'Remote edit' });
+  expect(await drainCalendarDeletions({ supabase: f.db })).toEqual({
+    deleted: 0,
+    failed: 1,
+  });
+  expect(f.tables.pending_calendar_deletions[0].last_error).toBe(
+    'deletion_conflict_remote_changed',
+  );
+  expect(mocks.remove).toHaveBeenCalledTimes(1);
+  expect(mocks.get.mock.calls.length).toBeGreaterThanOrEqual(2);
+});
+
+it('pending series edits cannot silently clear an unresolved occurrence conflict', async () => {
+  const f = await linked();
+  f.edit(base.id, {
+    title: 'Local',
+    calendar_conflict: { reason: 'recurring_occurrence_edit_requires_review' },
+  });
+  expect((await run(f)).conflicts).toBe(1);
+  expect(mocks.patch).not.toHaveBeenCalled();
+  expect(f.tables.tasks[0].calendar_dirty).toBe(true);
+});
+
+it('preserves a remote provider-only edit when a native completion requests deletion', async () => {
+  const f = await linked(), task = f.tables.tasks[0];
+  p.save({ ...p.events.get(task.calendar_event_id), location: 'New location' });
+  f.edit(task.id, { is_completed: true, status: 'done' });
+  expect(await run(f)).toMatchObject({ conflicts: 1 });
+  expect(mocks.remove).not.toHaveBeenCalled(); expect(p.events.get(task.calendar_event_id).status).not.toBe('cancelled');
+});
+it('leaves a queued deletion pending when the provider ETag changed only outside owned fields', async () => {
+  const f = await linked(), task = f.tables.tasks[0];
+  f.tables.pending_calendar_deletions.push({ id: 'delete', user_id: 'owner', event_id: task.calendar_event_id, calendar_id: 'primary' });
+  f.tables.task_calendar_deletion_baselines.push({ user_id: 'owner', event_id: task.calendar_event_id, calendar_id: 'primary', task_id: task.id, etag: task.calendar_etag, baseline: task.calendar_baseline });
+  p.save({ ...p.events.get(task.calendar_event_id), location: 'New location' });
+  expect(await drainCalendarDeletions({ supabase: f.db, userId: 'owner' })).toMatchObject({ failed: 1 });
+  expect(mocks.remove).not.toHaveBeenCalled(); expect(f.tables.pending_calendar_deletions).toHaveLength(1);
 });

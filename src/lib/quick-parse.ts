@@ -1,7 +1,38 @@
+import { addCalendarDays, validDate, calendarDate, dayWindow, resolveLocalInput, validTimezone, wallClock } from "./day-window";
+import { CivilDate } from './calendar-civil';
 import * as chrono from "chrono-node";
 import { newTaskTimeKind, type TaskTimeKind } from "./task-schedule";
 
+// Chrono's default validity check constructs a host-local Date. On a host DST
+// gap it can discard a perfectly valid civil input in another account zone,
+// before our strict IANA resolver sees it. Keep its parser/refiner pipeline but
+// validate components as calendar values; resolve account DST only afterwards.
+// Wrap every refiner because intermediate refiners may clone components.
+const accountParser = chrono.casual.clone();
+type CivilComponents = { get(key: string): number | null; isValidDate(): boolean };
+type CivilParseResult = { start: CivilComponents; end?: CivilComponents | null };
+type AccountRefiner = { refine(context: unknown, results: CivilParseResult[]): CivilParseResult[] };
+accountParser.refiners = accountParser.refiners.map((refiner: AccountRefiner): AccountRefiner => ({
+  refine(context, results) {
+    for (const result of results) for (const component of [result.start, result.end]) {
+      if (!component) continue;
+      component.isValidDate = () => {
+        const year = component.get('year')!, month = component.get('month')!, day = component.get('day')!;
+        const hour = component.get('hour') ?? 0, minute = component.get('minute') ?? 0;
+        const date = new Date(Date.UTC(year, month - 1, day, hour, minute));
+        date.setUTCFullYear(year);
+        return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day && date.getUTCHours() === hour && date.getUTCMinutes() === minute;
+      };
+    }
+    return refiner.refine(context, results);
+  },
+}));
+
 export type ParsedQuickInput = {
+  start_date?: string | null;
+  due_date?: string | null;
+  schedule_timezone?: string | null;
+  error?: string;
   title: string;
   /** Start of a timed task. Set when the user typed a range like
    *  "10am-11am" or "from 9 to 10". Null for due-only tasks. */
@@ -34,6 +65,7 @@ export type ParsedQuickInput = {
  * existing "Work" list without typing ~Work.
  */
 export type QuickParseContext = {
+  timezone?: string;
   /** Reference timezone for server callers (minutes east of UTC). */
   timezoneOffsetMinutes?: number;
   existingTags?: string[];
@@ -69,13 +101,25 @@ export type QuickParseContext = {
  */
 export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQuickInput {
   const instant = new Date();
-  const offset = ctx?.timezoneOffsetMinutes;
+  const zone = ctx?.timezone ? validTimezone(ctx.timezone) : null;
+  const offset = zone ? (+wallClock(instant, zone) - +instant) / 60000 : ctx?.timezoneOffsetMinutes;
   const reference = offset == null ? instant : { instant, timezone: offset };
-  const wallNow = offset == null ? instant : new Date(+instant + (offset + instant.getTimezoneOffset()) * 60000);
-  const localIso = (date: Date) => offset == null ? date.toISOString() : new Date(+date - (offset + date.getTimezoneOffset()) * 60000).toISOString();
+  const parse = zone ? accountParser.parse.bind(accountParser) : chrono.parse;
+  const wallDate = (year: number, month: number, day: number, hour = 0, minute = 0) => zone ? new CivilDate(Date.UTC(year, month, day, hour, minute)) : new Date(year, month, day, hour, minute);
+  const wallNow = zone ? new CivilDate(+wallClock(instant, zone)) : offset == null ? instant : new Date(+instant + (offset + instant.getTimezoneOffset()) * 60000);
+  let validationError: string | undefined;
+  const resolve = (civil: string, allDay = false) => {
+    if (!zone) return civil;
+    try { return allDay ? dayWindow(civil.slice(0, 10), zone).start.toISOString() : resolveLocalInput(civil.replace(/Z$/, ''), zone); }
+    catch (error) { validationError = (error as Error).message; return civil + (civil.endsWith('Z') ? '' : 'Z'); }
+  };
+  const localIso = (date: Date, allDay = false) => zone
+    ? resolve(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds())).toISOString(), allDay)
+    : offset == null ? date.toISOString() : new Date(+date - (offset + date.getTimezoneOffset()) * 60000).toISOString();
   const componentIso = (c: any, allDay = false, dateFrom = c) => {
+    if (c.isCertain('timezoneOffset') && !allDay) return new Date(Date.UTC(dateFrom.get('year'), dateFrom.get('month') - 1, dateFrom.get('day'), c.get('hour') ?? 0, c.get('minute') ?? 0, c.get('second') ?? 0, c.get('millisecond') ?? 0) - c.get('timezoneOffset') * 60000).toISOString();
+    if (zone) return resolve(new Date(Date.UTC(dateFrom.get('year'), dateFrom.get('month') - 1, dateFrom.get('day'), allDay ? 0 : c.get('hour') ?? 0, allDay ? 0 : c.get('minute') ?? 0, allDay ? 0 : c.get('second') ?? 0, allDay ? 0 : c.get('millisecond') ?? 0)).toISOString(), allDay);
     if (offset == null && !allDay && dateFrom === c) return c.date().toISOString();
-    if (c.isCertain('timezoneOffset') && !allDay && dateFrom === c) return c.date().toISOString();
     return localIso(new Date(dateFrom.get('year'), dateFrom.get('month') - 1, dateFrom.get('day'), allDay ? 0 : c.get('hour') ?? 0, allDay ? 0 : c.get('minute') ?? 0));
   };
   // Normalize common typos / shorthands so the chrono fallback still gets
@@ -206,7 +250,8 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     const atMatch = s.match(atRx);
     if (atMatch) {
       const phrase = atMatch[1]!.trim();
-      const r = chrono.parseDate(phrase, reference, { forwardDate: true });
+      const parsedReminder = parse(phrase, reference, { forwardDate: true })[0];
+      const r = parsedReminder ? new Date(componentIso(parsedReminder.start)) : null;
       if (r) {
         reminderAbsolute = r;
         s = s.replace(atMatch[0], " ").replace(/\s+/g, " ").trim();
@@ -253,21 +298,22 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
     ) {
       const now = wallNow;
       let year = now.getFullYear();
-      let startDate = new Date(year, m1 - 1, d1);
+      let startDate = wallDate(year, m1 - 1, d1);
       // If the parsed start is more than 6 months in the past, assume
       // the user meant next year.
-      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      const sixMonthsAgo = wallDate(now.getFullYear(), now.getMonth() - 6, now.getDate());
       if (startDate < sixMonthsAgo) {
         year += 1;
-        startDate = new Date(year, m1 - 1, d1);
+        startDate = wallDate(year, m1 - 1, d1);
       }
-      let endDate = new Date(year, m2 - 1, d2);
+      let endDate = wallDate(year, m2 - 1, d2);
       // Range crosses a year boundary (e.g. 12/30-1/3). Bump the end.
       if (endDate < startDate) {
-        endDate = new Date(year + 1, m2 - 1, d2);
+        endDate = wallDate(year + 1, m2 - 1, d2);
       }
-      rangeStartIso = localIso(startDate);
-      rangeEndIso = localIso(endDate);
+      if (startDate.getMonth() !== m1 - 1 || startDate.getDate() !== d1 || endDate.getMonth() !== m2 - 1 || endDate.getDate() !== d2) validationError = 'Invalid calendar date range';
+      rangeStartIso = localIso(startDate, true);
+      rangeEndIso = localIso(endDate, true);
       s = s.replace(matchText, " ").replace(/\s+/g, " ").trim();
     }
   }
@@ -284,7 +330,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
   let start_at: string | null = null;
   let due_at: string | null = null;
   let is_all_day = true;
-  const results = chrono.parse(s, reference, { forwardDate: true });
+  const results = parse(s, reference, { forwardDate: true });
   if (results.length) {
     const has = (r: any, k: string) => r?.start?.isCertain(k);
     const dateRes = results.find((r: any) => has(r, "day") || has(r, "weekday") || has(r, "month"));
@@ -295,7 +341,7 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
       if (timeRes.end) {
         let mergedEnd = componentIso(timeRes.end, false, dateRes.start);
         if (Date.parse(mergedEnd) < Date.parse(merged)) {
-          const nextDay = new Date(dateRes.start.get('year'), dateRes.start.get('month') - 1, dateRes.start.get('day') + 1, timeRes.end.get('hour'), timeRes.end.get('minute'));
+          const nextDay = wallDate(dateRes.start.get('year'), dateRes.start.get('month') - 1, dateRes.start.get('day') + 1, timeRes.end.get('hour'), timeRes.end.get('minute'));
           mergedEnd = localIso(nextDay);
         }
         start_at = merged; due_at = mergedEnd;
@@ -396,6 +442,8 @@ export function parseQuickInput(raw: string, ctx?: QuickParseContext): ParsedQui
   }
 
   return {
+    ...(zone ? { schedule_timezone: zone, start_date: is_all_day && start_at ? calendarDate(new Date(start_at), zone) : null, due_date: is_all_day && due_at ? calendarDate(new Date(due_at), zone) : null } : {}),
+    ...(validationError ? { error: validationError } : {}),
     title,
     start_at,
     due_at,
@@ -429,6 +477,8 @@ function nameToWordRegex(name: string): RegExp {
  * that the right intent was extracted.
  */
 export function describeParsed(p: ParsedQuickInput, now: Date = new Date()): string {
+  if (p.error) return p.error;
+  const zone = p.schedule_timezone || 'UTC';
   const parts: string[] = [];
 
   if (!p.title) return "Type a task. I'll parse the time, list, tags, and reminders for you.";
@@ -438,17 +488,17 @@ export function describeParsed(p: ParsedQuickInput, now: Date = new Date()): str
   if (p.start_at && p.due_at && p.is_all_day) {
     // Multi-day all-day range — describe as "May 5 to May 8" rather than
     // pretending we have a time component.
-    parts.push(`from ${formatDue(p.start_at, true, now)} to ${formatDue(p.due_at, true, now)}`);
+    parts.push(`from ${formatDue(p.start_date || p.start_at, true, now, zone)} to ${formatDue(p.due_date || p.due_at, true, now, zone)}`);
   } else if (p.start_at && p.due_at) {
-    parts.push(`from ${formatDue(p.start_at, false, now)} to ${formatTimeOnly(p.due_at)}`);
+    parts.push(`from ${formatDue(p.start_at, false, now, zone)} to ${formatTimeOnly(p.due_at, zone)}`);
   } else if (p.due_at) {
-    parts.push(`due ${formatDue(p.due_at, p.is_all_day, now)}`);
+    parts.push(`due ${formatDue(p.due_date || p.due_at, p.is_all_day, now, zone)}`);
   }
   if (p.rrule) {
     parts.push(`repeating ${describeRrule(p.rrule)}`);
   }
   if (p.reminder_at) {
-    parts.push(`with a reminder ${describeReminder(p.reminder_at, p.due_at, now)}`);
+    parts.push(`with a reminder ${describeReminder(p.reminder_at, p.due_at, now, zone)}`);
   }
   if (p.priority > 0) {
     parts.push(`${priorityWord(p.priority)} priority`);
@@ -486,7 +536,7 @@ function describeRrule(rrule: string): string {
   return rrule;
 }
 
-function describeReminder(reminderIso: string, dueIso: string | null, now: Date): string {
+function describeReminder(reminderIso: string, dueIso: string | null, now: Date, zone: string): string {
   const r = new Date(reminderIso);
   if (dueIso) {
     const offsetMs = new Date(dueIso).getTime() - r.getTime();
@@ -499,40 +549,26 @@ function describeReminder(reminderIso: string, dueIso: string | null, now: Date)
       return `${min} ${min === 1 ? "minute" : "minutes"} before`;
     }
   }
-  return `at ${formatTime(r, now)}`;
+  return `at ${formatTime(r, now, zone)}`;
 }
 
-function formatDue(iso: string, allDay: boolean, now: Date): string {
-  const d = new Date(iso);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfTomorrow = new Date(startOfToday);
-  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-  const startOfDayAfterTomorrow = new Date(startOfTomorrow);
-  startOfDayAfterTomorrow.setDate(startOfDayAfterTomorrow.getDate() + 1);
-
-  let dayPart: string;
-  if (d >= startOfToday && d < startOfTomorrow) dayPart = "today";
-  else if (d >= startOfTomorrow && d < startOfDayAfterTomorrow) dayPart = "tomorrow";
-  else dayPart = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-
-  if (allDay) return dayPart;
-  return `${dayPart} at ${formatTime(d, now)}`;
+export function formatDue(iso: string, allDay: boolean, now = new Date(), zone = 'UTC'): string {
+  const date = validDate(iso) ? iso : calendarDate(new Date(iso), zone);
+  const today = calendarDate(now, zone);
+  const dayPart = date === today ? 'today' : date === addCalendarDays(today, 1) ? 'tomorrow'
+    : new Date(date).toLocaleDateString(undefined, { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' });
+  return allDay ? dayPart : `${dayPart} at ${formatTime(new Date(iso), now, zone)}`;
 }
-
-function formatTime(d: Date, _now: Date): string {
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+function formatTime(d: Date, _now: Date, zone = 'UTC'): string {
+  return d.toLocaleTimeString(undefined, { timeZone: zone, hour: 'numeric', minute: '2-digit' });
 }
-
-/** Time-only format used in range descriptions ("from 10:00 AM to 11:00 AM"). */
-function formatTimeOnly(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-}
+function formatTimeOnly(iso: string, zone: string): string { return formatTime(new Date(iso), new Date(), zone); }
 
 /** Friendly description of "now" for the preview header. */
-export function describeNow(now: Date = new Date()): string {
+export function describeNow(now: Date = new Date(), zone = 'UTC'): string {
   return `Right now: ${now.toLocaleDateString(undefined, {
-    weekday: "long",
+    timeZone: zone, weekday: "long",
     month: "short",
     day: "numeric",
-  })}, ${formatTime(now, now)}.`;
+  })}, ${formatTime(now, now, zone)}.`;
 }

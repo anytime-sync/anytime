@@ -1,4 +1,7 @@
 "use client";
+import { useAccountDay } from "@/hooks/use-account-day";
+import { civilDay } from "@/lib/calendar-civil";
+import { addCalendarDays } from "@/lib/day-window";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import { TaskListView } from "@/components/app/task-list-view";
@@ -26,6 +29,8 @@ import { OnboardingModal } from "@/components/app/onboarding-modal";
  * rows in the same chronological stream.
  */
 export default function TodayPage() {
+  const account = useAccountDay();
+  const today = civilDay(account.date, account.timeZone);
   const [mode, setMode] = useDayViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
   const lang = useLanguage();
@@ -37,9 +42,8 @@ export default function TodayPage() {
         <OnboardingModal />
         <TaskListView
           title={t(lang, "view.today.heading")}
-          subtitle={format(new Date(), "EEEE, MMMM d")}
+          subtitle={format(today, "EEEE, MMMM d")}
           filter={{ view: "today" }}
-          defaults={{ due_at: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d.toISOString(); })() }}
           showDailyEdition
           sortBy="due_at"
           sortKey="today"
@@ -65,7 +69,7 @@ export default function TodayPage() {
               {t(lang, "view.today.heading")}
             </h1>
             <p className="text-sm text-muted-fg mt-1 truncate">
-              {format(new Date(), "EEEE, MMMM d")}
+              {format(today, "EEEE, MMMM d")}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -87,7 +91,7 @@ export default function TodayPage() {
       <div className="px-4 md:px-6 pt-3">
         <ActionBrief />
       </div>
-      <DayTimeline date={new Date()} />
+      <DayTimeline date={today} />
       <OnboardingModal />
     </div>
   );

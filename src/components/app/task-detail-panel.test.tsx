@@ -1,9 +1,10 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ task: null as any, mutate: vi.fn(), close: vi.fn() }));
+const state = vi.hoisted(() => ({ task: null as any, mutate: vi.fn(), close: vi.fn(), zone: "UTC" }));
 vi.mock('@/hooks/use-tasks', () => ({ useTask: () => ({ data: state.task }), useUpdateTask: () => ({ mutate: state.mutate }), useDeleteTask: () => ({}), useToggleTask: () => vi.fn() }));
 vi.mock('@/store/ui', () => ({ useUIStore: (select: any) => select({ selectedTaskId: 'task', setSelectedTaskId: state.close }) }));
+vi.mock('@/hooks/use-account-day', () => ({ useAccountDay: () => ({ date: '2026-11-05', timeZone: state.zone, isPending: false }) }));
 vi.mock('@/hooks/use-projects', () => ({ useProjects: () => ({ data: [] }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/lib/use-language', () => ({ useLanguage: () => 'en' }));
@@ -16,7 +17,7 @@ vi.mock('./tag-editor', () => ({ TagEditor: () => null }));
 import { TaskDetailPanel } from './task-detail-panel';
 import { resolveTaskDates } from '@/lib/task-schedule';
 const base = { id: 'task', title: 'Task', notes: null, tags: [], start_at: null, due_at: '2026-10-08T01:00:00Z', time_kind: 'deadline', is_all_day: false, priority: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' };
-beforeEach(() => { state.task = { ...base }; vi.clearAllMocks(); });
+beforeEach(() => { state.task = { ...base }; state.zone = 'UTC'; vi.clearAllMocks(); });
 function mount() { let tree!: ReactTestRenderer; act(() => { tree = create(<TaskDetailPanel />); }); return tree; }
 it.each([{ start_at: null }, { due_at: null, start_at: base.due_at }, { start_at: base.due_at }, { start_at: base.due_at, due_at: '2026-10-07T00:00:00Z' }, { start_at: '2026-10-08T00:55:00Z', time_kind: 'work' }])('opening and closing does not repair/mutate dates: %j', patch => {
   state.task = { ...base, ...patch }; const tree = mount();
@@ -61,4 +62,13 @@ it('keeps an interrupted deadline-to-span-to-timed flow valid across repeated ed
     expect(tree.root.findAllByType('select')[0].findAllByType('option').find(option => option.props.value === 'work')?.props.disabled).toBe(true);
   }
   act(() => tree.unmount());
+});
+
+it('reminder editing uses the account zone and converts an explicit time independently of the device', () => {
+  state.zone='America/New_York'; state.task.reminder_at='2026-03-08T13:00:00Z'; state.task.reminder_offset_min=30;
+  const tree=mount(); const input=tree.root.findAllByType('input').find(i=>i.props.type==='datetime-local')!;
+  expect(input.props.value).toBe('2026-03-08T09:00');
+  act(()=>input.props.onChange({target:{value:'2026-03-08T10:00'}}));
+  expect(state.mutate).toHaveBeenCalledWith({id:'task',reminder_at:'2026-03-08T14:00:00.000Z',reminder_offset_min:null,reminder_sent_at:null});
+  act(()=>tree.unmount());
 });

@@ -25,8 +25,11 @@ import {
   isBotConfigured,
   verifyWebhookSecret,
 } from "@/lib/telegram";
-import { newTaskTimeKind } from "@/lib/task-schedule";
-import { parseQuickInput } from "@/lib/quick-parse";
+import { accountTimezone, channelTaskFilter, parseChannelTask } from '@/lib/task-channel';
+import { taskNotificationDate } from '@/lib/task-notification';
+import { calendarDate } from '@/lib/day-window';
+import { completeTaskOccurrence } from '@/lib/task-completion';
+import type { Task } from '@/lib/db.types';
 
 // Service-role client for DB access
 function getSupabase() {
@@ -111,119 +114,33 @@ async function linkByCode(
 // Task helpers
 // ---------------------------------------------------------------------------
 
-interface TaskRow {
-  id: string;
-  title: string;
-  status: string;
-  priority: number;
-  due_at: string | null;
-  start_at: string | null;
-  is_all_day: boolean;
-  completed_at: string | null;
+type TaskRow = Task;
+async function getTasks(userId: string, zone: string, days = 1, overdue = false): Promise<TaskRow[]> {
+  let query = getSupabase().from('tasks').select('*')
+    .eq('user_id', userId).neq('status', 'archived')
+    .or(channelTaskFilter(calendarDate(new Date(), zone), zone, days, overdue))
+    .order('due_at', { ascending: true }).limit(100);
+  if (overdue) query = query.eq('is_completed', false);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
 }
-
-async function getTodayTasks(userId: string): Promise<TaskRow[]> {
-  const sb = getSupabase();
-  const now = new Date();
-  // Use the user's local day (Asia/Taipei = UTC+8) not UTC midnight,
-  // otherwise "today" is an 8-hour-shifted UTC window.
-  const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // Taipei UTC+8
-  const localNow = new Date(now.getTime() + TZ_OFFSET_MS);
-  const localDay = localNow.toISOString().slice(0, 10); // YYYY-MM-DD
-  const startOfDay = new Date(`${localDay}T00:00:00+08:00`);
-  const endOfDay = new Date(`${localDay}T23:59:59+08:00`);
-
-  const { data } = await sb
-    .from("tasks")
-    .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
-    .eq("user_id", userId)
-    .neq("status", "archived")
-    .gte("due_at", startOfDay.toISOString())
-    .lte("due_at", endOfDay.toISOString())
-    .order("due_at", { ascending: true });
-
-  return (data ?? []) as TaskRow[];
-}
-
-async function getOverdueTasks(userId: string): Promise<TaskRow[]> {
-  const sb = getSupabase();
-  const now = new Date();
-  now.setUTCHours(0, 0, 0, 0);
-
-  const { data } = await sb
-    .from("tasks")
-    .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
-    .eq("user_id", userId)
-    .eq("status", "open")
-    .lt("due_at", now.toISOString())
-    .order("due_at", { ascending: true });
-
-  return (data ?? []) as TaskRow[];
-}
-
-async function getWeekTasks(userId: string): Promise<TaskRow[]> {
-  const sb = getSupabase();
-  const now = new Date();
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(endOfWeek.getDate() + 7);
-
-  const { data } = await sb
-    .from("tasks")
-    .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
-    .eq("user_id", userId)
-    .neq("status", "archived")
-    .gte("due_at", now.toISOString())
-    .lte("due_at", endOfWeek.toISOString())
-    .order("due_at", { ascending: true });
-
-  return (data ?? []) as TaskRow[];
-}
-
-async function createTask(
-  userId: string,
-  title: string,
-  dueAt?: string,
-  startAt?: string,
-  opts?: { priority?: 0 | 1 | 3 | 5; isAllDay?: boolean; rrule?: string | null },
-): Promise<TaskRow> {
-  const sb = getSupabase();
-  // Cap title length to match other creation paths (DB/UX limit 500).
-  const safeTitle = (title ?? "").trim().slice(0, 500);
-  // is_all_day: trust the parser when it told us; otherwise infer from
-  // the absence of any timed value (date-only due_at has no "T" time).
-  const isAllDay =
-    opts?.isAllDay ?? (!startAt && !dueAt?.includes("T"));
-  const { data, error } = await sb
-    .from("tasks")
-    .insert({
-      user_id: userId,
-      title: safeTitle,
-      due_at: dueAt ?? null,
-      start_at: startAt ?? null,
-      status: "open",
-      priority: opts?.priority ?? 0,
-      is_all_day: isAllDay,
-      time_kind: newTaskTimeKind({ start_at: startAt, due_at: dueAt, is_all_day: isAllDay }),
-      rrule: opts?.rrule ?? null,
-    })
-    .select("id, title, status, priority, due_at, start_at, is_all_day, completed_at")
-    .single();
-
+async function createTask(userId: string, text: string, zone: string): Promise<TaskRow> {
+  const parsed = parseChannelTask(text, zone);
+  const { title, start_at, due_at, start_date, due_date, schedule_timezone, time_kind, is_all_day, priority, rrule, reminder_at, reminder_offset_min } = parsed;
+  const { data, error } = await getSupabase().from('tasks').insert({
+    user_id: userId, title: (title || text).trim().slice(0, 500), status: 'open',
+    start_at, due_at, start_date, due_date, schedule_timezone, time_kind,
+    is_all_day, priority, rrule, reminder_at, reminder_offset_min,
+  }).select('*').single();
   if (error) throw new Error(error.message);
-  return data as TaskRow;
+  return data;
 }
-
-async function completeTask(
-  userId: string,
-  taskId: string,
-): Promise<boolean> {
-  const sb = getSupabase();
-  const { error } = await sb
-    .from("tasks")
-    .update({ status: "done", completed_at: new Date().toISOString() })
-    .eq("id", taskId)
-    .eq("user_id", userId);
-  return !error;
+async function completeTask(userId: string, task: TaskRow, zone: string): Promise<boolean> {
+  // The listed revision, not a refetched newer one, is the user's command.
+  if (task.user_id !== userId || !task.updated_at) return false;
+  try { await completeTaskOccurrence(getSupabase(), task, zone, task.updated_at); return true; }
+  catch { return false; }
 }
 
 // ---------------------------------------------------------------------------
@@ -237,93 +154,16 @@ const PRIORITY_EMOJI: Record<number, string> = {
   5: "🔴",
 };
 
-function formatTaskList(tasks: TaskRow[], title: string): string {
-  if (tasks.length === 0) return `${title}\n\nNo tasks.`;
-
-  const lines = tasks.map((t, i) => {
-    const done = t.status === "done" ? "✅" : "⬜";
-    const pri = PRIORITY_EMOJI[t.priority] ?? "";
-    const time = t.due_at && !t.is_all_day
-      ? new Date(t.due_at).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-          timeZone: "Asia/Taipei",
-        })
-      : t.is_all_day
-        ? "all day"
-        : "";
-    const timeStr = time ? ` (${time})` : "";
-    return `${i + 1}. ${done} ${pri}${t.title}${timeStr}`;
-  });
-
-  return `${title}\n\n${lines.join("\n")}`;
+function formatTaskList(tasks: TaskRow[], title: string, zone: string, offset = 0): string {
+  if (!tasks.length) return `${title} · ${zone}\n\nNo tasks.`;
+  return `${title} · ${zone}\n\n` + tasks.map((task, index) => {
+    const label = taskNotificationDate(task, zone);
+    return `${index + offset + 1}. ${task.status === 'done' ? '✅' : '⬜'} ${PRIORITY_EMOJI[task.priority] ?? ''}${task.title}${label ? ` (${label})` : ''}`;
+  }).join('\n');
 }
-
-// ---------------------------------------------------------------------------
-// Natural language parsing (simple, no AI call needed for basic patterns)
-// ---------------------------------------------------------------------------
-
-/**
- * Telegram task parsing. Delegates to the shared `parseQuickInput`
- * (chrono-node based) used by the web quick-add, so "buy milk tomorrow
- * 3pm urgent" produces the same title/due/priority everywhere.
- *
- * Timezone: this bot standardizes on Asia/Taipei (UTC+8), matching the
- * rest of this webhook (getTodayTasks, /today formatting). chrono parses
- * relative phrases against the *server* clock (UTC on Vercel), so we feed
- * it a reference time shifted into Taipei wall-clock and then shift the
- * parsed result back to a true UTC instant. This makes "tomorrow 3pm"
- * mean 3pm Taipei, not 3pm UTC.
- */
-function parseTaskInput(text: string): {
-  title: string;
-  dueAt?: string;
-  startAt?: string;
-  isAllDay?: boolean;
-  priority?: 0 | 1 | 3 | 5;
-  rrule?: string | null;
-} {
-  const raw = (text ?? "").trim();
-  if (!raw) return { title: "" };
-
-  try {
-    const p = parseQuickInput(raw, { timezoneOffsetMinutes: 480 });
-    return {
-      title: (p.title || raw).slice(0, 500),
-      dueAt: p.due_at ?? undefined,
-      startAt: p.start_at ?? undefined,
-      isAllDay: p.is_all_day,
-      priority: p.priority,
-      rrule: p.rrule,
-    };
-  } catch {
-    // Never let a parse error drop the task — fall back to a plain title.
-    return { title: raw.slice(0, 500) };
-  }
-}
-
-/**
- * Confirmation line shown after creating a task. Echoes the parsed
- * schedule in Taipei time so the user can immediately see whether
- * "tomorrow 3pm" was understood correctly.
- */
-function formatCreated(task: TaskRow): string {
-  let when = "";
-  if (task.due_at) {
-    if (task.is_all_day) {
-      when = " · " + new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Taipei", weekday: "short", month: "short", day: "numeric",
-      }).format(new Date(task.due_at));
-    } else {
-      when = " · " + new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Taipei", weekday: "short", month: "short", day: "numeric",
-        hour: "2-digit", minute: "2-digit", hour12: false,
-      }).format(new Date(task.due_at));
-    }
-  }
-  const pri = task.priority === 5 ? " · 🔴" : task.priority === 3 ? " · 🟠" : "";
-  return `✨ Created: ${task.title}${when}${pri}`;
+function formatCreated(task: TaskRow, zone: string): string {
+  const when = taskNotificationDate(task, zone);
+  return `✨ Created: ${task.title}${when ? ` · ${when}` : ''} · ${zone}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -369,32 +209,33 @@ async function handleCommand(
   }
 
   const { userId } = link;
+  const zone = await accountTimezone(getSupabase(), userId);
 
   switch (cmd) {
     case "/start":
       return "Welcome to First Light! Your account is linked. Try /today to see your tasks.";
 
     case "/today": {
-      const tasks = await getTodayTasks(userId);
-      const overdue = await getOverdueTasks(userId);
-      taskListCache.set(chatId, [...overdue, ...tasks]);
-      let msg = formatTaskList(tasks, "📋 Today");
+      const tasks = await getTasks(userId, zone);
+      const overdue = await getTasks(userId, zone, 1, true);
+      taskListCache.set(chatId, [...tasks, ...overdue]);
+      let msg = formatTaskList(tasks, "📋 Today", zone);
       if (overdue.length > 0) {
-        msg += "\n\n" + formatTaskList(overdue, "⚠️ Overdue");
+        msg += "\n\n" + formatTaskList(overdue, "⚠️ Overdue", zone, tasks.length);
       }
       return msg;
     }
 
     case "/week": {
-      const tasks = await getWeekTasks(userId);
+      const tasks = await getTasks(userId, zone, 7);
       taskListCache.set(chatId, tasks);
-      return formatTaskList(tasks, "📅 This Week");
+      return formatTaskList(tasks, "📅 This Week", zone);
     }
 
     case "/overdue": {
-      const tasks = await getOverdueTasks(userId);
+      const tasks = await getTasks(userId, zone, 1, true);
       taskListCache.set(chatId, tasks);
-      return formatTaskList(tasks, "⚠️ Overdue");
+      return formatTaskList(tasks, "⚠️ Overdue", zone);
     }
 
     case "/done": {
@@ -407,19 +248,14 @@ async function handleCommand(
         return "No task list cached. Run /today first, then /done <number>.";
       }
       const task = cached[n - 1];
-      const ok = await completeTask(userId, task.id);
-      return ok ? `✅ Done: ${task.title}` : "Failed to complete task.";
+      const ok = await completeTask(userId, task, zone);
+      return ok ? `✅ Done: ${task.title}` : "Task changed or completion failed. Refresh /today or /week before trying again.";
     }
 
     case "/add": {
       if (!args) return "Usage: /add <task description>";
-      const parsed = parseTaskInput(args);
-      const task = await createTask(userId, parsed.title, parsed.dueAt, parsed.startAt, {
-        priority: parsed.priority,
-        isAllDay: parsed.isAllDay,
-        rrule: parsed.rrule,
-      });
-      return formatCreated(task);
+      try { return formatCreated(await createTask(userId, args, zone), zone); }
+      catch (error) { return `Task not saved: ${error instanceof Error ? error.message : 'Try again.'}`; }
     }
 
     default: {
@@ -435,13 +271,8 @@ async function handleCommand(
       }
       // Treat free text as a new task
       if (text.trim().length > 0 && !text.startsWith("/")) {
-        const parsed = parseTaskInput(text);
-        const task = await createTask(userId, parsed.title, parsed.dueAt, parsed.startAt, {
-          priority: parsed.priority,
-          isAllDay: parsed.isAllDay,
-          rrule: parsed.rrule,
-        });
-        return formatCreated(task);
+        try { return formatCreated(await createTask(userId, text, zone), zone); }
+        catch (error) { return `Task not saved: ${error instanceof Error ? error.message : 'Try again.'}`; }
       }
       return (
         "First Light Bot\n\n" +

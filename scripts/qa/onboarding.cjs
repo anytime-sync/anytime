@@ -13,7 +13,8 @@ const fixtures = {
     export const useUpdateTask = () => ({mutate: () => { throw Error('Unexpected task update'); }});
     export const useCreateTask = () => ({mutateAsync: async task => { window.fixtureTasks.push(task); }});`,
   '@/hooks/use-calendar': 'export const useCalendarEvents = () => ({data: []});',
-  '@/hooks/use-ai': 'export const useUserPrefs = () => ({data: {}});',
+  '@/hooks/use-ai': 'export const useUserPrefs = () => ({data: {timezone: "UTC"}, isPending: false});',
+  './use-ai': 'export const useUserPrefs = () => ({data: {timezone: "UTC"}, isPending: false});',
   '@/lib/supabase/client': `export const createClient = () => ({
     rpc: async name => {
       if (name !== 'admin_dashboard_summary') throw Error('Unexpected fixture RPC');
