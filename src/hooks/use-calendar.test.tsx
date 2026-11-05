@@ -56,6 +56,8 @@ it.each([true, false])(
       'subtaskCounts',
       'calendarEvents',
       'calendarConnection',
+      'upcoming-reminders',
+      'calendarSyncIssues',
     ])
       expect(invalidate).toHaveBeenCalledWith({ queryKey: [key] });
     act(() => tree.unmount());

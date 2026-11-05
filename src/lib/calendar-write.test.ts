@@ -460,3 +460,19 @@ it('pending series edits cannot silently clear an unresolved occurrence conflict
   expect(mocks.patch).not.toHaveBeenCalled();
   expect(f.tables.tasks[0].calendar_dirty).toBe(true);
 });
+
+it('preserves a remote provider-only edit when a native completion requests deletion', async () => {
+  const f = await linked(), task = f.tables.tasks[0];
+  p.save({ ...p.events.get(task.calendar_event_id), location: 'New location' });
+  f.edit(task.id, { is_completed: true, status: 'done' });
+  expect(await run(f)).toMatchObject({ conflicts: 1 });
+  expect(mocks.remove).not.toHaveBeenCalled(); expect(p.events.get(task.calendar_event_id).status).not.toBe('cancelled');
+});
+it('leaves a queued deletion pending when the provider ETag changed only outside owned fields', async () => {
+  const f = await linked(), task = f.tables.tasks[0];
+  f.tables.pending_calendar_deletions.push({ id: 'delete', user_id: 'owner', event_id: task.calendar_event_id, calendar_id: 'primary' });
+  f.tables.task_calendar_deletion_baselines.push({ user_id: 'owner', event_id: task.calendar_event_id, calendar_id: 'primary', task_id: task.id, etag: task.calendar_etag, baseline: task.calendar_baseline });
+  p.save({ ...p.events.get(task.calendar_event_id), location: 'New location' });
+  expect(await drainCalendarDeletions({ supabase: f.db, userId: 'owner' })).toMatchObject({ failed: 1 });
+  expect(mocks.remove).not.toHaveBeenCalled(); expect(f.tables.pending_calendar_deletions).toHaveLength(1);
+});

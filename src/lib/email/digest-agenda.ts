@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { dayWindow } from "@/lib/day-window";
+import { dayWindow, validDate } from "@/lib/day-window";
 
 /** calendar_events uses timestamptz even for Google's date-only values. */
 export type DigestCalendarEvent = {
@@ -13,6 +13,8 @@ export type DigestCalendarEvent = {
   task_id: string | null;
   /** Projected from raw.attendees; JSON may be absent or malformed. */
   attendees?: unknown;
+  google_start_date?: string | null;
+  google_end_date?: string | null;
 };
 
 export type DigestAgendaItem = {
@@ -47,11 +49,11 @@ export async function loadDigestAgenda(
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const { data, error } = await supabase
       .from("calendar_events")
-      .select("id,title,start_at,end_at,is_all_day,cancelled,status,task_id,attendees:raw->attendees")
+      .select("id,title,start_at,end_at,is_all_day,cancelled,status,task_id,attendees:raw->attendees,google_start_date:raw->start->>date,google_end_date:raw->end->>date")
       .eq("user_id", userId)
       .eq("cancelled", false)
       .or("status.is.null,status.neq.cancelled")
-      .or(`${overlap(false, start.toISOString(), nextStart.toISOString())},${overlap(true, dateStart, dateEnd)}`)
+      .or(`${overlap(false, start.toISOString(), nextStart.toISOString())},and(raw->start->>date.is.null,${overlap(true, dateStart, dateEnd)}),and(is_all_day.eq.true,raw->start->>date.lt.${nextDate(localDate)},or(raw->end->>date.gt.${localDate},raw->start->>date.gte.${localDate}))`)
       .order("start_at", { ascending: true })
       .order("id", { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1);
@@ -84,16 +86,19 @@ export function buildDigestAgenda(
     if (event.task_id && displayedTaskIds.has(event.task_id)) continue;
     const start = parseInstant(event.start_at);
     const end = parseInstant(event.end_at);
-    if (!start || (event.end_at !== null && !end)) continue;
+    if (!event.google_start_date && (!start || (event.end_at !== null && !end))) continue;
 
     if (event.is_all_day) {
-      // Sync stores Google {date} as midnight UTC; never shift those dates
-      // through the recipient's timezone. Google end dates are exclusive.
-      const startDate = start.toISOString().slice(0, 10);
-      const endDate = end?.toISOString().slice(0, 10) ?? nextDate(startDate);
+      // Canonical Google DATE wins over compatibility instants. Older rows
+      // without raw dates retain their original midnight-UTC interpretation.
+      const startDate = event.google_start_date ?? start!.toISOString().slice(0, 10);
+      if (!validDate(startDate)) continue;
+      const endDate = event.google_end_date ?? (event.google_start_date ? nextDate(startDate) : end?.toISOString().slice(0, 10) ?? nextDate(startDate));
+      if (!validDate(startDate) || !validDate(endDate)) continue;
       if (endDate <= startDate || startDate > localDate || endDate <= localDate) continue;
       agenda.push({ id: event.id, title: event.title, start: startDate, end: endDate, isAllDay: true });
     } else {
+      if (!start) continue;
       if (end && +end < +start) continue;
       const overlaps = end && +end > +start
         ? start < dayEnd && end > dayStart

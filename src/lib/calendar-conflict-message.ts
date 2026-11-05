@@ -1,6 +1,7 @@
 /** User-facing explanation; persisted reason codes remain stable for review. */
 export function calendarConflictMessage(reason: string): string {
   const messages: Record<string, string> = {
+    inactive_task_requires_review: 'This task is completed, archived or a subtask. Review its status in Tasks.',
     both_sides_changed: 'This task and its Google event both changed.',
     remote_changed_since_baseline:
       'The Google event changed since the last acknowledged sync.',

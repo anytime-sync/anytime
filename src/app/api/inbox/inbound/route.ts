@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { parseQuickInput, type ParsedQuickInput } from "@/lib/quick-parse";
+import type { ParsedQuickInput } from "@/lib/quick-parse";
+import { accountTimezone, parseChannelTask } from "@/lib/task-channel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -463,22 +464,15 @@ export async function POST(req: Request) {
   // Strip reply/forward prefixes BEFORE parsing so chrono and the
   // priority/tag heuristics see the real subject.
   const cleanedSubject = stripReplyPrefixes(rawSubject);
+  let timezone: string;
+  try { timezone = await accountTimezone(supabase, alias.user_id); }
+  catch { return NextResponse.json({ error: "timezone_unavailable" }, { status: 503 }); }
 
   // Run the same NL parser used by /app's Quick Add input. Empty
   // subject → empty parsed.title; we fall back to "(no subject)".
-  const parsed: ParsedQuickInput = cleanedSubject.length > 0
-    ? parseQuickInput(cleanedSubject, { existingTags, existingProjects })
-    : {
-        title: "",
-        start_at: null,
-        time_kind: "deadline",
-        due_at: null,
-        is_all_day: false,
-        priority: 0,
-        tagNames: [],
-        rrule: null,
-        reminder_at: null,
-      };
+  let parsed: ParsedQuickInput;
+  try { parsed = parseChannelTask(cleanedSubject, timezone, { existingTags, existingProjects }); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'invalid_schedule' }, { status: 422 }); }
 
   const title = (parsed.title || cleanedSubject || rawSubject || "(no subject)").slice(0, 500);
 
@@ -517,6 +511,10 @@ export async function POST(req: Request) {
       is_completed: false,
       priority: parsed.priority,
       start_at: parsed.start_at,
+      start_date: parsed.start_date,
+      due_date: parsed.due_date,
+      schedule_timezone: parsed.schedule_timezone,
+      reminder_offset_min: parsed.reminder_offset_min,
       time_kind: parsed.time_kind,
       due_at: parsed.due_at,
       is_all_day: parsed.is_all_day,

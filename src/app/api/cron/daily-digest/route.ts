@@ -10,9 +10,11 @@ import {
   type DigestPayload,
 } from "@/lib/email/daily-digest-template";
 import { loadDigestAgenda, type DigestAgendaItem } from "@/lib/email/digest-agenda";
-import { calendarDate, dayWindow } from "@/lib/day-window";
+import { calendarDate, addCalendarDays } from "@/lib/day-window";
 import { safeTimezone } from "@/lib/ai/tz";
 import { isAuthorizedCron } from "@/lib/cron-auth";
+
+import { channelTaskFilter, notificationTaskColumns } from "@/lib/task-channel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,26 +91,25 @@ async function handle(req: Request) {
 
     // Pull today's tasks: bucket by quadrant 1 vs everything-else due
     // today, plus overdue (due_at < today's local 00:00).
-    const { start: todayStart, nextStart: todayEnd } = dayWindow(localDate, tz);
+
 
     const { data: dueToday, error: dueError } = await supabase
       .from("tasks")
-      .select("id, title, start_at, due_at, time_kind, priority, is_all_day")
+      .select(notificationTaskColumns)
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
       .neq("status", "archived")
-      .gte("due_at", todayStart.toISOString())
-      .lt("due_at", todayEnd.toISOString())
+      .or(channelTaskFilter(localDate, tz))
       .order("priority", { ascending: false })
       .order("due_at", { ascending: true })
       .limit(20);
     const { data: overdueRaw, error: overdueError } = await supabase
       .from("tasks")
-      .select("id, title, start_at, due_at, time_kind, priority, is_all_day")
+      .select(notificationTaskColumns)
       .eq("user_id", pref.user_id)
       .eq("is_completed", false)
       .neq("status", "archived")
-      .lt("due_at", todayStart.toISOString())
+      .or(channelTaskFilter(localDate, tz, 1, true))
       .order("due_at", { ascending: true })
       .limit(5);
 
@@ -222,13 +223,12 @@ async function computeStreak(
   const today = currentDateInTz(new Date(), tz);
   // Look back up to 90 days — anyone running longer should still see
   // a healthy number; we're not racing for a perfect lifetime streak.
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 90);
+  const since = addCalendarDays(today, -90);
   const { data: rows } = await supabase
     .from("habit_logs")
     .select("logged_date")
     .eq("user_id", userId)
-    .gte("logged_date", since.toISOString().slice(0, 10));
+    .gte("logged_date", since);
   if (!rows || rows.length === 0) return 0;
 
   const days = new Set(rows.map((r: { logged_date: string }) => r.logged_date));

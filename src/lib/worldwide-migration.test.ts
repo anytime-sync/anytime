@@ -11,9 +11,11 @@ it('executes prepared SQL in an ephemeral fixture: atomic history, retry receipt
       create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('fixture.uid',true),'')::uuid $$;
       create function auth.role() returns text language sql as $$ select current_setting('fixture.role',true) $$;
       grant usage on schema auth to authenticated, service_role;
-      create table tasks(id uuid primary key default gen_random_uuid(), user_id uuid, project_id uuid, title text, notes text, priority int, position int, start_at timestamptz, due_at timestamptz, is_all_day boolean, rrule text, is_completed boolean default false, completed_at timestamptz, status text, parent_id uuid, calendar_event_id text, reminder_at timestamptz, reminder_sent_at timestamptz, updated_at timestamptz default now());
+      create table tasks(id uuid primary key default gen_random_uuid(), user_id uuid, project_id uuid, share_group_id uuid, title text, notes text, priority int, position int, start_at timestamptz, due_at timestamptz, is_all_day boolean, rrule text, is_completed boolean default false, completed_at timestamptz, status text, parent_id uuid, calendar_event_id text, reminder_at timestamptz, reminder_sent_at timestamptz, updated_at timestamptz default now());
+      create function public.is_project_member(id uuid) returns boolean language sql as $$ select id='00000000-0000-4000-8000-000000000004'::uuid and auth.uid()='00000000-0000-4000-8000-000000000003'::uuid $$;
+      create function public.is_share_group_member(id uuid) returns boolean language sql as $$ select false $$;
       create table user_calendar_connections(user_id uuid, provider text, primary_calendar_id text);
-      create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at=clock_timestamp(); return new; end $$;
+      create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at=now(); return new; end $$;
       create trigger tasks_set_updated_at before update on tasks for each row execute function public.set_updated_at();
       alter table tasks enable row level security;
       create policy owner_only on tasks for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
@@ -52,6 +54,19 @@ it('executes prepared SQL in an ephemeral fixture: atomic history, retry receipt
       schedule_timezone: null,
       calendar_baseline: null,
     });
+    await db.exec(`set fixture.uid='${owner}'; set fixture.role='authenticated'; set role authenticated;`);
+    await expect(db.exec(`update tasks set calendar_etag='forged' where id='${task}'`)).rejects.toThrow('calendar_state_is_server_managed');
+    await expect(db.exec(`update tasks set calendar_event_id='forged' where id='${task}'`)).rejects.toThrow('calendar_state_is_server_managed');
+    await expect(db.exec(`update tasks set calendar_event_generation=5 where id='${task}'`)).rejects.toThrow('calendar_state_is_server_managed');
+    await expect(db.exec(`insert into task_completion_receipts values('${owner}','${task}',now(),'{"forged":true}')`)).rejects.toThrow(/permission denied/);
+    await db.exec(`update tasks set title='Native edit still allowed' where id='${task}'`);
+    expect((await row()).calendar_dirty).toBe(true);
+    await expect(db.exec(`update tasks set calendar_dirty=false where id='${task}'`)).rejects.toThrow('calendar_state_is_server_managed');
+    await db.exec(`update tasks set is_all_day=true,time_kind='deadline',due_date='2026-11-05',due_at='2026-11-04T16:00Z',schedule_timezone='Asia/Taipei' where id='${task}'`);
+    await expect(db.exec(`update tasks set due_at='2026-11-05T16:00Z' where id='${task}'`)).rejects.toThrow('civil_date_changed_use_current_client');
+    expect((await row()).due_date.toISOString().slice(0, 10)).toBe('2026-11-05');
+    await db.exec(`update tasks set due_date='2026-11-06',due_at='2026-11-05T16:00Z' where id='${task}'`);
+    await db.exec(`update tasks set due_date=null,due_at='2026-03-07T14:00Z',is_all_day=false where id='${task}'; reset role;`);
     await db.exec(`update tasks set time_kind='deadline',schedule_timezone='America/New_York',rrule='FREQ=DAILY;COUNT=2',reminder_offset_min=30 where id='${task}';
       create function reject_fixture_history() returns trigger language plpgsql as $$ begin if new.is_completed then raise exception 'fixture_history_failed'; end if; return new; end $$;
       create trigger zz_fixture_history before insert on tasks for each row execute function reject_fixture_history();

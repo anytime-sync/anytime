@@ -100,8 +100,8 @@ Both UI and API recurring completion call `complete_task_occurrence`. A task loc
 exact expected revision, history insertion, advancement and retry receipt live in
 one transaction. An insert failure rolls back the advancement. The API requires
 `expected_updated_at` (or If-Unmodified-Since) for recurring completion; retry the
-same revision after a lost response. Existing task RLS governs owner/shared-editor
-access. History and receipts belong to the actor, preserving the previous UI
+same revision after a lost response. The protected completion function explicitly
+checks the existing owner/project/share-group editing rules. History and receipts belong to the actor, preserving the previous UI
 history ownership. Receipts cascade with task/account deletion. The snapshot trigger skips an
 already-deleted account during cascading deletion; this is tested in PGlite.
 
@@ -131,16 +131,41 @@ This does not make existing multi-batch imports transactional.
 
 - This is conservative bidirectional reconciliation for supported linked native
   tasks, not complete synchronization of every Google field or occurrence edit.
-  Conflict review is surfaced; a general choose-local/choose-remote resolution UI
-  is not implemented. Recurring exception conflicts need a separately reviewed
-  resolution workflow. No Google Tasks connector or OAuth scopes were added.
-- Date entry and Calendar views are covered here. Email ingestion and Telegram
-  command/query formatting still have separate timezone paths (email omits an
-  account parser context; Telegram uses Taipei). Digest selection and other
-  downstream readers still use compatibility timestamps rather than new civil
-  columns. Those paths need review before a claim of worldwide correctness across
-  every channel, especially after an explicit account-zone change. No digest
-  selection, live recurrence repair or private-row diagnosis is included.
+  Settings includes an owner-only pending/conflict list and comparison. Supported
+  nonrecurring classified changes can explicitly use the reviewed Google version
+  for the same native task. The POST refetches and checks the review digest
+  (task revision, acknowledged baseline/ETag, projection and remote ETag), then
+  applies through the atomic exact-revision RPC. It never writes to Google.
+  Newer remote edits after that read remain available to the next inbound sync.
+  There is no force-local overwrite action. Recurring exceptions, legacy/missing
+  baselines, deleted events, mode changes and unsupported deadline edits retain
+  the task/conflict and explain why manual review is required. No Google Tasks connector or OAuth scopes were added.
+- Email and Telegram capture use the same account IANA parser and canonical
+  date fields as Quick Add. Invalid/absent preferences use explicit UTC; preference
+  read failures block capture. New DST gaps/folds reject capture without saving
+  an unscheduled substitute. The account parser validates Chrono components as
+  civil values before applying IANA resolution: host-local DST must not discard
+  the date phrase first. Explicit offset timestamps retain their instant precision.
+  This uses the [documented Chrono refinement API](https://github.com/wanasit/chrono#customize-chrono),
+  with no dependency patch or host timezone mutation. Telegram completion uses the listed exact revision
+  and common atomic occurrence command; list numbering matches the cached order.
+- Digest/Telegram windows use civil dates first, half-open instant windows and
+  overlap for explicit work; civil span ends are inclusive. Explicit work ending
+  at day start is excluded from that day's agenda and is overdue. Start-only
+  deadlines are included. Unknown historical intent stays on its legacy due-point
+  contract; durations do not classify it. Digest send logs and caps are unchanged.
+- Digest, reminder email and Telegram share date rendering: canonical civil dates
+  stay fixed, timed values render in the account zone, explicit midnight stays
+  timed. A pinned schedule zone different from the account zone is shown as
+  `(account: <zone>; schedule: <zone>)`. Digest canonical Google DATE fields take
+  precedence over compatibility timestamps; older rows retain their UTC-prefix
+  compatibility interpretation. No history is backfilled.
+- Reminder dispatch reads timezone and the existing push opt-out, fails closed on
+  a failed preference query, and does not invent times for date-only tasks. Browser
+  timers are keyed by reminder instant/title/revision, cancelled on removal or
+  unmount, and refreshed after native/remote edits and focus/resume. Delays remain
+  absolute instant differences. Existing email/push shared claim policy is unchanged;
+  no live notification or email acceptance has occurred.
 - The day/week rails retain their existing display range and wall-clock layout.
   A repeated DST hour may share a visual position; stored instants remain distinct.
   This is not mobile/touch/iPhone or complete timeline UX acceptance.
@@ -166,7 +191,7 @@ impossible. Previously denied Vercel webhook enumeration was not retried.
 - Relevant timezone, PR26 compatibility, ICS, import and editor tests under
   `TZ=UTC`, `TZ=Asia/Taipei` and `TZ=America/Los_Angeles`.
 - `scripts/qa/capture-reliability.cjs`, `onboarding.cjs` and
-  `worldwide-calendar.cjs`: real UI/query code with synthetic auth/PostgREST;
+  `worldwide-calendar.cjs` and `calendar-review.cjs`: real UI/query code with synthetic auth/PostgREST;
   external and unexpected browser requests are blocked.
 - Typecheck, lint and an isolated production build with fixture service values,
   no `.env` files, genuine Google Fonts and no disabled production check.
@@ -175,3 +200,55 @@ Provider/database fixtures cover lost responses, overlapping workers, edits
 during push, exact echoes, baseline drift, 429/5xx, 412, ownership, instance/master
 identity, paginated partial failure and 410 reset. Full hosted-provider and
 concurrent-database acceptance remains a future release requirement.
+
+## Migration review and rollback order
+
+The prepared migration remains `20261105080347_worldwide_schedule_sync.sql` and
+is **not applied** to any hosted/connected database. It runs in one transaction
+and fails preflight when the prerequisite time-intent columns/function/trigger
+are missing. The repository's `20261005140000_task_time_intent.sql` was recorded
+under a different timestamp in the hosted history; legacy numeric versions are
+also present. Before approval, compare the actual schema, function bodies,
+policies, grants and migration history read-only. Apply only the exact reviewed
+new migration after resolving that history mapping. Do not replay the repository
+history wholesale or automatically repair/rename applied versions.
+
+`guard_task_schedule_state` is an invoker trigger with an empty search path. It
+rejects authenticated/anonymous writes to mapping, generation, acknowledged
+baseline/ETag, pending/conflict and dirty state before the native dirty trigger.
+It also rejects task identity/owner changes. Native shared-task edits keep existing
+RLS. Server writers use service_role. Existing civil dates must agree with the
+compatibility timestamp's date in the saved schedule zone; this deliberately
+allows within-day legacy end-of-day timestamps and midnight DST transitions.
+A cross-day timestamp-only old-client edit fails with
+`civil_date_changed_use_current_client`; updated clients send both fields. New
+helpers still emit account-day starts. Old rows without civil intent are untouched.
+
+Completion is a narrowly scoped definer with empty search path, qualified names,
+explicit signed actor-role checks and the existing owner/project/share-group
+editing rules. A task lock and exact revision guard precede receipt access. History,
+advancement and receipt commit together. Authenticated clients may SELECT their
+accessible receipts but cannot insert/update/delete/truncate them. Future changes
+to shared-task authorization must update this explicit function guard too.
+Reconciliation stays service-only/invoker and checks owned connection, mapping and
+exact task revision. Baseline/outbox/conflict state is durable and not exposed as
+provider snapshots to shared readers. The restricted deletion snapshot trigger
+preserves the acknowledged revision and skips accounts already being cascaded.
+Deletes require that acknowledged ETag, including provider-only changes.
+
+Rollback is **application first, additive state retained**: stop the new sync /
+completion callers through an approved release operation, roll the application
+back to a compatible checkpoint, and retain civil columns, baselines, outbox,
+conflicts, receipts, ACLs and protective triggers. The original PR36 client may
+receive explicit errors when editing already-civil dates; it cannot safely own
+those new schedules. Do not drop columns/tables to obtain apparent compatibility.
+A destructive schema rollback would require a separately approved backup and
+conversion/ambiguity plan. Dependency order, if ever approved, is callers → RPCs
+and task-attached triggers → receipts/deletion snapshots/indexes → replacement
+of the dirty trigger body → new columns. That destructive rollback is not prepared
+for automatic execution and has not been claimed tested.
+
+SQL verification uses synthetic ephemeral PGlite, including production-shaped
+`now()` revision triggers, owner/shared/unrelated actors, receipt forgery, metadata
+forgery, old-client rejection, transaction failure/retry and account cascade. This
+is not hosted RLS/extension parity or multi-connection/provider acceptance.

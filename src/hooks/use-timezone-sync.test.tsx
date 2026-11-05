@@ -89,3 +89,5 @@ it('cross-device insert between conditional update and insert wins over initiali
   await mount();
   expect(f.saved).toBe('Asia/Kathmandu');
 });
+
+it('a stored UTC choice is preserved by stale initialization', async () => { f.saved = 'UTC'; await mount(); expect(f.saved).toBe('UTC'); });

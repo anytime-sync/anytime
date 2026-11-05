@@ -268,6 +268,8 @@ export function useCreateTask() {
         warn();
       }
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
@@ -352,6 +354,8 @@ export function useUpdateTask() {
     },
     onSettled: (_d, _e, p) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["task", p.id] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
@@ -371,7 +375,7 @@ export function useToggleTask() {
     },
     onError: (error: Error) => toast.error(error.message),
     onSettled: () => {
-      for (const key of ['tasks', 'task', 'subtasks', 'subtaskCounts', 'calendarEvents']) void qc.invalidateQueries({ queryKey: [key] });
+      for (const key of ['tasks', 'task', 'subtasks', 'subtaskCounts', 'calendarEvents', 'calendarSyncIssues', 'upcoming-reminders']) void qc.invalidateQueries({ queryKey: [key] });
     },
   });
   return (task: Task) => {
@@ -402,6 +406,8 @@ export function useDeleteTask() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
       qc.invalidateQueries({ queryKey: ["subtaskCounts"] });
     },
@@ -439,6 +445,7 @@ export function useReorderTasks() {
     onError: (_e, _v, ctx) => {
       ctx?.prev.forEach(([k, v]) => qc.setQueryData(k, v));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSettled: () => { void qc.invalidateQueries({ queryKey: ["tasks"] }); void qc.invalidateQueries({ queryKey: ["upcoming-reminders"] });
+      qc.invalidateQueries({ queryKey: ["calendarSyncIssues"] }); },
   });
 }

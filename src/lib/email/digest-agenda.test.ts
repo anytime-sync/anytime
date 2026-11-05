@@ -115,3 +115,13 @@ describe("digest calendar selection", () => {
     ]).map(e => e.id)).toEqual(["missing", "point"]);
   });
 });
+it('uses canonical Google DATE even when the compatibility timestamp is on another UTC day', () => {
+  const result = buildDigestAgenda([{ id: 'canonical', title: 'Civil event', task_id: null, cancelled: false, status: 'confirmed',
+    is_all_day: true, start_at: '2026-11-04T16:00:00Z', end_at: '2026-11-05T16:00:00Z', google_start_date: '2026-11-05', google_end_date: '2026-11-06',
+  }], '2026-11-05', 'Pacific/Pago_Pago', new Set());
+  expect(result).toMatchObject([{ start: '2026-11-05', end: '2026-11-06' }]);
+});
+
+it('skips malformed canonical dates without inventing a date or aborting a digest', () => {
+  expect(buildDigestAgenda([event('bad-date', { is_all_day: true, google_start_date: 'invalid', google_end_date: null })], '2026-11-05', 'UTC', new Set())).toEqual([]);
+});

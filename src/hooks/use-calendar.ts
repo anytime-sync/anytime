@@ -104,7 +104,7 @@ export function useSyncCalendarNow() {
       if (!result.ok) toast.error(`Calendar sync incomplete: ${result.pending ?? '?'} tasks pending, ${result.pending_deletions ?? '?'} deletions pending, ${result.conflicts ?? '?'} conflicts. ${result.inbound.error || result.outbound.error || result.deletions.error || result.error || ''}`);
     },
     onSettled: () => {
-      for (const key of ['calendarEvents', 'calendarConnection', 'tasks', 'task', 'subtasks', 'subtaskCounts']) void qc.invalidateQueries({ queryKey: [key] });
+      for (const key of ['calendarEvents', 'calendarConnection', 'tasks', 'task', 'subtasks', 'subtaskCounts', 'calendarSyncIssues', 'upcoming-reminders']) void qc.invalidateQueries({ queryKey: [key] });
     },
     onError: (e: Error) => {
       toast.error(e.message);

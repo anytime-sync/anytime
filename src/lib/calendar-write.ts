@@ -317,6 +317,8 @@ export async function pushPendingTasksForUser({
           throw new CalendarConflict('missing_acknowledged_baseline', linked);
         if (!sameEvent(observed, t.calendar_baseline))
           throw new CalendarConflict('remote_changed_since_baseline', linked);
+        if (!event && linked.etag !== t.calendar_etag)
+          throw new CalendarConflict('remote_changed_since_baseline', linked);
         await prepare(event ? 'patch' : 'delete');
         try {
           if (!event) {
@@ -496,7 +498,7 @@ export async function drainCalendarDeletions({
           if (!baseline || baseline.calendar_id !== calendarId)
             throw new Error('deletion_requires_acknowledged_baseline');
           assertTaskOwner(event, baseline.task_id);
-          if (!sameEvent(eventBaseline(event), baseline.baseline))
+          if (event.etag !== baseline.etag || !sameEvent(eventBaseline(event), baseline.baseline))
             throw new Error('deletion_conflict_remote_changed');
           try {
             await deleteCalendarEvent({
