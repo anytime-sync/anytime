@@ -1,10 +1,14 @@
 "use client";
-import { calendarTask, snoozedDue } from "@/lib/task-schedule";
+import { calendarTask, snoozeTaskDates } from "@/lib/task-schedule";
 
+import { useAccountDay } from '@/hooks/use-account-day';
+import { civilDay, civilTime, civilKey } from '@/lib/calendar-civil';
+import { addCalendarDays } from '@/lib/day-window';
+import { calendarConflictMessage } from '@/lib/calendar-conflict-message';
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Clock, Clock3, Flag, Hash, ListTree, Repeat, Sparkles, Trash2, Users } from "lucide-react";
-import { format, isPast, isToday, isTomorrow } from "date-fns";
+import { format } from "date-fns";
 import { useDeleteTask, useToggleTask, useSubtaskCounts, useUpdateTask } from "@/hooks/use-tasks";
 import { useFindTime, type TimeSlot } from "@/hooks/use-ai";
 import { useCanUseFeature } from "@/hooks/use-feature-access";
@@ -18,6 +22,7 @@ import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/i18n";
 
 export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverlapping?: boolean }) {
+  const account = useAccountDay();
   const lang = useLanguage();
   const displayTask = calendarTask(task);
   const toggle = useToggleTask();
@@ -146,7 +151,7 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
         "group flex items-start gap-3 px-3 py-2 rounded-md cursor-pointer border relative",
         swipeX !== 0 && "bg-bg",
         // Overdue: red left accent border + faint red tint (highest priority)
-        !task.is_completed && task.due_at && isPast(new Date(task.due_at))
+        !task.is_completed && task.due_at && (task.is_all_day ? (task.due_date || civilKey(civilDay(task.due_at, account.timeZone))) < account.date : Date.parse(task.due_at) < Date.now())
           ? isSelected
             ? "border-red-400/50 bg-red-500/10"
             : "border-l-red-400 border-l-2 border-t-transparent border-r-transparent border-b-transparent bg-red-500/5 hover:bg-red-500/10"
@@ -191,7 +196,7 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
           )}
         >
           {task.title}
-          {!task.is_completed && task.due_at && isPast(new Date(task.due_at)) && (
+          {!task.is_completed && task.due_at && (task.is_all_day ? (task.due_date || civilKey(civilDay(task.due_at, account.timeZone))) < account.date : Date.parse(task.due_at) < Date.now()) && (
             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 text-[10px] font-semibold uppercase tracking-wide align-middle leading-none">
               overdue
             </span>
@@ -220,7 +225,8 @@ export function TaskItem({ task, isOverlapping }: { task: TaskWithTags; isOverla
           </p>
         )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[13px] text-muted-fg">
-          {task.due_at && <DueChip due_at={task.due_at} start_at={displayTask.start_at ?? undefined} all_day={task.is_all_day} />}
+          {task.calendar_conflict && <span role="status" className="text-danger">{calendarConflictMessage(task.calendar_conflict.reason)} Review this task and its Google event.</span>}
+          {task.due_at && <DueChip due_date={task.due_date} start_date={displayTask.start_at ? task.start_date : undefined} due_at={task.due_at} start_at={displayTask.start_at ?? undefined} all_day={task.is_all_day} />}
           {/* Duration: explicit start->end range wins; otherwise estimated. */}
           {(task.start_at && task.due_at && !task.is_all_day) ||
           task.estimated_pomodoros > 0 ? (
@@ -352,14 +358,6 @@ function FindTimeTrigger({ task, active, onToggle }: { task: TaskWithTags; activ
   );
 }
 
-// Shared shift logic for snooze presets.
-function snoozeAnchor(task: TaskWithTags): Date {
-  if (task.due_at) return new Date(task.due_at);
-  const d = new Date();
-  d.setHours(9, 0, 0, 0);
-  return d;
-}
-
 /**
  * Inline snooze tray. Renders a horizontal wrap of preset chips *inside* the
  * task row (below the metadata line), so it pushes the list down instead of
@@ -368,28 +366,19 @@ function snoozeAnchor(task: TaskWithTags): Date {
  * unschedules. Selecting a preset applies it and closes the tray.
  */
 function SnoozeTray({ task, onDone }: { task: TaskWithTags; onDone: () => void }) {
+  const account = useAccountDay();
   const lang = useLanguage();
   const update = useUpdateTask();
 
-  function applyDue(newDue: Date) {
-    const patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean } = {
-      id: task.id,
-      due_at: newDue.toISOString(),
-    };
-
-    update.mutate(patch);
-    onDone();
-  }
   function shiftByDays(days: number) {
-    applyDue(snoozedDue(task.due_at, days));
+    try { update.mutate({ id: task.id, ...snoozeTaskDates(task, days, account.timeZone) }); onDone(); }
+    catch (error) { toast.error((error as Error).message); }
   }
   function toWeekend() {
-    const d = new Date();
-    d.setHours(9, 0, 0, 0);
-    let add = (6 - d.getDay() + 7) % 7;
-    if (add === 0) add = 7;
-    d.setDate(d.getDate() + add);
-    applyDue(d);
+    let days = (6 - civilDay(account.date, account.timeZone).getUTCDay() + 7) % 7;
+    if (!days) days = 7;
+    try { update.mutate({ id: task.id, ...snoozeTaskDates(task, days, account.timeZone, new Date(), true) }); onDone(); }
+    catch (error) { toast.error((error as Error).message); }
   }
   function clearDue() {
     update.mutate({ id: task.id, due_at: null, start_at: null });
@@ -525,13 +514,14 @@ function FindTimeTray({ task, onDone }: { task: TaskWithTags; onDone: () => void
  * derived from estimated pomodoros (each = 25 min).
  */
 function DurationChip({ task }: { task: TaskWithTags }) {
+  const account = useAccountDay();
   const lang = useLanguage();
   if (task.start_at && task.due_at && !task.is_all_day) {
     const s = new Date(task.start_at);
     const e = new Date(task.due_at);
     const min = Math.max(0, Math.round((+e - +s) / 60_000));
     const fmt = (d: Date) =>
-      d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      d.toLocaleTimeString(undefined, { timeZone: account.timeZone, hour: "numeric", minute: "2-digit" });
     return (
       <span className="inline-flex items-center gap-1" title={`${min} min`}>
         <Clock className="size-3" />
@@ -552,17 +542,18 @@ function DurationChip({ task }: { task: TaskWithTags }) {
   return null;
 }
 
-function DueChip({ due_at, start_at, all_day }: { due_at: string; start_at?: string; all_day: boolean }) {
-  const d = new Date(due_at);
+function DueChip({ due_at, start_at, due_date, start_date, all_day }: { due_at: string; start_at?: string; due_date?: string | null; start_date?: string | null; all_day: boolean }) {
+  const account = useAccountDay();
+  const d = civilTime(due_at, account.timeZone);
   // Use start_at for the displayed time when available (shows when the task begins,
   // which is more actionable than the end/due time). Overdue logic always uses due_at.
-  const displayD = start_at ? new Date(start_at) : d;
-  const overdue = isPast(d);
-  const label = isToday(displayD)
+  const displayD = all_day && (start_date || due_date) ? civilDay(start_date || due_date!, account.timeZone) : start_at ? civilTime(start_at, account.timeZone) : d;
+  const overdue = all_day ? (due_date || civilKey(d)) < account.date : Date.parse(due_at) < Date.now();
+  const label = civilKey(displayD) === account.date
     ? all_day
       ? "Today"
       : `Today ${format(displayD, "h:mm a")}`
-    : isTomorrow(displayD)
+    : civilKey(displayD) === addCalendarDays(account.date, 1)
     ? all_day
       ? "Tomorrow"
       : `Tomorrow ${format(displayD, "h:mm a")}`

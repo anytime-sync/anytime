@@ -1,4 +1,7 @@
 "use client";
+import { useAccountDay } from "@/hooks/use-account-day";
+import { civilDay } from "@/lib/calendar-civil";
+import { addCalendarDays } from "@/lib/day-window";
 import { addDays, format } from "date-fns";
 import { Plus } from "lucide-react";
 import { TaskListView } from "@/components/app/task-list-view";
@@ -15,9 +18,11 @@ import { t } from "@/lib/i18n";
  */
 export default function TomorrowPage() {
   const lang = useLanguage();
+  const account = useAccountDay();
+  const today = civilDay(account.date, account.timeZone);
   const [mode, setMode] = useDayViewMode();
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
-  const tomorrow = addDays(new Date(), 1);
+  const tomorrow = civilDay(addCalendarDays(account.date, 1), account.timeZone);
 
   if (mode === "list") {
     return (

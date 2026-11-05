@@ -1,4 +1,3 @@
-import { normalizeTaskDate } from "@/lib/task-calendar";
 import { resolveTaskDates, type TaskTimeKind } from "@/lib/task-schedule";
 /**
  * GET    /api/v1/tasks/{id}     read a single task
@@ -54,6 +53,8 @@ export async function GET(req: NextRequest, { params }: Params) {
 interface PatchBody {
   time_kind?: TaskTimeKind | null;
   title?: string;
+  start_date?: string | null;
+  due_date?: string | null;
   due_at?: string | null;
   start_at?: string | null;
   is_all_day?: boolean | null;
@@ -65,6 +66,7 @@ interface PatchBody {
 }
 
 const ALLOWED: (keyof PatchBody)[] = [
+  "start_date", "due_date",
   "title",
   "time_kind",
   "due_at",
@@ -104,15 +106,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     patch.priority = normalizePriority(patch.priority as string | number | null) ?? 0;
   }
 
-  if ("start_at" in patch || "due_at" in patch || "time_kind" in patch || "is_all_day" in patch) {
-    const { data: current, error } = await ctx.supabase.from("tasks").select("start_at,due_at,is_all_day,time_kind").eq("id", params.id).eq("user_id", ctx.userId).maybeSingle();
+  if ("start_date" in patch || "due_date" in patch || "start_at" in patch || "due_at" in patch || "time_kind" in patch || "is_all_day" in patch) {
+    const { data: current, error } = await ctx.supabase.from("tasks").select("start_at,due_at,start_date,due_date,schedule_timezone,reminder_offset_min,is_all_day,time_kind").eq("id", params.id).eq("user_id", ctx.userId).maybeSingle();
     if (error) return jsonError(500, "db_error", error.message);
     if (!current) return jsonError(404, "not_found", "Task not found.");
     try {
       const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
       if (prefsError) return jsonError(500, 'db_error', prefsError.message);
       const zone = prefs?.timezone ?? 'UTC';
-      for (const key of ['start_at', 'due_at'] as const) if (key in patch) patch[key] = normalizeTaskDate(patch[key] as string | null, zone);
       Object.assign(patch, resolveTaskDates(current, patch, zone));
     }
     catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }

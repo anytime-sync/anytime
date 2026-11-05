@@ -1,5 +1,8 @@
 "use client";
 
+import { useAccountDay } from '@/hooks/use-account-day';
+import { civilTime, eventDays, civilKey } from '@/lib/calendar-civil';
+import { addCalendarDays } from '@/lib/day-window';
 import { useState } from "react";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
@@ -29,19 +32,20 @@ export function EventTaskRow({
 }) {
   const [open, setOpen] = useState(false);
 
-  const start = event.start_at ? new Date(event.start_at) : null;
-  const end = event.end_at ? new Date(event.end_at) : null;
+  const account = useAccountDay();
+  const start = event.is_all_day ? eventDays(event, account.timeZone)?.first ?? null : event.start_at ? civilTime(event.start_at, account.timeZone) : null;
+  const end = event.end_at ? civilTime(event.end_at, account.timeZone) : null;
   const allDay = !!event.is_all_day;
   const title = event.title?.trim() || "Untitled event";
 
-  const overdue = end ? !isToday(end) && isPast(end) : false;
+  const overdue = event.is_all_day ? (eventDays(event, account.timeZone)?.last.toISOString().slice(0,10) ?? account.date) < account.date : !!event.end_at && Date.parse(event.end_at) < Date.now();
 
   const dueLabel = (() => {
     if (!start) return "";
-    if (isToday(start)) {
+    if (civilKey(start) === account.date) {
       return allDay ? "Today" : `Today ${format(start, "h:mm a")}`;
     }
-    if (isTomorrow(start)) {
+    if (civilKey(start) === addCalendarDays(account.date, 1)) {
       return allDay ? "Tomorrow" : `Tomorrow ${format(start, "h:mm a")}`;
     }
     return allDay ? format(start, "MMM d") : format(start, "MMM d, h:mm a");

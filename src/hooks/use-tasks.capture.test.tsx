@@ -53,12 +53,15 @@ async function mount(hook: () => any) {
 const filter = () => fixture.calls.at(-1).filters.find((f: any) => f[0] === 'or')[1];
 it('current-main regression: Today follows the stored Taipei date', async () => {
   await mount(() => useTasks({ view: 'today' }));
-  expect(filter()).toBe('due_at.lt.2026-10-26T16:00:00.000Z,and(due_at.is.null,start_at.lt.2026-10-26T16:00:00.000Z)');
+  expect(filter()).toContain('and(due_date.lt.2026-10-27)');
+  expect(filter()).toContain('and(due_date.is.null,due_at.lt.2026-10-26T16:00:00.000Z)');
+  expect(filter()).toContain('and(due_date.is.null,due_at.is.null,start_date.is.null,start_at.lt.2026-10-26T16:00:00.000Z)');
 });
 it('current-main regression: Tomorrow uses inclusive start and exclusive next start on a 25-hour day', async () => {
   fixture.zone = 'America/New_York'; vi.setSystemTime(new Date('2026-10-31T16:00:00Z'));
   await mount(() => useTasks({ view: 'tomorrow' }));
-  expect(filter()).toBe('and(due_at.gte.2026-11-01T04:00:00.000Z,due_at.lt.2026-11-02T05:00:00.000Z),and(due_at.is.null,start_at.gte.2026-11-01T04:00:00.000Z,start_at.lt.2026-11-02T05:00:00.000Z)');
+  expect(filter()).toContain('and(due_date.gte.2026-11-01,due_date.lt.2026-11-02)');
+  expect(filter()).toContain('and(due_date.is.null,due_at.gte.2026-11-01T04:00:00.000Z,due_at.lt.2026-11-02T05:00:00.000Z)');
 });
 it.each([['tags', false], ['tags', true], ['task_tags', false], ['task_tags', true]] as const)(
   'current-main regression: retain the task after %s failure (response error %s) and retry only tags', async (table, asResponse) => {

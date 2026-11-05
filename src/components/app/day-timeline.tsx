@@ -1,4 +1,8 @@
 "use client";
+import { civilDay, civilTime, civilKey, civilWindow, taskDays } from '@/lib/calendar-civil';
+import { resolveLocalInput, dayWindow } from '@/lib/day-window';
+import { useAccountDay } from '@/hooks/use-account-day';
+import { toast } from 'sonner';
 import { calendarTask } from "@/lib/task-schedule";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -90,33 +94,35 @@ function layoutColumns<T extends { startMin: number; endMin: number }>(
 }
 
 export function DayTimeline({ date, includeCompleted = false }: { date: Date; includeCompleted?: boolean }) {
+  const account = useAccountDay();
+  const zone = account.timeZone;
   const lang = useLanguage();
   const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted });
   const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
   const { data: prefs } = useUserPrefs();
   const setSelected = useUIStore((s) => s.setSelectedTaskId);
   const update = useUpdateTask();
-  const dayStartForFetch = useMemo(() => startOfDay(date), [date.getTime()]);
-  const dayEndForFetch = useMemo(() => endOfDay(date), [date.getTime()]);
+  const dateKey = civilKey(date);
+  const accountWindow = useMemo(() => dayWindow(dateKey, zone), [dateKey, zone]);
+  const dayStartForFetch = accountWindow.start, dayEndForFetch = accountWindow.nextStart;
   const { data: events = [] } = useCalendarEvents({ from: dayStartForFetch, to: dayEndForFetch });
   const containerRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
-  const isToday = isSameDay(date, now);
+  const isToday = isSameDay(date, civilTime(now, zone));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
   function onDragEnd(e: DragEndEvent) {
+    if (account.isPending || account.error) return;
     const { active, delta } = e;
     const taskId = String(active.id);
     const task = tasks.find((t) => t.id === taskId);
     if (!task || !task.due_at) return;
 
     const origDue = new Date(task.due_at);
-    const origStart = task.start_at
-      ? new Date(task.start_at)
-      : new Date(origDue);
+    const origStart = civilTime(task.start_at || task.due_at, zone);
 
     const dyMin = delta.y / PX_PER_MIN;
     const rawMin =
@@ -129,10 +135,11 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
     const newHour = Math.floor(clamped / 60);
     const newMin = clamped % 60;
 
-    const newStart = new Date(date);
-    newStart.setHours(newHour, newMin, 0, 0);
+    let newStart: Date;
+    try { newStart = new Date(resolveLocalInput(`${civilKey(date)}T${String(newHour).padStart(2, '0')}:${String(newMin).padStart(2, '0')}`, zone)); }
+    catch (error) { toast.error((error as Error).message); return; }
 
-    if (newStart.getTime() === origStart.getTime()) return;
+    if (newStart.getTime() === Date.parse(task.start_at || task.due_at)) return;
 
     if (!task.start_at) return;
     const durationMs = origDue.getTime() - Date.parse(task.start_at);
@@ -149,7 +156,7 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
 
   useEffect(() => {
     if (!isToday || !containerRef.current) return;
-    const m = minutesFromRailStart(now);
+    const m = minutesFromRailStart(civilTime(now, zone));
     const target = Math.max(0, m * PX_PER_MIN - 200);
     containerRef.current.scrollTo({ top: target });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -161,13 +168,10 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
   const dayTasks = useMemo(
     () =>
       tasks.filter((t) => {
-        const anchor = t.start_at ?? t.due_at;
-        if (!anchor) return false;
-        const a = new Date(anchor);
-        const end = new Date(t.due_at ?? anchor);
-        return a <= dayEnd && (t.is_all_day ? startOfDay(end) >= dayStart : end > dayStart);
+        const range = taskDays(t, zone);
+        return !!range && +range.first <= Date.parse(dateKey) && +range.last >= Date.parse(dateKey);
       }),
-    [tasks, dayStart.getTime(), dayEnd.getTime()]
+    [tasks, dateKey, zone]
   );
 
   const allDayTasks = dayTasks.filter((t) => t.is_all_day || (!t.start_at && !t.due_at));
@@ -175,8 +179,8 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
   const timed = dayTasks
     .filter((t) => !t.is_all_day && t.start_at && t.due_at && Date.parse(t.due_at) > Date.parse(t.start_at))
     .map((t) => {
-      const rawDue = new Date(t.due_at!);
-      const start = new Date(t.start_at!);
+      const rawDue = civilTime(t.due_at!, zone);
+      const start = civilTime(t.start_at!, zone);
       const due = rawDue;
       const startMin = (start.getTime() - dayStart.getTime()) / 60000 - RAIL_START_HOUR * 60;
       const endMin = (due.getTime() - dayStart.getTime()) / 60000 - RAIL_START_HOUR * 60;
@@ -214,8 +218,8 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
   const calEvents = events
     .filter((e: CalendarEvent) => !e.is_all_day && e.start_at && e.end_at)
     .map((e: CalendarEvent) => {
-      const start = new Date(e.start_at!);
-      const end = new Date(e.end_at!);
+      const start = civilTime(e.start_at!, zone);
+      const end = civilTime(e.end_at!, zone);
       // Clip to today's window — multi-day events get visually cropped
       // rather than spanning past the visible rail.
       const sClipped = start < dayStartForLayout ? dayStartForLayout : start;
@@ -250,7 +254,7 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
     return { top: startMin * PX_PER_MIN, height: (endMin - startMin) * PX_PER_MIN };
   })();
 
-  const nowTop = isToday ? minutesFromRailStart(now) * PX_PER_MIN : null;
+  const nowTop = isToday ? minutesFromRailStart(civilTime(now, zone)) * PX_PER_MIN : null;
 
   const taskLayout = layoutColumns(timed);
 
@@ -373,7 +377,7 @@ export function DayTimeline({ date, includeCompleted = false }: { date: Date; in
           >
             <div className="flex items-center">
               <span className="w-14 pl-3 pr-2 text-[10px] font-medium text-danger tabular-nums">
-                {format(now, "h:mm")}
+                {format(civilTime(now, zone), "h:mm")}
               </span>
               <div className="flex-1 h-px bg-danger" />
               <span className="size-2 -mr-1 rounded-full bg-danger" />

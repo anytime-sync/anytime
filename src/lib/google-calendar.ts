@@ -66,6 +66,10 @@ export type GoogleAttendee = {
 
 export type GoogleCalendarEvent = {
   id: string;
+  etag?: string;
+  updated?: string;
+  transparency?: "transparent" | "opaque";
+  originalStartTime?: { date?: string; dateTime?: string; timeZone?: string };
   status?: "confirmed" | "tentative" | "cancelled";
   summary?: string;
   description?: string;
@@ -348,11 +352,13 @@ export async function patchCalendarEvent({
   eventId,
   patch,
   sendUpdates,
+  ifMatch,
 }: {
   accessToken: string;
   calendarId: string;
   eventId: string;
   patch: Partial<GoogleCalendarEventInput>;
+  ifMatch?: string;
   sendUpdates?: "all" | "externalOnly" | "none";
 }): Promise<GoogleCalendarEvent> {
   const params = new URLSearchParams();
@@ -367,10 +373,12 @@ export async function patchCalendarEvent({
     method: "PATCH",
     headers: {
       authorization: `Bearer ${accessToken}`,
+      ...(ifMatch ? { "If-Match": ifMatch } : {}),
       "content-type": "application/json",
     },
     body: JSON.stringify(patch),
   });
+  if (res.status === 412) throw new Error('google_precondition_failed');
   if (res.status === 404) {
     return { id: eventId, status: "cancelled" } as GoogleCalendarEvent;
   }
@@ -386,10 +394,12 @@ export async function deleteCalendarEvent({
   calendarId,
   eventId,
   sendUpdates,
+  ifMatch,
 }: {
   accessToken: string;
   calendarId: string;
   eventId: string;
+  ifMatch?: string;
   sendUpdates?: "all" | "externalOnly" | "none";
 }): Promise<void> {
   const params = new URLSearchParams();
@@ -399,8 +409,9 @@ export async function deleteCalendarEvent({
   )}/events/${encodeURIComponent(eventId)}?${params.toString()}`;
   const res = await fetch(url, {
     method: "DELETE",
-    headers: { authorization: `Bearer ${accessToken}` },
+    headers: { authorization: `Bearer ${accessToken}`, ...(ifMatch ? { "If-Match": ifMatch } : {}) },
   });
+  if (res.status === 412) throw new Error('google_precondition_failed');
   if (res.ok || res.status === 404 || res.status === 410) return;
   const text = await res.text();
   throw new Error(`google_delete_event_failed: ${res.status} ${text}`);

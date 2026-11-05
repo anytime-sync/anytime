@@ -66,5 +66,7 @@ it.each(['start_at', 'due_at'] as const)('moves civil spans by day count across 
 });
 
 it('preserves civil-date strings when moving date-only spans', () => {
-  expect(resolveTaskDates({ start_at: '2026-10-31', due_at: '2026-11-02', time_kind: 'span' }, { due_at: '2026-11-09' }, 'America/New_York')).toEqual({ start_at: '2026-11-07', due_at: '2026-11-09' });
+  expect(resolveTaskDates({ start_at: '2026-10-31', due_at: '2026-11-02', time_kind: 'span' }, { due_at: '2026-11-09' }, 'America/New_York')).toEqual({ start_at: '2026-11-07T05:00:00.000Z', due_at: '2026-11-09T05:00:00.000Z', start_date: '2026-11-07', due_date: '2026-11-09', schedule_timezone: 'America/New_York' });
 });
+
+it('local rescheduling moves relative reminders while absolute reminders remain unchanged',()=>{expect(resolveTaskDates({...task,reminder_offset_min:30},{due_at:'2026-09-14T09:00:00Z'},'Asia/Taipei')).toMatchObject({reminder_at:'2026-09-14T08:30:00.000Z',reminder_sent_at:null});expect(resolveTaskDates({...task,reminder_at:'2026-09-07T08:00Z'},{due_at:'2026-09-14T09:00:00Z'},'Asia/Taipei')).not.toHaveProperty('reminder_at');});

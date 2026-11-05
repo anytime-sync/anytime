@@ -1,4 +1,4 @@
-import { completedTaskOccurrence, nextTaskRecurrence } from "@/lib/task-recurrence";
+import { completeTaskOccurrence } from "@/lib/task-completion";
 /**
  * POST /api/v1/tasks/{id}/complete
  *   Mark a task complete. Convenience over PATCH { status: "done" } so that
@@ -33,36 +33,16 @@ export async function POST(req: NextRequest, { params }: Params) {
   const now = new Date().toISOString();
 
   // --- Recurring task: advance to next occurrence ---
-  if (task.rrule && task.due_at) {
+  if (task.rrule) {
+    const body = await req.json().catch(() => ({}));
+    const revision = body.expected_updated_at ?? req.headers.get('If-Unmodified-Since');
+    if (typeof revision !== 'string' || !Number.isFinite(Date.parse(revision))) return jsonError(428, 'revision_required', 'Recurring completion requires expected_updated_at from the task you viewed. Retry with the same revision.');
     const { data: prefs, error: prefsError } = await ctx.supabase.from('user_preferences').select('timezone').eq('user_id', ctx.userId).maybeSingle();
     if (prefsError) return jsonError(500, 'db_error', prefsError.message);
-    const recurrence = nextTaskRecurrence(task, prefs?.timezone ?? 'UTC');
-
-    if (recurrence) {
-      // 1. Insert a historical "done" clone for this occurrence (no rrule,
-      //    so it won't recur — it's just the audit record).
-      await ctx.supabase.from("tasks").insert(completedTaskOccurrence(task, ctx.userId, now));
-
-      // 2. Slide the live task forward to next occurrence, preserving duration.
-      const patch: Record<string, unknown> = {
-        ...recurrence.patch,
-        status: "open",
-        is_completed: false,
-        completed_at: null,
-      };
-
-      const { data: advanced, error: advanceError } = await ctx.supabase
-        .from("tasks")
-        .update(patch)
-        .eq("user_id", ctx.userId)
-        .eq("id", params.id)
-        .select("*")
-        .single();
-
-      if (advanceError) return jsonError(500, "db_error", advanceError.message);
-      return jsonOk({ data: advanced, recurring: true, next: recurrence.next.toISOString() });
-    }
-    // No next occurrence (UNTIL/COUNT exhausted) — fall through to permanent done.
+    try {
+      const result = await completeTaskOccurrence(ctx.supabase, task, prefs?.timezone || 'UTC', revision);
+      return jsonOk(result);
+    } catch (error) { return jsonError(409, 'completion_not_saved', (error as Error).message); }
   }
 
   // --- Non-recurring (or exhausted recurring): mark permanently done ---

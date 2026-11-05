@@ -76,6 +76,7 @@ function projectLegacyIcs(task: CalendarTask, timezone: string): TaskCalendarPro
 export function projectTaskCalendar(task: CalendarTask, timezone = 'UTC'): TaskCalendarProjection | null {
   if (task.parent_id || task.is_completed || task.status === 'done' || task.status === 'archived') return null;
   if (task.time_kind == null) return projectLegacyIcs(task, timezone);
+  timezone = validTimezone(task.schedule_timezone ?? timezone);
   const kind = taskTimeKind(task);
   const start = timestamp(task.start_at), due = timestamp(task.due_at);
   const anchor = Number.isFinite(due) ? task.due_at! : Number.isFinite(start) ? task.start_at! : null;
@@ -85,7 +86,8 @@ export function projectTaskCalendar(task: CalendarTask, timezone = 'UTC'): TaskC
     return { start: { dateTime: new Date(start).toISOString() }, end: { dateTime: new Date(due).toISOString() }, allDay: false, transparency: 'opaque', recurrence: calendarRecurrence(task.rrule, false, timezone), deadline: null };
   }
   const first = kind === 'span' && Number.isFinite(start) ? task.start_at! : anchor;
-  const firstDate = taskCalendarDate(first, timezone), lastDate = taskCalendarDate(anchor, timezone);
+  const lastDate = task.due_date ?? taskCalendarDate(anchor, timezone);
+  const firstDate = kind === 'span' ? task.start_date ?? taskCalendarDate(first, timezone) : lastDate;
   if (lastDate < firstDate) return null;
   return { start: { date: firstDate }, end: { date: nextDate(lastDate) }, allDay: true, transparency: 'transparent', recurrence: calendarRecurrence(task.rrule, true, timezone), deadline: kind === 'deadline' && !task.is_all_day ? anchor : null };
 }

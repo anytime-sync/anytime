@@ -1,43 +1,104 @@
 import { rrulestr } from 'rrule';
-import { resolveTaskDates, taskTimeKind, type TaskDates } from './task-schedule';
-import { dayWindow, instantFromWallClock, taskDate, validTimezone, wallClock } from './day-window';
+import {
+  resolveTaskDates,
+  taskTimeKind,
+  type TaskDates,
+} from './task-schedule';
+import {
+  calendarDate,
+  dayWindow,
+  instantFromWallClock,
+  taskDate,
+  validTimezone,
+  wallClock,
+} from './day-window';
 import { calendarRecurrence } from './task-calendar';
 import { legacyRecurrenceDates } from './task-legacy-dates';
 
 /** The existing INSERT status trigger treats default status=open as canonical.
  * Set both aliases so completed history cannot become an active calendar task. */
-export function completedTaskOccurrence<T extends TaskDates & { project_id?: string | null; title: string; notes?: string | null; priority?: number }>(task: T, userId: string, completedAt: string) {
-  return { user_id: userId, project_id: task.project_id, title: task.title, notes: task.notes, priority: task.priority,
-    start_at: task.start_at, due_at: task.due_at, is_all_day: task.is_all_day, time_kind: task.time_kind,
-    status: 'done' as const, is_completed: true, completed_at: completedAt, position: 0, rrule: null, calendar_event_id: null };
+export function completedTaskOccurrence<
+  T extends TaskDates & {
+    project_id?: string | null;
+    title: string;
+    notes?: string | null;
+    priority?: number;
+  },
+>(task: T, userId: string, completedAt: string) {
+  return {
+    user_id: userId,
+    project_id: task.project_id,
+    title: task.title,
+    notes: task.notes,
+    priority: task.priority,
+    start_date: task.start_date,
+    due_date: task.due_date,
+    schedule_timezone: task.schedule_timezone,
+    start_at: task.start_at,
+    due_at: task.due_at,
+    is_all_day: task.is_all_day,
+    time_kind: task.time_kind,
+    status: 'done' as const,
+    is_completed: true,
+    completed_at: completedAt,
+    position: 0,
+    rrule: null,
+    calendar_event_id: null,
+  };
 }
 
 /** COUNT is the remaining occurrence count for the advancing task row. The
  * completed one-off clone has no RRULE; never restart COUNT on every completion. */
-export function nextTaskRecurrence(task: TaskDates & { rrule?: string | null }, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+export function nextTaskRecurrence(
+  task: TaskDates & { rrule?: string | null },
+  timezone = 'UTC',
+) {
   if (!task.rrule || !task.due_at) return null;
   const legacy = task.time_kind == null;
-  const zone = legacy ? 'UTC' : validTimezone(timezone);
+  const zone = legacy
+    ? 'UTC'
+    : validTimezone(task.schedule_timezone ?? timezone);
   const kind = taskTimeKind(task) ?? 'deadline';
-  const allDay = !legacy && (kind === 'span' || (kind === 'deadline' && !!task.is_all_day));
+  const allDay =
+    !legacy && (kind === 'span' || (kind === 'deadline' && !!task.is_all_day));
   const ruleText = calendarRecurrence(task.rrule, allDay, zone);
-  if (!ruleText) return null;
+  if (!ruleText)
+    throw new Error('Invalid recurrence rule; task was not completed.');
   const count = /(?:^|;)COUNT=(\d+)(?:;|$)/i.exec(ruleText);
   if (count && Number(count[1]) <= 1) return null;
   try {
-    const anchor = kind !== 'deadline' && task.start_at ? task.start_at : task.due_at;
+    const anchor =
+      kind !== 'deadline' && task.start_at ? task.start_at : task.due_at;
     const from = new Date(anchor);
-    const civil = allDay ? new Date(`${taskDate(anchor, zone)}T00:00:00Z`) : wallClock(from, zone);
+    const civil = allDay
+      ? new Date(
+          `${(kind !== 'deadline' ? task.start_date : task.due_date) ?? taskDate(anchor, zone)}T00:00:00Z`,
+        )
+      : wallClock(from, zone);
     // Expand in civil time, then resolve using the account zone ourselves:
     // rrule's TZID conversion depends on the browser/server's host timezone.
-    const until = /(?:^|;)UNTIL=(\d{8}(?:T\d{6}Z)?)(?:;|$)/i.exec(ruleText)?.[1];
-    const limit = !until ? null : until.length === 8
-      ? +dayWindow(`${until.slice(0, 4)}-${until.slice(4, 6)}-${until.slice(6, 8)}`, zone).nextStart - 1
-      : Date.parse(`${until.slice(0, 4)}-${until.slice(4, 6)}-${until.slice(6, 8)}T${until.slice(9, 11)}:${until.slice(11, 13)}:${until.slice(13, 15)}Z`);
+    const until = /(?:^|;)UNTIL=(\d{8}(?:T\d{6}Z)?)(?:;|$)/i.exec(
+      ruleText,
+    )?.[1];
+    const limit = !until
+      ? null
+      : until.length === 8
+        ? +dayWindow(
+            `${until.slice(0, 4)}-${until.slice(4, 6)}-${until.slice(6, 8)}`,
+            zone,
+          ).nextStart - 1
+        : Date.parse(
+            `${until.slice(0, 4)}-${until.slice(4, 6)}-${until.slice(6, 8)}T${until.slice(9, 11)}:${until.slice(11, 13)}:${until.slice(13, 15)}Z`,
+          );
     // COUNT is decremented only after a real occurrence is completed, so a
     // nonexistent civil-time candidate must not consume the remaining count.
-    const withoutLimits = ruleText.split(';').filter(part => !/^(UNTIL|COUNT)=/i.test(part)).join(';');
-    const rule = rrulestr(`DTSTART:${civil.toISOString().replace(/[-:]|\.\d{3}/g, '')}\nRRULE:${withoutLimits}`);
+    const withoutLimits = ruleText
+      .split(';')
+      .filter((part) => !/^(UNTIL|COUNT)=/i.test(part))
+      .join(';');
+    const rule = rrulestr(
+      `DTSTART:${civil.toISOString().replace(/[-:]|\.\d{3}/g, '')}\nRRULE:${withoutLimits}`,
+    );
     let candidate = rule.after(civil, false);
     let next: Date | null = null;
     // RFC 5545 omits nonexistent local times instead of moving them an hour.
@@ -47,10 +108,41 @@ export function nextTaskRecurrence(task: TaskDates & { rrule?: string | null }, 
       if (next) break;
       candidate = rule.after(candidate, false);
     }
-    if (!next || (limit != null && +next > limit)) return null;
-    const rrule = count ? ruleText.replace(/COUNT=\d+/i, `COUNT=${Number(count[1]) - 1}`) : ruleText;
-    const dates = legacy ? legacyRecurrenceDates(task, next.toISOString())
-      : resolveTaskDates(task, kind === 'deadline' ? { due_at: next.toISOString() } : { start_at: next.toISOString() }, zone);
-    return { next, patch: { ...dates, rrule } };
-  } catch { return null; }
+    if (!candidate || (next && limit != null && +next > limit)) return null;
+    if (!next)
+      throw new Error(
+        'Could not resolve the next recurrence; task was not completed.',
+      );
+    const rrule = count
+      ? ruleText.replace(/COUNT=\d+/i, `COUNT=${Number(count[1]) - 1}`)
+      : ruleText;
+    const dates = legacy
+      ? legacyRecurrenceDates(task, next.toISOString())
+      : resolveTaskDates(
+          task,
+          kind === 'deadline'
+            ? allDay
+              ? { due_date: calendarDate(next, zone) }
+              : { due_at: next.toISOString() }
+            : allDay
+              ? { start_date: calendarDate(next, zone) }
+              : { start_at: next.toISOString() },
+          zone,
+        );
+    const reminder =
+      task.reminder_offset_min == null
+        ? {}
+        : {
+            reminder_at: new Date(
+              Date.parse(dates.due_at ?? task.due_at) -
+                task.reminder_offset_min * 60000,
+            ).toISOString(),
+            reminder_sent_at: null,
+          };
+    return { next, patch: { ...dates, ...reminder, rrule } };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : 'Invalid recurrence rule',
+    );
+  }
 }

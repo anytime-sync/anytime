@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "codex/firstlight-timezone-sync-20261105": false,
       "codex/firstlight-capture-reliability-20261103": false,
       "codex/task-calendar-intent": false,
       "fix/firstlight-scheduler-auth": false,

@@ -37,20 +37,21 @@ function matches(row, expression) {
     const parts = split(expression.slice(op.length + 1, -1)).map(p => matches(row, p));
     return op === 'and' ? parts.every(Boolean) : parts.some(Boolean);
   }
-  const [, key, op, raw] = expression.match(/^([\w_]+)\.(\w+)\.(.*)$/) || [];
+  const [, key, op, raw] = expression.match(/^([\w_>\-]+)\.(\w+)\.(.*)$/) || [];
+  const field = key?.split(/->>?/).reduce((value, part) => value?.[part], row);
   const value = raw === 'null' ? null : raw === 'false' ? false : raw === 'true' ? true : raw;
-  if (op === 'is' || op === 'eq') return row[key] === value;
-  if (op === 'neq') return row[key] !== value;
-  if (row[key] == null) return false;
-  if (op === 'lt') return row[key] < value;
-  if (op === 'gt') return row[key] > value;
-  if (op === 'gte') return row[key] >= value;
-  if (op === 'lte') return row[key] <= value;
+  if (op === 'is' || op === 'eq') return (field ?? null) === value;
+  if (op === 'neq') return field !== value;
+  if (field == null) return false;
+  if (op === 'lt') return field < value;
+  if (op === 'gt') return field > value;
+  if (op === 'gte') return field >= value;
+  if (op === 'lte') return field <= value;
   throw Error('Unimplemented fixture filter: ' + expression);
 }
 const task = (id, due_at, extra = {}) => ({
   id, title: id, user_id: 'fixture-user', status: 'open', is_completed: false,
-  parent_id: null, project_id: null, start_at: null, due_at, position: 0,
+  parent_id: null, project_id: null, start_at: null, due_at, start_date: null, due_date: null, schedule_timezone: null, position: 0,
   created_at: '2026-10-01T00:00:00.000Z', updated_at: '2026-10-01T00:00:00.000Z', ...extra,
 });
 function database(options = {}) {
@@ -79,6 +80,12 @@ async function backend(route, db, violations) {
     if (table === 'tasks') rows = rows.map(r => ({...r, task_tags: db.task_tags.filter(l => l.task_id === r.id).map(l => ({...l, tags: db.tags.find(t => t.id === l.tag_id)}))}));
     return json(request.headers().accept?.includes('object+json') ? rows[0] ?? null : rows);
   }
+  if (call.method === 'PATCH') {
+    const body = request.postDataJSON(); call.body = body;
+    const rows = db[table].filter(row => [...url.searchParams].filter(([key]) => !['select','order'].includes(key)).every(([key,value]) => matches(row, `${key}.${value}`)));
+    for (const row of rows) Object.assign(row, body, {updated_at: new Date().toISOString()});
+    return json(rows);
+  }
   if (call.method !== 'POST') { violations.push(call.method + ' ' + table); return route.abort(); }
   const body = request.postDataJSON(); call.body = body;
   if (db.failures.includes(table + '-before')) return route.fulfill({status: 503, json: {message: 'Fixture ' + table + ' unavailable'}});
@@ -96,7 +103,9 @@ async function backend(route, db, violations) {
   return json(request.headers().accept?.includes('object+json') ? output[0] : output);
 }
 
-(async () => {
+module.exports = {fixtures, database, task, backend};
+
+if (require.main === module) (async () => {
   const bundle = await build({
     absWorkingDir: root, bundle: true, write: false, platform: 'browser', format: 'iife', jsx: 'automatic',
     define: {'process.env.NODE_ENV': '"test"'},

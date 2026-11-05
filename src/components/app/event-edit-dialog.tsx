@@ -27,6 +27,9 @@ import { DateTimePicker } from "./date-time-picker";
  *     button below action buttons rather than competing for footer width.
  */
 type RawEvent = {
+  etag?: string;
+  start?: { date?: string };
+  end?: { date?: string };
   recurringEventId?: string;
   attendees?: Array<{
     email?: string;
@@ -47,8 +50,9 @@ export function EventEditDialog({
 }) {
   const allDay = !!event.is_all_day;
   const initialTitle = event.title ?? "";
-  const initialStart = event.start_at ?? "";
-  const initialEnd = event.end_at ?? "";
+  const dateRaw = event.raw as RawEvent | null;
+  const initialStart = (allDay ? dateRaw?.start?.date : null) ?? event.start_at ?? '';
+  const initialEnd = (allDay ? dateRaw?.end?.date : null) ?? event.end_at ?? '';
 
   const raw = (event.raw ?? {}) as RawEvent;
   const isRecurringInstance = !!raw.recurringEventId;
@@ -80,7 +84,7 @@ export function EventEditDialog({
     if (newStart.getTime() > curEnd.getTime()) {
       const delta = newStart.getTime() - prev.getTime();
       const adjustedEnd = new Date(curEnd.getTime() + delta);
-      setEndVal(adjustedEnd.toISOString());
+      setEndVal(allDay ? adjustedEnd.toISOString().slice(0, 10) : adjustedEnd.toISOString());
     }
   }
 
@@ -95,7 +99,7 @@ export function EventEditDialog({
     if (newEnd.getTime() < curStart.getTime()) {
       const delta = newEnd.getTime() - prev.getTime();
       const adjustedStart = new Date(curStart.getTime() + delta);
-      setStartVal(adjustedStart.toISOString());
+      setStartVal(allDay ? adjustedStart.toISOString().slice(0, 10) : adjustedStart.toISOString());
     }
   }
 
@@ -130,8 +134,8 @@ export function EventEditDialog({
     try {
       const patch: Record<string, unknown> = {};
       if (title !== initialTitle) patch.title = title;
-      if (startVal !== initialStart) patch.start_at = startVal || null;
-      if (endVal !== initialEnd) patch.end_at = endVal || null;
+      if (startVal !== initialStart) patch[allDay ? 'start_date' : 'start_at'] = startVal || null;
+      if (endVal !== initialEnd) patch[allDay ? 'end_date' : 'end_at'] = endVal || null;
       if (!attendeesSame) patch.attendees = attendees;
       if (Object.keys(patch).length === 0) {
         onClose();
@@ -143,7 +147,7 @@ export function EventEditDialog({
         `/api/calendar/google/event/${encodeURIComponent(event.id)}?${params.toString()}`,
         {
           method: "PATCH",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", "If-Match": raw.etag || "" },
           body: JSON.stringify(patch),
         }
       );
@@ -171,7 +175,7 @@ export function EventEditDialog({
       if (isRecurringInstance) params.set("scope", scope);
       const res = await fetch(
         `/api/calendar/google/event/${encodeURIComponent(event.id)}?${params.toString()}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: { "If-Match": raw.etag || "" } }
       );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -412,33 +416,4 @@ export function EventEditDialog({
       </div>
     </div>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/* Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function toInputValue(iso: string | null, allDay: boolean): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (allDay) {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
-
-function fromInputValue(value: string, allDay: boolean): string {
-  if (allDay) return value;
-  return new Date(value).toISOString();
-}
-
-function parseInputDate(value: string, allDay: boolean): Date | null {
-  if (!value) return null;
-  const d = allDay ? new Date(`${value}T00:00:00`) : new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
 }

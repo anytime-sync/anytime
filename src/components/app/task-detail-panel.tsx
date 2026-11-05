@@ -1,6 +1,7 @@
 "use client";
+import { toast } from "sonner";
 import { HOSTED_AI_ENABLED } from '@/lib/product-availability';
-import { snoozedDue, taskTimeKind, type TaskTimeKind } from "@/lib/task-schedule";
+import { snoozeTaskDates, taskTimeKind, type TaskTimeKind } from "@/lib/task-schedule";
 import { AiTaskActions } from "./ai-task-actions";
 import { TaskComments } from "./task-comments";
 
@@ -9,6 +10,10 @@ import { useTask, useUpdateTask, useDeleteTask, useToggleTask } from "@/hooks/us
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
 import { Bell, Flag, Trash2, X, Repeat, Paperclip, NotebookPen, Clock3 } from "lucide-react";
+import { useAccountDay } from '@/hooks/use-account-day';
+import { localInputValue, resolveLocalInput } from '@/lib/day-window';
+import { civilDay, civilTime } from '@/lib/calendar-civil';
+import type { TaskDates } from '@/lib/task-schedule';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn, priorityColorClass } from "@/lib/utils";
@@ -34,14 +39,8 @@ function recurrencePresets(lang: string): Array<{ value: string; label: string }
   ];
 }
 
-function localInputValue(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const tzOffset = d.getTimezoneOffset() * 60 * 1000;
-  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
-}
-
 export function TaskDetailPanel() {
+  const account = useAccountDay();
   const router = useRouter();
   const [openingNote, setOpeningNote] = useState(false);
   const openAsNote = async () => {
@@ -199,12 +198,12 @@ export function TaskDetailPanel() {
         </label>
         <div className="grid grid-cols-1 gap-3">
           <Field label={t(lang, "taskPanel.starts")}>
-            <DateTimePicker value={task.start_at} allDay={task.is_all_day}
+            <DateTimePicker value={task.is_all_day ? task.start_date ?? task.start_at : task.start_at} allDay={task.is_all_day}
               placeholder={t(lang, "taskPanel.startPlaceholder")}
               onChange={(iso) => update.mutate({ id: task.id, start_at: iso, due_at: task.due_at })} />
           </Field>
           <Field label={taskTimeKind(task) === 'work' ? t(lang, "taskPanel.ends") : t(lang, "taskPanel.due")}>
-            <DateTimePicker value={task.due_at} allDay={task.is_all_day}
+            <DateTimePicker value={task.is_all_day ? task.due_date ?? task.due_at : task.due_at} allDay={task.is_all_day}
               placeholder={t(lang, "taskPanel.duePlaceholder")}
               onChange={(iso) => update.mutate({ id: task.id, start_at: task.start_at, due_at: iso })} />
           </Field>
@@ -250,13 +249,13 @@ export function TaskDetailPanel() {
             <input
               type="datetime-local"
               className="input flex-1"
-              value={localInputValue(task.reminder_at)}
+              value={task.reminder_at ? localInputValue(task.reminder_at, account.timeZone) : ''}
               onChange={(e) => {
                 const v = e.target.value;
-                update.mutate({
-                  id: task.id,
-                  reminder_at: v ? new Date(v).toISOString() : null,
-                });
+                if (account.isPending || account.error) { toast.error('Account timezone is unavailable.'); return; }
+                try {
+                  update.mutate({ id: task.id, reminder_at: v ? resolveLocalInput(v, account.timeZone) : null, reminder_offset_min: null, reminder_sent_at: null });
+                } catch (error) { toast.error((error as Error).message); }
               }}
             />
           </div>
@@ -363,8 +362,8 @@ export function TaskDetailPanel() {
         </Field>
 
         <div className="text-xs text-muted-fg">
-          {t(lang, "taskPanel.created")} {format(new Date(task.created_at), "MMM d, yyyy")} · {t(lang, "taskPanel.updated")}{" "}
-          {format(new Date(task.updated_at), "MMM d, yyyy")}
+          {t(lang, "taskPanel.created")} {format(civilTime(task.created_at, account.timeZone), "MMM d, yyyy")} · {t(lang, "taskPanel.updated")}{" "}
+          {format(civilTime(task.updated_at, account.timeZone), "MMM d, yyyy")}
         </div>
       </div>
     </aside>
@@ -386,42 +385,21 @@ function SnoozeRow({
   task,
   onSnooze,
 }: {
-  task: { id: string; start_at: string | null; due_at: string | null };
-  onSnooze: (patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean }) => void;
+  task: TaskDates & { id: string; start_at: string | null; due_at: string | null };
+  onSnooze: (patch: { id: string; start_at?: string | null; due_at?: string | null; due_date?: string | null; is_all_day?: boolean }) => void;
 }) {
   const lang = useLanguage();
 
-  function anchor(): Date {
-    if (task.due_at) return new Date(task.due_at);
-    // No due date yet: anchor to today 9:00 AM local as a sensible default.
-    const d = new Date();
-    d.setHours(9, 0, 0, 0);
-    return d;
-  }
-
+  const account = useAccountDay();
   function shiftByDays(days: number) {
-    applyDue(snoozedDue(task.due_at, days));
+    try { onSnooze({ id: task.id, ...snoozeTaskDates(task, days, account.timeZone) }); }
+    catch (error) { toast.error((error as Error).message); }
   }
-
   function toWeekend() {
-    // Coming Saturday at 9:00 AM local (if today is Sat/Sun, jump to next Sat).
-    const d = new Date();
-    d.setHours(9, 0, 0, 0);
-    const day = d.getDay(); // 0 Sun .. 6 Sat
-    let add = (6 - day + 7) % 7;
-    if (add === 0) add = 7; // already Saturday -> next Saturday
-    d.setDate(d.getDate() + add);
-    applyDue(d);
-  }
-
-  function applyDue(newDue: Date) {
-    const patch: { id: string; start_at?: string | null; due_at: string | null; is_all_day?: boolean } = {
-      id: task.id,
-      due_at: newDue.toISOString(),
-    };
-    // Preserve duration: slide start_at forward by the same delta.
-
-    onSnooze(patch);
+    let days = (6 - civilDay(account.date, account.timeZone).getUTCDay() + 7) % 7;
+    if (!days) days = 7;
+    try { onSnooze({ id: task.id, ...snoozeTaskDates(task, days, account.timeZone, new Date(), true) }); }
+    catch (error) { toast.error((error as Error).message); }
   }
 
   function clearDue() {

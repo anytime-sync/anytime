@@ -19,6 +19,8 @@ import { useTasks, type TaskWithTags, type TasksFilter } from "@/hooks/use-tasks
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import type { CalendarEvent } from "@/lib/db.types";
 import { useAccountDay } from './use-account-day';
+import { dayWindow } from '@/lib/day-window';
+import type { GoogleCalendarEvent } from '@/lib/google-calendar';
 import { taskViewWindow } from '@/lib/task-view-window';
 
 export type ViewItem =
@@ -70,7 +72,9 @@ export function useViewItems(filter: TasksFilter): {
     const taskItems: ViewItem[] = tasks.map((task) => ({
       kind: "task",
       id: task.id,
-      sortAt: (task.start_at ?? task.due_at)
+      sortAt: (task.start_date ?? task.due_date)
+        ? +dayWindow((task.start_date ?? task.due_date)!, day.timeZone).start
+        : (task.start_at ?? task.due_at)
         ? new Date((task.start_at ?? task.due_at)!).getTime()
         : Number.POSITIVE_INFINITY,
       task,
@@ -79,14 +83,16 @@ export function useViewItems(filter: TasksFilter): {
     const eventItems: ViewItem[] = events.map((event) => ({
       kind: "event",
       id: `event:${event.id}`,
-      sortAt: event.start_at
+      sortAt: event.is_all_day && (event.raw as GoogleCalendarEvent | null)?.start?.date
+        ? +dayWindow((event.raw as GoogleCalendarEvent).start!.date!, day.timeZone).start
+        : event.start_at
         ? new Date(event.start_at).getTime()
         : Number.POSITIVE_INFINITY,
       event,
     }));
 
     return [...taskItems, ...eventItems];
-  }, [tasksQuery.data, eventsQuery.data, win]);
+  }, [tasksQuery.data, eventsQuery.data, win, day.timeZone]);
 
   return {
     items,

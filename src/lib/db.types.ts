@@ -73,6 +73,11 @@ export type Tag = {
 };
 
 export type Task = {
+  calendar_conflict?: { reason: string } | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  schedule_timezone?: string | null;
+  reminder_offset_min?: number | null;
   id: string;
   user_id: string;
   project_id: string | null;

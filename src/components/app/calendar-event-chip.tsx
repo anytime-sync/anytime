@@ -2,6 +2,9 @@
 
 import { CalendarDays, MapPin } from "lucide-react";
 import { format } from "date-fns";
+import { useAccountDay } from '@/hooks/use-account-day';
+import { civilTime, eventDays, civilKey } from '@/lib/calendar-civil';
+import { addCalendarDays } from '@/lib/day-window';
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/db.types";
@@ -32,8 +35,9 @@ export function CalendarEventChip({
   style?: React.CSSProperties;
 }) {
   const dfLocale = getLanguage(lang).dateFnsLocale;
-  const start = event.start_at ? new Date(event.start_at) : null;
-  const end = event.end_at ? new Date(event.end_at) : null;
+  const account = useAccountDay();
+  const start = event.is_all_day ? eventDays(event, account.timeZone)?.first ?? null : event.start_at ? civilTime(event.start_at, account.timeZone) : null;
+  const end = event.end_at ? civilTime(event.end_at, account.timeZone) : null;
   const allDay = event.is_all_day;
 
   const [editing, setEditing] = useState(false);

@@ -17,6 +17,9 @@ export type IcsTaskRow = {
   estimated_minutes: number | null;
   status?: string | null;
   time_kind?: TaskTimeKind | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  schedule_timezone?: string | null;
 };
 
 export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()): string {
@@ -33,15 +36,17 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
   lines.push("X-PUBLISHED-TTL:PT15M");
 
   const stamp = formatUtc(now);
-  const hasRecurringWork = tasks.some(task => {
+  const seriesZones = new Set(tasks.flatMap(task => {
     const p = projectTaskCalendar(task, zone);
-    return p?.recurrence && !p.allDay && !p.legacy;
-  });
-  const vtimezone = hasRecurringWork && zone !== 'UTC' ? getVtimezoneComponent(zone) : null;
-  if (hasRecurringWork && zone !== 'UTC' && !vtimezone) throw new Error(`ICS recurrence timezone is unsupported: ${zone}`);
-  // The timezone dataset may resolve an IANA alias to another TZID. The
-  // component identifier must match the parameter used by this feed.
-  if (vtimezone) lines.push(...vtimezone.trim().split(/\r?\n/).map(line => line.startsWith('TZID:') ? `TZID:${zone}` : line));
+    return p?.recurrence && !p.allDay && !p.legacy ? [validTimezone(task.schedule_timezone ?? zone)] : [];
+  }));
+  for (const seriesZone of seriesZones) {
+    if (seriesZone === 'UTC') continue;
+    const component = getVtimezoneComponent(seriesZone);
+    if (!component) throw new Error(`ICS recurrence timezone is unsupported: ${seriesZone}`);
+    // IANA aliases must use the same TZID as the event parameter.
+    lines.push(...component.trim().split(/\r?\n/).map(line => line.startsWith('TZID:') ? `TZID:${seriesZone}` : line));
+  }
   // Bump old events once so subscribers replace cached pre-fix date ranges.
   const feedRevision = Date.UTC(2026, 9, 25);
 
@@ -49,6 +54,7 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
     const task = source;
     const projection = projectTaskCalendar(task, zone);
     if (!projection) continue;
+    const seriesZone = validTimezone(task.schedule_timezone ?? zone);
 
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${task.id}@firstlight.to`);
@@ -61,8 +67,8 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
       lines.push(`DTSTART;VALUE=DATE:${projection.start.date.replace(/-/g, '')}`);
       lines.push(`DTEND;VALUE=DATE:${projection.end.date.replace(/-/g, '')}`);
     } else if ('dateTime' in projection.start && 'dateTime' in projection.end) {
-      if (projection.recurrence && vtimezone && !projection.legacy) {
-        lines.push(`DTSTART;TZID=${zone}:${formatUtc(wallClock(new Date(projection.start.dateTime), zone)).slice(0, -1)}`);
+      if (projection.recurrence && seriesZone !== 'UTC' && !projection.legacy) {
+        lines.push(`DTSTART;TZID=${seriesZone}:${formatUtc(wallClock(new Date(projection.start.dateTime), seriesZone)).slice(0, -1)}`);
         // DURATION preserves elapsed work time even on an occurrence that
         // crosses a DST transition; a local DTEND would change its duration.
         const seconds = Math.floor(Date.parse(projection.end.dateTime) / 1000) - Math.floor(Date.parse(projection.start.dateTime) / 1000);
@@ -74,7 +80,7 @@ export function buildIcs(tasks: IcsTaskRow[], timezone = "UTC", now = new Date()
     }
     lines.push(`SUMMARY:${escapeText(task.title || "(untitled)")}`);
     const description = projection.legacy ? task.notes?.trim() ? task.notes : undefined
-      : taskCalendarDescription(task.notes, projection, zone);
+      : taskCalendarDescription(task.notes, projection, seriesZone);
     if (description) lines.push(`DESCRIPTION:${escapeText(description)}`);
     if (projection.recurrence) lines.push(`RRULE:${projection.recurrence}`);
     lines.push("STATUS:CONFIRMED");

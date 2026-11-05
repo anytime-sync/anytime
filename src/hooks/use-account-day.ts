@@ -1,24 +1,67 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useUserPrefs } from './use-ai';
 import { calendarDate, dayWindow, validTimezone } from '@/lib/day-window';
 
-/** Membership follows the account calendar, not the travelling device.
- * Missing/invalid zones use the digest's UTC fallback until initialization. */
+// One timer/focus listener per active zone, shared by Calendar and task chips.
+// This store contains calendar keys only, never preferences or user data.
+const clocks = new Map<
+  string,
+  { listeners: Set<() => void>; stop: () => void }
+>();
+function subscribeDay(zone: string, listener: () => void) {
+  let clock = clocks.get(zone);
+  if (!clock) {
+    const listeners = new Set<() => void>();
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      clearTimeout(timer);
+      for (const update of listeners) update();
+      timer = setTimeout(
+        tick,
+        Math.max(
+          1,
+          +dayWindow(calendarDate(new Date(), zone), zone).nextStart -
+            Date.now(),
+        ),
+      );
+    };
+    clock = {
+      listeners,
+      stop: () => {
+        clearTimeout(timer);
+        if (typeof window !== 'undefined')
+          window.removeEventListener('focus', tick);
+      },
+    };
+    clocks.set(zone, clock);
+    if (typeof window !== 'undefined') window.addEventListener('focus', tick);
+    tick();
+  }
+  clock.listeners.add(listener);
+  return () => {
+    clock!.listeners.delete(listener);
+    if (!clock!.listeners.size) {
+      clock!.stop();
+      clocks.delete(zone);
+    }
+  };
+}
+
+/** Account civil days are independent of device location. Missing/invalid
+ * stored zones use the digest's UTC fallback until conditional initialization. */
 export function useAccountDay() {
   const prefs = useUserPrefs();
-  const [, refresh] = useState(0);
   const timeZone = validTimezone(prefs.data?.timezone || 'UTC');
-  const date = calendarDate(new Date(), timeZone);
-  useEffect(() => {
-    const update = () => refresh(value => value + 1);
-    const timer = setTimeout(update, Math.max(1, +dayWindow(date, timeZone).nextStart - Date.now()));
-    if (typeof window !== 'undefined') window.addEventListener('focus', update);
-    return () => {
-      clearTimeout(timer);
-      if (typeof window !== 'undefined') window.removeEventListener('focus', update);
-    };
-  }, [date, timeZone]);
+  const subscribe = useCallback(
+    (listener: () => void) => subscribeDay(timeZone, listener),
+    [timeZone],
+  );
+  const snapshot = useCallback(
+    () => calendarDate(new Date(), timeZone),
+    [timeZone],
+  );
+  const date = useSyncExternalStore(subscribe, snapshot, snapshot);
   return { date, timeZone, isPending: prefs.isPending, error: prefs.error };
 }

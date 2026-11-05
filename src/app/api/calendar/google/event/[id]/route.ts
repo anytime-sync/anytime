@@ -1,3 +1,5 @@
+import { googleEventDates, toCalendarEventRow } from "@/lib/calendar-event-dates";
+import type { GoogleCalendarEvent } from "@/lib/google-calendar";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
@@ -55,6 +57,8 @@ export async function PATCH(
 
   let patch: {
     title?: string;
+    start_date?: string;
+    end_date?: string;
     start_at?: string;
     end_at?: string;
     location?: string;
@@ -114,6 +118,11 @@ export async function PATCH(
     // through and patch the single event (which IS the master).
   }
 
+  const expectedEtag = req.headers.get('If-Match');
+  if (!expectedEtag || expectedEtag !== row.raw?.etag || targetIsSeries) return NextResponse.json({ error: targetIsSeries ? 'Series editing needs a reviewed master baseline; edit the series in Google Calendar.' : 'Event revision changed. Reload and review before saving.' }, { status: 409 });
+  const { data: prefs, error: prefsError } = await supabase.from('user_preferences').select('timezone').eq('user_id', user.id).maybeSingle();
+  if (prefsError) return NextResponse.json({ error: 'account_timezone_unavailable' }, { status: 500 });
+  const timezone = prefs?.timezone || 'UTC';
   // Build the Google-side patch. Only include fields the caller actually sent
   // — Google's PATCH preserves anything we don't include (vs PUT which would
   // wipe attendees, recurrence rules, etc.).
@@ -123,15 +132,13 @@ export async function PATCH(
   if (typeof patch.description === "string")
     googlePatch.description = patch.description;
   if (typeof patch.location === "string") googlePatch.location = patch.location;
-  if (typeof patch.start_at === "string") {
-    googlePatch.start = isAllDay
-      ? { date: patch.start_at.slice(0, 10) }
-      : { dateTime: patch.start_at };
-  }
-  if (typeof patch.end_at === "string") {
-    googlePatch.end = isAllDay
-      ? { date: patch.end_at.slice(0, 10) }
-      : { dateTime: patch.end_at };
+  if (patch.start_at || patch.end_at || patch.start_date || patch.end_date) {
+    const raw = row.raw as GoogleCalendarEvent | null;
+    try { Object.assign(googlePatch, googleEventDates({ is_all_day: isAllDay,
+      start_at: patch.start_at || row.start_at || undefined, end_at: patch.end_at || row.end_at || undefined,
+      start_date: patch.start_date ?? (patch.start_at ? undefined : raw?.start?.date ?? undefined),
+      end_date: patch.end_date ?? (patch.end_at ? undefined : raw?.end?.date ?? undefined),
+    }, timezone)); } catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   }
   if (Array.isArray(patch.attendees)) {
     googlePatch.attendees = patch.attendees
@@ -142,18 +149,27 @@ export async function PATCH(
     return NextResponse.json({ error: "nothing_to_patch" }, { status: 400 });
   }
 
+  let patched: GoogleCalendarEvent;
   try {
-    await patchCalendarEvent({
+    patched = await patchCalendarEvent({
       accessToken,
       calendarId: row.calendar_id,
       eventId: targetEventId,
       patch: googlePatch,
+      ifMatch: expectedEtag,
       // For series edits we want attendees notified; for time/title-only
       // tweaks too. Default behavior in lib is "all".
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "google_patch_failed";
     console.error("[google-event PATCH]", msg, e);
+    if (msg === 'google_precondition_failed') {
+      try {
+        const latest = await getCalendarEvent({ accessToken, calendarId: row.calendar_id, eventId: targetEventId });
+        if (!targetIsSeries) await service.from('calendar_events').update(toCalendarEventRow({ userId: user.id, calendarId: row.calendar_id, ev: latest, timezone })).eq('id', row.id).eq('user_id', user.id);
+      } catch { /* Keep the existing baseline if the refresh fails. */ }
+      return NextResponse.json({ error: 'Google changed this event. Reload and review before retrying.', conflict: true }, { status: 409 });
+    }
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
@@ -162,28 +178,10 @@ export async function PATCH(
   // singleEvents=true expansions) — only mirror when patching the row we
   // looked up.
   if (!targetIsSeries) {
-    const localUpdate: Record<string, unknown> = {
-      fetched_at: new Date().toISOString(),
-    };
-    if (typeof patch.title === "string") localUpdate.title = patch.title;
-    if (typeof patch.description === "string")
-      localUpdate.description = patch.description;
-    if (typeof patch.location === "string")
-      localUpdate.location = patch.location;
-    if (typeof patch.start_at === "string")
-      localUpdate.start_at = patch.start_at;
-    if (typeof patch.end_at === "string") localUpdate.end_at = patch.end_at;
-    if (Array.isArray(patch.attendees)) {
-      localUpdate.attendees_count = googlePatch.attendees?.length ?? 0;
-    }
-
-    const { error: updErr } = await service
-      .from("calendar_events")
-      .update(localUpdate)
-      .eq("id", row.id);
-    if (updErr) {
-      console.error("[google-event PATCH] mirror failed", updErr);
-    }
+    const { error: updErr } = await service.from('calendar_events')
+      .update(toCalendarEventRow({ userId: user.id, calendarId: row.calendar_id, ev: patched!, timezone }))
+      .eq('id', row.id).eq('user_id', user.id);
+    if (updErr) return NextResponse.json({ ok: true, mirror_pending: true });
   } else {
     // Series edit: invalidate the sync_token so the next cron tick does a
     // fresh full-window pull and picks up all expanded instance changes.
@@ -251,15 +249,28 @@ export async function DELETE(
     }
   }
 
+  const expectedEtag = req.headers.get('If-Match');
+  if (!expectedEtag || expectedEtag !== row.raw?.etag || targetIsSeries) return NextResponse.json({ error: targetIsSeries ? 'Series deletion needs a reviewed master baseline; edit the series in Google Calendar.' : 'Event revision changed. Reload and review before deleting.' }, { status: 409 });
+  const { data: prefs, error: prefsError } = await supabase.from('user_preferences').select('timezone').eq('user_id', user.id).maybeSingle();
+  if (prefsError) return NextResponse.json({ error: 'account_timezone_unavailable' }, { status: 500 });
+  const timezone = prefs?.timezone || 'UTC';
   try {
     await deleteCalendarEvent({
       accessToken,
       calendarId: row.calendar_id,
       eventId: targetEventId,
+      ifMatch: expectedEtag,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "google_delete_failed";
     console.error("[google-event DELETE]", msg, e);
+    if (msg === 'google_precondition_failed') {
+      try {
+        const latest = await getCalendarEvent({ accessToken, calendarId: row.calendar_id, eventId: targetEventId });
+        if (!targetIsSeries) await service.from('calendar_events').update(toCalendarEventRow({ userId: user.id, calendarId: row.calendar_id, ev: latest, timezone })).eq('id', row.id).eq('user_id', user.id);
+      } catch { /* Keep the existing baseline if the refresh fails. */ }
+      return NextResponse.json({ error: 'Google changed this event. Reload and review before retrying.', conflict: true }, { status: 409 });
+    }
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
@@ -287,14 +298,10 @@ export async function DELETE(
 }
 
 /* ------------------------------------------------------------------ */
-/* GET /api/calendar/google/event/[id] — fetch fresh from Google      */
+/* GET /api/calendar/google/event/[id] — acknowledged local revision */
 /* ------------------------------------------------------------------ */
 
-/**
- * GET returns the local row + the live Google master event when the
- * row is a recurring instance. Used by the dialog to show attendees +
- * recurrence info that may not be in the local cache.
- */
+/** Return one consistent cached revision for review and conditional editing. */
 export async function GET(
   _req: Request,
   ctx: { params: { id: string } }
@@ -374,7 +381,3 @@ async function getServiceAndToken(userId: string) {
   }
   return { service, accessToken, error: null } as const;
 }
-
-// Suppress unused-import lint: getCalendarEvent is exported from lib for
-// future "show fresh attendees pulled live from Google" UI features.
-void getCalendarEvent;

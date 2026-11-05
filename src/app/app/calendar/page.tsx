@@ -1,5 +1,8 @@
 "use client";
-import { calendarTask, taskTimeKind } from "@/lib/task-schedule";
+import { CivilDate, civilDay, civilKey, civilWindow, taskDays, eventDays, shiftInstantDays, shiftTaskDays } from '@/lib/calendar-civil';
+import { addCalendarDays } from '@/lib/day-window';
+import { useAccountDay } from '@/hooks/use-account-day';
+import { calendarTask } from "@/lib/task-schedule";
 
 import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
@@ -42,9 +45,18 @@ import { t as tr, getLanguage, type LanguageCode } from "@/lib/i18n";
  * Today page exactly (drag-to-reorder, inline AI parsing, tag pills).
  */
 export default function CalendarPage() {
+  const account = useAccountDay();
   const [mode, setMode] = useState<"month" | "day">("month");
-  const [cursor, setCursor] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [cursor, setCursor] = useState(() => civilDay(account.date, account.timeZone));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => civilDay(account.date, account.timeZone));
+
+  const accountDate = account.date, accountZone = account.timeZone;
+  const previousAccount = useRef({ date: accountDate, timeZone: accountZone });
+  useEffect(() => {
+    const previous = previousAccount.current;
+    const refresh = (value: Date) => previous.timeZone !== accountZone || civilKey(value) === previous.date ? civilDay(accountDate, accountZone) : value;
+    setCursor(refresh); setSelectedDate(refresh); previousAccount.current = { date: accountDate, timeZone: accountZone };
+  }, [accountDate, accountZone]);
 
   return mode === "day" ? (
     <DayView
@@ -134,6 +146,8 @@ function MonthView({
   setCursor: (d: Date) => void;
   onPickDay: (d: Date) => void;
 }) {
+  const account = useAccountDay();
+  const zone = account.timeZone;
   const lang = useLanguage();
   const dfLocale = getLanguage(lang).dateFnsLocale;
   const setQuickAdd = useUIStore((s) => s.setQuickAddOpen);
@@ -142,10 +156,8 @@ function MonthView({
   const monthEnd = endOfMonth(cursor);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const days = useMemo(
-    () => eachDayOfInterval({ start: gridStart, end: gridEnd }),
-    [gridStart.getTime(), gridEnd.getTime()]
-  );
+  const gridStartKey = civilKey(gridStart), gridEndKey = civilKey(gridEnd);
+  const days = useMemo(() => eachDayOfInterval({ start: new CivilDate(gridStartKey), end: new CivilDate(gridEndKey) }), [gridStartKey, gridEndKey]);
 
   const [showCompleted, setShowCompleted] = useState(false);
   const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: showCompleted });
@@ -153,8 +165,8 @@ function MonthView({
   // Fetch every event that overlaps the visible grid (typ. 6 weeks).
   // RLS-gated query — supabase reads only this user's rows.
   const { data: calEventsAll = [] } = useCalendarEvents({
-    from: startOfDay(gridStart),
-    to: endOfDay(gridEnd),
+    from: civilWindow(gridStart, zone).start,
+    to: civilWindow(gridEnd, zone).nextStart,
   });
   const { data: gcalConn } = useCalendarConnection();
   // Group by day for O(1) cell lookup; key by yyyy-MM-dd in local TZ.
@@ -162,22 +174,15 @@ function MonthView({
     const m = new Map<string, CalendarEvent[]>();
     for (const ev of calEventsAll) {
       if (!ev.start_at) continue;
-      // Round F v4.7 fix: skip multi-day events — they render as a single
-      // continuous bar via multiDayBars, so per-day chips would duplicate
-      // them visually (same logic the task path uses for multi-day tasks).
-      if (ev.end_at) {
-        const startMs = startOfDay(new Date(ev.start_at)).getTime();
-        const rawEndMs = startOfDay(new Date(ev.end_at)).getTime();
-        const endMs = ev.is_all_day ? rawEndMs - 86400000 : rawEndMs;
-        if (endMs > startMs) continue;
-      }
-      const k = format(new Date(ev.start_at), "yyyy-MM-dd");
+      const range = eventDays(ev, zone);
+      if (!range || +range.last > +range.first) continue;
+      const k = civilKey(range.first);
       const arr = m.get(k) ?? [];
       arr.push(ev);
       m.set(k, arr);
     }
     return m;
-  }, [calEventsAll]);
+  }, [calEventsAll, zone]);
 
   const update = useUpdateTask();
   const qc = useQueryClient();
@@ -231,8 +236,8 @@ function MonthView({
     const lastMs = startOfDay(days[days.length - 1]).getTime();
     for (const t of tasks) {
       if (!t.start_at || !t.due_at) continue;
-      const s = startOfDay(new Date(t.start_at)).getTime();
-      const e = startOfDay(new Date(t.due_at)).getTime();
+      const range = taskDays(t, zone)!;
+      const s = +range.first, e = +range.last;
       if (s === e) continue; // single-day → rendered as a chip in its cell
       if (s > lastMs || e < firstMs) continue;
       const clampedS = Math.max(s, firstMs);
@@ -267,11 +272,8 @@ function MonthView({
     // multi-day events use the same date span as tasks.
     for (const ev of calEventsAll) {
       if (!ev.start_at || !ev.end_at) continue;
-      const startMs = startOfDay(new Date(ev.start_at)).getTime();
-      // Google's all-day events use exclusive end (e.g. start=Mon, end=Wed
-      // means Mon+Tue, not Mon+Tue+Wed). Subtract a day for those.
-      const endRawMs = startOfDay(new Date(ev.end_at)).getTime();
-      const endMs = ev.is_all_day ? endRawMs - 86400000 : endRawMs;
+      const range = eventDays(ev, zone)!;
+      const startMs = +range.first, endMs = +range.last;
       if (endMs <= startMs) continue;
       if (startMs > lastMs || endMs < firstMs) continue;
       const clampedS = Math.max(startMs, firstMs);
@@ -316,7 +318,7 @@ function MonthView({
       bar.lane = lane;
     }
     return out;
-  }, [tasks, days, calEventsAll]);
+  }, [tasks, days, calEventsAll, zone]);
 
   // For each visible cell (by dateKey), how many bar lanes sit on top
   // of it. Cells use this to push their chip area down so chips never
@@ -342,31 +344,15 @@ function MonthView({
     if (!hoveredBarTaskId) return set;
     // Look in tasks first, then fall through to events.
     const t = tasks.find((x) => x.id === hoveredBarTaskId);
-    let startAt: string | null = null;
-    let endAt: string | null = null;
-    let allDay = false;
-    if (t?.start_at && t.due_at) {
-      startAt = t.start_at;
-      endAt = t.due_at;
-    } else {
-      const ev = calEventsAll.find((x) => x.id === hoveredBarTaskId);
-      if (ev?.start_at && ev?.end_at) {
-        startAt = ev.start_at;
-        endAt = ev.end_at;
-        allDay = !!ev.is_all_day;
-      }
-    }
-    if (!startAt || !endAt) return set;
-    const startMs = startOfDay(new Date(startAt)).getTime();
-    // GCal all-day events have exclusive end, subtract 1 day
-    const endMs = allDay
-      ? startOfDay(new Date(endAt)).getTime() - 86400000
-      : startOfDay(new Date(endAt)).getTime();
+    const ev = calEventsAll.find(x => x.id === hoveredBarTaskId);
+    const range = t ? taskDays(t, zone) : ev ? eventDays(ev, zone) : null;
+    if (!range) return set;
+    const startMs = +range.first, endMs = +range.last;
     for (let ms = startMs; ms <= endMs; ms += 86400000) {
-      set.add(format(new Date(ms), "yyyy-MM-dd"));
+      set.add(format(new CivilDate(ms), "yyyy-MM-dd"));
     }
     return set;
-  }, [hoveredBarTaskId, tasks, calEventsAll]);
+  }, [hoveredBarTaskId, tasks, calEventsAll, zone]);
 
   // While the user is dragging a task, track which cell their cursor is
   // over so we can light up the FULL range the bar would land on (not
@@ -386,26 +372,23 @@ function MonthView({
       fromKey = fk;
       const ev = calEventsAll.find((x) => x.id === eventId);
       if (!ev?.start_at || !ev?.end_at) return set;
-      startMs = startOfDay(new Date(ev.start_at)).getTime();
-      const allDay = !!ev.is_all_day;
-      endMs = allDay
-        ? startOfDay(new Date(ev.end_at)).getTime() - 86400000
-        : startOfDay(new Date(ev.end_at)).getTime();
+      const range = eventDays(ev, zone)!;
+      startMs = +range.first; endMs = +range.last;
     } else {
       const [taskId, fk] = idStr.split("::");
       fromKey = fk;
       const t = tasks.find((x) => x.id === taskId);
       if (!t?.start_at || !t?.due_at) return set;
-      startMs = startOfDay(new Date(t.start_at)).getTime();
-      endMs = startOfDay(new Date(t.due_at)).getTime();
+      const range = taskDays(t, zone)!;
+      startMs = +range.first; endMs = +range.last;
     }
     const [oy, om, od] = dragOverDateKey.split("-").map(Number);
     if (startMs === null || endMs === null) return set;
-    const dropDay = new Date(oy, om - 1, od);
+    const dropDay = new CivilDate(Date.UTC(oy, om - 1, od));
     let offsetMs: number;
     if (fromKey) {
       const [fy, fm, fd] = fromKey.split("-").map(Number);
-      const fromDay = new Date(fy, fm - 1, fd);
+      const fromDay = new CivilDate(Date.UTC(fy, fm - 1, fd));
       offsetMs = startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime();
     } else {
       offsetMs = startOfDay(dropDay).getTime() - startMs;
@@ -413,10 +396,10 @@ function MonthView({
     const newStart = startMs + offsetMs;
     const newEnd = endMs + offsetMs;
     for (let ms = newStart; ms <= newEnd; ms += 86400000) {
-      set.add(format(new Date(ms), "yyyy-MM-dd"));
+      set.add(format(new CivilDate(ms), "yyyy-MM-dd"));
     }
     return set;
-  }, [activeId, dragOverDateKey, tasks, calEventsAll]);
+  }, [activeId, dragOverDateKey, tasks, calEventsAll, zone]);
 
   // Measure the cell width so the DragOverlay can render multi-day
   // tasks at their REAL bar width (cellWidth * duration) instead of a
@@ -436,103 +419,33 @@ function MonthView({
 
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
-    if (!e.over) return;
-
-    // Round F v4.4: GCal event drag — drag id starts with "event::".
-    // Shift start_at + end_at by the same day offset (gap-preserving)
-    // and PATCH the Google event via /api/calendar/google/event/[id].
-    const idStr = String(e.active.id);
-    if (idStr.startsWith("event::")) {
-      const [, eventId, fromKey] = idStr.split("::");
-      const date = String(e.over.id);
-      const ev = calEventsAll.find((x) => x.id === eventId);
-      if (!ev || !ev.start_at) return;
-      const [y, m, d] = date.split("-").map(Number);
-      const dropDay = new Date(y, m - 1, d);
-      let offsetDays: number;
-      if (fromKey) {
-        const [fy, fm, fd] = fromKey.split("-").map(Number);
-        const fromDay = new Date(fy, fm - 1, fd);
-        offsetDays = Math.round(
-          (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
-        );
-      } else {
-        offsetDays = Math.round(
-          (startOfDay(dropDay).getTime() - startOfDay(new Date(ev.start_at)).getTime()) / 86400000
-        );
+    if (!e.over || account.isPending || account.error) return;
+    const id = String(e.active.id), target = String(e.over.id);
+    try {
+      if (id.startsWith('event::')) {
+        const [, eventId, fromKey] = id.split('::');
+        const ev = calEventsAll.find(x => x.id === eventId);
+        if (!ev?.start_at) return;
+        const range = eventDays(ev, zone)!;
+        const offset = (Date.parse(target) - Date.parse(fromKey || civilKey(range.first))) / 86400000;
+        if (!offset) return;
+        const raw = ev.raw as { etag?: string; start?: { date?: string }; end?: { date?: string } };
+        const patch = ev.is_all_day
+          ? { start_date: addCalendarDays(raw?.start?.date || civilKey(range.first), offset), end_date: addCalendarDays(raw?.end?.date || addCalendarDays(civilKey(range.last), 1), offset) }
+          : { start_at: shiftInstantDays(ev.start_at, offset, zone), end_at: ev.end_at ? new Date(Date.parse(shiftInstantDays(ev.start_at, offset, zone)) + Date.parse(ev.end_at) - Date.parse(ev.start_at)).toISOString() : undefined };
+        void fetch(`/api/calendar/google/event/${encodeURIComponent(eventId)}`, { method: 'PATCH', headers: { 'content-type': 'application/json', 'If-Match': raw?.etag || '' }, body: JSON.stringify(patch) })
+          .then(async response => { if (!response.ok) throw new Error((await response.json()).error || 'Reschedule failed'); })
+          .catch(error => toast.error(error.message)).finally(() => qc.invalidateQueries({ queryKey: ['calendarEvents'] }));
+        return;
       }
-      if (offsetDays === 0) return;
-      const newStart = new Date(ev.start_at);
-      newStart.setDate(newStart.getDate() + offsetDays);
-      const patch: { start_at: string; end_at?: string } = {
-        start_at: newStart.toISOString(),
-      };
-      if (ev.end_at) {
-        const newEnd = new Date(ev.end_at);
-        newEnd.setDate(newEnd.getDate() + offsetDays);
-        patch.end_at = newEnd.toISOString();
-      }
-      fetch(`/api/calendar/google/event/${encodeURIComponent(eventId)}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(patch),
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`http_${r.status}`);
-          qc.invalidateQueries({ queryKey: ["calendarEvents"] });
-        })
-        .catch((err) => {
-          toast.error("Couldn't reschedule event: " + (err?.message ?? "unknown"));
-          qc.invalidateQueries({ queryKey: ["calendarEvents"] });
-        });
-      return;
-    }
-
-    // Drag id is "<taskId>::<from-day-yyyy-mm-dd>" — the second part
-    // is the cell the chip was grabbed from. We always shift BOTH
-    // start_at and due_at by the same offset so the relative span is
-    // preserved (single-day stays single-day, 3-day stays 3-day).
-    // Hours/minutes are kept verbatim.
-    const [taskId, fromKey] = String(e.active.id).split("::");
-    const date = String(e.over.id); // yyyy-mm-dd (drop target)
-    const t = tasks.find((x) => x.id === taskId);
-    if (!t || !t.due_at) return;
-    const [y, m, d] = date.split("-").map(Number);
-    const dropDay = new Date(y, m - 1, d);
-
-    let offsetDays: number;
-    if (fromKey) {
-      const [fy, fm, fd] = fromKey.split("-").map(Number);
-      const fromDay = new Date(fy, fm - 1, fd);
-      offsetDays = Math.round(
-        (startOfDay(dropDay).getTime() - startOfDay(fromDay).getTime()) / 86400000
-      );
-    } else {
-      const origDue = new Date(t.due_at);
-      offsetDays = Math.round(
-        (startOfDay(dropDay).getTime() - startOfDay(origDue).getTime()) / 86400000
-      );
-    }
-    if (offsetDays === 0) return; // dropped on same cell
-
-    const origDue = new Date(t.due_at);
-    const newDue = new Date(origDue);
-    newDue.setDate(newDue.getDate() + offsetDays);
-    const updateData: { id: string; due_at: string; start_at?: string } = {
-      id: t.id,
-      due_at: newDue.toISOString(),
-    };
-    if (t.start_at) {
-      const newStart = taskTimeKind(t) === 'work'
-        ? new Date(Date.parse(t.start_at) + newDue.getTime() - origDue.getTime())
-        : new Date(t.start_at);
-      if (taskTimeKind(t) !== 'work') newStart.setDate(newStart.getDate() + offsetDays);
-      // Guard: never let start drift past due (start <= due always).
-      if (newStart.getTime() <= newDue.getTime()) {
-        updateData.start_at = newStart.toISOString();
-      }
-    }
-    update.mutate(updateData);
+      const [taskId, fromKey] = id.split('::');
+      const task = sourceTasks.find(x => x.id === taskId);
+      if (!task) return;
+      const range = taskDays(task, zone);
+      if (!range) return;
+      const offset = (Date.parse(target) - Date.parse(fromKey || civilKey(range.first))) / 86400000;
+      if (offset) update.mutate({ id: task.id, ...shiftTaskDays(task, offset, zone) });
+    } catch (error) { toast.error((error as Error).message); }
   }
 
   return (
@@ -554,7 +467,7 @@ function MonthView({
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(subMonths(cursor, 1))}>
               <ChevronLeft className="size-4" />
             </button>
-            <button className="btn-ghost h-9 px-2 text-xs" onClick={() => setCursor(new Date())}>{tr(lang, "view.calendar.today")}</button>
+            <button className="btn-ghost h-9 px-2 text-xs" onClick={() => setCursor(civilDay(account.date, zone))}>{tr(lang, "view.calendar.today")}</button>
             <button className="btn-ghost size-9 p-0 grid place-items-center" onClick={() => setCursor(addMonths(cursor, 1))}>
               <ChevronRight className="size-4" />
             </button>
@@ -588,14 +501,8 @@ function MonthView({
               // day chips.
               const dayMs = startOfDay(d).getTime();
               const dayTasks = tasks.filter((t) => {
-                const anchor = t.due_at ?? t.start_at;
-                if (!anchor) return false;
-                const due = startOfDay(new Date(t.due_at ?? t.start_at!)).getTime();
-                if (t.start_at) {
-                  const start = startOfDay(new Date(t.start_at)).getTime();
-                  if (start !== due) return false;
-                }
-                return due === dayMs;
+                const range = taskDays(t, zone);
+                return !!range && +range.first === +range.last && +range.first === dayMs;
               });
               return (
                 <DayCell
@@ -665,10 +572,12 @@ function DayCell({
   // every cell in that bar's range gets the same highlight.
   barHoverHighlight: boolean;
 }) {
+  const account = useAccountDay();
+  const zone = account.timeZone;
   const lang = useLanguage();
   const dfLocale = getLanguage(lang).dateFnsLocale;
   const { isOver, setNodeRef } = useDroppable({ id: dateKey });
-  const today = isSameDay(date, new Date());
+  const today = isSameDay(date, civilDay(account.date, zone));
   return (
     <div
       ref={setNodeRef}
@@ -855,10 +764,9 @@ function DraggableBar({
   const isEvent = bar.kind === "event";
   const item = isEvent ? bar.event! : bar.task!;
   const itemId = item.id;
-  const anchorIso = isEvent
-    ? new Date(bar.event!.start_at!).toISOString()
-    : new Date(bar.task!.start_at!).toISOString();
-  const anchorYmd = format(new Date(anchorIso), "yyyy-MM-dd");
+  const { timeZone: zone } = useAccountDay();
+  const range = isEvent ? eventDays(bar.event!, zone) : taskDays(bar.task!, zone);
+  const anchorYmd = civilKey(range!.first);
   const dragId = isEvent
     ? `event::${itemId}::${anchorYmd}`
     : `${itemId}::${anchorYmd}`;
@@ -982,13 +890,14 @@ function DraggableTask({
 }
 
 function DragPreview({ task, cellWidth }: { task: TaskWithTags; cellWidth: number }) {
+  const { timeZone: zone } = useAccountDay();
   // Multi-day tasks render the preview at their REAL width — cellWidth
   // multiplied by the task's day-span — so the user sees a full-size
   // bar tracking the cursor instead of a single-day chip.
   let widthPx = 180;
   if (task.start_at && task.due_at && cellWidth > 0) {
-    const s = startOfDay(new Date(task.start_at)).getTime();
-    const e = startOfDay(new Date(task.due_at)).getTime();
+    const range = taskDays(task, zone)!;
+    const s = +range.first, e = +range.last;
     if (e > s) {
       const days = Math.round((e - s) / 86400000) + 1;
       widthPx = Math.max(80, cellWidth * days - 12);
@@ -1048,6 +957,8 @@ function DayView({
   onChangeDate: (d: Date) => void;
   onBack: () => void;
 }) {
+  const account = useAccountDay();
+  const zone = account.timeZone;
   const lang = useLanguage();
   const dfLocale = getLanguage(lang).dateFnsLocale;
   const [viewMode, setViewMode] = useDayViewMode();
@@ -1055,18 +966,12 @@ function DayView({
   const { data: sourceTasks = [] } = useTasks({ view: "all", includeCompleted: showCompleted });
   const tasks = useMemo(() => sourceTasks.map(calendarTask), [sourceTasks]);
 
-  const dayStart = startOfDay(date);
-  const dayEnd = endOfDay(date);
+  const { start: dayStart, nextStart: dayEnd } = civilWindow(date, zone);
   const { data: dayEvents = [] } = useCalendarEvents({ from: dayStart, to: dayEnd });
   const dayTasks = tasks
     .filter((t) => {
-      const anchor = t.due_at ?? t.start_at;
-      if (!anchor) return false;
-      const due = new Date(t.due_at ?? t.start_at!);
-      // For multi-day tasks, treat the task as active on every day its
-      // [start_at, due_at] interval overlaps — not only the due day.
-      const start = t.start_at ? new Date(t.start_at) : due;
-      return start <= dayEnd && due >= dayStart;
+      const range = taskDays(t, zone);
+      return !!range && +range.first <= +date && +range.last >= +startOfDay(date);
     })
     .sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
@@ -1081,7 +986,7 @@ function DayView({
 
   const incomplete = dayTasks.filter((t) => !t.is_completed);
   const completed = dayTasks.filter((t) => t.is_completed);
-  const isToday = isSameDay(date, new Date());
+  const isToday = isSameDay(date, civilDay(account.date, zone));
 
   return (
     <div className="flex flex-col h-full">
@@ -1115,7 +1020,7 @@ function DayView({
             </button>
             <button
               className="btn-ghost h-9 px-2 text-xs"
-              onClick={() => onChangeDate(new Date())}
+              onClick={() => onChangeDate(civilDay(account.date, zone))}
             >
               {tr(lang, "view.calendar.today")}
             </button>
@@ -1142,7 +1047,7 @@ function DayView({
       <div className="flex-1 overflow-y-auto px-2 md:px-3 py-3 space-y-3">
         <InlineTaskInput
           defaultProjectId={null}
-          defaultDueAt={dayStart.toISOString()}
+          defaultDueAt={civilKey(date)}
         />
 
         {/* Round F v4.7: events render as EventTaskRow rows interleaved

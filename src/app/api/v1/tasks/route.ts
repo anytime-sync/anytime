@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   let q = ctx.supabase
     .from("tasks")
     .select(
-      "id,title,status,priority,due_at,start_at,time_kind,is_all_day,notes,project_id,created_at,updated_at,completed_at",
+      "id,title,status,priority,due_at,start_at,due_date,start_date,schedule_timezone,time_kind,is_all_day,notes,project_id,created_at,updated_at,completed_at",
     )
     .eq("user_id", ctx.userId)
     .order("due_at", { ascending: true, nullsFirst: false })
@@ -94,6 +94,8 @@ export async function GET(req: NextRequest) {
 interface CreateTaskBody {
   title: string;
   time_kind?: TaskTimeKind | null;
+  due_date?: string | null;
+  start_date?: string | null;
   due_at?: string | null;
   start_at?: string | null;
   is_all_day?: boolean | null;
@@ -104,29 +106,11 @@ interface CreateTaskBody {
   rrule?: string | null;
 }
 
-/**
- * Determine is_all_day from provided dates when not explicitly set.
- * If start_at or due_at contains a time component (non-midnight),
- * the task is NOT all-day.
- */
+/** A civil date has no time. Explicit timed midnight is still an instant. */
 function deriveIsAllDay(body: CreateTaskBody): boolean {
-  // Explicit override takes precedence
-  if (body.is_all_day !== undefined && body.is_all_day !== null) {
-    return body.is_all_day;
-  }
-  // Check the raw ISO string for midnight in the sender's timezone.
-  // "2026-06-01T00:00:00+08:00" is midnight Taipei = all-day,
-  // even though UTC representation is 2026-05-31T16:00:00Z.
-  // A date-only string ("2026-06-01") or T00:00:00 in any offset = all-day.
-  const midnightRe = /T00:00:00([Z+-]|$)/;
-  const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
-  function isMidnightOrDateOnly(iso: string): boolean {
-    return dateOnlyRe.test(iso) || midnightRe.test(iso);
-  }
-  if (body.start_at && !isMidnightOrDateOnly(body.start_at)) return false;
-  if (body.due_at && !isMidnightOrDateOnly(body.due_at)) return false;
-  // Default: all-day
-  return true;
+  if (body.is_all_day != null) return body.is_all_day;
+  if (body.due_date || body.start_date) return true;
+  return [body.start_at, body.due_at].filter(Boolean).every(value => /^\d{4}-\d{2}-\d{2}$/.test(value!));
 }
 
 export async function POST(req: NextRequest) {
@@ -153,10 +137,10 @@ export async function POST(req: NextRequest) {
   let dates;
   try {
     dates = createTaskDates({
-      start_at: normalizeTaskDate(body.start_at ?? null, prefs?.timezone ?? 'UTC'),
-      due_at: normalizeTaskDate(body.due_at ?? null, prefs?.timezone ?? 'UTC'),
+      start_at: body.start_at ?? null, due_at: body.due_at ?? null,
+      ...(body.start_date !== undefined ? { start_date: body.start_date } : {}), ...(body.due_date !== undefined ? { due_date: body.due_date } : {}),
       is_all_day: deriveIsAllDay(body), time_kind: body.time_kind,
-    });
+    }, prefs?.timezone || 'UTC');
   } catch (error) { return jsonError(400, "invalid_schedule", error instanceof Error ? error.message : "Invalid dates"); }
 
   const { data, error } = await ctx.supabase

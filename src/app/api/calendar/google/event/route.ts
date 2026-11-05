@@ -1,3 +1,4 @@
+import { googleEventDates, toCalendarEventRow } from "@/lib/calendar-event-dates";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
@@ -41,6 +42,8 @@ export async function POST(req: Request) {
   let body: {
     title?: string;
     start_at?: string;
+    start_date?: string;
+    end_date?: string;
     end_at?: string;
     is_all_day?: boolean;
     description?: string;
@@ -56,7 +59,7 @@ export async function POST(req: Request) {
   if (!title) {
     return NextResponse.json({ error: "title_required" }, { status: 400 });
   }
-  if (!body.start_at) {
+  if (!body.start_at && !body.start_date) {
     return NextResponse.json({ error: "start_at_required" }, { status: 400 });
   }
 
@@ -101,26 +104,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no_access_token" }, { status: 401 });
   }
 
-  // Compute end_at if caller didn't supply it.
-  const allDay = !!body.is_all_day;
-  const startIso = body.start_at;
-  const endIso =
-    body.end_at ??
-    (allDay
-      ? new Date(
-          new Date(startIso.slice(0, 10) + "T00:00:00").getTime() + 86400000
-        ).toISOString()
-      : new Date(new Date(startIso).getTime() + 60 * 60_000).toISOString());
-
-  // Build the Google-shaped input. All-day events use {date}, timed
-  // events use {dateTime}. Google does the rest.
-  const eventInput: GoogleCalendarEventInput = {
-    summary: title,
-    description: body.description || undefined,
-    location: body.location || undefined,
-    start: allDay ? { date: startIso.slice(0, 10) } : { dateTime: startIso },
-    end: allDay ? { date: endIso.slice(0, 10) } : { dateTime: endIso },
-  };
+  const { data: prefs, error: prefsError } = await supabase.from('user_preferences').select('timezone').eq('user_id', user.id).maybeSingle();
+  if (prefsError) return NextResponse.json({ error: 'account_timezone_unavailable' }, { status: 500 });
+  const timezone = prefs?.timezone || 'UTC';
+  let eventInput: GoogleCalendarEventInput;
+  try { eventInput = { summary: title, description: body.description || undefined, location: body.location || undefined, ...googleEventDates(body, timezone) }; }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
   let created;
   try {
@@ -137,40 +126,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
-  // Mirror locally so the UI shows the new event immediately. The cron
-  // sweep will reconcile any drift (e.g. attendee responses) later.
-  const localStart = allDay
-    ? new Date(startIso.slice(0, 10) + "T00:00:00").toISOString()
-    : startIso;
-  const localEnd = allDay
-    ? new Date(endIso.slice(0, 10) + "T23:59:59").toISOString()
-    : endIso;
-
-  const { error: insertErr } = await service.from("calendar_events").upsert(
-    {
-      user_id: user.id,
-      provider: "google",
-      external_id: created.id,
-      calendar_id: calendarId,
-      title: created.summary ?? title,
-      description: body.description ?? null,
-      location: body.location ?? null,
-      start_at: localStart,
-      end_at: localEnd,
-      is_all_day: allDay,
-      status: "confirmed",
-      html_link: created.htmlLink ?? null,
-      attendees_count: 0,
-      raw: created as unknown as Record<string, unknown>,
-      fetched_at: new Date().toISOString(),
-      cancelled: false,
-    },
-    { onConflict: "user_id,provider,external_id" }
+  const { error: insertErr } = await service.from('calendar_events').upsert(
+    toCalendarEventRow({ userId: user.id, calendarId, ev: created, timezone }),
+    { onConflict: 'user_id,provider,external_id' }
   );
   if (insertErr) {
     console.error("[google-event POST] mirror failed", insertErr);
     // Don't fail the request — the event IS in Google; cron will re-sync.
   }
 
-  return NextResponse.json({ ok: true, event_id: created.id });
+  return NextResponse.json({ ok: true, event_id: created.id, mirror_pending: !!insertErr });
 }
