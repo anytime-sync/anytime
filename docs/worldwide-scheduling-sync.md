@@ -101,9 +101,15 @@ exact expected revision, history insertion, advancement and retry receipt live i
 one transaction. An insert failure rolls back the advancement. The API requires
 `expected_updated_at` (or If-Unmodified-Since) for recurring completion; retry the
 same revision after a lost response. The protected completion function explicitly
-checks the existing owner/project/share-group editing rules. History and receipts belong to the actor, preserving the previous UI
-history ownership. Receipts cascade with task/account deletion. The snapshot trigger skips an
-already-deleted account during cascading deletion; this is tested in PGlite.
+checks the existing owner/assignee/project/share-group editing rules, including
+assignee-only tasks with a different owner and no group membership. Assignment is
+checked on the locked current row before receipt access; a former assignee cannot
+reuse an earlier receipt after reassignment. A NULL assignee never grants access.
+History and receipts belong to the actor, preserving the previous UI history
+ownership. Receipts cascade with task/account deletion. Both the snapshot trigger
+and the existing queue trigger skip an already-deleted owner during an account
+cascade. The exact supplied queue trigger/FK interaction is tested in PGlite;
+group-activity and other hosted cascade combinations have the limits below.
 
 The server-only reconciliation RPC applies remote task fields and acknowledges
 the baseline atomically under an exact revision and owned connection check.
@@ -115,7 +121,7 @@ pending for review. No existing queued customer row was inspected or changed.
 The new application code requires the additive schema. Deployment before a
 separately approved migration would fail; there is deliberately no fallback to
 non-atomic writes or unprotected provider overwrites. PGlite acceptance does not
-verify every hosted schema extension, existing queue trigger, auth integration,
+verify every hosted schema extension, trigger combination, auth integration,
 concurrent PostgreSQL connection or production RLS policy combination.
 
 ## Import policy
@@ -205,13 +211,17 @@ concurrent-database acceptance remains a future release requirement.
 
 The prepared migration remains `20261105080347_worldwide_schedule_sync.sql` and
 is **not applied** to any hosted/connected database. It runs in one transaction
-and fails preflight when the prerequisite time-intent columns/function/trigger
-are missing. The repository's `20261005140000_task_time_intent.sql` was recorded
-under a different timestamp in the hosted history; legacy numeric versions are
-also present. Before approval, compare the actual schema, function bodies,
-policies, grants and migration history read-only. Apply only the exact reviewed
-new migration after resolving that history mapping. Do not replay the repository
-history wholesale or automatically repair/rename applied versions.
+and fails preflight when the prerequisite time-intent/assignee columns, dirty
+function/trigger, or restricted queue function/attached AFTER DELETE trigger are
+missing or incompatible. The coordinator's permitted read-only catalog check
+confirmed hosted version **`20261025013129`, name `task_time_intent`**; the
+repository file remains `20261005140000_task_time_intent.sql`. Do not replay,
+rename, or repair that history. Only the exact reviewed new migration is proposed.
+The same bounded metadata check confirmed the listed runtime columns (including
+`push_reminders`), existing time-intent checks/index, status/dirty/updated-at
+triggers, `calendar_events` uniqueness on `(user_id,provider,external_id)` and
+digest-log primary key `(user_id,sent_for_date)`. These supplied catalog facts are
+not live behavior or complete release acceptance; this worker made no hosted read.
 
 `guard_task_schedule_state` is an invoker trigger with an empty search path. It
 rejects authenticated/anonymous writes to mapping, generation, acknowledged
@@ -225,7 +235,7 @@ A cross-day timestamp-only old-client edit fails with
 helpers still emit account-day starts. Old rows without civil intent are untouched.
 
 Completion is a narrowly scoped definer with empty search path, qualified names,
-explicit signed actor-role checks and the existing owner/project/share-group
+explicit signed actor-role checks and the existing owner/assignee/project/share-group
 editing rules. A task lock and exact revision guard precede receipt access. History,
 advancement and receipt commit together. Authenticated clients may SELECT their
 accessible receipts but cannot insert/update/delete/truncate them. Future changes
@@ -236,10 +246,32 @@ provider snapshots to shared readers. The restricted deletion snapshot trigger
 preserves the acknowledged revision and skips accounts already being cascaded.
 Deletes require that acknowledged ETag, including provider-only changes.
 
+The proposed replacement of `queue_calendar_event_delete()` adds only the
+owner-existence guard to its supplied body. It retains SECURITY DEFINER,
+`search_path = public, pg_catalog`, the existing AFTER DELETE trigger, and the
+existing postgres/service_role execution ACL. PGlite compares the function/trigger
+identities, owner, ACL and security configuration before and after replacement.
+Normal linked-task deletion still enqueues. The queue remains owner-editable
+under existing RLS; its fields cannot authorize a provider deletion without the
+separate service-only acknowledged snapshot and matching mapping/ETag/baseline.
+
+The old queue body creates a row referencing a deleted `auth.users` parent and
+therefore blocks the reproduced non-group account cascade **before** this
+migration. This is an inherited defect, not one introduced by the snapshot table.
+The earlier checkpoint fixture omitted that AFTER trigger; the expanded fixture
+reproduces the failure, then verifies both triggers together after the fix.
+The supplied group-activity metadata is modeled only for its DELETE branch:
+ordinary shared-task deletion logs activity, but a synthetic ordering in which
+the group has already disappeared fails the group-activity FK. The full hosted
+function, group/account dependency ordering, INSERT/UPDATE activity branches and
+all other trigger interactions are not reproduced. No group-activity function or
+policy is changed, and this result is not a complete hosted account-deletion proof.
+
 Rollback is **application first, additive state retained**: stop the new sync /
 completion callers through an approved release operation, roll the application
 back to a compatible checkpoint, and retain civil columns, baselines, outbox,
-conflicts, receipts, ACLs and protective triggers. The original PR36 client may
+conflicts, receipts, ACLs and protective triggers, including the inherited queue
+cascade fix. The original PR36 client may
 receive explicit errors when editing already-civil dates; it cannot safely own
 those new schedules. Do not drop columns/tables to obtain apparent compatibility.
 A destructive schema rollback would require a separately approved backup and
@@ -249,6 +281,8 @@ of the dirty trigger body → new columns. That destructive rollback is not prep
 for automatic execution and has not been claimed tested.
 
 SQL verification uses synthetic ephemeral PGlite, including production-shaped
-`now()` revision triggers, owner/shared/unrelated actors, receipt forgery, metadata
-forgery, old-client rejection, transaction failure/retry and account cascade. This
-is not hosted RLS/extension parity or multi-connection/provider acceptance.
+`now()` revision triggers, owner/shared/assignee/former-assignee/unrelated actors,
+receipt forgery, metadata forgery, old-client rejection, transaction failure/retry,
+normal linked deletion, queue tampering and the bounded cascade interactions above.
+This is not full hosted RLS/extension/trigger parity or multi-connection/provider
+acceptance.

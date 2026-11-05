@@ -1,14 +1,25 @@
 begin;
 -- Apply this exact new migration only after reviewing schema/history parity.
--- The earlier time-intent migration has a differently recorded hosted version;
--- do not replay it or repair migration history as part of this migration.
+-- Hosted task_time_intent is 20261025013129; the repository file is
+-- 20261005140000_task_time_intent.sql. Do not replay/repair that history.
 do $$ begin
   if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='time_kind')
     or not exists(select 1 from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='calendar_event_generation')
     or not exists(select 1 from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='calendar_dirty')
+    or not exists(select 1 from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='assignee_id')
     or not exists(select 1 from pg_catalog.pg_trigger where tgrelid='public.tasks'::regclass and tgname='tasks_calendar_dirty' and not tgisinternal)
     or to_regprocedure('public.mark_task_calendar_dirty()') is null then
     raise exception 'worldwide_schedule_requires_reviewed_time_intent_schema';
+  end if;
+  -- Replacing this existing function retains its owner, execution ACL and
+  -- attached trigger. Never create a missing function with default PUBLIC ACL.
+  if to_regprocedure('public.queue_calendar_event_delete()') is null
+    or not exists(select 1 from pg_catalog.pg_trigger where tgrelid='public.tasks'::regclass
+      and tgname='tasks_queue_calendar_delete' and not tgisinternal and tgtype=9
+      and tgenabled in ('O','A') and tgfoid=to_regprocedure('public.queue_calendar_event_delete()'))
+    or has_function_privilege('authenticated',to_regprocedure('public.queue_calendar_event_delete()'),'EXECUTE')
+    or has_function_privilege('anon',to_regprocedure('public.queue_calendar_event_delete()'),'EXECUTE') then
+    raise exception 'worldwide_schedule_requires_reviewed_calendar_queue';
   end if;
 end $$;
 -- PREPARED ONLY. No backfill, preference rewrite, or live migration execution.
@@ -114,12 +125,14 @@ begin
   if p_expected_updated_at is null then raise exception 'completion_requires_revision'; end if;
   if actor is null or coalesce(auth.role(),'') not in ('authenticated','service_role') then raise exception 'not_authorized'; end if;
   -- Definer is needed only for protected receipts. Repeat the existing task
-  -- UPDATE authorization (0002 + 0024); future policy changes must update this
-  -- guard together. The history belongs to the acting user, as before.
+  -- UPDATE authorization (owner, deployed assignee, project/share membership);
+  -- future policy changes must update this guard together. The history belongs
+  -- to the acting user, as before. NULL assignment never grants access.
   select * into current_task from public.tasks where id=p_task_id and user_id=p_user_id for update;
   if not found then raise exception 'task_not_found'; end if;
   if auth.role()<>'service_role' and not (
     current_task.user_id=actor
+    or coalesce(current_task.assignee_id=actor,false)
     or (current_task.project_id is not null and public.is_project_member(current_task.project_id))
     or (current_task.share_group_id is not null and public.is_share_group_member(current_task.share_group_id))
   ) then raise exception 'task_not_found'; end if;
@@ -191,6 +204,23 @@ create table public.task_calendar_deletion_baselines (
 alter table public.task_calendar_deletion_baselines enable row level security;
 revoke all on public.task_calendar_deletion_baselines from public, anon, authenticated;
 grant all on public.task_calendar_deletion_baselines to service_role;
+
+-- Fix the inherited AFTER DELETE queue/FK interaction too: during an account
+-- cascade the parent is already gone, so neither trigger may recreate children.
+-- Normal linked-task deletion still enqueues through the existing trigger.
+-- CREATE OR REPLACE preserves the existing postgres/service_role execution ACL;
+-- do not grant clients access or treat their editable queue as provider authority.
+create or replace function public.queue_calendar_event_delete() returns trigger
+language plpgsql security definer set search_path to 'public','pg_catalog' as $$
+declare v_calendar_id text;
+begin
+  if old.calendar_event_id is null
+    or not exists(select 1 from auth.users where id=old.user_id) then return old; end if;
+  select primary_calendar_id into v_calendar_id from public.user_calendar_connections where user_id=old.user_id and provider='google';
+  insert into public.pending_calendar_deletions(user_id,calendar_id,event_id) values(old.user_id,v_calendar_id,old.calendar_event_id);
+  return old;
+end $$;
+
 create function public.save_task_calendar_deletion_baseline() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin

@@ -80,6 +80,37 @@ it('UI double click/lost response retries the same exact revision and never inse
   ]);
   expect(f.from).not.toHaveBeenCalled();
 });
+it('UI keeps the distinct task owner and revision for assignee-only recurring completion and retry', async () => {
+  const assignedTask = {
+    ...task,
+    assignee_id: 'signed-in-assignee',
+    project_id: null,
+    share_group_id: null,
+  };
+  f.rpc
+    .mockResolvedValueOnce({ data: null, error: { message: 'response_lost' } })
+    .mockResolvedValue({
+      data: { data: assignedTask, recurring: true },
+      error: null,
+    });
+  await act(async () => {
+    toggle(assignedTask);
+  });
+  await act(async () => {
+    toggle(assignedTask);
+  });
+  expect(f.rpc).toHaveBeenCalledTimes(2);
+  for (const [name, args] of f.rpc.mock.calls) {
+    expect(name).toBe('complete_task_occurrence');
+    expect(args).toMatchObject({
+      p_user_id: 'owner',
+      p_task_id: task.id,
+      p_expected_updated_at: task.updated_at,
+      p_next: { due_at: '2026-03-08T13:00:00.000Z' },
+    });
+  }
+  expect(f.from).not.toHaveBeenCalled();
+});
 it('UI invalid recurrence is an error, not permanent completion', async () => {
   await act(async () => {
     toggle({ ...task, rrule: 'FREQ=INVALID' });
